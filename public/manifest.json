@@ -1,0 +1,19 @@
+{
+  "name": "LifeFlow",
+  "short_name": "LifeFlow",
+  "description": "捕捉 · 规划 · 专注 · 回顾",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#6366f1",
+  "orientation": "portrait-primary",
+  "categories": ["productivity", "utilities"],
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

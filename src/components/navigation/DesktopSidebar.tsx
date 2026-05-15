@@ -8,6 +8,7 @@ import {
   Calendar,
   Timer,
   BarChart3,
+  Target,
   FolderKanban,
   Trash2,
   Settings2,
@@ -20,6 +21,7 @@ const tabs: TabItem[] = [
   { id: "planner", label: "规划", icon: "Calendar", path: "/planner" },
   { id: "focus", label: "专注", icon: "Timer", path: "/focus" },
   { id: "review", label: "回顾", icon: "BarChart3", path: "/review" },
+  { id: "goals", label: "目标", icon: "Target", path: "/goals" },
   { id: "projects", label: "项目", icon: "FolderKanban", path: "/projects" },
   { id: "trash", label: "回收站", icon: "Trash2", path: "/trash" },
   { id: "settings", label: "设置", icon: "Settings2", path: "/settings" },
@@ -31,6 +33,7 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Calendar,
   Timer,
   BarChart3,
+  Target,
   FolderKanban,
   Trash2,
   Settings2,
@@ -75,7 +78,7 @@ export default function DesktopSidebar() {
       </nav>
 
       <div className="px-4 py-4 border-t border-gray-100">
-        <p className="text-xs text-gray-400 text-center">LifeFlow Core v2.0</p>
+        <p className="text-xs text-gray-400 text-center">LifeFlow Core v2.1</p>
       </div>
     </aside>
   );

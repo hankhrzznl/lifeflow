@@ -1,3 +1,4 @@
+/** @deprecated Use Task interface instead (v2.1 unified model) */
 export interface CaptureItem {
   id?: number;
   content: string;
@@ -7,6 +8,7 @@ export interface CaptureItem {
   updatedAt: number;
 }
 
+/** @deprecated Use Task interface instead (v2.1 unified model) */
 export interface CalendarEvent {
   id?: number;
   title: string;
@@ -80,7 +82,48 @@ export interface Suggestion {
   confidence: number;
 }
 
-export type PageId = "dashboard" | "capture" | "planner" | "focus" | "review" | "projects" | "trash" | "settings";
+export interface Task {
+  id?: number;
+  title: string;
+  type: 'longterm' | 'shortterm' | 'daily' | 'habit';
+  parentTaskId?: number;
+  isMilestone?: boolean;
+  note?: string;
+  status: 'active' | 'done' | 'archived';
+  planned?: boolean;
+  startTime?: number;
+  endTime?: number;
+  projectId?: string;
+  captureSourceId?: number;
+  focusSessions?: number[];
+  tags?: string[];
+  priority?: 'low' | 'medium' | 'high';
+  createdAt: number;
+  updatedAt: number;
+  order?: number;
+}
+
+export interface HabitLog {
+  id?: number;
+  taskId: number;
+  date: string;
+  count: number;
+  createdAt: number;
+}
+
+export interface PluginRegistry {
+  id: string;
+  name: string;
+  version: string;
+  description?: string;
+  status: 'installed' | 'active' | 'disabled' | 'error';
+  config?: Record<string, unknown>;
+  installedAt: number;
+  updatedAt: number;
+}
+
+export type PageId = "dashboard" | "capture" | "planner" | "focus" | "review" | "projects" | "trash" | "settings" | "goals" | "today";
+
 
 export interface TabItem {
   id: PageId;
@@ -88,3 +131,5 @@ export interface TabItem {
   icon: string;
   path: string;
 }
+
+export type GoalViewType = 'longterm' | 'shortterm' | 'daily' | 'habits';

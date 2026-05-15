@@ -6,6 +6,9 @@ import type {
   Project,
   AgentMemory,
   AgentChatSession,
+  Task,
+  HabitLog,
+  PluginRegistry,
 } from "./types";
 
 export class LifeFlowDB extends Dexie {
@@ -15,6 +18,9 @@ export class LifeFlowDB extends Dexie {
   projects!: Table<Project, string>;
   agentMemory!: Table<AgentMemory, number>;
   agentChats!: Table<AgentChatSession, string>;
+  tasks!: Table<Task, number>;
+  habit_logs!: Table<HabitLog, number>;
+  plugin_registry!: Table<PluginRegistry, string>;
 
   constructor() {
     super("LifeFlowDB");
@@ -35,10 +41,71 @@ export class LifeFlowDB extends Dexie {
         if (!event.tags) event.tags = [];
       });
     });
+
+    this.version(3).stores({
+      tasks: "++id, type, status, parentTaskId, startTime, projectId, createdAt, [type+status], *tags",
+      habit_logs: "++id, taskId, date, [taskId+date], createdAt",
+      plugin_registry: "id, status",
+    }).upgrade(async (tx) => {
+      const captures = await tx.table("capture").toArray();
+      let captureMigrated = 0;
+      for (const c of captures) {
+        const taskStatus: Task["status"] = c.status === "trash" ? "archived" : "active";
+        const taskPlanned = c.status === "planned" ? true : undefined;
+        await tx.table("tasks").add({
+          title: c.content,
+          type: "daily" as const,
+          status: taskStatus,
+          planned: taskPlanned,
+          tags: c.tags || [],
+          createdAt: c.createdAt,
+          updatedAt: c.updatedAt,
+        });
+        captureMigrated++;
+      }
+
+      const events = await tx.table("events").toArray();
+      let eventsMigrated = 0;
+      for (const e of events) {
+        await tx.table("tasks").add({
+          title: e.title,
+          type: "shortterm" as const,
+          status: e.deleted ? ("archived" as const) : ("active" as const),
+          planned: e.planned,
+          startTime: e.startTime,
+          endTime: e.endTime,
+          projectId: e.projectId,
+          captureSourceId: e.captureSourceId,
+          focusSessions: e.focusSessions || [],
+          tags: e.tags || [],
+          note: e.notes,
+          createdAt: e.createdAt,
+          updatedAt: e.updatedAt,
+        });
+        eventsMigrated++;
+      }
+
+      console.log(
+        `[LifeFlowDB v3 migration] Migrated ${captureMigrated} capture items and ${eventsMigrated} events to tasks table`
+      );
+    });
   }
 }
 
 export const db = new LifeFlowDB();
+
+function getLocalDateStr(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function getTodayRange(): { start: number; end: number } {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const end = start + 24 * 60 * 60 * 1000;
+  return { start, end };
+}
+
+// ─── Transaction ────────────────────────────────────────────
 
 export async function executeTransaction<T>(
   stores: (Table | string)[],
@@ -73,7 +140,29 @@ export async function executeTransaction<T>(
   throw lastError ?? new Error("TRANSACTION_FAILED");
 }
 
-// Capture CRUD
+// ─── Database Initialization ────────────────────────────────
+
+export async function initializeDatabase(): Promise<{
+  success: boolean;
+  error?: string;
+  recoverable?: boolean;
+}> {
+  try {
+    await db.open();
+    return { success: true };
+  } catch (err) {
+    const error = (err as Error).message;
+    const name = (err as Error).name;
+    const recoverable = !(
+      name === "QuotaExceededError" ||
+      name === "VersionError"
+    );
+    return { success: false, error, recoverable };
+  }
+}
+
+// ─── Capture CRUD (backward compatible) ─────────────────────
+
 export async function addCapture(content: string, tags: string[] = []): Promise<number> {
   const now = Date.now();
   return db.capture.add({
@@ -151,7 +240,8 @@ export async function getTrashCaptureCount(): Promise<number> {
   return db.capture.where("status").equals("trash").count();
 }
 
-// Events CRUD
+// ─── Events CRUD (backward compatible) ──────────────────────
+
 export async function createEvent(
   eventData: Omit<CalendarEvent, "id" | "createdAt" | "updatedAt">
 ): Promise<number> {
@@ -199,7 +289,8 @@ export async function getTrashEventCount(): Promise<number> {
   return db.events.filter((e) => e.deleted === true).count();
 }
 
-// Focus Logs CRUD
+// ─── Focus Logs CRUD ────────────────────────────────────────
+
 export async function createFocusLog(eventId?: number): Promise<number> {
   const now = Date.now();
   return db.focusLogs.add({
@@ -236,7 +327,8 @@ export async function getFocusLogsByTimeRange(
   return items.slice(0, limit);
 }
 
-// Projects CRUD
+// ─── Projects CRUD ──────────────────────────────────────────
+
 export async function createProject(name: string, color: string): Promise<string> {
   const id = crypto.randomUUID();
   await db.projects.add({ id, name, color });
@@ -259,20 +351,393 @@ export async function updateProject(
 }
 
 export async function deleteProject(id: string): Promise<void> {
-  await db.transaction("rw", [db.projects, db.events], async () => {
+  await db.transaction("rw", [db.projects, db.events, db.tasks], async () => {
     const events = await db.events.where("projectId").equals(id).toArray();
     for (const event of events) {
       await db.events.update(event.id!, { projectId: undefined, updatedAt: Date.now() });
     }
+
+    const tasks = await db.tasks.where("projectId").equals(id).toArray();
+    for (const task of tasks) {
+      await db.tasks.update(task.id!, { projectId: undefined, updatedAt: Date.now() });
+    }
+
     await db.projects.delete(id);
   });
 }
 
+/** @deprecated Use getProjectTaskCount instead */
 export async function getProjectEventCount(id: string): Promise<number> {
   return db.events.where("projectId").equals(id).and((e) => !e.deleted).count();
 }
 
-// Transactions
+export async function getProjectTaskCount(id: string): Promise<number> {
+  return db.tasks.where("projectId").equals(id).and((t) => t.status !== "archived").count();
+}
+
+// ─── Task CRUD ──────────────────────────────────────────────
+
+export async function createTask(
+  data: Omit<Task, "id" | "createdAt" | "updatedAt">
+): Promise<number> {
+  const now = Date.now();
+  return db.tasks.add({
+    ...data,
+    createdAt: now,
+    updatedAt: now,
+  });
+}
+
+export async function updateTask(
+  id: number,
+  updates: Partial<Omit<Task, "id" | "createdAt">>
+): Promise<void> {
+  await db.tasks.update(id, { ...updates, updatedAt: Date.now() });
+}
+
+export async function getTask(id: number): Promise<Task | undefined> {
+  return db.tasks.get(id);
+}
+
+export async function getTasksByType(
+  type: Task["type"],
+  limit?: number
+): Promise<Task[]> {
+  const collection = db.tasks.where("type").equals(type);
+  if (limit !== undefined) {
+    return collection.limit(limit).toArray();
+  }
+  return collection.toArray();
+}
+
+export async function getTasksByStatus(
+  status: Task["status"],
+  limit?: number
+): Promise<Task[]> {
+  const collection = db.tasks.where("status").equals(status);
+  if (limit !== undefined) {
+    return collection.limit(limit).toArray();
+  }
+  return collection.toArray();
+}
+
+export async function getTasksByTimeRange(
+  start: number,
+  end: number,
+  type?: Task["type"]
+): Promise<Task[]> {
+  const collection = db.tasks.where("startTime").between(start, end);
+  const items = await collection.toArray();
+  if (type) {
+    return items.filter((t) => t.type === type);
+  }
+  return items;
+}
+
+export async function getRootTasks(type: Task["type"]): Promise<Task[]> {
+  return db.tasks
+    .where("type")
+    .equals(type)
+    .filter((t) => !t.parentTaskId && t.status !== "archived")
+    .toArray();
+}
+
+export async function getChildTasks(parentTaskId: number): Promise<Task[]> {
+  return db.tasks
+    .where("parentTaskId")
+    .equals(parentTaskId)
+    .filter((t) => t.status !== "archived")
+    .toArray();
+}
+
+export interface TaskTreeNode extends Task {
+  children: TaskTreeNode[];
+}
+
+export async function getTaskTree(type: Task["type"]): Promise<TaskTreeNode[]> {
+  const roots = await db.tasks
+    .where("type")
+    .equals(type)
+    .filter((t) => !t.parentTaskId && t.status !== "archived")
+    .toArray();
+
+  async function buildChildren(parentId: number, depth: number): Promise<TaskTreeNode[]> {
+    if (depth >= 3) return [];
+    const children = await db.tasks
+      .where("parentTaskId")
+      .equals(parentId)
+      .filter((t) => t.status !== "archived")
+      .toArray();
+
+    const result: TaskTreeNode[] = [];
+    for (const child of children) {
+      result.push({
+        ...child,
+        children: await buildChildren(child.id!, depth + 1),
+      } as TaskTreeNode);
+    }
+    return result;
+  }
+
+  const tree: TaskTreeNode[] = [];
+  for (const root of roots) {
+    tree.push({
+      ...root,
+      children: await buildChildren(root.id!, 1),
+    } as TaskTreeNode);
+  }
+  return tree;
+}
+
+export async function deleteTask(id: number): Promise<void> {
+  await db.tasks.update(id, { status: "archived", updatedAt: Date.now() });
+}
+
+export async function restoreTask(id: number): Promise<void> {
+  await db.tasks.update(id, { status: "active", updatedAt: Date.now() });
+}
+
+export async function purgeTask(id: number): Promise<void> {
+  await db.tasks.delete(id);
+}
+
+export async function getTrashTasks(): Promise<Task[]> {
+  return db.tasks
+    .where("status")
+    .equals("archived")
+    .reverse()
+    .sortBy("updatedAt");
+}
+
+export async function getTrashTaskCount(): Promise<number> {
+  return db.tasks.where("status").equals("archived").count();
+}
+
+export async function moveTask(
+  taskId: number,
+  newParentId: number | null
+): Promise<void> {
+  if (newParentId === null) {
+    await db.tasks.update(taskId, { parentTaskId: undefined, updatedAt: Date.now() });
+    return;
+  }
+
+  if (newParentId === taskId) {
+    throw new Error("Cannot move a task under itself");
+  }
+
+  let currentId: number | undefined = newParentId;
+  while (currentId) {
+    if (currentId === taskId) {
+      throw new Error("Cannot move a task under its own descendant");
+    }
+    const parent: Task | undefined = await db.tasks.get(currentId);
+    currentId = parent?.parentTaskId;
+  }
+
+  await db.tasks.update(taskId, { parentTaskId: newParentId, updatedAt: Date.now() });
+}
+
+export async function reorderTasks(taskIds: number[]): Promise<void> {
+  await db.transaction("rw", db.tasks, async () => {
+    for (let i = 0; i < taskIds.length; i++) {
+      await db.tasks.update(taskIds[i], { order: i });
+    }
+  });
+}
+
+export async function getTasksByProject(
+  projectId: string,
+  limit?: number
+): Promise<Task[]> {
+  const collection = db.tasks
+    .where("projectId")
+    .equals(projectId)
+    .filter((t) => t.status !== "archived");
+  if (limit !== undefined) {
+    return collection.limit(limit).toArray();
+  }
+  return collection.toArray();
+}
+
+export async function getTodayTasks(): Promise<Task[]> {
+  const { start, end } = getTodayRange();
+  return db.tasks
+    .where("startTime")
+    .between(start, end, true, false)
+    .filter((t) => t.status === "active")
+    .toArray();
+}
+
+// ─── Habit CRUD ─────────────────────────────────────────────
+
+export async function checkInHabit(taskId: number): Promise<{
+  success: boolean;
+  record?: HabitLog;
+  message: string;
+  alreadyCheckedIn?: boolean;
+}> {
+  const task = await db.tasks.get(taskId);
+  if (!task) {
+    return { success: false, message: "Task not found" };
+  }
+  if (task.type !== "habit") {
+    return { success: false, message: "Task is not a habit" };
+  }
+  if (task.status !== "active") {
+    return { success: false, message: "Habit is not active" };
+  }
+
+  const today = getLocalDateStr(new Date());
+
+  const existing = await db.habit_logs
+    .where("[taskId+date]")
+    .equals([taskId, today])
+    .first();
+
+  if (existing) {
+    return {
+      success: false,
+      record: existing,
+      message: "Already checked in today",
+      alreadyCheckedIn: true,
+    };
+  }
+
+  const record: HabitLog = {
+    taskId,
+    date: today,
+    count: 1,
+    createdAt: Date.now(),
+  };
+
+  const id = await db.habit_logs.add(record);
+  record.id = id;
+
+  return { success: true, record, message: "Check-in successful" };
+}
+
+export async function getStreak(taskId: number): Promise<number> {
+  const logs = await db.habit_logs.where("taskId").equals(taskId).toArray();
+  if (logs.length === 0) return 0;
+
+  const dates = new Set(logs.map((l) => l.date));
+
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const todayStr = getLocalDateStr(today);
+  const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
+  const yesterdayStr = getLocalDateStr(yesterday);
+
+  let startFrom: Date;
+  if (dates.has(todayStr)) {
+    startFrom = today;
+  } else if (dates.has(yesterdayStr)) {
+    startFrom = yesterday;
+  } else {
+    return 0;
+  }
+
+  let streak = 0;
+  for (let i = 0; i < 365; i++) {
+    const d = new Date(startFrom.getTime() - i * 24 * 60 * 60 * 1000);
+    const dateStr = getLocalDateStr(d);
+    if (dates.has(dateStr)) {
+      streak++;
+    } else {
+      break;
+    }
+  }
+
+  return streak;
+}
+
+export async function getHabitLogs(
+  taskId: number,
+  limit?: number
+): Promise<HabitLog[]> {
+  const collection = db.habit_logs
+    .where("taskId")
+    .equals(taskId)
+    .reverse()
+    .sortBy("date");
+  const result = await collection;
+  if (limit !== undefined) {
+    return result.slice(0, limit);
+  }
+  return result;
+}
+
+export async function getHabitLogsByDateRange(
+  taskId: number,
+  startDate: string,
+  endDate: string
+): Promise<HabitLog[]> {
+  return db.habit_logs
+    .where("taskId")
+    .equals(taskId)
+    .filter((l) => l.date >= startDate && l.date <= endDate)
+    .toArray();
+}
+
+export async function getAllHabits(): Promise<Task[]> {
+  return db.tasks
+    .where("[type+status]")
+    .equals(["habit", "active"])
+    .toArray();
+}
+
+export async function deleteHabitLog(taskId: number, date: string): Promise<void> {
+  const existing = await db.habit_logs
+    .where("[taskId+date]")
+    .equals([taskId, date])
+    .first();
+  if (existing?.id != null) {
+    await db.habit_logs.delete(existing.id);
+  }
+}
+
+// ─── Plugin CRUD ────────────────────────────────────────────
+
+export async function registerPlugin(
+  data: Omit<PluginRegistry, "installedAt" | "updatedAt">
+): Promise<void> {
+  const now = Date.now();
+  await db.plugin_registry.put({
+    ...data,
+    installedAt: now,
+    updatedAt: now,
+  });
+}
+
+export async function getPlugin(id: string): Promise<PluginRegistry | undefined> {
+  return db.plugin_registry.get(id);
+}
+
+export async function getAllPlugins(): Promise<PluginRegistry[]> {
+  return db.plugin_registry.toArray();
+}
+
+export async function updatePluginStatus(
+  id: string,
+  status: PluginRegistry["status"]
+): Promise<void> {
+  await db.plugin_registry.update(id, { status, updatedAt: Date.now() });
+}
+
+export async function updatePluginConfig(
+  id: string,
+  config: Record<string, unknown>
+): Promise<void> {
+  await db.plugin_registry.update(id, { config, updatedAt: Date.now() });
+}
+
+export async function uninstallPlugin(id: string): Promise<void> {
+  await db.plugin_registry.delete(id);
+}
+
+// ─── Cross-model transactions ───────────────────────────────
+
 export async function convertCaptureToEvent(
   captureId: number,
   eventData: Omit<CalendarEvent, "id" | "captureSourceId">
@@ -297,12 +762,37 @@ export async function convertCaptureToEvent(
   });
 }
 
+/** Convert a capture item to a task (v2.1 unified model) */
+export async function convertCaptureToTask(
+  captureId: number,
+  taskData: Omit<Task, "id" | "captureSourceId" | "createdAt" | "updatedAt">
+): Promise<number> {
+  return db.transaction("rw", [db.capture, db.tasks], async () => {
+    const capture = await db.capture.get(captureId);
+    if (!capture) throw new Error(`Capture ${captureId} not found`);
+    if (capture.status !== "inbox") {
+      throw new Error(`Capture ${captureId} is not in inbox status`);
+    }
+
+    const now = Date.now();
+    const taskId = await db.tasks.add({
+      ...taskData,
+      captureSourceId: captureId,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    await db.capture.update(captureId, { status: "planned" });
+    return taskId;
+  });
+}
+
 export async function completeFocusSession(
   focusLogId: number,
   finalDuration: number,
   interruptions: number
 ): Promise<void> {
-  return db.transaction("rw", [db.focusLogs, db.events], async () => {
+  return db.transaction("rw", [db.focusLogs, db.tasks, db.events], async () => {
     const focusLog = await db.focusLogs.get(focusLogId);
     if (!focusLog) throw new Error(`FocusLog ${focusLogId} not found`);
 
@@ -311,6 +801,16 @@ export async function completeFocusSession(
       interruptions,
       completed: true,
     });
+
+    const task = await db.tasks.get(focusLog.eventId);
+    if (task) {
+      const existingSessions = task.focusSessions ?? [];
+      await db.tasks.update(task.id!, {
+        focusSessions: [...existingSessions, focusLogId],
+        updatedAt: Date.now(),
+      });
+      return;
+    }
 
     const event = await db.events.get(focusLog.eventId);
     if (event) {
@@ -360,7 +860,8 @@ export async function applySuggestedPlan(
   });
 }
 
-// Storage check
+// ─── Storage check ──────────────────────────────────────────
+
 export async function checkStorageSpace(): Promise<{
   used: number;
   total: number;
@@ -387,6 +888,8 @@ export async function checkStorageSpace(): Promise<{
   return null;
 }
 
+// ─── Export / Import ────────────────────────────────────────
+
 export interface ExportData {
   version: number;
   exportedAt: string;
@@ -397,24 +900,49 @@ export interface ExportData {
     projects: Project[];
     agentMemory: AgentMemory[];
     agentChats: AgentChatSession[];
+    tasks: Task[];
+    habitLogs: HabitLog[];
+    pluginRegistry: PluginRegistry[];
   };
 }
 
 export async function exportAllData(): Promise<ExportData> {
-  const [capture, events, focusLogs, projects, agentMemory, agentChats] =
-    await Promise.all([
-      db.capture.toArray(),
-      db.events.toArray(),
-      db.focusLogs.toArray(),
-      db.projects.toArray(),
-      db.agentMemory.toArray(),
-      db.agentChats.toArray(),
-    ]);
+  const [
+    capture,
+    events,
+    focusLogs,
+    projects,
+    agentMemory,
+    agentChats,
+    tasks,
+    habitLogs,
+    pluginRegistry,
+  ] = await Promise.all([
+    db.capture.toArray(),
+    db.events.toArray(),
+    db.focusLogs.toArray(),
+    db.projects.toArray(),
+    db.agentMemory.toArray(),
+    db.agentChats.toArray(),
+    db.tasks.toArray(),
+    db.habit_logs.toArray(),
+    db.plugin_registry.toArray(),
+  ]);
 
   return {
     version: 1,
     exportedAt: new Date().toISOString(),
-    data: { capture, events, focusLogs, projects, agentMemory, agentChats },
+    data: {
+      capture,
+      events,
+      focusLogs,
+      projects,
+      agentMemory,
+      agentChats,
+      tasks,
+      habitLogs,
+      pluginRegistry,
+    },
   };
 }
 
@@ -424,41 +952,55 @@ export async function importAllData(
   const { data } = importData;
   const imported: Record<string, number> = {};
 
-  await db.transaction("rw", [
-    db.capture,
-    db.events,
-    db.focusLogs,
-    db.projects,
-    db.agentMemory,
-    db.agentChats,
-  ], async () => {
-    await Promise.all([
-      db.capture.clear(),
-      db.events.clear(),
-      db.focusLogs.clear(),
-      db.projects.clear(),
-      db.agentMemory.clear(),
-      db.agentChats.clear(),
-    ]);
+  await db.transaction(
+    "rw",
+    [
+      db.capture,
+      db.events,
+      db.focusLogs,
+      db.projects,
+      db.agentMemory,
+      db.agentChats,
+      db.tasks,
+      db.habit_logs,
+      db.plugin_registry,
+    ],
+    async () => {
+      await Promise.all([
+        db.capture.clear(),
+        db.events.clear(),
+        db.focusLogs.clear(),
+        db.projects.clear(),
+        db.agentMemory.clear(),
+        db.agentChats.clear(),
+        db.tasks.clear(),
+        db.habit_logs.clear(),
+        db.plugin_registry.clear(),
+      ]);
 
-    const results = await Promise.all([
-      db.capture.bulkAdd(data.capture || []),
-      db.events.bulkAdd(data.events || []),
-      db.focusLogs.bulkAdd(data.focusLogs || []),
-      db.projects.bulkAdd(data.projects || []),
-      db.agentMemory.bulkAdd(data.agentMemory || []),
-      db.agentChats.bulkAdd(data.agentChats || []),
-    ]);
+      await Promise.all([
+        db.capture.bulkAdd(data.capture || []),
+        db.events.bulkAdd(data.events || []),
+        db.focusLogs.bulkAdd(data.focusLogs || []),
+        db.projects.bulkAdd(data.projects || []),
+        db.agentMemory.bulkAdd(data.agentMemory || []),
+        db.agentChats.bulkAdd(data.agentChats || []),
+        db.tasks.bulkAdd(data.tasks || []),
+        db.habit_logs.bulkAdd(data.habitLogs || []),
+        db.plugin_registry.bulkAdd(data.pluginRegistry || []),
+      ]);
 
-    imported.capture = data.capture?.length || 0;
-    imported.events = data.events?.length || 0;
-    imported.focusLogs = data.focusLogs?.length || 0;
-    imported.projects = data.projects?.length || 0;
-    imported.agentMemory = data.agentMemory?.length || 0;
-    imported.agentChats = data.agentChats?.length || 0;
-
-    return results;
-  });
+      imported.capture = data.capture?.length || 0;
+      imported.events = data.events?.length || 0;
+      imported.focusLogs = data.focusLogs?.length || 0;
+      imported.projects = data.projects?.length || 0;
+      imported.agentMemory = data.agentMemory?.length || 0;
+      imported.agentChats = data.agentChats?.length || 0;
+      imported.tasks = data.tasks?.length || 0;
+      imported.habitLogs = data.habitLogs?.length || 0;
+      imported.pluginRegistry = data.pluginRegistry?.length || 0;
+    }
+  );
 
   return { imported };
 }

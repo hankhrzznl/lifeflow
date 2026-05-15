@@ -112,6 +112,7 @@ export interface PluginAPI {
   onDeactivate(fn: () => void | Promise<void>): void;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 type PluginModule = {
   activate?: (api: PluginAPI) => void | Promise<void>;
   deactivate?: (api: PluginAPI) => void | Promise<void>;

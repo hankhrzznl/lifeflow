@@ -357,7 +357,7 @@ export default function PluginsPage() {
                           handleToggleStatus(plugin);
                         }}
                         className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-[var(--bg-primary)] transition-colors"
-                        title={plugin.status === "active" ? "禁用" : "激活"}
+                        aria-label={plugin.status === "active" ? "禁用插件" : "激活插件"}
                       >
                         <Power className={`w-4 h-4 ${plugin.status === "active" ? "text-amber-500" : "text-emerald-500"}`} />
                       </motion.button>
@@ -368,7 +368,7 @@ export default function PluginsPage() {
                           setConfirmDelete(plugin.id);
                         }}
                         className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                        title="卸载"
+                        aria-label="卸载插件"
                       >
                         <Trash2 className="w-4 h-4 text-red-400" />
                       </motion.button>

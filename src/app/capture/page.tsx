@@ -507,18 +507,21 @@ export default function CapturePage() {
                   <div className="absolute inset-y-0 right-0 flex">
                     <button
                       onClick={() => handlePlan(item.id!)}
+                      aria-label="标记完成"
                       className="w-16 bg-emerald-500 text-white flex items-center justify-center transition-colors hover:bg-emerald-600"
                     >
                       <Calendar className="w-5 h-5" />
                     </button>
                     <button
                       onClick={() => handleAssignClick(item.id!)}
+                      aria-label="分配目标"
                       className="w-16 bg-indigo-500 text-white flex items-center justify-center transition-colors hover:bg-indigo-600"
                     >
                       <Target className="w-5 h-5" />
                     </button>
                     <button
                       onClick={() => handleDelete(item.id!)}
+                      aria-label="删除"
                       className="w-16 bg-red-500 text-white flex items-center justify-center rounded-r-2xl transition-colors hover:bg-red-600"
                     >
                       <Trash2 className="w-5 h-5" />

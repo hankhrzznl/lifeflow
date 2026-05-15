@@ -140,6 +140,7 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
       <p className="text-sm text-gray-500 dark:text-gray-400 max-w-xs mb-6">可能是本地数据库暂时不可用</p>
       <button
         onClick={onRetry}
+        aria-label="重试加载"
         className="bg-indigo-600 text-white rounded-xl h-12 px-6 font-medium hover:bg-indigo-700 transition-colors text-sm flex items-center gap-2"
       >
         <RotateCcw className="w-4 h-4" />

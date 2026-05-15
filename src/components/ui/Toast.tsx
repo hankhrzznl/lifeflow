@@ -112,7 +112,7 @@ export function ToastContainer() {
                 {toast.action.label}
               </button>
             )}
-            <button onClick={() => removeToast(toast.id)} className="opacity-70 hover:opacity-100 flex-shrink-0">
+            <button onClick={() => removeToast(toast.id)} aria-label="关闭" className="opacity-70 hover:opacity-100 flex-shrink-0">
               <X className="w-4 h-4" />
             </button>
             {duration > 0 && (

@@ -85,9 +85,11 @@ export class LifeFlowDB extends Dexie {
         eventsMigrated++;
       }
 
-      console.log(
-        `[LifeFlowDB v3 migration] Migrated ${captureMigrated} capture items and ${eventsMigrated} events to tasks table`
-      );
+      if (typeof window !== "undefined" && window.location.hostname === "localhost") {
+        console.log(
+          `[LifeFlowDB v3 migration] Migrated ${captureMigrated} capture items and ${eventsMigrated} events to tasks table`
+        );
+      }
     });
   }
 }

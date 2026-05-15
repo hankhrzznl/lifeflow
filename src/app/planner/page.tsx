@@ -432,6 +432,7 @@ function MobileHeader({
       <motion.button
         whileTap={{ scale: 0.92 }}
         onClick={onAdd}
+        aria-label="添加事件"
         className="flex items-center gap-1.5 bg-primary-500 text-white w-10 h-10 rounded-2xl shadow-sm hover:bg-primary-600 transition-colors"
       >
         <Plus className="w-5 h-5 mx-auto" />
@@ -1296,6 +1297,7 @@ export default function PlannerPage() {
                 </h2>
                 <button
                   onClick={closeModal}
+                  aria-label="关闭"
                   className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                 >
                   <X className="w-5 h-5 text-[var(--muted-foreground)]" />

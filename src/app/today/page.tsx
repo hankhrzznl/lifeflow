@@ -2,11 +2,13 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronLeft,
   ChevronRight,
   AlertCircle,
   RotateCcw,
+  Zap,
 } from "lucide-react";
 import {
   getTasksByTimeRange,
@@ -490,11 +492,25 @@ export default function TodayPage() {
   }, []);
 
   const [isToday, setIsToday] = useState(false);
+  const [showNewDayBanner, setShowNewDayBanner] = useState(false);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsToday(dayStart === getDayStart(Date.now()));
   }, [dayStart]);
+
+  useEffect(() => {
+    if (!isToday) return;
+    const checkDay = () => {
+      if (getDayStart(Date.now()) !== dayStart) {
+        setShowNewDayBanner(true);
+        setTimeout(() => setShowNewDayBanner(false), 5000);
+        goToday();
+      }
+    };
+    const interval = setInterval(checkDay, 60000);
+    return () => clearInterval(interval);
+  }, [isToday, dayStart, goToday]);
 
   if (error) return <ErrorState onRetry={loadData} />;
   if (loading) return <LoadingSkeleton />;
@@ -540,6 +556,24 @@ export default function TodayPage() {
           </button>
         </div>
       </div>
+
+      <AnimatePresence>
+        {showNewDayBanner && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="px-4 py-2.5 bg-indigo-50 dark:bg-indigo-900/30 border-b border-indigo-100 dark:border-indigo-800 flex items-center gap-2">
+              <Zap className="w-4 h-4 text-indigo-500" />
+              <span className="text-sm font-medium text-indigo-700 dark:text-indigo-300">
+                新的一天开始了
+              </span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {clippedTasks.length === 0 ? (
         <div className="flex-1 overflow-y-auto">

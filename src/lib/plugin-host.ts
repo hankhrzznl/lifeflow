@@ -1,5 +1,93 @@
 import type { PluginRegistry } from "./types";
 
+export interface SecurityAuditEvent {
+  timestamp: number;
+  pluginId: string;
+  type: "scan_blocked" | "scan_warning" | "upload_rejected" | "sandbox_error";
+  message: string;
+  codeSnippet?: string;
+}
+
+export class SecurityAuditLog {
+  private static events: SecurityAuditEvent[] = [];
+  private static maxEvents = 100;
+
+  static log(event: Omit<SecurityAuditEvent, "timestamp">): void {
+    this.events.push({ ...event, timestamp: Date.now() });
+    if (this.events.length > this.maxEvents) {
+      this.events = this.events.slice(-this.maxEvents);
+    }
+    console.warn(`[Security] [${event.type}] [Plugin:${event.pluginId}] ${event.message}`);
+  }
+
+  static getEvents(pluginId?: string): SecurityAuditEvent[] {
+    if (pluginId) return this.events.filter((e) => e.pluginId === pluginId);
+    return [...this.events];
+  }
+
+  static clear(): void {
+    this.events = [];
+  }
+}
+
+interface SecurityScanResult {
+  passed: boolean;
+  blocked: boolean;
+  warnings: string[];
+  blocks: string[];
+}
+
+const SECURITY_RULES: { pattern: RegExp; message: string; level: "block" | "warn" }[] = [
+  { pattern: /document\s*\.\s*(cookie|domain|write|writeln)/, message: "DOM操作: document cookie/domain/write 被拦截", level: "block" },
+  { pattern: /(window|self|parent|top)\s*\.\s*location/, message: "导航劫持: location 访问被拦截", level: "block" },
+  { pattern: /eval\s*\(/, message: "动态代码执行: eval() 被拦截", level: "block" },
+  { pattern: /new\s+Function\s*\(/, message: "动态代码执行: new Function() 被拦截", level: "block" },
+  { pattern: /\.\s*innerHTML\s*=/, message: "XSS风险: innerHTML 赋值被拦截", level: "block" },
+  { pattern: /\.\s*outerHTML\s*=/, message: "XSS风险: outerHTML 赋值被拦截", level: "block" },
+  { pattern: /document\s*\.\s*createElement\s*\(\s*['"]script['"]/, message: "XSS风险: 动态创建script标签被拦截", level: "block" },
+  { pattern: /fetch\s*\(/, message: "网络请求: fetch() 被拦截", level: "block" },
+  { pattern: /XMLHttpRequest/, message: "网络请求: XMLHttpRequest 被拦截", level: "block" },
+  { pattern: /WebSocket/, message: "网络请求: WebSocket 被拦截", level: "block" },
+  { pattern: /localStorage|sessionStorage/, message: "存储访问: localStorage/sessionStorage 被拦截", level: "block" },
+  { pattern: /indexedDB/, message: "存储访问: indexedDB 被拦截", level: "block" },
+  { pattern: /navigator\s*\.\s*sendBeacon/, message: "数据外泄: sendBeacon 被拦截", level: "block" },
+  { pattern: /document\s*\.\s*querySelector/, message: "DOM查询: querySelector 被拦截", level: "block" },
+  { pattern: /__proto__|prototype\s*\[/, message: "原型污染: __proto__/prototype 访问被拦截", level: "block" },
+  { pattern: /import\s*\(/, message: "动态导入: import() 被拦截", level: "block" },
+  { pattern: /setTimeout|setInterval/, message: "定时器: setTimeout/setInterval 被拦截", level: "warn" },
+  { pattern: /console\s*\.\s*clear/, message: "调试干扰: console.clear()", level: "warn" },
+  { pattern: /while\s*\(\s*true\s*\)/, message: "无限循环: while(true) 被检测", level: "warn" },
+  { pattern: /debugger/, message: "调试语句: debugger 被检测", level: "warn" },
+];
+
+export function performStaticSecurityScan(code: string, pluginId: string): SecurityScanResult {
+  const result: SecurityScanResult = { passed: true, blocked: false, warnings: [], blocks: [] };
+
+  for (const rule of SECURITY_RULES) {
+    if (rule.pattern.test(code)) {
+      if (rule.level === "block") {
+        result.passed = false;
+        result.blocked = true;
+        result.blocks.push(rule.message);
+        SecurityAuditLog.log({
+          pluginId,
+          type: "scan_blocked",
+          message: rule.message,
+        });
+      } else {
+        result.warnings.push(rule.message);
+        SecurityAuditLog.log({
+          pluginId,
+          type: "scan_warning",
+          message: rule.message,
+        });
+      }
+    }
+  }
+
+  return result;
+}
+
 export interface PluginRoute {
   path: string;
   component: React.ComponentType;

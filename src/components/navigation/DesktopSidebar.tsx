@@ -10,6 +10,7 @@ import {
   BarChart3,
   Target,
   FolderKanban,
+  Puzzle,
   Trash2,
   Settings2,
 } from "lucide-react";
@@ -24,6 +25,7 @@ const tabs: TabItem[] = [
   { id: "review", label: "回顾", icon: "BarChart3", path: "/review" },
   { id: "projects", label: "项目", icon: "FolderKanban", path: "/projects" },
   { id: "trash", label: "回收站", icon: "Trash2", path: "/trash" },
+  { id: "plugins", label: "插件", icon: "Puzzle", path: "/plugins" },
   { id: "settings", label: "设置", icon: "Settings2", path: "/settings" },
 ];
 
@@ -35,6 +37,7 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   BarChart3,
   Target,
   FolderKanban,
+  Puzzle,
   Trash2,
   Settings2,
 };

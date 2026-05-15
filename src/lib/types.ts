@@ -122,7 +122,7 @@ export interface PluginRegistry {
   updatedAt: number;
 }
 
-export type PageId = "dashboard" | "capture" | "planner" | "focus" | "review" | "projects" | "trash" | "settings" | "goals" | "today";
+export type PageId = "dashboard" | "capture" | "planner" | "focus" | "review" | "projects" | "trash" | "settings" | "goals" | "today" | "plugins";
 
 
 export interface TabItem {

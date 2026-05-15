@@ -140,6 +140,37 @@ export async function executeTransaction<T>(
   throw lastError ?? new Error("TRANSACTION_FAILED");
 }
 
+export async function writeWithRetry<T>(
+  operation: () => Promise<T>,
+  options: { maxRetries?: number; context?: string } = {}
+): Promise<T> {
+  const { maxRetries = 3, context = "" } = options;
+  let lastError: Error | null = null;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await operation();
+    } catch (err) {
+      lastError = err as Error;
+
+      if (
+        (err as Error).name === "QuotaExceededError" ||
+        (err as Error).name === "VersionError"
+      ) {
+        throw err;
+      }
+
+      if (attempt < maxRetries) {
+        const delay = 100 * Math.pow(2, attempt - 1);
+        console.warn(`[DB] ${context} 第${attempt}次失败，${delay}ms后重试...`);
+        await new Promise((r) => setTimeout(r, delay));
+      }
+    }
+  }
+
+  throw lastError ?? new Error("WRITE_FAILED");
+}
+
 // ─── Database Initialization ────────────────────────────────
 
 export async function initializeDatabase(): Promise<{
@@ -381,18 +412,24 @@ export async function createTask(
   data: Omit<Task, "id" | "createdAt" | "updatedAt">
 ): Promise<number> {
   const now = Date.now();
-  return db.tasks.add({
-    ...data,
-    createdAt: now,
-    updatedAt: now,
-  });
+  return writeWithRetry(
+    () => db.tasks.add({
+      ...data,
+      createdAt: now,
+      updatedAt: now,
+    }),
+    { context: `createTask(${data.title})` }
+  );
 }
 
 export async function updateTask(
   id: number,
   updates: Partial<Omit<Task, "id" | "createdAt">>
 ): Promise<void> {
-  await db.tasks.update(id, { ...updates, updatedAt: Date.now() });
+  return writeWithRetry(
+    async () => { await db.tasks.update(id, { ...updates, updatedAt: Date.now() }); },
+    { context: `updateTask(${id})` }
+  );
 }
 
 export async function getTask(id: number): Promise<Task | undefined> {
@@ -490,7 +527,10 @@ export async function getTaskTree(type: Task["type"]): Promise<TaskTreeNode[]> {
 }
 
 export async function deleteTask(id: number): Promise<void> {
-  await db.tasks.update(id, { status: "archived", updatedAt: Date.now() });
+  return writeWithRetry(
+    async () => { await db.tasks.update(id, { status: "archived", updatedAt: Date.now() }); },
+    { context: `deleteTask(${id})` }
+  );
 }
 
 export async function restoreTask(id: number): Promise<void> {
@@ -611,7 +651,10 @@ export async function checkInHabit(taskId: number): Promise<{
     createdAt: Date.now(),
   };
 
-  const id = await db.habit_logs.add(record);
+  const id = await writeWithRetry(
+    () => db.habit_logs.add(record),
+    { context: `checkInHabit(${taskId})` }
+  );
   record.id = id;
 
   return { success: true, record, message: "Check-in successful" };

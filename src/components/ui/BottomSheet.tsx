@@ -7,7 +7,8 @@ import {
   useEffect,
   type ReactNode,
 } from "react";
-import { motion, useMotionValue, useTransform, animate } from "framer-motion";
+import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "framer-motion";
+import { Maximize2 } from "lucide-react";
 
 interface BottomSheetProps {
   children: ReactNode;
@@ -16,6 +17,8 @@ interface BottomSheetProps {
   headerContent?: ReactNode;
   className?: string;
   onSnapChange?: (index: number) => void;
+  open: boolean;
+  onClose?: () => void;
 }
 
 export function BottomSheet({
@@ -25,6 +28,8 @@ export function BottomSheet({
   headerContent,
   className = "",
   onSnapChange,
+  open,
+  onClose,
 }: BottomSheetProps) {
   const [currentSnap, setCurrentSnap] = useState(defaultSnap);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -86,9 +91,9 @@ export function BottomSheet({
 
       const containerHeight = containerRef.current.clientHeight;
       const maxOpen = containerHeight * (1 - snapPoints[snapPoints.length - 1] / 100);
-      const minOpen = containerHeight * (1 - snapPoints[0] / 100);
+      const maxDown = containerHeight * 0.7;
 
-      const clampedY = Math.max(maxOpen, Math.min(minOpen, newY));
+      const clampedY = Math.max(maxOpen, Math.min(maxDown, newY));
       y.set(clampedY);
     },
     [snapPoints, y]
@@ -97,6 +102,14 @@ export function BottomSheet({
   const handleDragEnd = useCallback(
     (_: unknown, info: { velocity: { y: number } }) => {
       const currentY = y.get();
+      if (!containerRef.current) return;
+      const containerHeight = containerRef.current.clientHeight;
+
+      if (info.velocity.y > 500 || currentY > containerHeight * 0.6) {
+        onClose?.();
+        return;
+      }
+
       const snapIndex = findClosestSnap(currentY, info.velocity.y);
       const targetOffset = getSnapOffset(snapIndex);
 
@@ -108,8 +121,20 @@ export function BottomSheet({
       setCurrentSnap(snapIndex);
       onSnapChange?.(snapIndex);
     },
-    [findClosestSnap, getSnapOffset, onSnapChange, y]
+    [findClosestSnap, getSnapOffset, onClose, onSnapChange, y]
   );
+
+  const handleExpandToFull = useCallback(() => {
+    const maxIndex = snapPoints.length - 1;
+    const offset = getSnapOffset(maxIndex);
+    animate(y, offset, {
+      type: "spring",
+      stiffness: 300,
+      damping: 30,
+    });
+    setCurrentSnap(maxIndex);
+    onSnapChange?.(maxIndex);
+  }, [getSnapOffset, onSnapChange, snapPoints.length, y]);
 
   const handleSnapToggle = useCallback(() => {
     if (currentSnap === 0) {
@@ -136,6 +161,8 @@ export function BottomSheet({
 
   const sheetTop = useTransform(y, (v) => `${Math.max(0, v)}px`);
 
+  const isAtMaxSnap = currentSnap === snapPoints.length - 1;
+
   useEffect(() => {
     const offset = getSnapOffset(defaultSnap);
     y.set(offset);
@@ -143,44 +170,82 @@ export function BottomSheet({
   }, []);
 
   return (
-    <div ref={containerRef} className={`fixed inset-x-0 bottom-0 z-40 ${className}`}>
-      <div className="relative h-full w-full pointer-events-none">
-        <motion.div
-          drag="y"
-          dragConstraints={containerRef}
-          dragElastic={0}
-          dragMomentum={false}
-          className="absolute inset-x-0 pointer-events-auto"
-          style={{
-            top: sheetTop,
-            bottom: 0,
-          }}
-          onDragStart={handleDragStart}
-          onDrag={handleDrag}
-          onDragEnd={handleDragEnd}
-        >
-          <div className="flex flex-col h-full bg-[var(--card-bg)] rounded-t-2xl shadow-2xl border-t border-[var(--card-border)]">
+    <AnimatePresence>
+      {open && (
+        <>
+          <motion.div
+            key="bottom-sheet-backdrop"
+            className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => onClose?.()}
+          />
+
+          <motion.div
+            key="bottom-sheet"
+            className={`fixed inset-x-0 bottom-0 z-50 ${className}`}
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            exit={{ y: "100%" }}
+            transition={{ type: "spring", damping: 30, stiffness: 300 }}
+          >
             <div
-              className="flex-shrink-0 pt-3 pb-1 cursor-grab active:cursor-grabbing touch-none"
-              onClick={handleSnapToggle}
+              ref={containerRef}
+              className="relative h-screen w-full pointer-events-none"
             >
-              <div className="w-10 h-1 rounded-full bg-gray-300 dark:bg-gray-600 mx-auto" />
-            </div>
+              <motion.div
+                drag="y"
+                dragConstraints={containerRef}
+                dragElastic={0}
+                dragMomentum={false}
+                className="absolute inset-x-0 pointer-events-auto"
+                style={{
+                  top: sheetTop,
+                  bottom: 0,
+                }}
+                onDragStart={handleDragStart}
+                onDrag={handleDrag}
+                onDragEnd={handleDragEnd}
+              >
+                <div className="flex flex-col h-full bg-[var(--card-bg)] rounded-t-2xl shadow-2xl border-t border-[var(--card-border)]">
+                  <div
+                    className="flex-shrink-0 pt-3 pb-1 cursor-grab active:cursor-grabbing touch-none relative"
+                    onClick={handleSnapToggle}
+                  >
+                    <div className="w-10 h-1 rounded-full bg-gray-300 dark:bg-gray-600 mx-auto" />
 
-            {headerContent && (
-              <div className="flex-shrink-0 px-4 py-2 border-b border-[var(--card-border)]">
-                {headerContent}
-              </div>
-            )}
+                    {!isAtMaxSnap && (
+                      <button
+                        type="button"
+                        className="absolute right-4 top-1.5 p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleExpandToFull();
+                        }}
+                      >
+                        <Maximize2 className="w-4 h-4 text-gray-500" />
+                      </button>
+                    )}
+                  </div>
 
-            <div className="flex-1 overflow-hidden">
-              <div className="h-full overflow-y-auto overscroll-contain">
-                {children}
-              </div>
+                  {headerContent && (
+                    <div className="flex-shrink-0 px-4 py-2 border-b border-[var(--card-border)]">
+                      {headerContent}
+                    </div>
+                  )}
+
+                  <div className="flex-1 overflow-hidden">
+                    <div className="h-full overflow-y-auto overscroll-contain">
+                      {children}
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
             </div>
-          </div>
-        </motion.div>
-      </div>
-    </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
   );
 }

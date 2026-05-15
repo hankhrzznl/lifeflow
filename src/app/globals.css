@@ -88,6 +88,10 @@
   --foreground: #0f172a;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --bg-primary: var(--background);
+  --bg-secondary: #ffffff;
+  --text-primary: var(--foreground);
+  --text-secondary: #64748b;
   --card-bg: #ffffff;
   --card-border: #e2e8f0;
   --muted: #94a3b8;
@@ -104,6 +108,10 @@
     --foreground: #e2e8f0;
     --color-background: var(--background);
     --color-foreground: var(--foreground);
+    --bg-primary: var(--background);
+    --bg-secondary: #1e293b;
+    --text-primary: var(--foreground);
+    --text-secondary: #94a3b8;
     --card-bg: #1e293b;
     --card-border: #334155;
     --muted: #64748b;

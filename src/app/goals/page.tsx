@@ -16,6 +16,7 @@ import {
   Trash2,
   Clock,
   RotateCcw,
+  Zap,
 } from "lucide-react";
 import {
   getTaskTree,
@@ -787,6 +788,26 @@ function HabitCard({
   );
 }
 
+function useDayTransitionGuard(): { dayChanged: boolean; dismissOverlay: () => void } {
+  const [dayChanged, setDayChanged] = useState(false);
+  const todayRef = useRef(getLocalDateStr(new Date()));
+
+  useEffect(() => {
+    const check = () => {
+      const newToday = getLocalDateStr(new Date());
+      if (newToday !== todayRef.current) {
+        todayRef.current = newToday;
+        setDayChanged(true);
+        setTimeout(() => setDayChanged(false), 5000);
+      }
+    };
+    const interval = setInterval(check, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return { dayChanged, dismissOverlay: () => setDayChanged(false) };
+}
+
 export default function GoalsPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -817,6 +838,8 @@ export default function GoalsPage() {
 
   const [shorttermFilter, setShorttermFilter] = useState<ShortTermFilter>("全部");
   const [shorttermCelebrationShrunk, setShorttermCelebrationShrunk] = useState(false);
+
+  const { dayChanged, dismissOverlay } = useDayTransitionGuard();
 
   const showToast = useCallback((message: string, type: "success" | "error" = "success") => {
     setToast({ message, type });
@@ -1397,59 +1420,96 @@ export default function GoalsPage() {
     if (loading) return <HabitListSkeleton />;
     if (error) return <ErrorStateView onRetry={loadHabits} />;
 
-    if (habits.length === 0) {
-      return (
-        <EmptyStateView
-          icon={Flame}
-          title="培养一个好习惯"
-          description="每天打卡，见证坚持的力量"
-          actionLabel="创建新习惯"
-          onAction={handleMainAddClick}
-        />
-      );
-    }
-
     const allDoneToday =
       habits.length > 0 &&
       habits.every((h) => todayCheckedHabits.has(h.id!));
 
     return (
-      <div className="px-4 py-4">
+      <>
         <AnimatePresence>
-          {showAddForm && (
-            <AddTaskForm
-              placeholder="输入习惯名称"
-              onSubmit={(title) => handleAddTask(title, "habits")}
-              onCancel={() => setShowAddForm(false)}
-              typeLabel="习惯"
-            />
+          {dayChanged && currentView === "habits" && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 bg-black/20 backdrop-blur-sm flex items-center justify-center"
+              onClick={dismissOverlay}
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-xl mx-4 max-w-sm text-center"
+              >
+                <div className="w-12 h-12 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center mx-auto mb-3">
+                  <Zap className="w-6 h-6 text-indigo-500" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">
+                  日期已变更
+                </h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                  新的一天开始了，请刷新习惯数据
+                </p>
+                <button
+                  onClick={async () => {
+                    dismissOverlay();
+                    await loadHabits();
+                  }}
+                  className="w-full py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition-colors"
+                >
+                  刷新数据
+                </button>
+              </motion.div>
+            </motion.div>
           )}
         </AnimatePresence>
+        {habits.length === 0 ? (
+          <EmptyStateView
+            icon={Flame}
+            title="培养一个好习惯"
+            description="每天打卡，见证坚持的力量"
+            actionLabel="创建新习惯"
+            onAction={handleMainAddClick}
+          />
+        ) : (
+          <div className="px-4 py-4">
+            <AnimatePresence>
+              {showAddForm && (
+                <AddTaskForm
+                  placeholder="输入习惯名称"
+                  onSubmit={(title) => handleAddTask(title, "habits")}
+                  onCancel={() => setShowAddForm(false)}
+                  typeLabel="习惯"
+                />
+              )}
+            </AnimatePresence>
 
-        <div className="space-y-3">
-          {habits.map((habit, i) => (
-            <HabitCard
-              key={habit.id}
-              task={habit}
-              streak={habitStreaks.get(habit.id!) ?? 0}
-              todayChecked={todayCheckedHabits.has(habit.id!)}
-              onCheckIn={handleCheckIn}
-              onDelete={handleDeleteTask}
-              celebrateIndex={allDoneToday ? i : undefined}
-            />
-          ))}
-        </div>
+            <div className="space-y-3">
+              {habits.map((habit, i) => (
+                <HabitCard
+                  key={habit.id}
+                  task={habit}
+                  streak={habitStreaks.get(habit.id!) ?? 0}
+                  todayChecked={todayCheckedHabits.has(habit.id!)}
+                  onCheckIn={handleCheckIn}
+                  onDelete={handleDeleteTask}
+                  celebrateIndex={allDoneToday ? i : undefined}
+                />
+              ))}
+            </div>
 
-        {!showAddForm && (
-          <button
-            onClick={handleMainAddClick}
-            className="mt-3 w-full flex items-center justify-center gap-1.5 py-3 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-700 text-sm text-gray-500 dark:text-gray-400 hover:border-indigo-300 dark:hover:border-indigo-700 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            添加新习惯
-          </button>
+            {!showAddForm && (
+              <button
+                onClick={handleMainAddClick}
+                className="mt-3 w-full flex items-center justify-center gap-1.5 py-3 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-700 text-sm text-gray-500 dark:text-gray-400 hover:border-indigo-300 dark:hover:border-indigo-700 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                添加新习惯
+              </button>
+            )}
+          </div>
         )}
-      </div>
+      </>
     );
   };
 

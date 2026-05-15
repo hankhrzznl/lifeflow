@@ -1266,7 +1266,7 @@ export default function PlannerPage() {
             onEventClick={openEditModal}
           />
         </div>
-        <BottomSheet snapPoints={[25, 50, 85]} defaultSnap={1}>
+        <BottomSheet snapPoints={[25, 50, 85]} defaultSnap={1} open={true}>
           <div className="h-full overflow-y-auto overscroll-contain">
             {mobileTimelineGrid}
           </div>

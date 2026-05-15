@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Inbox, Send, Trash2, Calendar, X } from "lucide-react";
+import { Inbox, Send, Trash2, Calendar, X, Target, Mountain, CalendarDays, ClipboardList, Flame, CheckSquare, XCircle } from "lucide-react";
 import { createTask, deleteTask, restoreTask, updateTask, getTasksByType } from "@/lib/db";
-import type { Task } from "@/lib/types";
+import type { Task, GoalViewType } from "@/lib/types";
 import { showToast } from "@/components/ui/Toast";
 
 function relativeTime(timestamp: number): string {
@@ -23,6 +23,13 @@ function relativeTime(timestamp: number): string {
 const SWIPE_THRESHOLD = 80;
 const SWIPE_MAX = 160;
 
+const GOAL_TYPES: { type: GoalViewType; label: string; desc: string; icon: typeof Mountain; color: string }[] = [
+  { type: "longterm", label: "长期目标", desc: "成为一个更大目标的里程碑", icon: Mountain, color: "text-indigo-600" },
+  { type: "shortterm", label: "短期事件", desc: "作为独立事件执行", icon: CalendarDays, color: "text-blue-600" },
+  { type: "daily", label: "日常琐事", desc: "转为每天重复的待办", icon: ClipboardList, color: "text-green-600" },
+  { type: "habits", label: "习惯追踪", desc: "建立一个新的日常习惯", icon: Flame, color: "text-orange-600" },
+];
+
 export default function CapturePage() {
   const [content, setContent] = useState("");
   const [tags, setTags] = useState<string[]>([]);
@@ -38,6 +45,11 @@ export default function CapturePage() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const touchStartXRef = useRef(0);
   const activeSwipeIdRef = useRef<number | null>(null);
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const [assignTargetId, setAssignTargetId] = useState<number | null>(null);
+  const [batchMode, setBatchMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
   const loadItems = useCallback(async () => {
     const all = await getTasksByType("daily");
@@ -118,10 +130,108 @@ export default function CapturePage() {
     try {
       await updateTask(id, { status: "done" });
       await loadItems();
-    } catch (err) {
-      console.error("规划失败:", err);
+    } catch {
+      // fail silently
     }
   };
+
+  const handleAssignGoal = async (targetType: GoalViewType) => {
+    const captureId = assignTargetId;
+    if (!captureId) return;
+    setAssignTargetId(null);
+    setSwipedId(null);
+    setSwipeOffset(0);
+    activeSwipeIdRef.current = null;
+
+    try {
+      const item = allActiveRef.current.find((t) => t.id === captureId);
+      if (!item) return;
+
+      const taskType = targetType === "habits" ? "habit" : targetType;
+      await createTask({
+        title: item.title,
+        type: taskType,
+        status: "active",
+        tags: item.tags,
+      });
+
+      await updateTask(captureId, { status: "done" });
+
+      showToast({
+        message: `已分配到「${GOAL_TYPES.find((g) => g.type === targetType)?.label}」`,
+        type: "success",
+      });
+
+      await loadItems();
+    } catch {
+      showToast({ message: "分配失败，请重试", type: "error" });
+    }
+  };
+
+  const handleAssignClick = (id: number) => {
+    setAssignTargetId(id);
+  };
+
+  const toggleBatchSelect = (id: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const enterBatchMode = () => {
+    setBatchMode(true);
+    setSwipedId(null);
+    setSwipeOffset(0);
+    activeSwipeIdRef.current = null;
+  };
+
+  const exitBatchMode = () => {
+    setBatchMode(false);
+    setSelectedIds(new Set());
+  };
+
+  const handleBatchDelete = async () => {
+    if (selectedIds.size === 0) return;
+    const ids = [...selectedIds];
+    try {
+      for (const id of ids) await deleteTask(id);
+      showToast({
+        message: `已批量删除 ${ids.length} 条`,
+        type: "info",
+        undoAction: async () => {
+          for (const id of ids) await restoreTask(id);
+          await loadItems();
+        },
+      });
+      exitBatchMode();
+      await loadItems();
+    } catch {
+      showToast({ message: "批量删除失败", type: "error" });
+    }
+  };
+
+  const handleLongPressStart = useCallback((id: number) => {
+    if (batchMode) return;
+    longPressTimerRef.current = setTimeout(() => {
+      enterBatchMode();
+      setSelectedIds(new Set([id]));
+    }, 500);
+  }, [batchMode]);
+
+  const handleLongPressEnd = useCallback(() => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+    };
+  }, []);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -279,6 +389,86 @@ export default function CapturePage() {
         </motion.button>
       </motion.div>
 
+      <AnimatePresence>
+        {batchMode && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="mb-3 px-4 py-2 bg-indigo-50 dark:bg-indigo-900/30 rounded-xl flex items-center justify-between"
+          >
+            <span className="text-sm font-medium text-indigo-700 dark:text-indigo-300">
+              已选 {selectedIds.size} 项
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleBatchDelete}
+                disabled={selectedIds.size === 0}
+                className="flex items-center gap-1 text-xs font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 px-3 py-1.5 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors disabled:opacity-40"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                删除
+              </button>
+              <button
+                onClick={exitBatchMode}
+                className="flex items-center gap-1 text-xs font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-3 py-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+              >
+                <XCircle className="w-3.5 h-3.5" />
+                取消
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {assignTargetId !== null && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-end justify-center"
+            onClick={() => setAssignTargetId(null)}
+          >
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", stiffness: 400, damping: 40 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-lg bg-white dark:bg-gray-900 rounded-t-2xl p-6"
+            >
+              <div className="w-10 h-1 bg-gray-300 dark:bg-gray-700 rounded-full mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">分配目标</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">选择要将这条想法分配到的目标类型</p>
+              <div className="space-y-2">
+                {GOAL_TYPES.map(({ type, label, desc, icon: Icon, color }) => (
+                  <button
+                    key={type}
+                    onClick={() => handleAssignGoal(type)}
+                    className="w-full flex items-center gap-4 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left"
+                  >
+                    <div className={`w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center ${color}`}>
+                      <Icon className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{label}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{desc}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={() => setAssignTargetId(null)}
+                className="mt-4 w-full py-3 rounded-xl border border-gray-200 dark:border-gray-700 text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              >
+                取消
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="flex-1 overflow-y-auto -mx-4 px-4 scrollbar-hide">
         <AnimatePresence mode="popLayout">
           {items.length === 0 ? (
@@ -319,13 +509,19 @@ export default function CapturePage() {
                   <div className="absolute inset-y-0 right-0 flex">
                     <button
                       onClick={() => handlePlan(item.id!)}
-                      className="w-20 bg-indigo-500 text-white flex items-center justify-center transition-colors hover:bg-indigo-600"
+                      className="w-16 bg-emerald-500 text-white flex items-center justify-center transition-colors hover:bg-emerald-600"
                     >
                       <Calendar className="w-5 h-5" />
                     </button>
                     <button
+                      onClick={() => handleAssignClick(item.id!)}
+                      className="w-16 bg-indigo-500 text-white flex items-center justify-center transition-colors hover:bg-indigo-600"
+                    >
+                      <Target className="w-5 h-5" />
+                    </button>
+                    <button
                       onClick={() => handleDelete(item.id!)}
-                      className="w-20 bg-red-500 text-white flex items-center justify-center rounded-r-2xl transition-colors hover:bg-red-600"
+                      className="w-16 bg-red-500 text-white flex items-center justify-center rounded-r-2xl transition-colors hover:bg-red-600"
                     >
                       <Trash2 className="w-5 h-5" />
                     </button>
@@ -339,13 +535,45 @@ export default function CapturePage() {
                         ? { type: "spring", stiffness: 600, damping: 40 }
                         : { type: "spring", stiffness: 500, damping: 35 }
                     }
-                    onTouchStart={(e) => handleTouchStart(item.id!, e)}
-                    onTouchMove={handleTouchMove}
-                    onTouchEnd={handleTouchEnd}
+                    onTouchStart={(e) => {
+                      if (batchMode) return;
+                      handleTouchStart(item.id!, e);
+                      handleLongPressStart(item.id!);
+                    }}
+                    onTouchMove={(e) => {
+                      handleLongPressEnd();
+                      if (batchMode) return;
+                      handleTouchMove(e);
+                    }}
+                    onTouchEnd={() => {
+                      handleLongPressEnd();
+                      if (batchMode) return;
+                      handleTouchEnd();
+                    }}
+                    onMouseDown={() => handleLongPressStart(item.id!)}
+                    onMouseUp={handleLongPressEnd}
+                    onMouseLeave={handleLongPressEnd}
                     onClick={() => {
+                      if (batchMode) {
+                        toggleBatchSelect(item.id!);
+                        return;
+                      }
                       if (isSwiped) closeSwipe();
                     }}
                   >
+                    {batchMode && (
+                      <div className="flex items-center gap-3 mb-1">
+                        <div
+                          className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-colors ${
+                            selectedIds.has(item.id!)
+                              ? "bg-indigo-600 border-indigo-600"
+                              : "border-gray-300 dark:border-gray-600"
+                          }`}
+                        >
+                          {selectedIds.has(item.id!) && <CheckSquare className="w-3.5 h-3.5 text-white" />}
+                        </div>
+                      </div>
+                    )}
                     <p className="text-gray-800 dark:text-gray-200 text-sm leading-relaxed whitespace-pre-wrap break-words">
                       {item.title}
                     </p>

@@ -32,7 +32,7 @@ export function ToastContainer() {
     if (toast.duration !== 0) {
       setTimeout(() => {
         setToasts((prev) => prev.filter((t) => t.id !== id));
-      }, toast.duration ?? 3000);
+      }, toast.duration ?? 5000);
     }
   }, []);
 
@@ -55,16 +55,16 @@ export function ToastContainer() {
   };
 
   return (
-    <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] flex flex-col gap-2">
+    <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-[100] flex flex-col gap-2 pointer-events-none">
       <AnimatePresence>
         {toasts.map((toast) => (
           <motion.div
             key={toast.id}
-            initial={{ opacity: 0, y: -20, scale: 0.9 }}
+            initial={{ opacity: 0, y: 20, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -20, scale: 0.9 }}
+            exit={{ opacity: 0, y: 20, scale: 0.9 }}
             transition={{ type: "spring", stiffness: 500, damping: 30 }}
-            className={`${typeStyles[toast.type]} px-4 py-3 rounded-2xl shadow-lg flex items-center gap-3 min-w-[280px] max-w-[360px]`}
+            className={`${typeStyles[toast.type]} px-4 py-3 rounded-2xl shadow-lg flex items-center gap-3 min-w-[280px] max-w-[360px] pointer-events-auto`}
           >
             <span className="text-sm flex-1">{toast.message}</span>
             {toast.undoAction && (

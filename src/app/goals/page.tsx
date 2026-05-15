@@ -841,6 +841,7 @@ export default function GoalsPage() {
   const [toast, setToast] = useState<ToastFeedback | null>(null);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const tabDirection = useRef<number>(0);
+  const [tabAnimDir, setTabAnimDir] = useState(0);
 
   const [shorttermFilter, setShorttermFilter] = useState<ShortTermFilter>("全部");
   const [shorttermCelebrationShrunk, setShorttermCelebrationShrunk] = useState(false);
@@ -865,13 +866,13 @@ export default function GoalsPage() {
 
   useEffect(() => {
     if (allShorttermDone) {
-      setShorttermCelebrationShrunk(false);
+      requestAnimationFrame(() => setShorttermCelebrationShrunk(false));
       const timer = setTimeout(() => {
         setShorttermCelebrationShrunk(true);
       }, 5000);
       return () => clearTimeout(timer);
     } else {
-      setShorttermCelebrationShrunk(false);
+      requestAnimationFrame(() => setShorttermCelebrationShrunk(false));
     }
   }, [allShorttermDone]);
 
@@ -893,6 +894,7 @@ export default function GoalsPage() {
       const oldIdx = TABS.findIndex((t) => t.key === currentView);
       const newIdx = TABS.findIndex((t) => t.key === view);
       tabDirection.current = newIdx > oldIdx ? 1 : -1;
+      setTabAnimDir(newIdx > oldIdx ? 1 : -1);
       router.push(`/goals?view=${view}`);
       setShowAddForm(false);
       setAddFormParentId(null);
@@ -1548,15 +1550,14 @@ export default function GoalsPage() {
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        <AnimatePresence mode="wait" custom={tabDirection.current}>
+        <AnimatePresence mode="wait" custom={tabAnimDir}>
           <motion.div
             key={currentView}
-            custom={tabDirection.current}
-            initial={{ opacity: 0, x: tabDirection.current > 0 ? 30 : -30 }}
+            custom={tabAnimDir}
+            initial={{ opacity: 0, x: tabAnimDir > 0 ? 30 : -30 }}
             animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: tabDirection.current > 0 ? -30 : 30 }}
-            transition={{ duration: 0.25, ease: [0.32, 0.72, 0, 1] }}
-          >
+            exit={{ opacity: 0, x: tabAnimDir > 0 ? -30 : 30 }}
+            transition={{ duration: 0.25, ease: [0.32, 0.72, 0, 1] }}>
             {currentView === "longterm" && renderLongtermView()}
             {currentView === "shortterm" && renderShorttermView()}
             {currentView === "daily" && renderDailyView()}

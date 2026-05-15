@@ -512,9 +512,6 @@ export default function TodayPage() {
     return () => clearInterval(interval);
   }, [isToday, dayStart, goToday]);
 
-  if (error) return <ErrorState onRetry={loadData} />;
-  if (loading) return <LoadingSkeleton />;
-
   const clippedTasks = tasks
     .filter((t) => t.type === "shortterm" || t.type === "daily")
     .map((t) => {
@@ -531,8 +528,11 @@ export default function TodayPage() {
       const timer = setTimeout(() => setAllDoneBannerShrunk(true), 5000);
       return () => clearTimeout(timer);
     }
-    setAllDoneBannerShrunk(false);
+    requestAnimationFrame(() => setAllDoneBannerShrunk(false));
   }, [allDone]);
+
+  if (error) return <ErrorState onRetry={loadData} />;
+  if (loading) return <LoadingSkeleton />;
 
   return (
     <div className="flex flex-col h-full max-h-screen max-w-4xl mx-auto">

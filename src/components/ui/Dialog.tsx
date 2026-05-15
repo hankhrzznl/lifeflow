@@ -53,10 +53,10 @@ export default function Dialog({
   const currentInputValue = isControlled ? externalInputValue : internalInputValue;
 
   useEffect(() => {
-    if (externalInputValue !== undefined) {
-      setInternalInputValue(externalInputValue);
+    if (externalInputValue !== undefined && externalInputValue !== internalInputValue) {
+      requestAnimationFrame(() => setInternalInputValue(externalInputValue));
     }
-  }, [externalInputValue]);
+  }, [externalInputValue, internalInputValue]);
 
   const handleInputChange = (value: string) => {
     if (isControlled) {

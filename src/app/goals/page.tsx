@@ -702,6 +702,12 @@ function DailyTaskItem({
         {task.title}
       </span>
 
+      {task.note && !isFuture && (
+        <span className="flex-1 text-xs text-gray-400 dark:text-gray-500 line-clamp-1 ml-2 truncate max-w-[120px]">
+          {task.note}
+        </span>
+      )}
+
       {isFuture && (
         <Info className="w-3.5 h-3.5 text-gray-300 dark:text-gray-600" />
       )}

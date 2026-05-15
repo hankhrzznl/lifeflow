@@ -30,6 +30,7 @@ import {
   getAllHabits,
 } from "@/lib/db";
 import { showToast as globalShowToast } from "@/components/ui/Toast";
+import { PRIORITY_CONFIG } from "@/lib/types";
 import type { Task, GoalViewType } from "@/lib/types";
 
 interface TaskTreeNode extends Task {
@@ -483,6 +484,14 @@ function TreeNode({
           {node.title}
         </span>
 
+        {node.priority && (
+          <span
+            className="w-2 h-2 rounded-full flex-shrink-0"
+            style={{ backgroundColor: PRIORITY_CONFIG.find(p => p.key === node.priority)?.hex || '#6B7280' }}
+            title={PRIORITY_CONFIG.find(p => p.key === node.priority)?.label}
+          />
+        )}
+
         {node.isMilestone && (
           <span className="text-[10px] font-medium text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 px-1.5 py-0.5 rounded-md flex-shrink-0">
             里程碑
@@ -619,6 +628,14 @@ function ShortTermCard({
           {isDone && <Check className="w-3 h-3 text-white" />}
         </button>
 
+        {task.priority && (
+          <span
+            className="w-2 h-2 rounded-full flex-shrink-0"
+            style={{ backgroundColor: PRIORITY_CONFIG.find(p => p.key === task.priority)?.hex || '#6B7280' }}
+            title={PRIORITY_CONFIG.find(p => p.key === task.priority)?.label}
+          />
+        )}
+
         <div className="flex-1 min-w-0">
           <p
             className={`text-sm truncate ${
@@ -723,6 +740,14 @@ function DailyTaskItem({
         {isDone && <Check className="w-3 h-3 text-white" />}
       </button>
 
+      {task.priority && (
+        <span
+          className="w-2 h-2 rounded-full flex-shrink-0"
+          style={{ backgroundColor: PRIORITY_CONFIG.find(p => p.key === task.priority)?.hex || '#6B7280' }}
+          title={PRIORITY_CONFIG.find(p => p.key === task.priority)?.label}
+        />
+      )}
+
       <span
         className={`flex-1 text-sm ${
           isDone
@@ -773,6 +798,13 @@ function HabitCard({
         <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center flex-shrink-0">
           <Flame className="w-4 h-4 text-white" />
         </div>
+        {task.priority && (
+          <span
+            className="w-2 h-2 rounded-full flex-shrink-0"
+            style={{ backgroundColor: PRIORITY_CONFIG.find(p => p.key === task.priority)?.hex || '#6B7280' }}
+            title={PRIORITY_CONFIG.find(p => p.key === task.priority)?.label}
+          />
+        )}
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
             {task.title}

@@ -104,7 +104,7 @@ export interface Task {
   captureSourceId?: number;
   focusSessions?: number[];
   tags?: string[];
-  priority?: 'low' | 'medium' | 'high';
+  priority?: 'urgent-important' | 'not-urgent-important' | 'urgent-not-important' | 'not-urgent-not-important';
   createdAt: number;
   updatedAt: number;
   order?: number;
@@ -173,3 +173,12 @@ export interface PluginMetadata {
 export type GoalViewType = 'long-term' | 'short-term' | 'daily-trivial' | 'habits';
 
 export type GoalTab = 'long-term' | 'short-term' | 'daily-trivial' | 'habits';
+
+export type Priority = 'urgent-important' | 'not-urgent-important' | 'urgent-not-important' | 'not-urgent-not-important';
+
+export const PRIORITY_CONFIG: { key: Priority; label: string; color: string; bg: string; hex: string }[] = [
+  { key: 'urgent-important', label: '重要且紧急', color: 'text-red-600', bg: 'bg-red-100', hex: '#EF4444' },
+  { key: 'not-urgent-important', label: '重要不紧急', color: 'text-blue-600', bg: 'bg-blue-100', hex: '#3B82F6' },
+  { key: 'urgent-not-important', label: '不重要但紧急', color: 'text-amber-600', bg: 'bg-amber-100', hex: '#F59E0B' },
+  { key: 'not-urgent-not-important', label: '不重要不紧急', color: 'text-gray-500', bg: 'bg-gray-100', hex: '#6B7280' },
+];

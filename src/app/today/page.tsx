@@ -16,6 +16,7 @@ import {
   getAllProjects,
 } from "@/lib/db";
 import type { Task, LegacyProject } from "@/lib/types";
+import { PRIORITY_CONFIG } from "@/lib/types";
 
 const SLOT_HEIGHT = 32;
 const MINUTES_PER_SLOT = 15;
@@ -244,7 +245,8 @@ function TimelineEventBlock({
   const start = task._clippedStart ?? task.startTime!;
   const end = task._clippedEnd ?? task.endTime!;
   const { top, height } = calculateEventPosition(start, end, dayStart);
-  const color = task.status === "done" ? "#10B981" : (projectColor || "#6366f1");
+  const priorityConfig = task.priority ? PRIORITY_CONFIG.find((p) => p.key === task.priority) : null;
+  const color = task.status === "done" ? "#10B981" : (priorityConfig?.hex) || (projectColor || "#6366f1");
 
   const typeLabel =
     task.type === "shortterm"
@@ -364,7 +366,8 @@ function TaskListItem({
   isHighlighted?: boolean;
   onClick: () => void;
 }) {
-  const color = projectColor || "#6366f1";
+  const priorityConfig = task.priority ? PRIORITY_CONFIG.find((p) => p.key === task.priority) : null;
+  const color = task.status === "done" ? "#10B981" : (priorityConfig?.hex) || (projectColor || "#6366f1");
 
   return (
     <div
@@ -378,6 +381,14 @@ function TaskListItem({
         className="w-1 h-8 rounded-full flex-shrink-0"
         style={{ backgroundColor: color }}
       />
+      {task.priority && priorityConfig && (
+        <span
+          className="text-[10px] font-medium px-1.5 py-0.5 rounded flex-shrink-0"
+          style={{ backgroundColor: `${priorityConfig.hex}18`, color: priorityConfig.hex }}
+        >
+          {priorityConfig.label}
+        </span>
+      )}
       <div className="flex-1 min-w-0">
         <p className={`text-sm truncate ${task.status === "done" ? "line-through text-gray-400" : "text-gray-900 dark:text-gray-100"}`}>
           {task.title}

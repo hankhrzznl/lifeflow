@@ -5,10 +5,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Inbox, Send, Trash2, X, Mountain,
   CalendarDays, ClipboardList, Flame, CheckSquare, XCircle,
-  ChevronRight,
+  ChevronRight, PlusCircle,
 } from "lucide-react";
 import { createTask, deleteTask, restoreTask, updateTask, getTasksByType, getAllProjectsV2, getBoardsByProject, getSectionsByBoard } from "@/lib/db";
-import type { Task, GoalViewType, ProjectV2, Board, Section } from "@/lib/types";
+import type { Task, GoalViewType, ProjectV2, Board, Section, Priority } from "@/lib/types";
+import { PRIORITY_CONFIG } from "@/lib/types";
 import { showToast } from "@/components/ui/Toast";
 
 function relativeTime(timestamp: number): string {
@@ -40,12 +41,6 @@ const GOAL_TYPES: { type: GoalViewType; label: string; desc: string; icon: typeo
   { type: "habits", label: "习惯追踪", desc: "建立一个新的日常习惯", icon: Flame, color: "text-orange-600" },
 ];
 
-const PRIORITY_OPTIONS = [
-  { key: "high", label: "高", color: "bg-red-100 text-red-600 border-red-300" },
-  { key: "medium", label: "中", color: "bg-amber-100 text-amber-600 border-amber-300" },
-  { key: "low", label: "低", color: "bg-green-100 text-green-600 border-green-300" },
-] as const;
-
 export default function CapturePage() {
   const [content, setContent] = useState("");
   const [tags, setTags] = useState<string[]>([]);
@@ -67,14 +62,19 @@ export default function CapturePage() {
   const [selectedClassification, setSelectedClassification] = useState<ClassificationType | null>(null);
   const [taskDraft, setTaskDraft] = useState<{
     title: string;
-    priority: "high" | "medium" | "low";
+    priority: Priority;
     projectId: number | null;
     boardId: number | null;
     sectionId: number | null;
     note: string;
     dueDate: string;
     successCriteria: string;
-  }>({ title: "", priority: "medium", projectId: null, boardId: null, sectionId: null, note: "", dueDate: "", successCriteria: "" });
+    startTime: string;
+    endTime: string;
+    frequency: "daily" | "weekly" | "monthly";
+    targetCount: string;
+    milestones: string[];
+  }>({ title: "", priority: "not-urgent-important", projectId: null, boardId: null, sectionId: null, note: "", dueDate: "", successCriteria: "", startTime: "", endTime: "", frequency: "daily", targetCount: "", milestones: [] });
 
   const [projects, setProjects] = useState<ProjectV2[]>([]);
   const [boards, setBoards] = useState<Board[]>([]);
@@ -156,13 +156,18 @@ export default function CapturePage() {
     setFlowPhase("classify");
     setTaskDraft({
       title: item.title,
-      priority: "medium",
+      priority: "not-urgent-important",
       projectId: null,
       boardId: null,
       sectionId: null,
       note: "",
       dueDate: "",
       successCriteria: "",
+      startTime: "",
+      endTime: "",
+      frequency: "daily",
+      targetCount: "",
+      milestones: [],
     });
   }, []);
 
@@ -204,34 +209,47 @@ export default function CapturePage() {
     setTaskDraft((d) => ({ ...d, sectionId }));
   }, []);
 
+  const addMilestone = () => setTaskDraft((d) => ({ ...d, milestones: [...d.milestones, ""] }));
+  const updateMilestone = (idx: number, value: string) => setTaskDraft((d) => {
+    const m = [...d.milestones]; m[idx] = value; return { ...d, milestones: m };
+  });
+  const removeMilestone = (idx: number) => setTaskDraft((d) => ({
+    ...d, milestones: d.milestones.filter((_, i) => i !== idx)
+  }));
+
   const handleTaskCreate = useCallback(async () => {
     if (!classifyTarget || !taskDraft.title.trim() || !selectedClassification) return;
-    const classification = selectedClassification;
+    const c = selectedClassification;
     const typeMap: Record<ClassificationType, Task["type"]> = {
-      "long-term": "longterm",
-      "short-term": "shortterm",
-      "daily-trivial": "daily",
-      "habits": "habit",
+      "long-term": "longterm", "short-term": "shortterm", "daily-trivial": "daily", "habits": "habit",
     };
-
     try {
       await createTask({
         title: taskDraft.title,
-        type: typeMap[classification],
-        classification: (classification === "habits" ? "habit" : classification) as Task["classification"],
+        type: typeMap[c],
+        classification: (c === "habits" ? "habit" : c) as Task["classification"],
         status: "active",
         priority: taskDraft.priority,
         sectionId: taskDraft.sectionId ?? undefined,
         note: taskDraft.note || undefined,
         successCriteria: taskDraft.successCriteria || undefined,
+        dueDate: taskDraft.dueDate ? new Date(taskDraft.dueDate).getTime() : undefined,
+        startTime: taskDraft.startTime ? new Date(taskDraft.startTime).getTime() : undefined,
+        endTime: taskDraft.endTime ? new Date(taskDraft.endTime).getTime() : undefined,
+        frequency: (c === "habits" ? taskDraft.frequency : undefined),
       });
+      if (taskDraft.milestones.some((m) => m.trim())) {
+        for (const m of taskDraft.milestones) {
+          if (m.trim()) {
+            await createTask({ title: m, type: "longterm", classification: "long-term", status: "active" });
+          }
+        }
+      }
       await updateTask(classifyTarget.id!, { status: "done" });
-      showToast({ message: `已创建为「${CLASSIFICATION_OPTIONS.find((o) => o.key === classification)?.label}」`, type: "success" });
+      showToast({ message: `已创建为「${CLASSIFICATION_OPTIONS.find((o) => o.key === c)?.label}」`, type: "success" });
       closeFlow();
       await loadItems();
-    } catch {
-      showToast({ message: "创建失败，请重试", type: "error" });
-    }
+    } catch { showToast({ message: "创建失败，请重试", type: "error" }); }
   }, [classifyTarget, taskDraft, selectedClassification, loadItems, closeFlow]);
 
   const handleAssignGoal = async (targetType: GoalViewType) => {
@@ -454,109 +472,146 @@ export default function CapturePage() {
       <AnimatePresence>
         {isCreateOpen && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-end justify-center" onClick={closeFlow}>
-            <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", stiffness: 400, damping: 40 }} onClick={(e) => e.stopPropagation()} className="w-full max-w-lg bg-white dark:bg-gray-900 rounded-t-2xl max-h-[85vh] overflow-y-auto">
+            <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", stiffness: 400, damping: 40 }} onClick={(e) => e.stopPropagation()} className="w-full max-w-lg bg-white dark:bg-gray-900 rounded-t-2xl">
               <div className="w-10 h-1 bg-gray-300 dark:bg-gray-700 rounded-full mx-auto mt-3 mb-1" />
-              <div className="px-6 pt-4 pb-6 space-y-4">
-                <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">创建任务</h3>
+              <div className="px-6 pt-4 pb-6 space-y-4 max-h-[70vh] overflow-y-auto">
+
+                <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">
+                  {selectedClassification === "long-term" && "创建长期目标"}
+                  {selectedClassification === "short-term" && "创建短期事件"}
+                  {selectedClassification === "daily-trivial" && "创建日常琐事"}
+                  {selectedClassification === "habits" && "创建习惯"}
+                </h3>
 
                 <div>
                   <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">标题</label>
                   <input
                     type="text" value={taskDraft.title}
                     onChange={(e) => setTaskDraft((d) => ({ ...d, title: e.target.value }))}
-                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="输入标题"
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400"
                     maxLength={200}
                   />
                 </div>
 
                 <div>
                   <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">优先级</label>
-                  <div className="flex gap-2">
-                    {PRIORITY_OPTIONS.map((opt) => (
+                  <div className="grid grid-cols-2 gap-2">
+                    {PRIORITY_CONFIG.map((opt) => (
                       <button
                         key={opt.key}
                         onClick={() => setTaskDraft((d) => ({ ...d, priority: opt.key }))}
-                        className={`flex-1 py-2 rounded-xl text-sm font-medium border transition-all ${
-                          taskDraft.priority === opt.key ? opt.color + " border-2" : "border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"
+                        className={`py-2.5 rounded-xl text-xs font-medium border transition-all ${
+                          taskDraft.priority === opt.key
+                            ? `${opt.bg} ${opt.color} border-2 border-current`
+                            : "border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"
                         }`}
                       >
+                        <span className="inline-block w-2 h-2 rounded-full mr-1.5" style={{ backgroundColor: opt.hex }} />
                         {opt.label}
                       </button>
                     ))}
                   </div>
                 </div>
 
+                {selectedClassification === "long-term" && (
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">成功标准 <span className="text-red-400">*</span></label>
+                    <textarea value={taskDraft.successCriteria} onChange={(e) => setTaskDraft((d) => ({ ...d, successCriteria: e.target.value }))} placeholder="如何判断这个目标已完成？" rows={2} className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400" maxLength={500} />
+                  </div>
+                )}
+
+                {selectedClassification === "long-term" && (
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">里程碑</label>
+                    <div className="space-y-2">
+                      {taskDraft.milestones.map((m, i) => (
+                        <div key={i} className="flex items-center gap-2">
+                          <input value={m} onChange={(e) => updateMilestone(i, e.target.value)} placeholder={`里程碑 ${i + 1}`} className="flex-1 px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                          <button onClick={() => removeMilestone(i)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400"><X className="w-4 h-4" /></button>
+                        </div>
+                      ))}
+                      <button onClick={addMilestone} className="flex items-center gap-1 text-xs text-indigo-500 hover:text-indigo-600 font-medium py-1"><PlusCircle className="w-3.5 h-3.5" />添加里程碑</button>
+                    </div>
+                  </div>
+                )}
+
+                {selectedClassification === "short-term" && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">开始时间 <span className="text-red-400">*</span></label>
+                      <input type="datetime-local" value={taskDraft.startTime} onChange={(e) => setTaskDraft((d) => ({ ...d, startTime: e.target.value }))} className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">结束时间 <span className="text-red-400">*</span></label>
+                      <input type="datetime-local" value={taskDraft.endTime} onChange={(e) => setTaskDraft((d) => ({ ...d, endTime: e.target.value }))} className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                  </div>
+                )}
+
+                {selectedClassification === "habits" && (
+                  <>
+                    <div>
+                      <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">频率</label>
+                      <div className="flex gap-2">
+                        {(["daily", "weekly", "monthly"] as const).map((f) => (
+                          <button key={f} onClick={() => setTaskDraft((d) => ({ ...d, frequency: f }))} className={`flex-1 py-2 rounded-xl text-sm font-medium border transition-all ${taskDraft.frequency === f ? "bg-orange-100 text-orange-600 border-orange-300" : "border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"}`}>
+                            {f === "daily" ? "每天" : f === "weekly" ? "每周" : "每月"}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">目标次数</label>
+                      <input type="number" value={taskDraft.targetCount} onChange={(e) => setTaskDraft((d) => ({ ...d, targetCount: e.target.value }))} placeholder={`每${taskDraft.frequency === "daily" ? "天" : taskDraft.frequency === "weekly" ? "周" : "月"}完成次数`} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                  </>
+                )}
+
+                {selectedClassification !== "daily-trivial" && (
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">截止日期</label>
+                    <input type="date" value={taskDraft.dueDate} onChange={(e) => setTaskDraft((d) => ({ ...d, dueDate: e.target.value }))} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  </div>
+                )}
+
                 <div>
                   <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">所属模块</label>
                   <div className="space-y-2">
-                    <select
-                      value={taskDraft.projectId ?? ""}
-                      onChange={(e) => handleProjectChange(e.target.value ? parseInt(e.target.value) : null)}
-                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">选择项目（可选）</option>
+                    <select value={taskDraft.projectId ?? ""} onChange={(e) => handleProjectChange(e.target.value ? parseInt(e.target.value) : null)} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                      <option value="">选择项目</option>
                       {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                     </select>
                     {boards.length > 0 && (
-                      <select
-                        value={taskDraft.boardId ?? ""}
-                        onChange={(e) => handleBoardChange(e.target.value ? parseInt(e.target.value) : null)}
-                        className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="">选择大模块（可选）</option>
+                      <select value={taskDraft.boardId ?? ""} onChange={(e) => handleBoardChange(e.target.value ? parseInt(e.target.value) : null)} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="">选择大模块</option>
                         {boards.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
                       </select>
                     )}
                     {sections.length > 0 && (
-                      <select
-                        value={taskDraft.sectionId ?? ""}
-                        onChange={(e) => handleSectionChange(e.target.value ? parseInt(e.target.value) : null)}
-                        className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="">选择子模块（可选）</option>
-                        {sections.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                      <select value={taskDraft.sectionId ?? ""} onChange={(e) => handleSectionChange(e.target.value ? parseInt(e.target.value) : null)} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="">选择子模块</option>
+                        {sections.map((s) => {
+                          const board = boards.find(b => b.id === s.boardId);
+                          const project = projects.find(p => p.id === board?.projectId);
+                          const path = [project?.name, board?.name, s.name].filter(Boolean).join(" > ");
+                          return <option key={s.id} value={s.id}>{path}</option>;
+                        })}
                       </select>
                     )}
                   </div>
                 </div>
 
                 <div>
-                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">截止日期</label>
-                  <input
-                    type="date" value={taskDraft.dueDate}
-                    onChange={(e) => setTaskDraft((d) => ({ ...d, dueDate: e.target.value }))}
-                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div>
                   <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">备注</label>
-                  <textarea
-                    value={taskDraft.note} rows={3}
-                    onChange={(e) => setTaskDraft((d) => ({ ...d, note: e.target.value }))}
-                    placeholder="添加备注信息..."
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400"
-                    maxLength={1000}
-                  />
+                  <textarea value={taskDraft.note} rows={2} onChange={(e) => setTaskDraft((d) => ({ ...d, note: e.target.value }))} placeholder="添加备注信息..." className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400" maxLength={1000} />
                 </div>
-
-                {selectedClassification && (
-                  <div>
-                    <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">成功标准</label>
-                    <textarea
-                      value={taskDraft.successCriteria} rows={2}
-                      onChange={(e) => setTaskDraft((d) => ({ ...d, successCriteria: e.target.value }))}
-                      placeholder="如何判断这个目标已完成？"
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400"
-                      maxLength={500}
-                    />
-                  </div>
-                )}
 
                 <div className="flex gap-3 pt-2">
                   <button onClick={closeFlow} className="flex-1 py-3 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">取消</button>
                   <button onClick={handleTaskCreate} disabled={!taskDraft.title.trim()} className="flex-1 py-3 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-40">创建任务</button>
                 </div>
+
               </div>
             </motion.div>
           </motion.div>

@@ -37,9 +37,9 @@ interface TaskTreeNode extends Task {
 }
 
 const TABS: { key: GoalViewType; label: string; icon: typeof Mountain }[] = [
-  { key: "longterm", label: "长期目标", icon: Mountain },
-  { key: "shortterm", label: "短期事件", icon: CalendarDays },
-  { key: "daily", label: "日常琐事", icon: ClipboardList },
+  { key: "long-term", label: "长期目标", icon: Mountain },
+  { key: "short-term", label: "短期事件", icon: CalendarDays },
+  { key: "daily-trivial", label: "日常琐事", icon: ClipboardList },
   { key: "habits", label: "习惯追踪", icon: Flame },
 ];
 
@@ -824,12 +824,12 @@ export default function GoalsPage() {
 
   const viewParam = searchParams.get("view");
   const currentView: GoalViewType =
-    viewParam === "longterm" ||
-    viewParam === "shortterm" ||
-    viewParam === "daily" ||
+    viewParam === "long-term" ||
+    viewParam === "short-term" ||
+    viewParam === "daily-trivial" ||
     viewParam === "habits"
       ? viewParam
-      : "longterm";
+      : "long-term";
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -978,13 +978,13 @@ export default function GoalsPage() {
   useEffect(() => {
     const load = async () => {
       switch (currentView) {
-        case "longterm":
+        case "long-term":
           await loadLongterm();
           break;
-        case "shortterm":
+        case "short-term":
           await loadShortterm();
           break;
-        case "daily":
+        case "daily-trivial":
           await loadDaily();
           break;
         case "habits":
@@ -1001,13 +1001,13 @@ export default function GoalsPage() {
       try {
         await updateTask(task.id!, { status: newStatus });
         switch (currentView) {
-          case "longterm":
+          case "long-term":
             await loadLongterm();
             break;
-          case "shortterm":
+          case "short-term":
             await loadShortterm();
             break;
-          case "daily":
+          case "daily-trivial":
             await loadDaily();
             break;
         }
@@ -1021,7 +1021,7 @@ export default function GoalsPage() {
   const handleAddTask = useCallback(
     async (title: string, viewType: GoalViewType, parentTaskId?: number) => {
       try {
-        const taskType = viewType === "habits" ? "habit" : viewType;
+        const taskType = viewType === "habits" ? "habit" as const : viewType === "long-term" ? "longterm" as const : viewType === "short-term" ? "shortterm" as const : "daily" as const;
         const taskData: Omit<Task, "id" | "createdAt" | "updatedAt"> = {
           title,
           type: taskType,
@@ -1032,7 +1032,7 @@ export default function GoalsPage() {
           taskData.parentTaskId = parentTaskId;
         }
 
-        if (viewType === "daily") {
+        if (viewType === "daily-trivial") {
           const { start, end } = getTodayRange();
           taskData.startTime = start;
           taskData.endTime = end;
@@ -1043,13 +1043,13 @@ export default function GoalsPage() {
         setAddFormParentId(null);
 
         switch (viewType) {
-          case "longterm":
+          case "long-term":
             await loadLongterm();
             break;
-          case "shortterm":
+          case "short-term":
             await loadShortterm();
             break;
-          case "daily":
+          case "daily-trivial":
             await loadDaily();
             break;
           case "habits":
@@ -1069,13 +1069,13 @@ export default function GoalsPage() {
         await deleteTask(task.id!);
         showToast("已移入回收站", "success");
         switch (currentView) {
-          case "longterm":
+          case "long-term":
             await loadLongterm();
             break;
-          case "shortterm":
+          case "short-term":
             await loadShortterm();
             break;
-          case "daily":
+          case "daily-trivial":
             await loadDaily();
             break;
           case "habits":
@@ -1214,7 +1214,7 @@ export default function GoalsPage() {
           {showAddForm && (
             <AddTaskForm
               placeholder={addFormParentId ? "输入子任务名称" : "输入长期目标名称"}
-              onSubmit={(title) => handleAddTask(title, "longterm", addFormParentId ?? undefined)}
+              onSubmit={(title) => handleAddTask(title, "long-term", addFormParentId ?? undefined)}
               onCancel={() => {
                 setShowAddForm(false);
                 setAddFormParentId(null);
@@ -1277,7 +1277,7 @@ export default function GoalsPage() {
           {showAddForm && (
             <AddTaskForm
               placeholder="输入短期事件名称"
-              onSubmit={(title) => handleAddTask(title, "shortterm")}
+              onSubmit={(title) => handleAddTask(title, "short-term")}
               onCancel={() => setShowAddForm(false)}
             />
           )}
@@ -1376,7 +1376,7 @@ export default function GoalsPage() {
           {showAddForm && (
             <AddTaskForm
               placeholder="输入日常琐事名称"
-              onSubmit={(title) => handleAddTask(title, "daily")}
+              onSubmit={(title) => handleAddTask(title, "daily-trivial")}
               onCancel={() => setShowAddForm(false)}
             />
           )}
@@ -1562,9 +1562,9 @@ export default function GoalsPage() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: tabAnimDir > 0 ? -30 : 30 }}
             transition={{ duration: 0.25, ease: [0.32, 0.72, 0, 1] }}>
-            {currentView === "longterm" && renderLongtermView()}
-            {currentView === "shortterm" && renderShorttermView()}
-            {currentView === "daily" && renderDailyView()}
+            {currentView === "long-term" && renderLongtermView()}
+            {currentView === "short-term" && renderShorttermView()}
+            {currentView === "daily-trivial" && renderDailyView()}
             {currentView === "habits" && renderHabitsView()}
           </motion.div>
         </AnimatePresence>

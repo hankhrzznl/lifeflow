@@ -24,9 +24,9 @@ const SWIPE_THRESHOLD = 80;
 const SWIPE_MAX = 160;
 
 const GOAL_TYPES: { type: GoalViewType; label: string; desc: string; icon: typeof Mountain; color: string }[] = [
-  { type: "longterm", label: "长期目标", desc: "成为一个更大目标的里程碑", icon: Mountain, color: "text-indigo-600" },
-  { type: "shortterm", label: "短期事件", desc: "作为独立事件执行", icon: CalendarDays, color: "text-blue-600" },
-  { type: "daily", label: "日常琐事", desc: "转为每天重复的待办", icon: ClipboardList, color: "text-green-600" },
+  { type: "long-term", label: "长期目标", desc: "成为一个更大目标的里程碑", icon: Mountain, color: "text-indigo-600" },
+  { type: "short-term", label: "短期事件", desc: "作为独立事件执行", icon: CalendarDays, color: "text-blue-600" },
+  { type: "daily-trivial", label: "日常琐事", desc: "转为每天重复的待办", icon: ClipboardList, color: "text-green-600" },
   { type: "habits", label: "习惯追踪", desc: "建立一个新的日常习惯", icon: Flame, color: "text-orange-600" },
 ];
 
@@ -145,7 +145,7 @@ export default function CapturePage() {
       const item = allActiveRef.current.find((t) => t.id === captureId);
       if (!item) return;
 
-      const taskType = targetType === "habits" ? "habit" : targetType;
+      const taskType = targetType === "habits" ? "habit" : targetType === "long-term" ? "longterm" : targetType === "short-term" ? "shortterm" : "daily";
       await createTask({
         title: item.title,
         type: taskType,

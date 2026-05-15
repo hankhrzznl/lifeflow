@@ -37,7 +37,8 @@ export interface FocusLog {
   createdAt: number;
 }
 
-export interface Project {
+/** @deprecated Use ProjectV2 interface instead (v2.2) */
+export interface LegacyProject {
   id: string;
   name: string;
   color: string;
@@ -86,6 +87,7 @@ export interface Task {
   id?: number;
   title: string;
   type: 'longterm' | 'shortterm' | 'daily' | 'habit';
+  classification?: 'long-term' | 'short-term' | 'daily-trivial' | 'habit';
   parentTaskId?: number;
   isMilestone?: boolean;
   note?: string;
@@ -94,6 +96,11 @@ export interface Task {
   startTime?: number;
   endTime?: number;
   projectId?: string;
+  sectionId?: number;
+  boardId?: number;
+  dueDate?: number;
+  successCriteria?: string;
+  frequency?: 'daily' | 'weekly' | 'monthly';
   captureSourceId?: number;
   focusSessions?: number[];
   tags?: string[];
@@ -122,6 +129,47 @@ export interface PluginRegistry {
   updatedAt: number;
 }
 
+export interface ProjectV2 {
+  id?: number;
+  name: string;
+  color?: string;
+  createdAt: number;
+}
+
+export interface Board {
+  id?: number;
+  name: string;
+  projectId?: number;
+  createdAt: number;
+}
+
+export interface Section {
+  id?: number;
+  name: string;
+  boardId?: number;
+  createdAt: number;
+}
+
+export interface TrashItem {
+  id?: number;
+  originalTable: 'capture' | 'tasks' | 'projects' | 'boards' | 'sections';
+  originalId: number;
+  data: Record<string, unknown>;
+  deletedAt: number;
+}
+
+export interface PluginMetadata {
+  id?: number;
+  name: string;
+  version: string;
+  description?: string;
+  status: 'installed' | 'active' | 'disabled' | 'error';
+  isBuiltIn?: boolean;
+  code?: string;
+  installedAt: number;
+  updatedAt: number;
+}
+
 export type PageId = "dashboard" | "capture" | "planner" | "focus" | "review" | "projects" | "trash" | "settings" | "goals" | "today" | "plugins";
 
 
@@ -132,4 +180,6 @@ export interface TabItem {
   path: string;
 }
 
-export type GoalViewType = 'longterm' | 'shortterm' | 'daily' | 'habits';
+export type GoalViewType = 'long-term' | 'short-term' | 'daily-trivial' | 'habits';
+
+export type GoalTab = 'long-term' | 'short-term' | 'daily-trivial' | 'habits';

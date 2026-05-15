@@ -9,12 +9,13 @@ import {
   AlertCircle,
   RotateCcw,
   Zap,
+  Play,
 } from "lucide-react";
 import {
   getTasksByTimeRange,
   getAllProjects,
 } from "@/lib/db";
-import type { Task, Project } from "@/lib/types";
+import type { Task, LegacyProject } from "@/lib/types";
 
 const SLOT_HEIGHT = 32;
 const MINUTES_PER_SLOT = 15;
@@ -230,12 +231,14 @@ function TimelineEventBlock({
   dayStart,
   projectColor,
   isHighlighted,
+  isFocusEnabled,
   onClick,
 }: {
   task: Task & { _clippedStart?: number; _clippedEnd?: number };
   dayStart: number;
   projectColor?: string;
   isHighlighted?: boolean;
+  isFocusEnabled?: boolean;
   onClick: () => void;
 }) {
   const start = task._clippedStart ?? task.startTime!;
@@ -251,6 +254,9 @@ function TimelineEventBlock({
         : task.type === "longterm"
           ? "目标"
           : "习惯";
+
+  const showFocusButton =
+    task.type === "shortterm" && task.status === "active" && isFocusEnabled;
 
   return (
     <div
@@ -283,6 +289,16 @@ function TimelineEventBlock({
           {task.status === "done" && "✓ "}
           {task.title}
         </p>
+        {showFocusButton && (
+          <a
+            href={`/plugins/focus-timer?taskId=${task.id}`}
+            onClick={(e) => e.stopPropagation()}
+            className="bg-purple-500 text-white text-xs rounded-full px-3 py-1 flex items-center gap-1 flex-shrink-0 hover:bg-purple-600 transition-colors"
+          >
+            <Play className="w-3 h-3" />
+            开始专注
+          </a>
+        )}
       </div>
       <p className="text-[10px] text-gray-400 mt-0.5">
         {formatTime(start)} - {formatTime(end)}
@@ -381,6 +397,30 @@ function TaskListItem({
   );
 }
 
+function usePluginStatus(pluginName: string): boolean {
+  const [enabled, setEnabled] = useState(false);
+
+  useEffect(() => {
+    const cancelled = false;
+    const check = async () => {
+      try {
+        const { getPluginMeta } = await import("@/lib/db");
+        const plugin = await getPluginMeta(pluginName);
+        if (!cancelled) {
+          setEnabled(plugin?.status === "active");
+        }
+      } catch {
+        // Plugin table may not exist yet
+      }
+    };
+    check();
+    const interval = setInterval(check, 5000);
+    return () => clearInterval(interval);
+  }, [pluginName]);
+
+  return enabled;
+}
+
 export default function TodayPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -400,8 +440,11 @@ export default function TodayPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [projects, setProjects] = useState<Project[]>([]);
+  const [projects, setProjects] = useState<LegacyProject[]>([]);
   const [highlightedId, setHighlightedId] = useState<number | null>(null);
+
+  const isTimelineEnabled = usePluginStatus("timeline");
+  const isFocusEnabled = usePluginStatus("focus-timer");
 
   const projectColorMap = useMemo(() => {
     const map = new Map<string, string>();
@@ -615,6 +658,25 @@ export default function TodayPage() {
         <div className="flex-1 overflow-y-auto">
           <EmptyState />
         </div>
+      ) : !isTimelineEnabled ? (
+        <div className="flex-1 overflow-y-auto">
+          <div className="px-4 py-2">
+            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+              任务列表 ({clippedTasks.length})
+            </p>
+            <div className="space-y-1">
+              {clippedTasks.map((task) => (
+                <TaskListItem
+                  key={task.id}
+                  task={task}
+                  projectColor={task.projectId ? projectColorMap.get(task.projectId) : undefined}
+                  isHighlighted={highlightedId === task.id}
+                  onClick={() => handleListItemClick(task.id!)}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
       ) : (
         <div className="flex-1 flex flex-col overflow-hidden">
           <div className="flex-1 overflow-y-auto today-timeline-scroll">
@@ -630,6 +692,7 @@ export default function TodayPage() {
                   dayStart={dayStart}
                   projectColor={task.projectId ? projectColorMap.get(task.projectId) : undefined}
                   isHighlighted={highlightedId === task.id}
+                  isFocusEnabled={isFocusEnabled}
                   onClick={() => handleBlockClick(task.id!)}
                 />
               ))}

@@ -3,24 +3,34 @@ import type {
   CaptureItem,
   CalendarEvent,
   FocusLog,
-  Project,
+  LegacyProject,
   AgentMemory,
   AgentChatSession,
   Task,
   HabitLog,
   PluginRegistry,
+  ProjectV2,
+  TrashItem,
+  Board,
+  Section,
+  PluginMetadata,
 } from "./types";
 
 export class LifeFlowDB extends Dexie {
   capture!: Table<CaptureItem, number>;
   events!: Table<CalendarEvent, number>;
   focusLogs!: Table<FocusLog, number>;
-  projects!: Table<Project, string>;
+  projects!: Table<LegacyProject, string>;
   agentMemory!: Table<AgentMemory, number>;
   agentChats!: Table<AgentChatSession, string>;
   tasks!: Table<Task, number>;
   habit_logs!: Table<HabitLog, number>;
   plugin_registry!: Table<PluginRegistry, string>;
+  projectV2s!: Table<ProjectV2, number>;
+  trashStore!: Table<TrashItem, number>;
+  boards!: Table<Board, number>;
+  sections!: Table<Section, number>;
+  pluginsMeta!: Table<PluginMetadata, number>;
 
   constructor() {
     super("LifeFlowDB");
@@ -89,6 +99,39 @@ export class LifeFlowDB extends Dexie {
         console.log(
           `[LifeFlowDB v3 migration] Migrated ${captureMigrated} capture items and ${eventsMigrated} events to tasks table`
         );
+      }
+    });
+
+    this.version(4).stores({
+      projectV2s: "++id, name, createdAt",
+      trashStore: "++id, originalTable, deletedAt",
+      boards: "++id, name, projectId, createdAt",
+      sections: "++id, name, boardId, createdAt",
+      pluginsMeta: "++id, name, status",
+    }).upgrade(async (tx) => {
+      if (typeof window !== "undefined" && window.location.hostname === "localhost") {
+        console.log("[LifeFlowDB v4] Starting migration...");
+      }
+
+      try {
+        const defaultProjectId = await tx.table("projectV2s").add({
+          name: "默认项目",
+          color: "#007AFF",
+          createdAt: Date.now(),
+        });
+
+        const boardCount = await tx.table("boards").toCollection().modify((board: Record<string, unknown>) => {
+          if (!board.projectId) board.projectId = defaultProjectId;
+        });
+
+        const taskCount = await tx.table("tasks").count();
+
+        if (typeof window !== "undefined" && window.location.hostname === "localhost") {
+          console.log(`[LifeFlowDB v4] Default project: ${defaultProjectId}, boards: ${boardCount}, tasks: ${taskCount}`);
+        }
+      } catch (err) {
+        console.error("[LifeFlowDB v4] Migration failed:", err);
+        throw err;
       }
     });
   }
@@ -368,17 +411,17 @@ export async function createProject(name: string, color: string): Promise<string
   return id;
 }
 
-export async function getAllProjects(): Promise<Project[]> {
+export async function getAllProjects(): Promise<LegacyProject[]> {
   return db.projects.toArray();
 }
 
-export async function getProject(id: string): Promise<Project | undefined> {
+export async function getProject(id: string): Promise<LegacyProject | undefined> {
   return db.projects.get(id);
 }
 
 export async function updateProject(
   id: string,
-  updates: Partial<Pick<Project, "name" | "color">>
+  updates: Partial<Pick<LegacyProject, "name" | "color">>
 ): Promise<void> {
   await db.projects.update(id, { ...updates });
 }
@@ -942,7 +985,7 @@ export interface ExportData {
     capture: CaptureItem[];
     events: CalendarEvent[];
     focusLogs: FocusLog[];
-    projects: Project[];
+    projects: LegacyProject[];
     agentMemory: AgentMemory[];
     agentChats: AgentChatSession[];
     tasks: Task[];
@@ -1048,4 +1091,171 @@ export async function importAllData(
   );
 
   return { imported };
+}
+
+// ─── ProjectV2 CRUD ─────────────────────────────────────────
+
+export async function createProjectV2(name: string, color?: string): Promise<number> {
+  return db.projectV2s.add({ name, color: color || "#007AFF", createdAt: Date.now() });
+}
+
+export async function getAllProjectsV2(): Promise<ProjectV2[]> {
+  return db.projectV2s.toArray();
+}
+
+export async function getProjectV2(id: number): Promise<ProjectV2 | undefined> {
+  return db.projectV2s.get(id);
+}
+
+export async function updateProjectV2(id: number, updates: Partial<Pick<ProjectV2, "name" | "color">>): Promise<void> {
+  await db.projectV2s.update(id, updates);
+}
+
+export async function deleteProjectToTrash(id: number): Promise<void> {
+  const project = await db.projectV2s.get(id);
+  if (!project) throw new Error("PROJECT_NOT_FOUND");
+  await db.transaction("rw", db.projectV2s, db.trashStore, async () => {
+    await db.trashStore.add({
+      originalTable: "projects",
+      originalId: id,
+      data: JSON.parse(JSON.stringify(project)),
+      deletedAt: Date.now(),
+    });
+    await db.projectV2s.delete(id);
+  });
+}
+
+// ─── Board CRUD ─────────────────────────────────────────────
+
+export async function createBoard(name: string, projectId?: number): Promise<number> {
+  return db.boards.add({ name, projectId, createdAt: Date.now() });
+}
+
+export async function getBoardsByProject(projectId: number): Promise<Board[]> {
+  return db.boards.where("projectId").equals(projectId).toArray();
+}
+
+export async function getBoard(id: number): Promise<Board | undefined> {
+  return db.boards.get(id);
+}
+
+export async function updateBoard(id: number, name: string): Promise<void> {
+  await db.boards.update(id, { name });
+}
+
+export async function deleteBoardToTrash(id: number): Promise<void> {
+  const board = await db.boards.get(id);
+  if (!board) throw new Error("BOARD_NOT_FOUND");
+  await db.transaction("rw", db.boards, db.trashStore, async () => {
+    await db.trashStore.add({ originalTable: "boards", originalId: id, data: JSON.parse(JSON.stringify(board)), deletedAt: Date.now() });
+    await db.boards.delete(id);
+  });
+}
+
+// ─── Section CRUD ───────────────────────────────────────────
+
+export async function createSection(name: string, boardId?: number): Promise<number> {
+  return db.sections.add({ name, boardId, createdAt: Date.now() });
+}
+
+export async function getSectionsByBoard(boardId: number): Promise<Section[]> {
+  return db.sections.where("boardId").equals(boardId).toArray();
+}
+
+export async function updateSection(id: number, name: string): Promise<void> {
+  await db.sections.update(id, { name });
+}
+
+export async function deleteSectionToTrash(id: number): Promise<void> {
+  const section = await db.sections.get(id);
+  if (!section) throw new Error("SECTION_NOT_FOUND");
+  await db.transaction("rw", db.sections, db.trashStore, async () => {
+    await db.trashStore.add({ originalTable: "sections", originalId: id, data: JSON.parse(JSON.stringify(section)), deletedAt: Date.now() });
+    await db.sections.delete(id);
+  });
+}
+
+// ─── Trash CRUD ─────────────────────────────────────────────
+
+export async function getTrashItems(): Promise<TrashItem[]> {
+  return db.trashStore.orderBy("deletedAt").reverse().toArray();
+}
+
+export async function restoreFromTrash(trashId: number): Promise<void> {
+  const item = await db.trashStore.get(trashId);
+  if (!item) throw new Error("TRASH_ITEM_NOT_FOUND");
+
+  const tableMap: Record<string, string> = {
+    capture: "capture",
+    tasks: "tasks",
+    projects: "projectV2s",
+    boards: "boards",
+    sections: "sections",
+  };
+
+  const targetTable = tableMap[item.originalTable];
+  if (!targetTable) throw new Error("UNKNOWN_TABLE");
+
+  await db.transaction("rw", db.trashStore, async () => {
+    const table = (db as unknown as Record<string, unknown>)[targetTable] as { add: (data: unknown) => Promise<unknown> };
+    if (table && typeof table.add === "function") {
+      await table.add(item.data);
+    }
+    await db.trashStore.delete(trashId);
+  });
+}
+
+export async function purgeFromTrash(trashId: number): Promise<void> {
+  await db.trashStore.delete(trashId);
+}
+
+export async function autoCleanupTrash(daysRetention = 30): Promise<number> {
+  const threshold = Date.now() - daysRetention * 24 * 60 * 60 * 1000;
+  const oldItems = await db.trashStore.where("deletedAt").below(threshold).toArray();
+  for (const item of oldItems) {
+    await db.trashStore.delete(item.id!);
+  }
+  return oldItems.length;
+}
+
+// ─── Plugin Metadata CRUD ───────────────────────────────────
+
+export async function initBuiltInPlugins(): Promise<void> {
+  const existing = await db.pluginsMeta.toArray();
+  const names = new Set(existing.map((p) => p.name));
+
+  if (!names.has("timeline")) {
+    await db.pluginsMeta.add({
+      name: "timeline",
+      version: "1.0.0",
+      description: "生命时间轴可视化",
+      status: "active",
+      isBuiltIn: true,
+      installedAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+  }
+  if (!names.has("focus-timer")) {
+    await db.pluginsMeta.add({
+      name: "focus-timer",
+      version: "1.0.0",
+      description: "专注计时器",
+      status: "active",
+      isBuiltIn: true,
+      installedAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+  }
+}
+
+export async function getPluginMeta(name: string): Promise<PluginMetadata | undefined> {
+  return db.pluginsMeta.where("name").equals(name).first();
+}
+
+export async function getAllPluginsMeta(): Promise<PluginMetadata[]> {
+  return db.pluginsMeta.toArray();
+}
+
+export async function updatePluginMetaStatus(id: number, status: PluginMetadata["status"]): Promise<void> {
+  await db.pluginsMeta.update(id, { status, updatedAt: Date.now() });
 }

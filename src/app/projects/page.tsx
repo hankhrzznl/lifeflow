@@ -2,110 +2,152 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { FolderKanban, Plus, Trash2, Pencil, X, Hash, Palette } from "lucide-react";
-import {
-  createProject,
-  getAllProjects,
-  updateProject,
-  deleteProject,
-  getProjectTaskCount,
-} from "@/lib/db";
-import type { Project } from "@/lib/types";
+import { Folder, Plus, Trash2, Edit3, ChevronRight, AlertCircle, RotateCcw } from "lucide-react";
+import { getAllProjectsV2, createProjectV2, updateProjectV2, deleteProjectToTrash, getBoardsByProject } from "@/lib/db";
+import { showToast } from "@/components/ui/Toast";
+import type { ProjectV2 } from "@/lib/types";
+import Link from "next/link";
 
-const PROJECT_COLORS = [
-  "#6366f1",
-  "#8b5cf6",
-  "#ec4899",
-  "#f43f5e",
-  "#f97316",
-  "#eab308",
-  "#22c55e",
-  "#14b8a6",
-  "#06b6d4",
-  "#3b82f6",
-  "#64748b",
-  "#78716c",
-];
+const PROJECT_COLORS = ["#007AFF", "#34C759", "#FF9500", "#FF3B30", "#AF52DE", "#5856D6"];
 
-type ProjectWithCount = Project & { eventCount: number };
+type ProjectWithCount = ProjectV2 & { boardCount: number };
 
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<ProjectWithCount[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
-  const [editingProject, setEditingProject] = useState<Project | null>(null);
-  const [formName, setFormName] = useState("");
-  const [formColor, setFormColor] = useState(PROJECT_COLORS[0]);
+  const [error, setError] = useState<string | null>(null);
+  const [showForm, setShowForm] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newColor, setNewColor] = useState(PROJECT_COLORS[0]);
   const [saving, setSaving] = useState(false);
-  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [editId, setEditId] = useState<number | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editColor, setEditColor] = useState(PROJECT_COLORS[0]);
 
   const loadProjects = useCallback(async () => {
-    const all = await getAllProjects();
-    const withCounts = await Promise.all(
-      all.map(async (p) => ({
-        ...p,
-        eventCount: await getProjectTaskCount(p.id),
-      }))
-    );
-    setProjects(withCounts);
-    setLoading(false);
+    try {
+      setError(null);
+      const all = await getAllProjectsV2();
+      const withCounts = await Promise.all(
+        all.map(async (p) => ({
+          ...p,
+          boardCount: (await getBoardsByProject(p.id!)).length,
+        }))
+      );
+      setProjects(withCounts);
+    } catch {
+      setError("加载项目列表失败");
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
-    queueMicrotask(() => loadProjects());
+    const load = async () => { await loadProjects(); };
+    load();
   }, [loadProjects]);
 
-  function openCreateModal() {
-    setEditingProject(null);
-    setFormName("");
-    setFormColor(PROJECT_COLORS[0]);
-    setShowModal(true);
+  function openEditModal(project: ProjectV2) {
+    setEditId(project.id!);
+    setEditName(project.name);
+    setEditColor(project.color || PROJECT_COLORS[0]);
   }
 
-  function openEditModal(project: Project) {
-    setEditingProject(project);
-    setFormName(project.name);
-    setFormColor(project.color);
-    setShowModal(true);
+  function closeEditModal() {
+    setEditId(null);
+    setEditName("");
   }
 
-  function closeModal() {
-    setShowModal(false);
-    setEditingProject(null);
-  }
-
-  async function handleSave() {
-    if (!formName.trim()) return;
+  async function handleCreate() {
+    if (!newName.trim()) return;
     setSaving(true);
     try {
-      if (editingProject) {
-        await updateProject(editingProject.id, {
-          name: formName.trim(),
-          color: formColor,
-        });
-      } else {
-        await createProject(formName.trim(), formColor);
-      }
+      await createProjectV2(newName.trim(), newColor);
+      setNewName("");
+      setNewColor(PROJECT_COLORS[0]);
+      setShowForm(false);
       await loadProjects();
-      closeModal();
+      showToast({ message: `项目"${newName.trim()}"已创建`, type: "success", duration: 3000 });
+    } catch {
+      showToast({ message: "创建项目失败", type: "error", duration: 3000 });
     } finally {
       setSaving(false);
     }
   }
 
-  async function handleDelete(id: string) {
-    await deleteProject(id);
-    await loadProjects();
-    setDeleteConfirm(null);
+  async function handleEdit() {
+    if (!editName.trim() || editId === null) return;
+    setSaving(true);
+    try {
+      await updateProjectV2(editId, { name: editName.trim(), color: editColor });
+      closeEditModal();
+      await loadProjects();
+      showToast({ message: "项目已更新", type: "success", duration: 2000 });
+    } catch {
+      showToast({ message: "更新项目失败", type: "error", duration: 3000 });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete(project: ProjectWithCount) {
+    try {
+      await deleteProjectToTrash(project.id!);
+      await loadProjects();
+      showToast({
+        message: `项目"${project.name}"已移至回收站`,
+        type: "info",
+        duration: 5000,
+        undoAction: async () => {
+          await createProjectV2(project.name, project.color);
+          await loadProjects();
+        },
+      });
+    } catch {
+      showToast({ message: "删除项目失败", type: "error", duration: 3000 });
+    }
   }
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
-          <span className="text-sm text-[var(--muted-foreground)]">加载中...</span>
+      <div className="flex flex-col h-full max-h-screen">
+        <header className="flex-shrink-0 flex items-center justify-between px-4 py-3 border-b border-[var(--card-border)] bg-[var(--card-bg)]">
+          <div className="flex items-center gap-2">
+            <Folder className="w-5 h-5 text-primary-500" />
+            <h1 className="text-lg font-semibold text-[var(--foreground)]">项目管理</h1>
+          </div>
+        </header>
+        <div className="flex-1 overflow-y-auto px-4 py-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="rounded-2xl bg-[var(--card-bg)] border border-[var(--card-border)] p-4 space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="skeleton w-8 h-8 rounded-lg" />
+                  <div className="skeleton h-4 w-24" />
+                </div>
+                <div className="skeleton h-3 w-16" />
+              </div>
+            ))}
+          </div>
         </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full gap-4 px-4">
+        <div className="w-14 h-14 rounded-full bg-danger-100 dark:bg-danger-900/30 flex items-center justify-center">
+          <AlertCircle className="w-7 h-7 text-danger-500" />
+        </div>
+        <p className="text-sm text-[var(--muted-foreground)]">{error}</p>
+        <button
+          onClick={loadProjects}
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary-500 text-white text-sm font-medium hover:bg-primary-600 transition-colors"
+        >
+          <RotateCcw className="w-4 h-4" />
+          重试
+        </button>
       </div>
     );
   }
@@ -114,12 +156,12 @@ export default function ProjectsPage() {
     <div className="flex flex-col h-full max-h-screen">
       <header className="flex-shrink-0 flex items-center justify-between px-4 py-3 border-b border-[var(--card-border)] bg-[var(--card-bg)]">
         <div className="flex items-center gap-2">
-          <FolderKanban className="w-5 h-5 text-primary-500" />
+          <Folder className="w-5 h-5 text-primary-500" />
           <h1 className="text-lg font-semibold text-[var(--foreground)]">项目管理</h1>
         </div>
         <motion.button
           whileTap={{ scale: 0.95 }}
-          onClick={openCreateModal}
+          onClick={() => setShowForm(!showForm)}
           className="flex items-center gap-1.5 bg-primary-500 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-primary-600 transition-colors shadow-sm"
         >
           <Plus className="w-4 h-4" />
@@ -128,70 +170,150 @@ export default function ProjectsPage() {
       </header>
 
       <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-4">
+        <AnimatePresence>
+          {showForm && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden"
+            >
+              <div className="rounded-2xl bg-[var(--card-bg)] border border-[var(--card-border)] p-4 mb-4 space-y-3">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-sm font-medium text-[var(--foreground)]">
+                    项目名称
+                  </label>
+                  <input
+                    type="text"
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    placeholder="例如：工作、学习、个人"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleCreate();
+                      if (e.key === "Escape") setShowForm(false);
+                    }}
+                    className="w-full px-3 py-2.5 rounded-xl border border-[var(--card-border)] bg-[var(--background)] text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 transition-colors"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm font-medium text-[var(--foreground)]">
+                    颜色
+                  </label>
+                  <div className="flex gap-3">
+                    {PROJECT_COLORS.map((color) => (
+                      <button
+                        key={color}
+                        onClick={() => setNewColor(color)}
+                        className={`w-9 h-9 rounded-full transition-all ${
+                          newColor === color
+                            ? "ring-2 ring-offset-2 ring-primary-500 scale-110"
+                            : "hover:scale-105"
+                        }`}
+                        style={{ backgroundColor: color }}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex gap-3 pt-1">
+                  <button
+                    onClick={() => setShowForm(false)}
+                    className="flex-1 px-4 py-2 rounded-xl text-sm font-medium text-[var(--foreground)] border border-[var(--card-border)] hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                  >
+                    取消
+                  </button>
+                  <motion.button
+                    whileTap={{ scale: 0.97 }}
+                    onClick={handleCreate}
+                    disabled={saving || !newName.trim()}
+                    className="flex-1 px-4 py-2 rounded-xl text-sm font-medium bg-primary-500 text-white hover:bg-primary-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {saving ? "创建中..." : "创建"}
+                  </motion.button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {projects.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-center">
+          <div className="flex flex-col items-center justify-center h-[60vh] text-center">
             <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary-100 to-primary-200 dark:from-primary-900/30 dark:to-primary-800/20 flex items-center justify-center mb-5">
-              <FolderKanban className="w-10 h-10 text-primary-400" />
+              <Folder className="w-10 h-10 text-primary-400" />
             </div>
             <h2 className="text-xl font-bold text-[var(--foreground)] mb-2">
               还没有项目
             </h2>
             <p className="text-sm text-[var(--muted-foreground)] max-w-xs mb-6">
-              创建项目来组织你的事件，让规划更有条理
+              创建项目来组织你的看板和任务，让工作更有条理
             </p>
-            <button
-              onClick={openCreateModal}
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setShowForm(true)}
               className="bg-primary-500 text-white px-6 py-2.5 rounded-xl font-medium hover:bg-primary-600 transition-colors text-sm"
             >
               创建第一个项目
-            </button>
+            </motion.button>
           </div>
         ) : (
-          <div className="flex flex-col gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {projects.map((project, index) => (
               <motion.div
                 key={project.id}
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05 }}
-                className="flex items-center gap-3 px-4 py-3.5 rounded-2xl bg-[var(--card-bg)] border border-[var(--card-border)] hover:border-primary-300 transition-colors group"
+                className="group relative"
               >
-                <div
-                  className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                  style={{ backgroundColor: project.color + "20" }}
+                <Link
+                  href={`/projects/${project.id}`}
+                  className="block rounded-2xl bg-[var(--card-bg)] border border-[var(--card-border)] hover:border-primary-300 p-4 transition-colors"
                 >
-                  <Hash
-                    className="w-5 h-5"
-                    style={{ color: project.color }}
-                  />
-                </div>
-
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-[var(--foreground)] truncate">
-                    {project.name}
-                  </p>
+                  <div className="flex items-center gap-3 mb-3">
+                    <div
+                      className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                      style={{ backgroundColor: (project.color || "#007AFF") + "20" }}
+                    >
+                      <div
+                        className="w-3 h-3 rounded-full"
+                        style={{ backgroundColor: project.color || "#007AFF" }}
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-[var(--foreground)] truncate">
+                        {project.name}
+                      </p>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-[var(--muted-foreground)] flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </div>
                   <p className="text-xs text-[var(--muted-foreground)]">
-                    {project.eventCount} 个关联事件
+                    {project.boardCount} 个看板
                   </p>
-                </div>
+                </Link>
 
-                <div
-                  className="w-3 h-3 rounded-full flex-shrink-0 ring-1 ring-black/10"
-                  style={{ backgroundColor: project.color }}
-                />
-
-                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button
-                    onClick={() => openEditModal(project)}
-                    className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      openEditModal(project);
+                    }}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 shadow-sm border border-[var(--card-border)] transition-colors"
                   >
-                    <Pencil className="w-4 h-4 text-[var(--muted-foreground)]" />
+                    <Edit3 className="w-3.5 h-3.5 text-[var(--muted-foreground)]" />
                   </button>
                   <button
-                    onClick={() => setDeleteConfirm(project.id)}
-                    className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-danger-50 transition-colors"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleDelete(project);
+                    }}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg bg-white dark:bg-gray-800 hover:bg-danger-50 dark:hover:bg-danger-900/20 shadow-sm border border-[var(--card-border)] transition-colors"
                   >
-                    <Trash2 className="w-4 h-4 text-danger-400" />
+                    <Trash2 className="w-3.5 h-3.5 text-danger-400" />
                   </button>
                 </div>
               </motion.div>
@@ -201,14 +323,14 @@ export default function ProjectsPage() {
       </div>
 
       <AnimatePresence>
-        {showModal && (
+        {editId !== null && (
           <>
             <motion.div
               className="fixed inset-0 bg-black/40 z-50"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={closeModal}
+              onClick={closeEditModal}
             />
             <motion.div
               className="fixed bottom-0 left-0 right-0 z-50 bg-[var(--card-bg)] rounded-t-2xl shadow-xl md:inset-auto md:top-1/2 md:left-1/2 md:bottom-auto md:right-auto md:w-full md:max-w-sm md:rounded-2xl md:-translate-x-1/2 md:-translate-y-1/2"
@@ -219,43 +341,45 @@ export default function ProjectsPage() {
             >
               <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--card-border)]">
                 <h2 className="text-lg font-semibold text-[var(--foreground)]">
-                  {editingProject ? "编辑项目" : "新建项目"}
+                  编辑项目
                 </h2>
                 <button
-                  onClick={closeModal}
+                  onClick={closeEditModal}
                   className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                 >
-                  <X className="w-5 h-5 text-[var(--muted-foreground)]" />
+                  <Edit3 className="w-5 h-5 text-[var(--muted-foreground)]" />
                 </button>
               </div>
 
-              <div className="px-5 py-4 flex flex-col gap-4">
+              <div className="px-5 py-4 space-y-4">
                 <div className="flex flex-col gap-1.5">
                   <label className="text-sm font-medium text-[var(--foreground)]">
                     项目名称
                   </label>
                   <input
                     type="text"
-                    value={formName}
-                    onChange={(e) => setFormName(e.target.value)}
-                    placeholder="例如：工作、学习、个人"
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
                     autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleEdit();
+                      if (e.key === "Escape") closeEditModal();
+                    }}
                     className="w-full px-3 py-2.5 rounded-xl border border-[var(--card-border)] bg-[var(--background)] text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 transition-colors"
                   />
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label className="text-sm font-medium text-[var(--foreground)] flex items-center gap-1.5">
-                    <Palette className="w-4 h-4" />
+                  <label className="text-sm font-medium text-[var(--foreground)]">
                     颜色
                   </label>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex gap-3">
                     {PROJECT_COLORS.map((color) => (
                       <button
                         key={color}
-                        onClick={() => setFormColor(color)}
-                        className={`w-8 h-8 rounded-lg transition-all ${
-                          formColor === color
+                        onClick={() => setEditColor(color)}
+                        className={`w-9 h-9 rounded-full transition-all ${
+                          editColor === color
                             ? "ring-2 ring-offset-2 ring-primary-500 scale-110"
                             : "hover:scale-105"
                         }`}
@@ -268,66 +392,19 @@ export default function ProjectsPage() {
 
               <div className="flex gap-3 px-5 py-4 border-t border-[var(--card-border)]">
                 <button
-                  onClick={closeModal}
+                  onClick={closeEditModal}
                   className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium text-[var(--foreground)] border border-[var(--card-border)] hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                 >
                   取消
                 </button>
                 <motion.button
                   whileTap={{ scale: 0.97 }}
-                  onClick={handleSave}
-                  disabled={saving || !formName.trim()}
+                  onClick={handleEdit}
+                  disabled={saving || !editName.trim()}
                   className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium bg-primary-500 text-white hover:bg-primary-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {saving ? "保存中..." : "保存"}
                 </motion.button>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {deleteConfirm && (
-          <>
-            <motion.div
-              className="fixed inset-0 bg-black/40 z-50"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setDeleteConfirm(null)}
-            />
-            <motion.div
-              className="fixed bottom-0 left-0 right-0 z-50 bg-[var(--card-bg)] rounded-t-2xl shadow-xl md:inset-auto md:top-1/2 md:left-1/2 md:bottom-auto md:right-auto md:w-full md:max-w-sm md:rounded-2xl md:-translate-x-1/2 md:-translate-y-1/2"
-              initial={{ y: "100%", opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: "100%", opacity: 0 }}
-              transition={{ type: "spring", stiffness: 400, damping: 30 }}
-            >
-              <div className="px-5 py-6 text-center">
-                <div className="w-14 h-14 rounded-full bg-danger-100 dark:bg-danger-900/30 flex items-center justify-center mx-auto mb-4">
-                  <Trash2 className="w-7 h-7 text-danger-500" />
-                </div>
-                <h3 className="text-lg font-semibold text-[var(--foreground)] mb-2">
-                  确认删除
-                </h3>
-                <p className="text-sm text-[var(--muted-foreground)] mb-6">
-                  删除项目后，关联的事件将不再归属于该项目，但不会被删除。
-                </p>
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => setDeleteConfirm(null)}
-                    className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium text-[var(--foreground)] border border-[var(--card-border)] hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                  >
-                    取消
-                  </button>
-                  <button
-                    onClick={() => handleDelete(deleteConfirm)}
-                    className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium bg-danger-500 text-white hover:bg-danger-600 transition-colors"
-                  >
-                    确认删除
-                  </button>
-                </div>
               </div>
             </motion.div>
           </>

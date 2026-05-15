@@ -27,7 +27,7 @@ import {
   getAllProjects,
   db,
 } from "@/lib/db";
-import type { Task, Project } from "@/lib/types";
+import type { Task, LegacyProject } from "@/lib/types";
 import {
   HOUR_HEIGHT,
   HOUR_COUNT,
@@ -605,10 +605,10 @@ export default function PlannerPage() {
   const [formEndMin, setFormEndMin] = useState("00");
   const [formTags, setFormTags] = useState("");
   const [formProjectId, setFormProjectId] = useState("");
-  const [projects, setProjects] = useState<Project[]>([]);
+  const [projects, setProjects] = useState<LegacyProject[]>([]);
 
   const projectMap = useMemo(() => {
-    const map = new Map<string, Project>();
+    const map = new Map<string, LegacyProject>();
     projects.forEach((p) => map.set(p.id, p));
     return map;
   }, [projects]);

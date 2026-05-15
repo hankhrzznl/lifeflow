@@ -1,7 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
-import DesktopSidebar from "@/components/navigation/DesktopSidebar";
+import DesktopSidebarV2 from "@/components/navigation/DesktopSidebarV2";
 import BottomTabBar from "@/components/navigation/BottomTabBar";
+import { MoreMenu } from "@/components/navigation/MoreMenu";
 import { ToastContainer } from "@/components/ui/Toast";
 import FAB from "@/components/ui/FAB";
 import ClientProviders from "@/components/ClientProviders";
@@ -40,10 +41,15 @@ export default function RootLayout({
           <SWProvider>
             <GlobalErrorBoundary>
             <div className="flex h-full min-h-screen">
-              <DesktopSidebar />
-              <main className="flex-1 pb-16 md:pb-0 overflow-auto">
-                {children}
-              </main>
+              <DesktopSidebarV2 />
+              <div className="flex-1 flex flex-col lg:ml-64">
+                <div className="flex items-center justify-end px-4 h-12 lg:hidden">
+                  <MoreMenu />
+                </div>
+                <main className="flex-1 pb-16 lg:pb-0 overflow-auto">
+                  {children}
+                </main>
+              </div>
             </div>
             <BottomTabBar />
             <FAB />

@@ -16,7 +16,6 @@ export default function BottomTabBar() {
   const pathname = usePathname();
 
   const isActive = (path: string) => {
-    if (path === "/") return pathname === "/";
     return pathname.startsWith(path);
   };
 

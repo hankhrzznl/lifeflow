@@ -645,6 +645,10 @@ export async function getTasksByProject(
   return collection.toArray();
 }
 
+export async function getTasksBySection(sectionId: number): Promise<Task[]> {
+  return db.tasks.where("sectionId").equals(sectionId).toArray();
+}
+
 export async function getTodayTasks(): Promise<Task[]> {
   const { start, end } = getTodayRange();
   return db.tasks
@@ -991,6 +995,11 @@ export interface ExportData {
     tasks: Task[];
     habitLogs: HabitLog[];
     pluginRegistry: PluginRegistry[];
+    projectV2s: ProjectV2[];
+    boards: Board[];
+    sections: Section[];
+    pluginsMeta: PluginMetadata[];
+    trashStore: TrashItem[];
   };
 }
 
@@ -1005,6 +1014,11 @@ export async function exportAllData(): Promise<ExportData> {
     tasks,
     habitLogs,
     pluginRegistry,
+    projectV2s,
+    boards,
+    sections,
+    pluginsMeta,
+    trashStore,
   ] = await Promise.all([
     db.capture.toArray(),
     db.events.toArray(),
@@ -1015,6 +1029,11 @@ export async function exportAllData(): Promise<ExportData> {
     db.tasks.toArray(),
     db.habit_logs.toArray(),
     db.plugin_registry.toArray(),
+    db.projectV2s.toArray(),
+    db.boards.toArray(),
+    db.sections.toArray(),
+    db.pluginsMeta.toArray(),
+    db.trashStore.toArray(),
   ]);
 
   return {
@@ -1030,6 +1049,11 @@ export async function exportAllData(): Promise<ExportData> {
       tasks,
       habitLogs,
       pluginRegistry,
+      projectV2s,
+      boards,
+      sections,
+      pluginsMeta,
+      trashStore,
     },
   };
 }
@@ -1052,6 +1076,11 @@ export async function importAllData(
       db.tasks,
       db.habit_logs,
       db.plugin_registry,
+      db.projectV2s,
+      db.boards,
+      db.sections,
+      db.pluginsMeta,
+      db.trashStore,
     ],
     async () => {
       await Promise.all([
@@ -1064,6 +1093,11 @@ export async function importAllData(
         db.tasks.clear(),
         db.habit_logs.clear(),
         db.plugin_registry.clear(),
+        db.projectV2s.clear(),
+        db.boards.clear(),
+        db.sections.clear(),
+        db.pluginsMeta.clear(),
+        db.trashStore.clear(),
       ]);
 
       await Promise.all([
@@ -1076,6 +1110,11 @@ export async function importAllData(
         db.tasks.bulkAdd(data.tasks || []),
         db.habit_logs.bulkAdd(data.habitLogs || []),
         db.plugin_registry.bulkAdd(data.pluginRegistry || []),
+        db.projectV2s.bulkAdd(data.projectV2s || []),
+        db.boards.bulkAdd(data.boards || []),
+        db.sections.bulkAdd(data.sections || []),
+        db.pluginsMeta.bulkAdd(data.pluginsMeta || []),
+        db.trashStore.bulkAdd(data.trashStore || []),
       ]);
 
       imported.capture = data.capture?.length || 0;
@@ -1087,6 +1126,11 @@ export async function importAllData(
       imported.tasks = data.tasks?.length || 0;
       imported.habitLogs = data.habitLogs?.length || 0;
       imported.pluginRegistry = data.pluginRegistry?.length || 0;
+      imported.projectV2s = data.projectV2s?.length || 0;
+      imported.boards = data.boards?.length || 0;
+      imported.sections = data.sections?.length || 0;
+      imported.pluginsMeta = data.pluginsMeta?.length || 0;
+      imported.trashStore = data.trashStore?.length || 0;
     }
   );
 
@@ -1156,6 +1200,10 @@ export async function deleteBoardToTrash(id: number): Promise<void> {
 
 export async function createSection(name: string, boardId?: number): Promise<number> {
   return db.sections.add({ name, boardId, createdAt: Date.now() });
+}
+
+export async function getSection(id: number): Promise<Section | undefined> {
+  return db.sections.get(id);
 }
 
 export async function getSectionsByBoard(boardId: number): Promise<Section[]> {

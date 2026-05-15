@@ -170,16 +170,6 @@ export interface PluginMetadata {
   updatedAt: number;
 }
 
-export type PageId = "dashboard" | "capture" | "planner" | "focus" | "review" | "projects" | "trash" | "settings" | "goals" | "today" | "plugins";
-
-
-export interface TabItem {
-  id: PageId;
-  label: string;
-  icon: string;
-  path: string;
-}
-
 export type GoalViewType = 'long-term' | 'short-term' | 'daily-trivial' | 'habits';
 
 export type GoalTab = 'long-term' | 'short-term' | 'daily-trivial' | 'habits';

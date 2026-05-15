@@ -16,12 +16,12 @@ import {
 import type { TabItem } from "@/lib/types";
 
 const tabs: TabItem[] = [
-  { id: "dashboard", label: "今天", icon: "LayoutDashboard", path: "/" },
+  { id: "today", label: "今天", icon: "LayoutDashboard", path: "/today" },
   { id: "capture", label: "捕捉", icon: "Inbox", path: "/capture" },
   { id: "planner", label: "规划", icon: "Calendar", path: "/planner" },
   { id: "focus", label: "专注", icon: "Timer", path: "/focus" },
-  { id: "review", label: "回顾", icon: "BarChart3", path: "/review" },
   { id: "goals", label: "目标", icon: "Target", path: "/goals" },
+  { id: "review", label: "回顾", icon: "BarChart3", path: "/review" },
   { id: "projects", label: "项目", icon: "FolderKanban", path: "/projects" },
   { id: "trash", label: "回收站", icon: "Trash2", path: "/trash" },
   { id: "settings", label: "设置", icon: "Settings2", path: "/settings" },

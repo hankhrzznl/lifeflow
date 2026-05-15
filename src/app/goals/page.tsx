@@ -28,6 +28,7 @@ import {
   getHabitLogsByDateRange,
   getAllHabits,
 } from "@/lib/db";
+import { showToast as globalShowToast } from "@/components/ui/Toast";
 import type { Task, GoalViewType } from "@/lib/types";
 
 interface TaskTreeNode extends Task {
@@ -247,25 +248,19 @@ function AddTaskForm({
   );
 }
 
-function MonthHeatmap({
-  taskId,
-  monthOffset = 0,
-}: {
-  taskId: number;
-  monthOffset?: number;
-}) {
+function HabitHeatmap({ taskId }: { taskId: number }) {
   const [dates, setDates] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     let cancelled = false;
-    const now = new Date();
-    const targetMonth = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1);
-    const year = targetMonth.getFullYear();
-    const month = targetMonth.getMonth();
-    const firstDay = getLocalDateStr(new Date(year, month, 1));
-    const lastDay = getLocalDateStr(new Date(year, month + 1, 0));
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const startDate = new Date(today);
+    startDate.setDate(today.getDate() - 111);
+    const startStr = getLocalDateStr(startDate);
+    const endStr = getLocalDateStr(today);
 
-    getHabitLogsByDateRange(taskId, firstDay, lastDay).then((logs) => {
+    getHabitLogsByDateRange(taskId, startStr, endStr).then((logs) => {
       if (cancelled) return;
       setDates(new Set(logs.map((l) => l.date)));
     });
@@ -273,62 +268,147 @@ function MonthHeatmap({
     return () => {
       cancelled = true;
     };
-  }, [taskId, monthOffset]);
+  }, [taskId]);
 
-  const now = new Date();
-  const targetMonth = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1);
-  const year = targetMonth.getFullYear();
-  const month = targetMonth.getMonth();
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const todayStr = getLocalDateStr(now);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayStr = getLocalDateStr(today);
+  const startDate = new Date(today);
+  startDate.setDate(today.getDate() - 111);
 
-  const weeks: (number | null)[][] = [];
-  let currentWeek: (number | null)[] = [];
-  const firstDayOfWeek = new Date(year, month, 1).getDay();
+  const CELL_SIZE = 12;
+  const GAP = 3;
+  const ROWS = 7;
+  const COLS = 16;
+  const LABEL_WIDTH = 22;
+  const MONTH_HEIGHT = 16;
 
-  for (let i = 0; i < firstDayOfWeek; i++) {
-    currentWeek.push(null);
-  }
+  const startDayOfWeek = startDate.getDay();
+  const firstSunday = new Date(startDate);
+  firstSunday.setDate(startDate.getDate() - startDayOfWeek);
 
-  for (let day = 1; day <= daysInMonth; day++) {
-    currentWeek.push(day);
-    if (currentWeek.length === 7) {
-      weeks.push(currentWeek);
-      currentWeek = [];
+  const cells: {
+    date: Date | null;
+    dateStr: string | null;
+    checked: boolean;
+    isToday: boolean;
+    isFuture: boolean;
+  }[][] = [];
+
+  for (let row = 0; row < ROWS; row++) {
+    cells.push([]);
+    for (let col = 0; col < COLS; col++) {
+      const dayOffset = col * 7 + row;
+      const cellDate = new Date(firstSunday);
+      cellDate.setDate(firstSunday.getDate() + dayOffset);
+
+      if (cellDate < startDate || cellDate > today) {
+        cells[row][col] = {
+          date: null,
+          dateStr: null,
+          checked: false,
+          isToday: false,
+          isFuture: false,
+        };
+      } else {
+        const dateStr = getLocalDateStr(cellDate);
+        cells[row][col] = {
+          date: cellDate,
+          dateStr,
+          checked: dates.has(dateStr),
+          isToday: dateStr === todayStr,
+          isFuture: dateStr > todayStr,
+        };
+      }
     }
   }
-  if (currentWeek.length > 0) {
-    weeks.push(currentWeek);
+
+  const monthLabels: { label: string; col: number }[] = [];
+  let prevMonth = -1;
+  for (let col = 0; col < COLS; col++) {
+    for (let row = 0; row < ROWS; row++) {
+      const cell = cells[row][col];
+      if (cell.date) {
+        const m = cell.date.getMonth();
+        if (m !== prevMonth) {
+          monthLabels.push({ label: `${m + 1}月`, col });
+          prevMonth = m;
+        }
+        break;
+      }
+    }
   }
 
+  const totalWidth = COLS * (CELL_SIZE + GAP) - GAP;
+  const totalHeight = ROWS * (CELL_SIZE + GAP) - GAP;
+  const svgWidth = LABEL_WIDTH + totalWidth;
+  const svgHeight = MONTH_HEIGHT + totalHeight;
+
   return (
-    <div className="flex gap-1">
-      {weeks.map((week, wi) => (
-        <div key={wi} className="flex flex-col gap-1">
-          {week.map((day, di) => {
-            if (day === null) {
-              return <div key={di} className="w-3 h-3 rounded-sm" />;
-            }
-            const dateStr = getLocalDateStr(new Date(year, month, day as number));
-            const checked = dates.has(dateStr);
-            const isFuture = dateStr > todayStr;
-            return (
-              <div
-                key={di}
-                title={dateStr}
-                className={`w-3 h-3 rounded-sm ${
-                  checked
-                    ? "bg-emerald-500"
-                    : isFuture
-                    ? "bg-gray-100 dark:bg-gray-800"
-                    : "bg-gray-200 dark:bg-gray-700"
-                }`}
-              />
-            );
-          })}
-        </div>
+    <svg
+      width={svgWidth}
+      height={svgHeight}
+      viewBox={`0 0 ${svgWidth} ${svgHeight}`}
+      className="overflow-visible"
+      role="img"
+      aria-label="习惯打卡热力图"
+    >
+      {monthLabels.map((ml, i) => (
+        <text
+          key={`m-${i}`}
+          x={LABEL_WIDTH + ml.col * (CELL_SIZE + GAP)}
+          y={11}
+          className="fill-gray-400 dark:fill-gray-500"
+          fontSize="10"
+        >
+          {ml.label}
+        </text>
       ))}
-    </div>
+      {["日", "一", "二", "三", "四", "五", "六"].map((label, i) => (
+        <text
+          key={`d-${i}`}
+          x={LABEL_WIDTH - 4}
+          y={MONTH_HEIGHT + i * (CELL_SIZE + GAP) + CELL_SIZE / 2 + 4}
+          className="fill-gray-400 dark:fill-gray-500"
+          fontSize="9"
+          textAnchor="end"
+        >
+          {label}
+        </text>
+      ))}
+      {cells.map((row, ri) =>
+        row.map((cell, ci) => {
+          if (!cell.date || !cell.dateStr) return null;
+          const x = LABEL_WIDTH + ci * (CELL_SIZE + GAP);
+          const y = MONTH_HEIGHT + ri * (CELL_SIZE + GAP);
+
+          let fillClass = "fill-gray-100 dark:fill-gray-800";
+          if (cell.checked) {
+            fillClass = "fill-emerald-500 dark:fill-emerald-400";
+          } else if (cell.isFuture) {
+            fillClass = "fill-gray-50 dark:fill-gray-900 opacity-30";
+          }
+
+          return (
+            <rect
+              key={`${ri}-${ci}`}
+              x={x}
+              y={y}
+              width={CELL_SIZE}
+              height={CELL_SIZE}
+              rx={2}
+              className={`${fillClass} ${cell.isToday ? "stroke-indigo-500 dark:stroke-indigo-400" : ""}`}
+              strokeWidth={cell.isToday ? 1.5 : 0}
+            >
+              <title>
+                {cell.dateStr}
+                {cell.checked ? " ✅已打卡" : ""}
+              </title>
+            </rect>
+          );
+        })
+      )}
+    </svg>
   );
 }
 
@@ -590,7 +670,10 @@ function DailyTaskItem({
     <div className="flex items-center gap-3 px-4 py-2.5">
       <button
         onClick={() => {
-          if (isFuture) return;
+          if (isFuture) {
+            globalShowToast({ message: "未来日期的琐事还不能标记完成哦", type: "warning" });
+            return;
+          }
           onToggleDone(task);
         }}
         disabled={isFuture}
@@ -631,12 +714,14 @@ function HabitCard({
   todayChecked,
   onCheckIn,
   onDelete,
+  celebrateIndex,
 }: {
   task: Task;
   streak: number;
   todayChecked: boolean;
   onCheckIn: (task: Task) => void;
   onDelete: (task: Task) => void;
+  celebrateIndex?: number;
 }) {
   return (
     <motion.div
@@ -658,10 +743,27 @@ function HabitCard({
           </div>
         </div>
         {todayChecked ? (
-          <span className="flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-2.5 py-1.5 rounded-xl flex-shrink-0">
-            <Check className="w-3.5 h-3.5" />
-            已打卡
-          </span>
+          celebrateIndex !== undefined ? (
+            <motion.span
+              key={`celebrate-${task.id}`}
+              initial={{ scale: 1 }}
+              animate={{ scale: [1, 1.3, 1] }}
+              transition={{
+                delay: celebrateIndex * 0.1,
+                duration: 0.4,
+                ease: "easeOut",
+              }}
+              className="flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-2.5 py-1.5 rounded-xl flex-shrink-0"
+            >
+              <Check className="w-3.5 h-3.5" />
+              已打卡
+            </motion.span>
+          ) : (
+            <span className="flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-2.5 py-1.5 rounded-xl flex-shrink-0">
+              <Check className="w-3.5 h-3.5" />
+              已打卡
+            </span>
+          )
         ) : (
           <button
             onClick={() => onCheckIn(task)}
@@ -679,7 +781,7 @@ function HabitCard({
       </div>
 
       <div className="overflow-x-auto">
-        <MonthHeatmap taskId={task.id!} />
+        <HabitHeatmap taskId={task.id!} />
       </div>
     </motion.div>
   );
@@ -711,8 +813,10 @@ export default function GoalsPage() {
   const [addFormParentId, setAddFormParentId] = useState<number | null>(null);
   const [toast, setToast] = useState<ToastFeedback | null>(null);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const tabDirection = useRef<number>(0);
 
   const [shorttermFilter, setShorttermFilter] = useState<ShortTermFilter>("全部");
+  const [shorttermCelebrationShrunk, setShorttermCelebrationShrunk] = useState(false);
 
   const showToast = useCallback((message: string, type: "success" | "error" = "success") => {
     setToast({ message, type });
@@ -726,13 +830,45 @@ export default function GoalsPage() {
     };
   }, []);
 
+  const allShorttermDone =
+    shorttermTasks.length > 0 &&
+    shorttermTasks.every((t) => t.status === "done");
+
+  useEffect(() => {
+    if (allShorttermDone) {
+      setShorttermCelebrationShrunk(false);
+      const timer = setTimeout(() => {
+        setShorttermCelebrationShrunk(true);
+      }, 5000);
+      return () => clearTimeout(timer);
+    } else {
+      setShorttermCelebrationShrunk(false);
+    }
+  }, [allShorttermDone]);
+
+  const allHabitsDoneToday =
+    habits.length > 0 &&
+    habits.every((h) => todayCheckedHabits.has(h.id!));
+
+  const prevAllHabitsDoneRef = useRef(false);
+
+  useEffect(() => {
+    if (allHabitsDoneToday && !prevAllHabitsDoneRef.current && currentView === "habits") {
+      showToast("今日全部完成！");
+    }
+    prevAllHabitsDoneRef.current = allHabitsDoneToday;
+  }, [allHabitsDoneToday, currentView, showToast]);
+
   const switchView = useCallback(
     (view: GoalViewType) => {
+      const oldIdx = TABS.findIndex((t) => t.key === currentView);
+      const newIdx = TABS.findIndex((t) => t.key === view);
+      tabDirection.current = newIdx > oldIdx ? 1 : -1;
       router.push(`/goals?view=${view}`);
       setShowAddForm(false);
       setAddFormParentId(null);
     },
-    [router]
+    [router, currentView]
   );
 
   const loadLongterm = useCallback(async () => {
@@ -1094,6 +1230,10 @@ export default function GoalsPage() {
       );
     }
 
+    const allDone =
+      shorttermTasks.length > 0 &&
+      shorttermTasks.every((t) => t.status === "done");
+
     const filters: ShortTermFilter[] = ["全部", "进行中", "已完成", "已逾期"];
 
     return (
@@ -1107,6 +1247,35 @@ export default function GoalsPage() {
             />
           )}
         </AnimatePresence>
+
+        {allDone && (
+          <motion.div
+            key={shorttermCelebrationShrunk ? "shrunk" : "full"}
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className={`bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl mb-4 flex items-center gap-2 transition-all ${
+              shorttermCelebrationShrunk
+                ? "px-2.5 py-1.5 justify-center"
+                : "p-3"
+            }`}
+          >
+            {shorttermCelebrationShrunk ? (
+              <span className="text-sm">🎉</span>
+            ) : (
+              <>
+                <span className="text-sm font-medium text-green-700 dark:text-green-300">
+                  🎉 所有短期事件已完成！
+                </span>
+                <button
+                  onClick={() => router.push("/goals?view=habits")}
+                  className="text-xs font-medium text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 underline underline-offset-2 ml-auto flex-shrink-0"
+                >
+                  查看习惯追踪
+                </button>
+              </>
+            )}
+          </motion.div>
+        )}
 
         <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-1">
           {filters.map((f) => (
@@ -1240,6 +1409,10 @@ export default function GoalsPage() {
       );
     }
 
+    const allDoneToday =
+      habits.length > 0 &&
+      habits.every((h) => todayCheckedHabits.has(h.id!));
+
     return (
       <div className="px-4 py-4">
         <AnimatePresence>
@@ -1254,7 +1427,7 @@ export default function GoalsPage() {
         </AnimatePresence>
 
         <div className="space-y-3">
-          {habits.map((habit) => (
+          {habits.map((habit, i) => (
             <HabitCard
               key={habit.id}
               task={habit}
@@ -1262,6 +1435,7 @@ export default function GoalsPage() {
               todayChecked={todayCheckedHabits.has(habit.id!)}
               onCheckIn={handleCheckIn}
               onDelete={handleDeleteTask}
+              celebrateIndex={allDoneToday ? i : undefined}
             />
           ))}
         </div>
@@ -1308,11 +1482,20 @@ export default function GoalsPage() {
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        <AnimatePresence mode="wait">
-          {currentView === "longterm" && renderLongtermView()}
-          {currentView === "shortterm" && renderShorttermView()}
-          {currentView === "daily" && renderDailyView()}
-          {currentView === "habits" && renderHabitsView()}
+        <AnimatePresence mode="wait" custom={tabDirection.current}>
+          <motion.div
+            key={currentView}
+            custom={tabDirection.current}
+            initial={{ opacity: 0, x: tabDirection.current > 0 ? 30 : -30 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: tabDirection.current > 0 ? -30 : 30 }}
+            transition={{ duration: 0.25, ease: [0.32, 0.72, 0, 1] }}
+          >
+            {currentView === "longterm" && renderLongtermView()}
+            {currentView === "shortterm" && renderShorttermView()}
+            {currentView === "daily" && renderDailyView()}
+            {currentView === "habits" && renderHabitsView()}
+          </motion.div>
         </AnimatePresence>
       </div>
 

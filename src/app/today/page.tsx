@@ -240,7 +240,7 @@ function TimelineEventBlock({
   const start = task._clippedStart ?? task.startTime!;
   const end = task._clippedEnd ?? task.endTime!;
   const { top, height } = calculateEventPosition(start, end, dayStart);
-  const color = projectColor || "#6366f1";
+  const color = task.status === "done" ? "#10B981" : (projectColor || "#6366f1");
 
   const typeLabel =
     task.type === "shortterm"
@@ -523,6 +523,17 @@ export default function TodayPage() {
     })
     .sort((a, b) => (a._clippedStart ?? 0) - (b._clippedStart ?? 0));
 
+  const allDone = clippedTasks.length > 0 && clippedTasks.every((t) => t.status === "done");
+  const [allDoneBannerShrunk, setAllDoneBannerShrunk] = useState(false);
+
+  useEffect(() => {
+    if (allDone) {
+      const timer = setTimeout(() => setAllDoneBannerShrunk(true), 5000);
+      return () => clearTimeout(timer);
+    }
+    setAllDoneBannerShrunk(false);
+  }, [allDone]);
+
   return (
     <div className="flex flex-col h-full max-h-screen max-w-4xl mx-auto">
       <div className="flex-shrink-0 sticky top-0 z-30 bg-white/95 dark:bg-gray-900/95 backdrop-blur border-b border-gray-100 dark:border-gray-800">
@@ -569,6 +580,27 @@ export default function TodayPage() {
               <Zap className="w-4 h-4 text-indigo-500" />
               <span className="text-sm font-medium text-indigo-700 dark:text-indigo-300">
                 新的一天开始了
+              </span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {allDone && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden"
+          >
+            <div className={`px-4 flex items-center gap-2 transition-all duration-500 ${
+              allDoneBannerShrunk ? "py-1.5" : "py-2.5"
+            } bg-emerald-50 dark:bg-emerald-900/20 border-b border-emerald-100 dark:border-emerald-800`}>
+              <span className={`font-medium text-emerald-700 dark:text-emerald-300 transition-all ${
+                allDoneBannerShrunk ? "text-xs" : "text-sm"
+              }`}>
+                {allDoneBannerShrunk ? "🎉" : "🎉 今日任务全部完成！"}
               </span>
             </div>
           </motion.div>

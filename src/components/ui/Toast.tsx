@@ -30,7 +30,15 @@ export function ToastContainer() {
     const id = Math.random().toString(36).slice(2);
     const duration = toast.duration ?? 5000;
     durationsRef.current.set(id, duration);
-    setToasts((prev) => [...prev, { ...toast, id, duration }]);
+    setToasts((prev) => {
+      const next = [...prev, { ...toast, id, duration }];
+      if (next.length > 3) {
+        const oldest = next[0];
+        durationsRef.current.delete(oldest.id);
+        return next.slice(-3);
+      }
+      return next;
+    });
 
     if (duration !== 0) {
       setTimeout(() => {

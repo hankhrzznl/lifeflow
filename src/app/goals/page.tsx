@@ -43,7 +43,9 @@ const TABS: { key: GoalViewType; label: string; icon: typeof Mountain }[] = [
   { key: "habits", label: "习惯追踪", icon: Flame },
 ];
 
-type ShortTermFilter = "全部" | "进行中" | "已完成" | "已逾期";
+type ShortTermFilter = "全部" | "进行中" | "已完成" | "已逾期" | "本周" | "本月";
+type DailyFilter = "全部" | "未完成" | "已完成";
+type LongtermFilter = "全部" | "进行中" | "已完成";
 
 function getLocalDateStr(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -431,6 +433,10 @@ function TreeNode({
   const hasChildren = node.children.length > 0;
   const maxDepthReached = depth >= 3;
 
+  const doneChildren = node.children.filter((c) => c.status === "done").length;
+  const totalChildren = node.children.length;
+  const progress = totalChildren > 0 ? doneChildren / totalChildren : 0;
+
   return (
     <div>
       <div
@@ -483,10 +489,33 @@ function TreeNode({
           </span>
         )}
 
+        {node.classification && !node.isMilestone && (
+          <span className="text-[10px] font-medium text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-900/30 px-1.5 py-0.5 rounded-md flex-shrink-0">
+            {node.classification === "long-term" && "长期"}
+            {node.classification === "short-term" && "短期"}
+            {node.classification === "daily-trivial" && "日常"}
+            {node.classification === "habit" && "习惯"}
+          </span>
+        )}
+
         {hasChildren && (
           <span className="text-xs text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded-full flex-shrink-0">
             {node.children.length}
           </span>
+        )}
+
+        {hasChildren && (
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <div className="w-10 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-emerald-500 rounded-full transition-all"
+                style={{ width: `${Math.round(progress * 100)}%` }}
+              />
+            </div>
+            <span className="text-[10px] text-gray-400 dark:text-gray-500">
+              {doneChildren}/{totalChildren}
+            </span>
+          </div>
         )}
 
         <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -822,13 +851,14 @@ export default function GoalsPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const viewParam = searchParams.get("view");
+  const tabParam = searchParams.get("tab");
+  const fromCapture = searchParams.get("fromCapture") === "1";
   const currentView: GoalViewType =
-    viewParam === "long-term" ||
-    viewParam === "short-term" ||
-    viewParam === "daily-trivial" ||
-    viewParam === "habits"
-      ? viewParam
+    tabParam === "long-term" ||
+    tabParam === "short-term" ||
+    tabParam === "daily-trivial" ||
+    tabParam === "habits"
+      ? tabParam
       : "long-term";
 
   const [loading, setLoading] = useState(true);
@@ -848,6 +878,8 @@ export default function GoalsPage() {
   const [tabAnimDir, setTabAnimDir] = useState(0);
 
   const [shorttermFilter, setShorttermFilter] = useState<ShortTermFilter>("全部");
+  const [dailyFilter, setDailyFilter] = useState<DailyFilter>("全部");
+  const [longtermFilter, setLongtermFilter] = useState<LongtermFilter>("全部");
   const [shorttermCelebrationShrunk, setShorttermCelebrationShrunk] = useState(false);
 
   const { dayChanged, dismissOverlay } = useDayTransitionGuard();
@@ -862,6 +894,15 @@ export default function GoalsPage() {
     return () => {
       if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
     };
+  }, []);
+
+  useEffect(() => {
+    if (fromCapture) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      showToast("已从捕捉箱导入", "success");
+      setShowAddForm(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const allShorttermDone =
@@ -899,7 +940,7 @@ export default function GoalsPage() {
       const newIdx = TABS.findIndex((t) => t.key === view);
       tabDirection.current = newIdx > oldIdx ? 1 : -1;
       setTabAnimDir(newIdx > oldIdx ? 1 : -1);
-      router.push(`/goals?view=${view}`);
+      router.push(`/goals?tab=${view}`);
       setShowAddForm(false);
       setAddFormParentId(null);
     },
@@ -1155,15 +1196,47 @@ export default function GoalsPage() {
     if (shorttermFilter === "进行中") return shorttermTasks.filter((t) => t.status === "active" && (!t.endTime || t.endTime >= now));
     if (shorttermFilter === "已完成") return shorttermTasks.filter((t) => t.status === "done");
     if (shorttermFilter === "已逾期") return shorttermTasks.filter((t) => t.status === "active" && t.endTime != null && t.endTime < now);
+    if (shorttermFilter === "本周") {
+      const today = new Date();
+      const dayOfWeek = today.getDay();
+      const monday = new Date(today);
+      monday.setDate(today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1));
+      monday.setHours(0, 0, 0, 0);
+      const sunday = new Date(monday);
+      sunday.setDate(monday.getDate() + 6);
+      sunday.setHours(23, 59, 59, 999);
+      return shorttermTasks.filter((t) => {
+        if (!t.endTime && !t.startTime) return false;
+        const taskTime = t.endTime ?? t.startTime ?? 0;
+        return taskTime >= monday.getTime() && taskTime <= sunday.getTime();
+      });
+    }
+    if (shorttermFilter === "本月") {
+      const today = new Date();
+      const firstDay = new Date(today.getFullYear(), today.getMonth(), 1).getTime();
+      const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999).getTime();
+      return shorttermTasks.filter((t) => {
+        if (!t.endTime && !t.startTime) return false;
+        const taskTime = t.endTime ?? t.startTime ?? 0;
+        return taskTime >= firstDay && taskTime <= lastDay;
+      });
+    }
     return shorttermTasks;
   }, [shorttermFilter, shorttermTasks]);
 
-  const dailyByDate = (() => {
+  const filteredDaily = useMemo(() => {
+    if (dailyFilter === "全部") return dailyTasks;
+    if (dailyFilter === "未完成") return dailyTasks.filter((t) => t.status !== "done");
+    if (dailyFilter === "已完成") return dailyTasks.filter((t) => t.status === "done");
+    return dailyTasks;
+  }, [dailyFilter, dailyTasks]);
+
+  const dailyByDate = useMemo(() => {
     const todayStr = getLocalDateStr(new Date());
     const groups: { dateStr: string; label: string; isToday: boolean; tasks: Task[] }[] = [];
     const seen = new Set<string>();
 
-    const todayTasks = dailyTasks.filter((t) => {
+    const todayTasks = filteredDaily.filter((t) => {
       if (!t.startTime) return false;
       const ds = getLocalDateStr(new Date(t.startTime));
       return ds === todayStr;
@@ -1174,7 +1247,7 @@ export default function GoalsPage() {
       seen.add(todayStr);
     }
 
-    for (const task of dailyTasks) {
+    for (const task of filteredDaily) {
       if (!task.startTime) continue;
       const ds = getLocalDateStr(new Date(task.startTime));
       if (seen.has(ds)) continue;
@@ -1190,7 +1263,14 @@ export default function GoalsPage() {
     }
 
     return groups;
-  })();
+  }, [filteredDaily]);
+
+  const filteredTree = useMemo(() => {
+    if (longtermFilter === "全部") return tree;
+    if (longtermFilter === "进行中") return tree.filter((t) => t.status !== "done");
+    if (longtermFilter === "已完成") return tree.filter((t) => t.status === "done");
+    return tree;
+  }, [longtermFilter, tree]);
 
   const renderLongtermView = () => {
     if (loading) return <LongtermSkeleton />;
@@ -1223,8 +1303,26 @@ export default function GoalsPage() {
           )}
         </AnimatePresence>
 
+        {tree.length > 0 && (
+          <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-1">
+            {(["全部", "进行中", "已完成"] as LongtermFilter[]).map((f) => (
+              <button
+                key={f}
+                onClick={() => setLongtermFilter(f)}
+                className={`text-xs font-medium px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors ${
+                  longtermFilter === f
+                    ? "bg-indigo-600 text-white"
+                    : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+                }`}
+              >
+                {f}
+              </button>
+            ))}
+          </div>
+        )}
+
         <div className="space-y-1">
-          {tree.map((node) => (
+          {filteredTree.map((node) => (
             <TreeNode
               key={node.id}
               node={node}
@@ -1237,13 +1335,22 @@ export default function GoalsPage() {
         </div>
 
         {!showAddForm && (
-          <button
-            onClick={handleMainAddClick}
-            className="mt-3 w-full flex items-center justify-center gap-1.5 py-3 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-700 text-sm text-gray-500 dark:text-gray-400 hover:border-indigo-300 dark:hover:border-indigo-700 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            添加长期目标
-          </button>
+          <div className="mt-3 space-y-2">
+            <button
+              onClick={handleMainAddClick}
+              className="w-full flex items-center justify-center gap-1.5 py-3 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-700 text-sm text-gray-500 dark:text-gray-400 hover:border-indigo-300 dark:hover:border-indigo-700 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              添加长期目标
+            </button>
+            <button
+              onClick={handleMainAddClick}
+              className="w-full flex items-center justify-center gap-1.5 py-3 rounded-xl border-2 border-dashed border-amber-300 dark:border-amber-700 text-sm text-amber-600 dark:text-amber-400 hover:border-amber-400 dark:hover:border-amber-600 hover:text-amber-700 dark:hover:text-amber-300 transition-colors"
+            >
+              <Mountain className="w-4 h-4" />
+              添加里程碑
+            </button>
+          </div>
         )}
       </div>
     );
@@ -1269,7 +1376,7 @@ export default function GoalsPage() {
       shorttermTasks.length > 0 &&
       shorttermTasks.every((t) => t.status === "done");
 
-    const filters: ShortTermFilter[] = ["全部", "进行中", "已完成", "已逾期"];
+    const filters: ShortTermFilter[] = ["全部", "进行中", "已完成", "已逾期", "本周", "本月"];
 
     return (
       <div className="px-4 py-4">
@@ -1302,7 +1409,7 @@ export default function GoalsPage() {
                   🎉 所有短期事件已完成！
                 </span>
                 <button
-                  onClick={() => router.push("/goals?view=habits")}
+                  onClick={() => router.push("/goals?tab=habits")}
                   className="text-xs font-medium text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 underline underline-offset-2 ml-auto flex-shrink-0"
                 >
                   查看习惯追踪
@@ -1381,6 +1488,22 @@ export default function GoalsPage() {
             />
           )}
         </AnimatePresence>
+
+        <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-1">
+          {(["全部", "未完成", "已完成"] as DailyFilter[]).map((f) => (
+            <button
+              key={f}
+              onClick={() => setDailyFilter(f)}
+              className={`text-xs font-medium px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors ${
+                dailyFilter === f
+                  ? "bg-indigo-600 text-white"
+                  : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+              }`}
+            >
+              {f}
+            </button>
+          ))}
+        </div>
 
         <div className="space-y-4">
           {dailyByDate.map((group) => (
@@ -1586,6 +1709,14 @@ export default function GoalsPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <button
+        onClick={handleMainAddClick}
+        className="fixed bottom-24 right-4 z-30 bg-blue-500 w-14 h-14 rounded-full shadow-lg flex items-center justify-center hover:bg-blue-600 transition-colors active:scale-95"
+        aria-label="添加任务"
+      >
+        <Plus className="w-6 h-6 text-white" />
+      </button>
     </div>
   );
 }

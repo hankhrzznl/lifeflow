@@ -95,8 +95,7 @@ export default function CapturePage() {
       setTimeout(() => {
         textareaRef.current?.focus();
       }, 600);
-    } catch (err) {
-      console.error("添加捕捉失败:", err);
+    } catch {
     } finally {
       setTimeout(() => setIsSubmitting(false), 500);
     }
@@ -118,8 +117,7 @@ export default function CapturePage() {
         },
       });
       await loadItems();
-    } catch (err) {
-      console.error("删除失败:", err);
+    } catch {
     }
   };
 

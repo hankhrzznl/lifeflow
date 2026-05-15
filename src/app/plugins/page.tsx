@@ -87,8 +87,7 @@ export default function PluginsPage() {
     try {
       const all = await getAllPlugins();
       setPlugins(all);
-    } catch (err) {
-      console.error("Failed to load plugins:", err);
+    } catch {
       showToast({ message: "加载插件列表失败", type: "error", duration: 3000 });
     } finally {
       setIsLoading(false);
@@ -136,8 +135,7 @@ export default function PluginsPage() {
       setPluginVersion("1.0.0");
       setShowInstall(false);
       await loadPlugins();
-    } catch (err) {
-      console.error("Plugin install failed:", err);
+    } catch {
       showToast({ message: "插件安装失败，请重试", type: "error", duration: 3000 });
     } finally {
       setIsInstalling(false);
@@ -156,8 +154,7 @@ export default function PluginsPage() {
         duration: 2000,
       });
       await loadPlugins();
-    } catch (err) {
-      console.error("Toggle plugin status failed:", err);
+    } catch {
       showToast({ message: "状态切换失败", type: "error", duration: 3000 });
     }
   }
@@ -168,8 +165,7 @@ export default function PluginsPage() {
       showToast({ message: "插件已卸载", type: "success", duration: 2000 });
       setConfirmDelete(null);
       await loadPlugins();
-    } catch (err) {
-      console.error("Uninstall plugin failed:", err);
+    } catch {
       showToast({ message: "卸载失败，请重试", type: "error", duration: 3000 });
     }
   }

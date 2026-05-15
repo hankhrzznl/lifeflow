@@ -154,6 +154,7 @@ export default function Dialog({
               {type === "info" ? (
                 <button
                   onClick={onClose}
+                  aria-label="关闭"
                   className="bg-indigo-600 text-white rounded-xl h-11 px-5 font-medium hover:bg-indigo-700 transition-colors"
                 >
                   知道了
@@ -162,12 +163,14 @@ export default function Dialog({
                 <>
                   <button
                     onClick={handleCancel}
+                    aria-label="取消"
                     className="border border-gray-200 dark:border-gray-700 rounded-xl h-11 px-5 font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                   >
                     {cancelLabel}
                   </button>
                   <button
                     onClick={handleConfirm}
+                    aria-label={confirmLabel || "确认"}
                     className={`rounded-xl h-11 px-5 font-medium text-white transition-colors ${
                       isDanger
                         ? "bg-red-600 hover:bg-red-700"

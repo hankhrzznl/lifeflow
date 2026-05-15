@@ -52,8 +52,7 @@ export default function SettingsPage() {
         type: "success",
         duration: 3000,
       });
-    } catch (err) {
-      console.error("Export failed:", err);
+    } catch {
       showToast({
         message: "导出失败，请重试",
         type: "error",
@@ -112,8 +111,7 @@ export default function SettingsPage() {
       });
 
       window.dispatchEvent(new Event("data-imported"));
-    } catch (err) {
-      console.error("Import failed:", err);
+    } catch {
       showToast({
         message: "导入失败，请重试",
         type: "error",

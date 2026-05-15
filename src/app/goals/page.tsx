@@ -441,6 +441,7 @@ function TreeNode({
         {hasChildren ? (
           <button
             onClick={() => setExpanded(!expanded)}
+            aria-label={expanded ? "收起" : "展开"}
             className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
           >
             <motion.span
@@ -456,6 +457,7 @@ function TreeNode({
 
         <button
           onClick={() => onToggleDone(node)}
+          aria-label={isDone ? "标记为未完成" : "标记为已完成"}
           className={`flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
             isDone
               ? "bg-emerald-500 border-emerald-500"
@@ -494,6 +496,7 @@ function TreeNode({
               onAddChild(node.id!);
             }}
             disabled={maxDepthReached}
+            aria-label="添加子任务"
             className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors disabled:opacity-30"
             title={maxDepthReached ? "已达最大嵌套层级（3级）" : "添加子任务"}
           >
@@ -501,6 +504,7 @@ function TreeNode({
           </button>
           <button
             onClick={() => onDelete(node)}
+            aria-label="删除"
             className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
           >
             <Trash2 className="w-3.5 h-3.5 text-gray-400 hover:text-red-500" />

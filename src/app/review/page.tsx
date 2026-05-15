@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { BarChart as BarChartIcon, Flame, Timer, Target, Zap } from "lucide-react";
+import Link from "next/link";
 import {
   BarChart,
   Bar,
@@ -625,13 +626,13 @@ export default function ReviewPage() {
               <p className="text-sm text-[var(--muted-foreground)] mb-4">
                 没有任何专注数据？去开始第一段专注吧
               </p>
-              <a
-                href="/focus"
+              <Link
+                href="/plugins/focus-timer"
                 className="inline-flex items-center gap-1.5 bg-indigo-500 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-indigo-600 transition-colors"
               >
                 <Timer className="w-4 h-4" />
                 开始专注
-              </a>
+              </Link>
             </div>
           )}
         </div>

@@ -60,7 +60,6 @@ export default function ProjectsPage() {
       const next = new Set(prev);
       if (next.has(boardId)) { next.delete(boardId); return next; }
       next.add(boardId);
-      getSectionsByBoard(boardId).then((s) => setSections((prev) => new Map(prev).set(boardId, s)));
       return next;
     });
     const existingSections = sections.get(boardId) || await getSectionsByBoard(boardId);
@@ -311,16 +310,16 @@ export default function ProjectsPage() {
         {editingProject && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/40 flex items-end justify-center" onClick={() => setEditingProject(null)}>
             <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", stiffness: 400, damping: 40 }} onClick={(e) => e.stopPropagation()} className="w-full max-w-lg bg-white dark:bg-gray-900 rounded-t-2xl p-6">
-              <h3 className="text-lg font-semibold mb-4">编辑项目</h3>
-              <input value={editingProject.name} onChange={(e) => setEditingProject({ ...editingProject, name: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border mb-3 text-sm" />
+              <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">编辑项目</h3>
+              <input value={editingProject.name} onChange={(e) => setEditingProject({ ...editingProject, name: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 mb-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               <div className="flex gap-2 mb-4">
                 {COLORS.map((c) => (
                   <button key={c} onClick={() => setEditingProject({ ...editingProject, color: c })} className={`w-8 h-8 rounded-full transition-transform ${editingProject.color === c ? "ring-2 ring-offset-2 ring-blue-500" : ""}`} style={{ backgroundColor: c }} />
                 ))}
               </div>
               <div className="flex gap-3">
-                <button onClick={() => setEditingProject(null)} className="flex-1 py-3 rounded-xl border text-sm">取消</button>
-                <button onClick={handleUpdateProject} className="flex-1 py-3 rounded-xl bg-blue-600 text-white text-sm">保存</button>
+                <button onClick={() => setEditingProject(null)} className="flex-1 py-3 rounded-xl border border-gray-200 dark:border-gray-700 text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">取消</button>
+                <button onClick={handleUpdateProject} className="flex-1 py-3 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors">保存</button>
               </div>
             </motion.div>
           </motion.div>

@@ -8,7 +8,7 @@ import {
   getAllProjects,
   updateProject,
   deleteProject,
-  getProjectEventCount,
+  getProjectTaskCount,
 } from "@/lib/db";
 import type { Project } from "@/lib/types";
 
@@ -44,7 +44,7 @@ export default function ProjectsPage() {
     const withCounts = await Promise.all(
       all.map(async (p) => ({
         ...p,
-        eventCount: await getProjectEventCount(p.id),
+        eventCount: await getProjectTaskCount(p.id),
       }))
     );
     setProjects(withCounts);

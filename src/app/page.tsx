@@ -18,11 +18,11 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import {
-  getInboxCount,
-  getEventsByTimeRange,
+  getTasksByTimeRange,
+  getTodayTasks,
   getFocusLogsByTimeRange,
 } from "@/lib/db";
-import type { CalendarEvent, FocusLog } from "@/lib/types";
+import type { Task, FocusLog } from "@/lib/types";
 import EmptyState from "@/components/ui/EmptyState";
 
 const WEEK_DAY_NAMES = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
@@ -188,7 +188,7 @@ function StatCard({
 export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [inboxCount, setInboxCount] = useState(0);
-  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [focusLogs, setFocusLogs] = useState<FocusLog[]>([]);
   const [now, setNow] = useState(INITIAL_NOW);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -198,14 +198,14 @@ export default function DashboardPage() {
   const fetchData = useCallback(async () => {
     try {
       const { start, end } = getTodayRange();
-      const [inbox, evts, logs] = await Promise.all([
-        getInboxCount(),
-        getEventsByTimeRange(start, end),
+      const [todayTasks, evts, logs] = await Promise.all([
+        getTodayTasks(),
+        getTasksByTimeRange(start, end),
         getFocusLogsByTimeRange(start, end),
       ]);
       if (cancelledRef.current) return;
-      setInboxCount(inbox);
-      setEvents(evts);
+      setInboxCount(todayTasks.length);
+      setTasks(evts);
       setFocusLogs(logs);
     } catch (err) {
       if (cancelledRef.current) return;
@@ -248,34 +248,34 @@ export default function DashboardPage() {
   );
   const totalFocusMinutes = Math.round(totalFocusMs / 60000);
 
-  const completedEventIds = new Set(completedFocusLogs.map((fl) => fl.eventId));
-  const completedEventsCount = events.filter(
-    (e) => e.id !== undefined && completedEventIds.has(e.id)
+  const completedTaskIds = new Set(completedFocusLogs.map((fl) => fl.eventId));
+  const completedTasksCount = tasks.filter(
+    (t) => t.id !== undefined && completedTaskIds.has(t.id)
   ).length;
   const completionRate =
-    events.length > 0
-      ? Math.round((completedEventsCount / events.length) * 100)
+    tasks.length > 0
+      ? Math.round((completedTasksCount / tasks.length) * 100)
       : 0;
 
   const activeFocusSession = focusLogs.find((fl) => !fl.completed);
-  const activeEvent =
+  const activeTask =
     activeFocusSession !== undefined
-      ? events.find((e) => e.id === activeFocusSession.eventId)
+      ? tasks.find((t) => t.id === activeFocusSession.eventId)
       : undefined;
 
-  const remainingEvents = events
-    .filter((e) => e.endTime > now)
-    .sort((a, b) => a.startTime - b.startTime);
+  const remainingTasks = tasks
+    .filter((t) => t.endTime && t.endTime > now)
+    .sort((a, b) => a.startTime! - b.startTime!);
 
-  const upcomingEvents = remainingEvents.slice(0, 5);
-  const plannedEventsCount = events.filter((e) => e.planned).length;
-  const allTodayEventsCount = events.length;
+  const upcomingTasks = remainingTasks.slice(0, 5);
+  const plannedTasksCount = tasks.filter((t) => t.planned).length;
+  const allTodayTasksCount = tasks.length;
 
   const activeCountdown =
-    activeEvent && activeEvent.endTime > now ? activeEvent.endTime - now : 0;
+    activeTask && activeTask.endTime && activeTask.endTime > now ? activeTask.endTime - now : 0;
 
   useEffect(() => {
-    if (activeEvent && activeEvent.endTime > now) {
+    if (activeTask && activeTask.endTime && activeTask.endTime > now) {
       tickRef.current = setInterval(() => {
         setNow(Date.now());
       }, 1000);
@@ -286,7 +286,7 @@ export default function DashboardPage() {
         }
       };
     }
-  }, [activeEvent, now]);
+  }, [activeTask, now]);
 
   let statusTitle: string;
   let statusDescription: string;
@@ -294,21 +294,21 @@ export default function DashboardPage() {
   let statusVariant: "active" | "idle-upcoming" | "idle-empty" | "no-task";
   let idleHint: IdleHint | null = null;
 
-  if (activeEvent) {
+  if (activeTask) {
     statusTitle = "进行中";
-    statusDescription = activeEvent.title;
+    statusDescription = activeTask.title;
     StatusIcon = Zap;
     statusVariant = "active";
-  } else if (allTodayEventsCount > 0) {
-    if (remainingEvents.length > 0) {
-      const nextEventMinutes = Math.round(
-        (remainingEvents[0].startTime - now) / 60000
+  } else if (allTodayTasksCount > 0) {
+    if (remainingTasks.length > 0) {
+      const nextTaskMinutes = Math.round(
+        (remainingTasks[0].startTime! - now) / 60000
       );
       statusTitle = "空闲";
-      statusDescription = `下一个: ${remainingEvents[0].title} ${formatTime(remainingEvents[0].startTime)}`;
+      statusDescription = `下一个: ${remainingTasks[0].title} ${formatTime(remainingTasks[0].startTime!)}`;
       StatusIcon = Coffee;
       statusVariant = "idle-upcoming";
-      idleHint = getIdleHint(nextEventMinutes);
+      idleHint = getIdleHint(nextTaskMinutes);
     } else {
       statusTitle = "今天没有更多安排了";
       statusDescription = "辛苦了，回顾一下今天的成果吧";
@@ -430,8 +430,8 @@ export default function DashboardPage() {
               <div className="flex items-center gap-2 text-xs text-[var(--muted-foreground)]">
                 <Clock className="w-3.5 h-3.5" />
                 <span>
-                  {formatTime(activeEvent!.startTime)} -{" "}
-                  {formatTime(activeEvent!.endTime)}
+                  {formatTime(activeTask!.startTime!)} -{" "}
+                  {formatTime(activeTask!.endTime!)}
                 </span>
               </div>
             </div>
@@ -497,7 +497,7 @@ export default function DashboardPage() {
           <StatCard
             icon={Calendar}
             label="今日任务"
-            value={plannedEventsCount}
+            value={plannedTasksCount}
             color="#f59e0b"
             bgColor="#fffbeb"
           />
@@ -525,7 +525,7 @@ export default function DashboardPage() {
             今日时间线
           </h2>
 
-          {upcomingEvents.length === 0 ? (
+          {upcomingTasks.length === 0 ? (
             <EmptyState
               icon={Calendar}
               title="暂无待办事项"
@@ -534,13 +534,13 @@ export default function DashboardPage() {
           ) : (
             <div className="space-y-0">
               <AnimatePresence mode="popLayout">
-                {upcomingEvents.map((event, index) => {
+                {upcomingTasks.map((task, index) => {
                   const isCurrent =
-                    event.startTime <= now && event.endTime > now;
-                  const isPast = event.endTime <= now;
+                    task.startTime! <= now && task.endTime != null && task.endTime > now;
+                  const isPast = task.endTime != null && task.endTime <= now;
                   return (
                     <motion.div
-                      key={event.id ?? index}
+                      key={task.id ?? index}
                       initial={{ opacity: 0, x: -8 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: index * 0.06, duration: 0.3 }}
@@ -565,7 +565,7 @@ export default function DashboardPage() {
                               : "text-[var(--muted-foreground)]"
                         }`}
                       >
-                        {formatTime(event.startTime)}
+                        {formatTime(task.startTime!)}
                       </span>
                       <div className="flex-1 min-w-0">
                         <p
@@ -577,14 +577,14 @@ export default function DashboardPage() {
                                 : "text-[var(--foreground)]"
                           }`}
                         >
-                          {event.title}
+                          {task.title}
                         </p>
                         <p className="text-xs text-[var(--muted-foreground)] mt-0.5">
-                          {formatTime(event.startTime)} -{" "}
-                          {formatTime(event.endTime)}
-                          {event.tags && event.tags.length > 0 && (
+                          {formatTime(task.startTime!)} -{" "}
+                          {task.endTime ? formatTime(task.endTime) : "..."}
+                          {task.tags && task.tags.length > 0 && (
                             <span className="ml-2">
-                              {event.tags.map((tag) => (
+                              {task.tags.map((tag) => (
                                 <span
                                   key={tag}
                                   className="inline-block bg-[var(--card-border)] rounded-full px-1.5 py-px text-[10px] mr-1"
@@ -603,9 +603,9 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {upcomingEvents.length > 0 && remainingEvents.length > 5 && (
+          {upcomingTasks.length > 0 && remainingTasks.length > 5 && (
             <p className="text-xs text-[var(--muted-foreground)] text-center mt-4 pt-3 border-t border-[var(--card-border)]">
-              还有 {remainingEvents.length - upcomingEvents.length} 项任务未显示
+              还有 {remainingTasks.length - upcomingTasks.length} 项任务未显示
             </p>
           )}
         </motion.div>

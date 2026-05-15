@@ -2,18 +2,16 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Trash2, RotateCcw, AlertTriangle, Calendar, Inbox } from "lucide-react";
-import {
-  getTrashEvents,
-  getTrashCaptures,
-  restoreEvent,
-  restoreCapture,
-  purgeEvent,
-  purgeCapture,
-  getTrashEventCount,
-  getTrashCaptureCount,
-} from "@/lib/db";
-import type { CalendarEvent, CaptureItem } from "@/lib/types";
+import { Trash2, RotateCcw, AlertTriangle, Calendar, ClipboardList, Target, Flame } from "lucide-react";
+import { getTrashTasks, restoreTask, purgeTask } from "@/lib/db";
+import type { Task } from "@/lib/types";
+
+const TYPE_CONFIG: Record<Task["type"], { label: string; icon: typeof Calendar; color: string }> = {
+  shortterm: { label: "短期", icon: Calendar, color: "text-blue-500 bg-blue-50" },
+  daily: { label: "日常", icon: ClipboardList, color: "text-amber-500 bg-amber-50" },
+  longterm: { label: "长期", icon: Target, color: "text-purple-500 bg-purple-50" },
+  habit: { label: "习惯", icon: Flame, color: "text-orange-500 bg-orange-50" },
+};
 
 function relativeTime(timestamp: number): string {
   const diff = Date.now() - timestamp;
@@ -28,38 +26,15 @@ function relativeTime(timestamp: number): string {
   return new Date(timestamp).toLocaleDateString("zh-CN");
 }
 
-function formatTime(ts: number): string {
-  return new Date(ts).toLocaleString("zh-CN", {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-type TabId = "events" | "captures";
-
 export default function TrashPage() {
-  const [activeTab, setActiveTab] = useState<TabId>("events");
-  const [events, setEvents] = useState<CalendarEvent[]>([]);
-  const [captures, setCaptures] = useState<CaptureItem[]>([]);
-  const [eventCount, setEventCount] = useState(0);
-  const [captureCount, setCaptureCount] = useState(0);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
-  const [purgeConfirm, setPurgeConfirm] = useState<string | null>(null);
+  const [purgeConfirm, setPurgeConfirm] = useState<number | "all" | null>(null);
   const [purging, setPurging] = useState(false);
 
   const loadData = useCallback(async () => {
-    const [ev, ca, ec, cc] = await Promise.all([
-      getTrashEvents(),
-      getTrashCaptures(),
-      getTrashEventCount(),
-      getTrashCaptureCount(),
-    ]);
-    setEvents(ev);
-    setCaptures(ca);
-    setEventCount(ec);
-    setCaptureCount(cc);
+    const items = await getTrashTasks();
+    setTasks(items);
     setLoading(false);
   }, []);
 
@@ -67,31 +42,15 @@ export default function TrashPage() {
     queueMicrotask(() => loadData());
   }, [loadData]);
 
-  async function handleRestoreEvent(id: number) {
-    await restoreEvent(id);
+  async function handleRestore(id: number) {
+    await restoreTask(id);
     await loadData();
   }
 
-  async function handleRestoreCapture(id: number) {
-    await restoreCapture(id);
-    await loadData();
-  }
-
-  async function handlePurgeEvent(id: number) {
+  async function handlePurge(id: number) {
     setPurging(true);
     try {
-      await purgeEvent(id);
-      await loadData();
-    } finally {
-      setPurging(false);
-      setPurgeConfirm(null);
-    }
-  }
-
-  async function handlePurgeCapture(id: number) {
-    setPurging(true);
-    try {
-      await purgeCapture(id);
+      await purgeTask(id);
       await loadData();
     } finally {
       setPurging(false);
@@ -102,12 +61,8 @@ export default function TrashPage() {
   async function handlePurgeAll() {
     setPurging(true);
     try {
-      const allEvents = await getTrashEvents();
-      const allCaptures = await getTrashCaptures();
-      await Promise.all([
-        ...allEvents.map((e) => purgeEvent(e.id!)),
-        ...allCaptures.map((c) => purgeCapture(c.id!)),
-      ]);
+      const all = await getTrashTasks();
+      await Promise.all(all.map((t) => purgeTask(t.id!)));
       await loadData();
     } finally {
       setPurging(false);
@@ -115,7 +70,8 @@ export default function TrashPage() {
     }
   }
 
-  const isEmpty = eventCount === 0 && captureCount === 0;
+  const count = tasks.length;
+  const isEmpty = count === 0;
 
   return (
     <div className="flex-1 flex flex-col h-full bg-[var(--bg-primary)]">
@@ -123,7 +79,7 @@ export default function TrashPage() {
         <div>
           <h1 className="text-xl font-bold text-[var(--text-primary)]">回收站</h1>
           <p className="text-sm text-[var(--text-secondary)] mt-1">
-            {isEmpty ? "回收站为空" : `${eventCount + captureCount} 个项目等待清理`}
+            {isEmpty ? "回收站为空" : `${count} 个项目等待清理`}
           </p>
         </div>
         {!isEmpty && (
@@ -136,41 +92,6 @@ export default function TrashPage() {
             清空回收站
           </motion.button>
         )}
-      </div>
-
-      <div className="flex gap-1 mx-5 p-1 rounded-xl bg-[var(--bg-secondary)] mb-3">
-        <button
-          onClick={() => setActiveTab("events")}
-          className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-all ${
-            activeTab === "events"
-              ? "bg-[var(--bg-primary)] text-[var(--text-primary)] shadow-sm"
-              : "text-[var(--text-secondary)]"
-          }`}
-        >
-          <Calendar className="w-4 h-4" />
-          事件
-          {eventCount > 0 && (
-            <span className="text-xs px-1.5 py-0.5 rounded-full bg-[var(--bg-secondary)] text-[var(--text-secondary)]">
-              {eventCount}
-            </span>
-          )}
-        </button>
-        <button
-          onClick={() => setActiveTab("captures")}
-          className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-all ${
-            activeTab === "captures"
-              ? "bg-[var(--bg-primary)] text-[var(--text-primary)] shadow-sm"
-              : "text-[var(--text-secondary)]"
-          }`}
-        >
-          <Inbox className="w-4 h-4" />
-          捕捉
-          {captureCount > 0 && (
-            <span className="text-xs px-1.5 py-0.5 rounded-full bg-[var(--bg-secondary)] text-[var(--text-secondary)]">
-              {captureCount}
-            </span>
-          )}
-        </button>
       </div>
 
       <div className="flex-1 overflow-y-auto px-5 pb-24">
@@ -189,10 +110,12 @@ export default function TrashPage() {
           </div>
         ) : (
           <AnimatePresence mode="popLayout">
-            {activeTab === "events" &&
-              events.map((event) => (
+            {tasks.map((task) => {
+              const config = TYPE_CONFIG[task.type] ?? TYPE_CONFIG.shortterm;
+              const Icon = config.icon;
+              return (
                 <motion.div
-                  key={`event-${event.id}`}
+                  key={`task-${task.id}`}
                   layout
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
@@ -200,21 +123,27 @@ export default function TrashPage() {
                   className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-[var(--bg-secondary)] mb-2"
                 >
                   <div className="w-8 h-8 rounded-xl bg-danger-100 flex items-center justify-center flex-shrink-0">
-                    <Calendar className="w-4 h-4 text-danger-500" />
+                    <Icon className="w-4 h-4 text-danger-500" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-[var(--text-primary)] truncate">
-                      {event.title || "未命名事件"}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium text-[var(--text-primary)] truncate">
+                        {task.title || "未命名"}
+                      </p>
+                      <span
+                        className={`flex-shrink-0 text-xs px-1.5 py-0.5 rounded-md font-medium ${config.color}`}
+                      >
+                        {config.label}
+                      </span>
+                    </div>
                     <p className="text-xs text-[var(--text-secondary)] mt-0.5">
-                      {formatTime(event.startTime)} - {formatTime(event.endTime)}
-                      {event.deletedAt && ` · ${relativeTime(event.deletedAt)}删除`}
+                      {relativeTime(task.updatedAt)}删除
                     </p>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <motion.button
                       whileTap={{ scale: 0.95 }}
-                      onClick={() => handleRestoreEvent(event.id!)}
+                      onClick={() => handleRestore(task.id!)}
                       className="p-2 rounded-xl bg-emerald-100 text-emerald-600 hover:bg-emerald-200 transition-colors"
                       title="恢复"
                     >
@@ -222,7 +151,7 @@ export default function TrashPage() {
                     </motion.button>
                     <motion.button
                       whileTap={{ scale: 0.95 }}
-                      onClick={() => setPurgeConfirm(`event:${event.id}`)}
+                      onClick={() => setPurgeConfirm(task.id!)}
                       className="p-2 rounded-xl bg-danger-100 text-danger-500 hover:bg-danger-200 transition-colors"
                       title="永久删除"
                     >
@@ -230,71 +159,14 @@ export default function TrashPage() {
                     </motion.button>
                   </div>
                 </motion.div>
-              ))}
-            {activeTab === "events" && events.length === 0 && eventCount === 0 && (
-              <div className="flex flex-col items-center justify-center py-16 text-[var(--text-secondary)]">
-                <Calendar className="w-10 h-10 mb-3 opacity-30" />
-                <p className="text-sm">没有已删除的事件</p>
-              </div>
-            )}
-            {activeTab === "captures" &&
-              captures.map((capture) => (
-                <motion.div
-                  key={`capture-${capture.id}`}
-                  layout
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 20 }}
-                  className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-[var(--bg-secondary)] mb-2"
-                >
-                  <div className="w-8 h-8 rounded-xl bg-danger-100 flex items-center justify-center flex-shrink-0">
-                    <Inbox className="w-4 h-4 text-danger-500" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-[var(--text-primary)] truncate">
-                      {capture.content || "空内容"}
-                    </p>
-                    <p className="text-xs text-[var(--text-secondary)] mt-0.5">
-                      {relativeTime(capture.createdAt)}捕捉
-                      {capture.tags.length > 0 && (
-                        <span className="ml-2">
-                          {capture.tags.map((t) => `#${t}`).join(" ")}
-                        </span>
-                      )}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <motion.button
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => handleRestoreCapture(capture.id!)}
-                      className="p-2 rounded-xl bg-emerald-100 text-emerald-600 hover:bg-emerald-200 transition-colors"
-                      title="恢复"
-                    >
-                      <RotateCcw className="w-4 h-4" />
-                    </motion.button>
-                    <motion.button
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => setPurgeConfirm(`capture:${capture.id}`)}
-                      className="p-2 rounded-xl bg-danger-100 text-danger-500 hover:bg-danger-200 transition-colors"
-                      title="永久删除"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </motion.button>
-                  </div>
-                </motion.div>
-              ))}
-            {activeTab === "captures" && captures.length === 0 && captureCount === 0 && (
-              <div className="flex flex-col items-center justify-center py-16 text-[var(--text-secondary)]">
-                <Inbox className="w-10 h-10 mb-3 opacity-30" />
-                <p className="text-sm">没有已删除的捕捉</p>
-              </div>
-            )}
+              );
+            })}
           </AnimatePresence>
         )}
       </div>
 
       <AnimatePresence>
-        {purgeConfirm && (
+        {purgeConfirm !== null && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -337,10 +209,7 @@ export default function TrashPage() {
                       if (purgeConfirm === "all") {
                         handlePurgeAll();
                       } else {
-                        const [type, idStr] = purgeConfirm.split(":");
-                        const id = Number(idStr);
-                        if (type === "event") handlePurgeEvent(id);
-                        else handlePurgeCapture(id);
+                        handlePurge(purgeConfirm);
                       }
                     }}
                     className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium bg-danger-500 text-white hover:bg-danger-600 transition-colors disabled:opacity-50"

@@ -3,8 +3,8 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Inbox, Send, Trash2, Calendar, X } from "lucide-react";
-import { addCapture, deleteCapture, restoreCapture, updateCaptureStatus, getPaginatedInboxItems } from "@/lib/db";
-import type { CaptureItem } from "@/lib/types";
+import { createTask, deleteTask, restoreTask, updateTask, getTasksByType } from "@/lib/db";
+import type { Task } from "@/lib/types";
 import { showToast } from "@/components/ui/Toast";
 
 function relativeTime(timestamp: number): string {
@@ -27,7 +27,8 @@ export default function CapturePage() {
   const [content, setContent] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
-  const [items, setItems] = useState<CaptureItem[]>([]);
+  const [items, setItems] = useState<Task[]>([]);
+  const allActiveRef = useRef<Task[]>([]);
   const [hasMore, setHasMore] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -39,18 +40,21 @@ export default function CapturePage() {
   const activeSwipeIdRef = useRef<number | null>(null);
 
   const loadItems = useCallback(async () => {
-    const result = await getPaginatedInboxItems(20);
-    setItems(result.items);
-    setHasMore(result.hasMore);
+    const all = await getTasksByType("daily");
+    const active = all
+      .filter((t) => t.status === "active")
+      .sort((a, b) => b.createdAt - a.createdAt);
+    allActiveRef.current = active;
+    setItems(active.slice(0, 20));
+    setHasMore(active.length > 20);
   }, []);
 
   const loadMore = useCallback(async () => {
     if (isLoadingMore || !hasMore || items.length === 0) return;
     setIsLoadingMore(true);
-    const oldest = items[items.length - 1];
-    const result = await getPaginatedInboxItems(20, oldest.createdAt);
-    setItems((prev) => [...prev, ...result.items]);
-    setHasMore(result.hasMore);
+    const nextSlice = allActiveRef.current.slice(items.length, items.length + 20);
+    setItems((prev) => [...prev, ...nextSlice]);
+    setHasMore(items.length + nextSlice.length < allActiveRef.current.length);
     setIsLoadingMore(false);
   }, [isLoadingMore, hasMore, items]);
 
@@ -66,7 +70,12 @@ export default function CapturePage() {
 
     setIsSubmitting(true);
     try {
-      await addCapture(trimmed, tags);
+      await createTask({
+        title: trimmed,
+        type: "daily",
+        status: "active",
+        tags,
+      });
       setContent("");
       setTags([]);
       setTagInput("");
@@ -86,13 +95,13 @@ export default function CapturePage() {
     setSwipeOffset(0);
     activeSwipeIdRef.current = null;
     try {
-      await deleteCapture(id);
+      await deleteTask(id);
       showToast({
         message: "已移入回收站",
         type: "info",
         duration: 5000,
         undoAction: async () => {
-          await restoreCapture(id);
+          await restoreTask(id);
           await loadItems();
         },
       });
@@ -107,7 +116,7 @@ export default function CapturePage() {
     setSwipeOffset(0);
     activeSwipeIdRef.current = null;
     try {
-      await updateCaptureStatus(id, "planned");
+      await updateTask(id, { status: "done" });
       await loadItems();
     } catch (err) {
       console.error("规划失败:", err);
@@ -338,10 +347,10 @@ export default function CapturePage() {
                     }}
                   >
                     <p className="text-gray-800 dark:text-gray-200 text-sm leading-relaxed whitespace-pre-wrap break-words">
-                      {item.content}
+                      {item.title}
                     </p>
                     <div className="flex items-center gap-2 mt-2.5">
-                      {item.tags.map((tag) => (
+                      {(item.tags ?? []).map((tag) => (
                         <span
                           key={tag}
                           className="text-xs text-indigo-500 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 px-2 py-0.5 rounded-md"

@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useSearchParams } from "next/navigation";
 import { ArrowLeft, Play, Pause, Square, XCircle, Zap, Bell } from "lucide-react";
 import Link from "next/link";
-import { createFocusLog, updateFocusLog, getEventsByTimeRange } from "@/lib/db";
+import { createFocusLog, updateFocusLog, getTasksByTimeRange } from "@/lib/db";
 import { getTodayRange } from "@/lib/planner-utils";
 
 const DURATION_PRESETS = [15, 25, 30, 45, 60];
@@ -310,11 +310,11 @@ function FocusPageInner() {
     if (eventParam) {
       const loadEvent = async () => {
         const { start, end } = getTodayRange();
-        const events = await getEventsByTimeRange(start, end);
-        const found = events.find(
-          (e) => e.id?.toString() === eventParam
+        const tasks = await getTasksByTimeRange(start, end);
+        const found = tasks.find(
+          (t) => t.id?.toString() === eventParam
         );
-        if (found) {
+        if (found && found.startTime != null && found.endTime != null) {
           setTaskTitle(found.title);
           const duration =
             (found.endTime - found.startTime) / (1000 * 60);
@@ -323,6 +323,8 @@ function FocusPageInner() {
           setPlannedMinutes(mins);
           setTotalSeconds(mins * 60);
           setRemainingSeconds(mins * 60);
+        } else if (found) {
+          setTaskTitle(found.title);
         }
       };
       loadEvent();

@@ -1,5 +1,5 @@
 import { db } from "./db";
-import type { CalendarEvent } from "./types";
+import type { Task } from "./types";
 
 export const HOUR_HEIGHT = 128;
 export const HOUR_COUNT = 24;
@@ -50,19 +50,20 @@ export async function detectConflicts(
   newStart: number,
   newEnd: number,
   excludeEventId?: number
-): Promise<CalendarEvent[]> {
+): Promise<Task[]> {
   const dayStart = new Date(newStart);
   dayStart.setHours(0, 0, 0, 0);
   const dayEnd = new Date(newStart);
   dayEnd.setHours(23, 59, 59, 999);
 
-  const dayEvents = await db.events
+  const dayEvents = await db.tasks
     .where("startTime")
     .between(dayStart.getTime(), dayEnd.getTime())
     .toArray();
 
   return dayEvents.filter((e) => {
     if (excludeEventId !== undefined && e.id === excludeEventId) return false;
+    if (e.startTime == null || e.endTime == null) return false;
     return newStart < e.endTime && newEnd > e.startTime;
   });
 }

@@ -19,15 +19,15 @@ import {
 } from "@dnd-kit/core";
 import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import {
-  getEventsByTimeRange,
-  createEvent,
-  updateEvent,
-  deleteEvent,
-  restoreEvent,
+  getTasksByTimeRange,
+  createTask,
+  updateTask,
+  deleteTask,
+  restoreTask,
   getAllProjects,
   db,
 } from "@/lib/db";
-import type { CalendarEvent, Project } from "@/lib/types";
+import type { Task, Project } from "@/lib/types";
 import {
   HOUR_HEIGHT,
   HOUR_COUNT,
@@ -57,7 +57,7 @@ function DraggableEventCard({
   projectColor,
   projectName,
 }: {
-  event: CalendarEvent;
+  event: Task;
   dayStart: number;
   isDragging: boolean;
   onClick: () => void;
@@ -68,9 +68,9 @@ function DraggableEventCard({
   const { attributes, listeners, setNodeRef, transform, isDragging: isActive } =
     useDraggable({ id: event.id!, data: { event } });
 
-  const { top, height } = getEventPosition(event.startTime, event.endTime, dayStart);
+  const { top, height } = getEventPosition(event.startTime!, event.endTime!, dayStart);
   // eslint-disable-next-line react-hooks/purity
-  const isPast = event.endTime < Date.now();
+  const isPast = event.endTime! < Date.now();
   const dragging = isDragging || isActive;
 
   const style = transform
@@ -116,7 +116,7 @@ function DraggableEventCard({
         <div className="flex items-center gap-1.5 flex-shrink-0 mt-1">
           <Clock className="w-3 h-3 text-[var(--muted-foreground)] flex-shrink-0" />
           <span className="text-xs text-[var(--muted-foreground)]">
-            {formatTime(event.startTime)} - {formatTime(event.endTime)}
+            {formatTime(event.startTime!)} - {formatTime(event.endTime!)}
           </span>
         </div>
         <p className="text-sm font-medium text-[var(--foreground)] leading-tight mt-0.5 truncate">
@@ -133,7 +133,7 @@ function DraggableEventCard({
             </span>
           </div>
         )}
-        {event.tags.length > 0 && (
+        {event.tags && event.tags.length > 0 && (
           <div className="flex gap-1 mt-1 flex-wrap overflow-hidden">
             {event.tags.map((tag) => (
               <span
@@ -151,8 +151,8 @@ function DraggableEventCard({
   );
 }
 
-function DraggableOverlay({ event, dayStart }: { event: CalendarEvent; dayStart: number }) {
-  const { height } = getEventPosition(event.startTime, event.endTime, dayStart);
+function DraggableOverlay({ event, dayStart }: { event: Task; dayStart: number }) {
+  const { height } = getEventPosition(event.startTime!, event.endTime!, dayStart);
   return (
     <div
       className="absolute left-1 right-1 rounded-lg border border-primary-300 bg-primary-50 shadow-xl ring-2 ring-primary-400/30 opacity-95 scale-[1.03]"
@@ -162,7 +162,7 @@ function DraggableOverlay({ event, dayStart }: { event: CalendarEvent; dayStart:
         <div className="flex items-center gap-1.5 flex-shrink-0">
           <Clock className="w-3 h-3 text-primary-500" />
           <span className="text-xs text-primary-600 font-medium">
-            {formatTime(event.startTime)} - {formatTime(event.endTime)}
+            {formatTime(event.startTime!)} - {formatTime(event.endTime!)}
           </span>
         </div>
         <p className="text-sm font-semibold text-[var(--foreground)] leading-tight mt-0.5 truncate">
@@ -181,16 +181,16 @@ function EventCard({
   projectColor,
   projectName,
 }: {
-  event: CalendarEvent;
+  event: Task;
   dayStart: number;
   onClick: () => void;
   onDoubleClick: () => void;
   projectColor?: string;
   projectName?: string;
 }) {
-  const { top, height } = getEventPosition(event.startTime, event.endTime, dayStart);
+  const { top, height } = getEventPosition(event.startTime!, event.endTime!, dayStart);
   // eslint-disable-next-line react-hooks/purity
-  const isPast = event.endTime < Date.now();
+  const isPast = event.endTime! < Date.now();
 
   return (
     <div
@@ -213,7 +213,7 @@ function EventCard({
         <div className="flex items-center gap-1.5 flex-shrink-0 mt-1">
           <Clock className="w-3 h-3 text-[var(--muted-foreground)] flex-shrink-0" />
           <span className="text-xs text-[var(--muted-foreground)]">
-            {formatTime(event.startTime)} - {formatTime(event.endTime)}
+            {formatTime(event.startTime!)} - {formatTime(event.endTime!)}
           </span>
         </div>
         <p className="text-sm font-medium text-[var(--foreground)] leading-tight mt-0.5 truncate">
@@ -230,7 +230,7 @@ function EventCard({
             </span>
           </div>
         )}
-        {event.tags.length > 0 && (
+        {event.tags && event.tags.length > 0 && (
           <div className="flex gap-1 mt-1 flex-wrap overflow-hidden">
             {event.tags.map((tag) => (
               <span
@@ -296,7 +296,7 @@ function ConflictResolver({
   onResolve,
   onCancel,
 }: {
-  conflicts: CalendarEvent[];
+  conflicts: Task[];
   pendingDrop: { eventId: number; newStart: number; newEnd: number; durationMinutes: number } | null;
   onResolve: (option: "before" | "after" | "override" | "cancel") => void;
   onCancel: () => void;
@@ -341,7 +341,7 @@ function ConflictResolver({
                       {c.title}
                     </p>
                     <p className="text-xs text-[var(--muted-foreground)]">
-                      {formatTime(c.startTime)} - {formatTime(c.endTime)}
+                      {formatTime(c.startTime!)} - {formatTime(c.endTime!)}
                     </p>
                   </div>
                 </div>
@@ -446,10 +446,10 @@ function MobileOverview({
   currentTimePos,
   onEventClick,
 }: {
-  events: CalendarEvent[];
+  events: Task[];
   loading: boolean;
   currentTimePos: number;
-  onEventClick: (event: CalendarEvent) => void;
+  onEventClick: (event: Task) => void;
 }) {
   if (loading) {
     return (
@@ -484,8 +484,8 @@ function MobileOverview({
 
   const upcoming = events
     // eslint-disable-next-line react-hooks/purity
-    .filter((e) => e.endTime > Date.now())
-    .sort((a, b) => a.startTime - b.startTime)
+    .filter((e) => e.endTime! > Date.now())
+    .sort((a, b) => a.startTime! - b.startTime!)
     .slice(0, 3);
 
   const nowMinutes = (currentTimePos / (HOUR_HEIGHT * HOUR_COUNT)) * 24 * 60;
@@ -518,7 +518,7 @@ function MobileOverview({
           <div className="flex flex-col gap-2 flex-1 overflow-y-auto">
             {upcoming.map((event) => {
               // eslint-disable-next-line react-hooks/purity
-              const isPast = event.endTime < Date.now();
+              const isPast = event.endTime! < Date.now();
 
               return (
                 <motion.button
@@ -535,17 +535,17 @@ function MobileOverview({
                 >
                   <div className="flex flex-col items-center flex-shrink-0 w-12">
                     <span className="text-sm font-semibold text-[var(--foreground)]">
-                      {formatTime(event.startTime)}
+                      {formatTime(event.startTime!)}
                     </span>
                     <span className="text-xs text-[var(--muted-foreground)]">
-                      {formatTime(event.endTime)}
+                      {formatTime(event.endTime!)}
                     </span>
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-[var(--foreground)] truncate">
                       {event.title}
                     </p>
-                    {event.tags.length > 0 && (
+                    {event.tags && event.tags.length > 0 && (
                       <div className="flex gap-1 mt-1 flex-wrap">
                         {event.tags.map((tag) => (
                           <span
@@ -576,18 +576,18 @@ function MobileOverview({
 }
 
 export default function PlannerPage() {
-  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [events, setEvents] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentTimePos, setCurrentTimePos] = useState(getCurrentTimePosition());
   const [modalMode, setModalMode] = useState<ModalMode>("add");
   const [showModal, setShowModal] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<Task | null>(null);
   const [saving, setSaving] = useState(false);
-  const [activeDragEvent, setActiveDragEvent] = useState<CalendarEvent | null>(null);
+  const [activeDragEvent, setActiveDragEvent] = useState<Task | null>(null);
   const [dropIndicatorMinutes, setDropIndicatorMinutes] = useState<number | null>(null);
   const [dayStart] = useState(() => getTodayRange().start);
   const [showConflictPanel, setShowConflictPanel] = useState(false);
-  const [conflictingEvents, setConflictingEvents] = useState<CalendarEvent[]>([]);
+  const [conflictingEvents, setConflictingEvents] = useState<Task[]>([]);
   const [pendingConflictDrop, setPendingConflictDrop] = useState<{
     eventId: number;
     newStart: number;
@@ -628,7 +628,7 @@ export default function PlannerPage() {
 
   const fetchEvents = useCallback(async () => {
     const { start, end } = dayRange.current;
-    const data = await getEventsByTimeRange(start, end);
+    const data = await getTasksByTimeRange(start, end);
     setEvents(data);
     setLoading(false);
   }, []);
@@ -668,9 +668,9 @@ export default function PlannerPage() {
 
     setActiveDragEvent(draggedEvent);
     setDropIndicatorMinutes(null);
-    dragStartMinutesRef.current = getStartMinutes(draggedEvent.startTime, dayRange.current.start);
+    dragStartMinutesRef.current = getStartMinutes(draggedEvent.startTime!, dayRange.current.start);
     dragEventDurationRef.current = Math.round(
-      (draggedEvent.endTime - draggedEvent.startTime) / 60000
+      (draggedEvent.endTime! - draggedEvent.startTime!) / 60000
     );
     setDragDuration(dragEventDurationRef.current);
   }
@@ -719,7 +719,7 @@ export default function PlannerPage() {
       setShowConflictPanel(true);
     } else {
       try {
-        await updateEvent(activeEvent.id!, {
+        await updateTask(activeEvent.id!, {
           startTime: newStart,
           endTime: newEnd,
         });
@@ -753,15 +753,15 @@ export default function PlannerPage() {
 
     if (option === "before") {
       const earliestConflict = conflictingEvents.reduce((min, e) =>
-        e.startTime < min.startTime ? e : min
+        e.startTime! < min.startTime! ? e : min
       );
-      resolvedEnd = earliestConflict.startTime;
+      resolvedEnd = earliestConflict.startTime!;
       resolvedStart = resolvedEnd - pendingConflictDrop.durationMinutes * 60000;
     } else if (option === "after") {
       const latestConflict = conflictingEvents.reduce((max, e) =>
-        e.endTime > max.endTime ? e : max
+        e.endTime! > max.endTime! ? e : max
       );
-      resolvedStart = latestConflict.endTime;
+      resolvedStart = latestConflict.endTime!;
       resolvedEnd = resolvedStart + pendingConflictDrop.durationMinutes * 60000;
     }
 
@@ -775,28 +775,30 @@ export default function PlannerPage() {
 
     if (option === "override") {
       try {
-        await db.transaction("rw", [db.events, db.capture], async () => {
+        await db.transaction("rw", [db.tasks], async () => {
           for (const conflict of conflictingEvents) {
-            await db.events.delete(conflict.id!);
+            await db.tasks.update(conflict.id!, { status: "archived" });
             if (conflict.captureSourceId != null) {
-              await db.capture.update(conflict.captureSourceId, {
-                status: "inbox",
+              await db.tasks.update(conflict.captureSourceId, {
+                status: "active",
               });
             }
           }
           if (isFormSave) {
             const fd = pendingConflictDrop.formData!;
             if (pendingConflictDrop.mode === "add") {
-              await createEvent({
+              await createTask({
                 title: fd.title,
                 startTime: fd.startTime,
                 endTime: fd.endTime,
                 tags: fd.tags,
+                status: "active",
                 planned: true,
                 focusSessions: [],
+                type: "shortterm",
               });
             } else {
-              await updateEvent(pendingConflictDrop.eventId, {
+              await updateTask(pendingConflictDrop.eventId, {
                 title: fd.title,
                 startTime: fd.startTime,
                 endTime: fd.endTime,
@@ -804,7 +806,7 @@ export default function PlannerPage() {
               });
             }
           } else {
-            await db.events.update(pendingConflictDrop.eventId, {
+            await db.tasks.update(pendingConflictDrop.eventId, {
               startTime: pendingConflictDrop.newStart,
               endTime: pendingConflictDrop.newEnd,
               updatedAt: Date.now(),
@@ -821,16 +823,18 @@ export default function PlannerPage() {
         if (isFormSave) {
           const fd = pendingConflictDrop.formData!;
           if (pendingConflictDrop.mode === "add") {
-            await createEvent({
+            await createTask({
               title: fd.title,
               startTime: resolvedStart,
               endTime: resolvedEnd,
               tags: fd.tags,
+              status: "active",
               planned: true,
               focusSessions: [],
+              type: "shortterm",
             });
           } else {
-            await updateEvent(pendingConflictDrop.eventId, {
+            await updateTask(pendingConflictDrop.eventId, {
               title: fd.title,
               startTime: resolvedStart,
               endTime: resolvedEnd,
@@ -838,7 +842,7 @@ export default function PlannerPage() {
             });
           }
         } else {
-          await updateEvent(pendingConflictDrop.eventId, {
+          await updateTask(pendingConflictDrop.eventId, {
             startTime: resolvedStart,
             endTime: resolvedEnd,
           });
@@ -870,17 +874,17 @@ export default function PlannerPage() {
     setShowModal(true);
   }
 
-  function openEditModal(event: CalendarEvent) {
+  function openEditModal(event: Task) {
     setModalMode("edit");
     setSelectedEvent(event);
-    const start = new Date(event.startTime);
-    const end = new Date(event.endTime);
+    const start = new Date(event.startTime!);
+    const end = new Date(event.endTime!);
     setFormTitle(event.title);
     setFormStartHour(String(start.getHours()).padStart(2, "0"));
     setFormStartMin(String(start.getMinutes()).padStart(2, "0"));
     setFormEndHour(String(end.getHours()).padStart(2, "0"));
     setFormEndMin(String(end.getMinutes()).padStart(2, "0"));
-    setFormTags(event.tags.join(", "));
+    setFormTags((event.tags ?? []).join(", "));
     setFormProjectId(event.projectId || "");
     setShowModal(true);
   }
@@ -955,9 +959,9 @@ export default function PlannerPage() {
     setSaving(true);
     try {
       if (modalMode === "add") {
-        await createEvent(data as Omit<CalendarEvent, "id" | "createdAt" | "updatedAt">);
+        await createTask({ ...data, type: "shortterm", status: "active" } as Omit<Task, "id" | "createdAt" | "updatedAt">);
       } else if (modalMode === "edit" && selectedEvent?.id != null) {
-        await updateEvent(selectedEvent.id, {
+        await updateTask(selectedEvent.id, {
           title: data.title,
           startTime: data.startTime,
           endTime: data.endTime,
@@ -976,13 +980,13 @@ export default function PlannerPage() {
     setSaving(true);
     try {
       const eventId = selectedEvent.id;
-      await deleteEvent(eventId);
+      await deleteTask(eventId);
       showToast({
         message: "已移入回收站",
         type: "info",
         duration: 5000,
         undoAction: async () => {
-          await restoreEvent(eventId);
+          await restoreTask(eventId);
           await fetchEvents();
         },
       });

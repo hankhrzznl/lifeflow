@@ -31,8 +31,9 @@ import {
 } from "@/lib/db";
 import { showToast as globalShowToast } from "@/components/ui/Toast";
 import TaskDetail from "@/components/ui/TaskDetail";
+import SectionDetail from "@/components/ui/SectionDetail";
 import { PRIORITY_CONFIG } from "@/lib/types";
-import type { Task, GoalViewType, HabitLog } from "@/lib/types";
+import type { Task, GoalViewType, HabitLog, Section } from "@/lib/types";
 
 interface TaskTreeNode extends Task {
   children: TaskTreeNode[];
@@ -922,7 +923,9 @@ export default function GoalsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [tree, setTree] = useState<TaskTreeNode[]>([]);
+  const [sections, setSections] = useState<Section[]>([]);
   const [shorttermTasks, setShorttermTasks] = useState<Task[]>([]);
+  const [detailSectionId, setDetailSectionId] = useState<number | null>(null);
   const [dailyTasks, setDailyTasks] = useState<Task[]>([]);
   const [habits, setHabits] = useState<Task[]>([]);
   const [habitStreaks, setHabitStreaks] = useState<Map<number, number>>(new Map());
@@ -939,6 +942,8 @@ export default function GoalsPage() {
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const tabDirection = useRef<number>(0);
   const [tabAnimDir, setTabAnimDir] = useState(0);
+  const currentViewRef = useRef<GoalViewType>(currentView);
+  useEffect(() => { currentViewRef.current = currentView; }, [currentView]);
 
   const [shorttermFilter, setShorttermFilter] = useState<ShortTermFilter>("全部");
   const [dailyFilter, setDailyFilter] = useState<DailyFilter>("全部");
@@ -1000,7 +1005,7 @@ export default function GoalsPage() {
 
   const switchView = useCallback(
     (view: GoalViewType) => {
-      const oldIdx = TABS.findIndex((t) => t.key === currentView);
+      const oldIdx = TABS.findIndex((t) => t.key === currentViewRef.current);
       const newIdx = TABS.findIndex((t) => t.key === view);
       tabDirection.current = newIdx > oldIdx ? 1 : -1;
       setTabAnimDir(newIdx > oldIdx ? 1 : -1);
@@ -1008,7 +1013,7 @@ export default function GoalsPage() {
       setShowAddForm(false);
       setAddFormParentId(null);
     },
-    [router, currentView]
+    [router]
   );
 
   const loadLongterm = useCallback(async () => {
@@ -1017,6 +1022,8 @@ export default function GoalsPage() {
     try {
       const data = await getTaskTree("longterm");
       setTree(data);
+      const allSections = await db.sections.toArray();
+      setSections(allSections);
     } catch {
       setError(true);
     } finally {
@@ -1336,7 +1343,7 @@ export default function GoalsPage() {
     if (loading) return <LongtermSkeleton />;
     if (error) return <ErrorStateView onRetry={loadLongterm} />;
 
-    if (tree.length === 0) {
+    if (tree.length === 0 && sections.length === 0) {
       return (
         <EmptyStateView
           icon={Mountain}
@@ -1378,6 +1385,33 @@ export default function GoalsPage() {
                 {f}
               </button>
             ))}
+          </div>
+        )}
+
+        {sections.length > 0 && (
+          <div className="mb-4">
+            <p className="text-xs font-medium text-gray-400 dark:text-gray-500 mb-2 uppercase tracking-wide">子模块长期目标</p>
+            <div className="space-y-2">
+              {sections.map((section) => (
+                <div
+                  key={section.id}
+                  onClick={() => setDetailSectionId(section.id!)}
+                  className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white dark:bg-gray-800 border border-indigo-100 dark:border-indigo-900/30 cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
+                    <Mountain className="w-4 h-4 text-indigo-500" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{section.name}</p>
+                    {section.stages && section.stages.length > 0 && (
+                      <p className="text-xs text-gray-400 mt-0.5">{section.stages.length} 个阶段 · {section.stages.reduce((s, st) => s + st.achievements.length, 0)} 个成就</p>
+                    )}
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0" />
+                </div>
+              ))}
+            </div>
+            <div className="border-t border-gray-100 dark:border-gray-800 my-4" />
           </div>
         )}
 
@@ -1845,6 +1879,13 @@ export default function GoalsPage() {
         <TaskDetail
           taskId={detailTaskId}
           onClose={() => setDetailTaskId(null)}
+        />
+      )}
+      {detailSectionId !== null && (
+        <SectionDetail
+          sectionId={detailSectionId}
+          onClose={() => setDetailSectionId(null)}
+          onUpdate={loadLongterm}
         />
       )}
     </div>

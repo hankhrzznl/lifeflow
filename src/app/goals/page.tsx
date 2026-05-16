@@ -942,9 +942,6 @@ export default function GoalsPage() {
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const tabDirection = useRef<number>(0);
   const [tabAnimDir, setTabAnimDir] = useState(0);
-  const currentViewRef = useRef<GoalViewType>(currentView);
-  useEffect(() => { currentViewRef.current = currentView; }, [currentView]);
-
   const [shorttermFilter, setShorttermFilter] = useState<ShortTermFilter>("全部");
   const [dailyFilter, setDailyFilter] = useState<DailyFilter>("全部");
   const [longtermFilter, setLongtermFilter] = useState<LongtermFilter>("全部");
@@ -1003,17 +1000,17 @@ export default function GoalsPage() {
     prevAllHabitsDoneRef.current = allHabitsDoneToday;
   }, [allHabitsDoneToday, currentView, showToast]);
 
-  const switchView = useCallback(
+  const handleTabClick = useCallback(
     (view: GoalViewType) => {
-      const oldIdx = TABS.findIndex((t) => t.key === currentViewRef.current);
+      const oldIdx = TABS.findIndex((t) => t.key === currentView);
       const newIdx = TABS.findIndex((t) => t.key === view);
       tabDirection.current = newIdx > oldIdx ? 1 : -1;
       setTabAnimDir(newIdx > oldIdx ? 1 : -1);
-      router.push(`/goals?tab=${view}`);
+      router.push(`/goals?tab=${view}`, { scroll: false });
       setShowAddForm(false);
       setAddFormParentId(null);
     },
-    [router]
+    [currentView, router]
   );
 
   const loadLongterm = useCallback(async () => {
@@ -1818,7 +1815,7 @@ export default function GoalsPage() {
             return (
               <button
                 key={key}
-                onClick={() => switchView(key)}
+                onClick={() => handleTabClick(key)}
                 className={`flex-1 flex items-center justify-center gap-1.5 h-12 text-sm font-medium transition-colors relative ${
                   active
                     ? "text-indigo-600 border-b-2 border-indigo-600"

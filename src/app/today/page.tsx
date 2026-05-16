@@ -16,6 +16,7 @@ import {
   getAllProjects,
 } from "@/lib/db";
 import type { Task, LegacyProject } from "@/lib/types";
+import TaskDetail from "@/components/ui/TaskDetail";
 import { PRIORITY_CONFIG } from "@/lib/types";
 
 const SLOT_HEIGHT = 32;
@@ -453,6 +454,7 @@ export default function TodayPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [projects, setProjects] = useState<LegacyProject[]>([]);
   const [highlightedId, setHighlightedId] = useState<number | null>(null);
+  const [detailTaskId, setDetailTaskId] = useState<number | null>(null);
 
   const isTimelineEnabled = usePluginStatus("timeline");
   const isFocusEnabled = usePluginStatus("focus-timer");
@@ -529,6 +531,7 @@ export default function TodayPage() {
   }, [dayStart, scrollToCurrentTime]);
 
   const handleBlockClick = useCallback((taskId: number) => {
+    setDetailTaskId(taskId);
     const listItem = document.getElementById(`event-list-item-${taskId}`);
     if (listItem) {
       listItem.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -538,6 +541,7 @@ export default function TodayPage() {
   }, []);
 
   const handleListItemClick = useCallback((taskId: number) => {
+    setDetailTaskId(taskId);
     const block = document.getElementById(`event-block-${taskId}`);
     if (block) {
       block.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -729,6 +733,13 @@ export default function TodayPage() {
             </div>
           </div>
         </div>
+      )}
+      {detailTaskId !== null && (
+        <TaskDetail
+          taskId={detailTaskId}
+          onClose={() => setDetailTaskId(null)}
+          onUpdate={() => loadData()}
+        />
       )}
     </div>
   );

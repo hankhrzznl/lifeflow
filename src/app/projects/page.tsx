@@ -14,6 +14,7 @@ import {
   getTasksBySection, updateTask,
 } from "@/lib/db";
 import { showToast } from "@/components/ui/Toast";
+import TaskDetail from "@/components/ui/TaskDetail";
 import { PRIORITY_CONFIG } from "@/lib/types";
 import type { ProjectV2, Board, Section, Task } from "@/lib/types";
 
@@ -32,6 +33,7 @@ export default function ProjectsPage() {
   const [newProjectName, setNewProjectName] = useState("");
   const [newProjectColor, setNewProjectColor] = useState(COLORS[0]);
   const [editingProject, setEditingProject] = useState<ProjectV2 | null>(null);
+  const [detailTaskId, setDetailTaskId] = useState<number | null>(null);
 
   const loadProjects = useCallback(async () => {
     try {
@@ -272,8 +274,8 @@ export default function ProjectsPage() {
                                               {sectionTasks.length > 0 && (
                                                 <div className="pb-2">
                                                   {sectionTasks.map((task) => (
-                                                    <div key={task.id} className="flex items-center gap-2 pl-20 pr-4 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors">
-                                                      <button onClick={() => handleToggleTask(task)} className="flex-shrink-0">
+                                                    <div key={task.id} className="flex items-center gap-2 pl-20 pr-4 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors" onClick={() => setDetailTaskId(task.id!)} style={{ cursor: "pointer" }}>
+                                                      <button onClick={(e) => { e.stopPropagation(); handleToggleTask(task); }} className="flex-shrink-0">
                                                         {task.status === "done" ? <CheckCircle className="w-4 h-4 text-emerald-500" /> : <Circle className="w-4 h-4 text-gray-300" />}
                                                       </button>
                                                       <span className={`flex-1 text-xs ${task.status === "done" ? "line-through text-gray-400" : "text-gray-700 dark:text-gray-300"}`}>{task.title}</span>
@@ -325,6 +327,14 @@ export default function ProjectsPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {detailTaskId !== null && (
+        <TaskDetail
+          taskId={detailTaskId}
+          onClose={() => setDetailTaskId(null)}
+          onUpdate={loadProjects}
+        />
+      )}
     </div>
   );
 }

@@ -30,6 +30,7 @@ import {
   getAllHabits,
 } from "@/lib/db";
 import { showToast as globalShowToast } from "@/components/ui/Toast";
+import TaskDetail from "@/components/ui/TaskDetail";
 import { PRIORITY_CONFIG } from "@/lib/types";
 import type { Task, GoalViewType } from "@/lib/types";
 
@@ -422,12 +423,14 @@ function TreeNode({
   onToggleDone,
   onAddChild,
   onDelete,
+  onDetailClick,
 }: {
   node: TaskTreeNode;
   depth: number;
   onToggleDone: (task: Task) => void;
   onAddChild: (parentId: number) => void;
   onDelete: (task: Task) => void;
+  onDetailClick?: (taskId: number) => void;
 }) {
   const [expanded, setExpanded] = useState(depth === 0);
   const isDone = node.status === "done";
@@ -475,7 +478,8 @@ function TreeNode({
         </button>
 
         <span
-          className={`flex-1 text-sm ${
+          onClick={() => onDetailClick?.(node.id!)}
+          className={`flex-1 text-sm cursor-pointer ${
             isDone
               ? "line-through text-gray-400 dark:text-gray-500"
               : "text-gray-900 dark:text-gray-100 font-medium"
@@ -574,6 +578,7 @@ function TreeNode({
                     onToggleDone={onToggleDone}
                     onAddChild={onAddChild}
                     onDelete={onDelete}
+                    onDetailClick={onDetailClick}
                   />
                 </motion.div>
               ))}
@@ -590,11 +595,13 @@ function ShortTermCard({
   onToggleDone,
   onAssignToday,
   onDelete,
+  onDetailClick,
 }: {
   task: Task;
   onToggleDone: (task: Task) => void;
   onAssignToday: (task: Task) => void;
   onDelete: (task: Task) => void;
+  onDetailClick?: (taskId: number) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const isDone = task.status === "done";
@@ -638,7 +645,8 @@ function ShortTermCard({
 
         <div className="flex-1 min-w-0">
           <p
-            className={`text-sm truncate ${
+            onClick={() => onDetailClick?.(task.id!)}
+            className={`text-sm truncate cursor-pointer ${
               isDone
                 ? "line-through text-gray-400 dark:text-gray-500"
                 : "text-gray-900 dark:text-gray-100 font-medium"
@@ -710,10 +718,12 @@ function DailyTaskItem({
   task,
   onToggleDone,
   isFuture,
+  onDetailClick,
 }: {
   task: Task;
   onToggleDone: (task: Task) => void;
   isFuture: boolean;
+  onDetailClick?: (taskId: number) => void;
 }) {
   const isDone = task.status === "done";
 
@@ -749,7 +759,8 @@ function DailyTaskItem({
       )}
 
       <span
-        className={`flex-1 text-sm ${
+        onClick={() => onDetailClick?.(task.id!)}
+        className={`flex-1 text-sm cursor-pointer ${
           isDone
             ? "line-through text-gray-400 dark:text-gray-500"
             : isFuture
@@ -780,6 +791,7 @@ function HabitCard({
   onCheckIn,
   onDelete,
   celebrateIndex,
+  onDetailClick,
 }: {
   task: Task;
   streak: number;
@@ -787,6 +799,7 @@ function HabitCard({
   onCheckIn: (task: Task) => void;
   onDelete: (task: Task) => void;
   celebrateIndex?: number;
+  onDetailClick?: (taskId: number) => void;
 }) {
   return (
     <motion.div
@@ -806,7 +819,10 @@ function HabitCard({
           />
         )}
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+          <p
+            onClick={() => onDetailClick?.(task.id!)}
+            className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate cursor-pointer"
+          >
             {task.title}
           </p>
           <div className="flex items-center gap-1">
@@ -913,6 +929,7 @@ export default function GoalsPage() {
   const [dailyFilter, setDailyFilter] = useState<DailyFilter>("全部");
   const [longtermFilter, setLongtermFilter] = useState<LongtermFilter>("全部");
   const [shorttermCelebrationShrunk, setShorttermCelebrationShrunk] = useState(false);
+  const [detailTaskId, setDetailTaskId] = useState<number | null>(null);
 
   const { dayChanged, dismissOverlay } = useDayTransitionGuard();
 
@@ -1362,6 +1379,7 @@ export default function GoalsPage() {
               onToggleDone={handleToggleDone}
               onAddChild={(parentId) => handleAddChildClick(parentId, 1)}
               onDelete={handleDeleteTask}
+              onDetailClick={setDetailTaskId}
             />
           ))}
         </div>
@@ -1475,6 +1493,7 @@ export default function GoalsPage() {
                 onToggleDone={handleToggleDone}
                 onAssignToday={handleAssignToday}
                 onDelete={handleDeleteTask}
+                onDetailClick={setDetailTaskId}
               />
             </div>
           ))}
@@ -1563,6 +1582,7 @@ export default function GoalsPage() {
                     task={task}
                     onToggleDone={handleToggleDone}
                     isFuture={!group.isToday}
+                    onDetailClick={setDetailTaskId}
                   />
                 ))}
               </div>
@@ -1661,6 +1681,7 @@ export default function GoalsPage() {
                   onCheckIn={handleCheckIn}
                   onDelete={handleDeleteTask}
                   celebrateIndex={allDoneToday ? i : undefined}
+                  onDetailClick={setDetailTaskId}
                 />
               ))}
             </div>
@@ -1749,6 +1770,13 @@ export default function GoalsPage() {
       >
         <Plus className="w-6 h-6 text-white" />
       </button>
+
+      {detailTaskId !== null && (
+        <TaskDetail
+          taskId={detailTaskId}
+          onClose={() => setDetailTaskId(null)}
+        />
+      )}
     </div>
   );
 }

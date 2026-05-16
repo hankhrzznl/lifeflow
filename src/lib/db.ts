@@ -153,6 +153,14 @@ export class LifeFlowDB extends Dexie {
         console.log("[LifeFlowDB v6] Added time_segments table");
       }
     });
+
+    this.version(7).stores({
+      sections: "++id, name, boardId, startTime, createdAt",
+    }).upgrade(async () => {
+      if (typeof window !== "undefined" && window.location.hostname === "localhost") {
+        console.log("[LifeFlowDB v7] Added startTime index to sections");
+      }
+    });
   }
 }
 
@@ -1237,8 +1245,8 @@ export async function getSectionsByBoard(boardId: number): Promise<Section[]> {
   return db.sections.where("boardId").equals(boardId).toArray();
 }
 
-export async function updateSection(id: number, name: string): Promise<void> {
-  await db.sections.update(id, { name });
+export async function updateSection(id: number, updates: Partial<Section>): Promise<void> {
+  await db.sections.update(id, updates);
 }
 
 export async function deleteSectionToTrash(id: number): Promise<void> {

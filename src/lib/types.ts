@@ -115,6 +115,8 @@ export interface HabitLog {
   taskId: number;
   date: string;
   count: number;
+  note?: string;
+  rating?: number;
   createdAt: number;
 }
 
@@ -148,6 +150,17 @@ export interface Section {
   name: string;
   boardId?: number;
   createdAt: number;
+  note?: string;
+  successCriteria?: string;
+  priority?: Priority;
+  startTime?: number;
+  tags?: string[];
+  stages?: StagePhase[];
+}
+
+export interface StagePhase {
+  name: string;
+  achievements: string[];
 }
 
 export interface TrashItem {

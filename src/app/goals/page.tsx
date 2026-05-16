@@ -19,12 +19,12 @@ import {
   Zap,
 } from "lucide-react";
 import {
+  db,
   getTaskTree,
   getTasksByType,
   createTask,
   updateTask,
   deleteTask,
-  checkInHabit,
   getStreak,
   getHabitLogsByDateRange,
   getAllHabits,
@@ -32,7 +32,7 @@ import {
 import { showToast as globalShowToast } from "@/components/ui/Toast";
 import TaskDetail from "@/components/ui/TaskDetail";
 import { PRIORITY_CONFIG } from "@/lib/types";
-import type { Task, GoalViewType } from "@/lib/types";
+import type { Task, GoalViewType, HabitLog } from "@/lib/types";
 
 interface TaskTreeNode extends Task {
   children: TaskTreeNode[];
@@ -788,7 +788,8 @@ function HabitCard({
   task,
   streak,
   todayChecked,
-  onCheckIn,
+  todayLog,
+  onCheckin,
   onDelete,
   celebrateIndex,
   onDetailClick,
@@ -796,11 +797,14 @@ function HabitCard({
   task: Task;
   streak: number;
   todayChecked: boolean;
-  onCheckIn: (task: Task) => void;
+  todayLog?: HabitLog;
+  onCheckin: (taskId: number, date: string, currentCount: number) => void;
   onDelete: (task: Task) => void;
   celebrateIndex?: number;
   onDetailClick?: (taskId: number) => void;
 }) {
+  const todayStr = getLocalDateStr(new Date());
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -825,9 +829,15 @@ function HabitCard({
           >
             {task.title}
           </p>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 flex-wrap">
             <Flame className="w-3 h-3 text-orange-500" />
             <span className="text-xs font-semibold text-orange-500">{streak} 天连续</span>
+            {todayLog?.rating && (
+              <span className="text-xs text-amber-500 ml-1">{todayLog.rating}/10</span>
+            )}
+            {todayLog?.note && (
+              <span className="text-xs text-gray-400 truncate ml-1 max-w-[100px]">{todayLog.note}</span>
+            )}
           </div>
         </div>
         {todayChecked ? (
@@ -854,7 +864,7 @@ function HabitCard({
           )
         ) : (
           <button
-            onClick={() => onCheckIn(task)}
+            onClick={() => onCheckin(task.id!, todayStr, todayLog?.count ?? 0)}
             className="text-xs font-medium text-white bg-indigo-600 hover:bg-indigo-700 px-4 py-1.5 rounded-xl transition-colors flex-shrink-0"
           >
             打卡
@@ -917,6 +927,11 @@ export default function GoalsPage() {
   const [habits, setHabits] = useState<Task[]>([]);
   const [habitStreaks, setHabitStreaks] = useState<Map<number, number>>(new Map());
   const [todayCheckedHabits, setTodayCheckedHabits] = useState<Set<number>>(new Set());
+  const [habitLogs, setHabitLogs] = useState<Map<number, HabitLog>>(new Map());
+  const [monthlyLogs, setMonthlyLogs] = useState<HabitLog[]>([]);
+  const [habitCheckinTarget, setHabitCheckinTarget] = useState<{ taskId: number; date: string; count: number } | null>(null);
+  const [checkinNote, setCheckinNote] = useState("");
+  const [checkinRating, setCheckinRating] = useState<number>(5);
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [addFormParentId, setAddFormParentId] = useState<number | null>(null);
@@ -1046,18 +1061,30 @@ export default function GoalsPage() {
 
       const streaks = new Map<number, number>();
       const checked = new Set<number>();
+      const logs = new Map<number, HabitLog>();
       const todayStr = getLocalDateStr(new Date());
+      const today = new Date();
+      const monthStart = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().slice(0, 10);
+      const allMonthLogs: HabitLog[] = [];
 
       for (const h of all) {
         const s = await getStreak(h.id!);
         streaks.set(h.id!, s);
 
-        const logs = await getHabitLogsByDateRange(h.id!, todayStr, todayStr);
-        if (logs.length > 0) checked.add(h.id!);
+        const todayLogs = await getHabitLogsByDateRange(h.id!, todayStr, todayStr);
+        if (todayLogs.length > 0) {
+          checked.add(h.id!);
+          logs.set(h.id!, todayLogs[0]);
+        }
+
+        const monthLogs = await getHabitLogsByDateRange(h.id!, monthStart, todayStr);
+        allMonthLogs.push(...monthLogs);
       }
 
       setHabitStreaks(streaks);
       setTodayCheckedHabits(checked);
+      setHabitLogs(logs);
+      setMonthlyLogs(allMonthLogs);
     } catch {
       setError(true);
     } finally {
@@ -1209,28 +1236,12 @@ export default function GoalsPage() {
   );
 
   const handleCheckIn = useCallback(
-    async (task: Task) => {
-      try {
-        const result = await checkInHabit(task.id!);
-        if (result.success) {
-          setTodayCheckedHabits((prev) => new Set(prev).add(task.id!));
-          const newStreak = await getStreak(task.id!);
-          setHabitStreaks((prev) => {
-            const next = new Map(prev);
-            next.set(task.id!, newStreak);
-            return next;
-          });
-          showToast("打卡成功！", "success");
-        } else if (result.alreadyCheckedIn) {
-          showToast("今天已经打卡过了", "error");
-        } else {
-          showToast(result.message, "error");
-        }
-      } catch {
-        showToast("打卡失败", "error");
-      }
+    (taskId: number, date: string, currentCount: number) => {
+      setCheckinNote("");
+      setCheckinRating(5);
+      setHabitCheckinTarget({ taskId, date, count: currentCount });
     },
-    [showToast]
+    []
   );
 
   const handleMainAddClick = useCallback(() => {
@@ -1671,6 +1682,18 @@ export default function GoalsPage() {
               )}
             </AnimatePresence>
 
+            {habits.length > 0 && (
+              <div className="mb-3 px-4 py-3 bg-amber-50 dark:bg-amber-900/20 rounded-xl">
+                <p className="text-sm font-medium text-amber-700 dark:text-amber-300">
+                  本月总评分：{(() => {
+                    if (monthlyLogs.length === 0) return "暂无";
+                    const avg = monthlyLogs.reduce((s, l) => s + (l.rating || 0), 0) / monthlyLogs.length;
+                    return `${avg.toFixed(1)} / 10`;
+                  })()}
+                </p>
+              </div>
+            )}
+
             <div className="space-y-3">
               {habits.map((habit, i) => (
                 <HabitCard
@@ -1678,13 +1701,60 @@ export default function GoalsPage() {
                   task={habit}
                   streak={habitStreaks.get(habit.id!) ?? 0}
                   todayChecked={todayCheckedHabits.has(habit.id!)}
-                  onCheckIn={handleCheckIn}
+                  todayLog={habitLogs.get(habit.id!)}
+                  onCheckin={handleCheckIn}
                   onDelete={handleDeleteTask}
                   celebrateIndex={allDoneToday ? i : undefined}
                   onDetailClick={setDetailTaskId}
                 />
               ))}
             </div>
+
+            {habitCheckinTarget && (
+              <div className="fixed inset-0 z-50 bg-black/40 flex items-end justify-center" onClick={() => setHabitCheckinTarget(null)}>
+                <div className="w-full max-w-sm bg-white dark:bg-gray-900 rounded-t-2xl p-6" onClick={(e) => e.stopPropagation()}>
+                  <h3 className="text-lg font-semibold mb-4">打卡</h3>
+
+                  <div className="mb-3">
+                    <label className="text-xs font-medium text-gray-500 mb-1 block">评分 (1-10)</label>
+                    <div className="flex items-center gap-1">
+                      {[1,2,3,4,5,6,7,8,9,10].map((n) => (
+                        <button key={n} onClick={() => setCheckinRating(n)}
+                          className={`w-8 h-8 rounded-lg text-xs font-medium transition-colors ${
+                            checkinRating >= n ? "bg-amber-400 text-white" : "bg-gray-100 dark:bg-gray-800 text-gray-400"
+                          }`}>
+                          {n}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="mb-4">
+                    <label className="text-xs font-medium text-gray-500 mb-1 block">备注</label>
+                    <textarea value={checkinNote} onChange={(e) => setCheckinNote(e.target.value)}
+                      rows={3} placeholder="今天完成情况..."
+                      className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  </div>
+
+                  <div className="flex gap-3">
+                    <button onClick={() => setHabitCheckinTarget(null)}
+                      className="flex-1 py-3 rounded-xl border border-gray-200 dark:border-gray-700 text-sm text-gray-500">取消</button>
+                    <button onClick={async () => {
+                      const { taskId, date, count } = habitCheckinTarget;
+                      await db.habit_logs.put({ taskId, date, count: count + 1, note: checkinNote || undefined, rating: checkinRating, createdAt: Date.now() });
+                      showToast("打卡成功", "success");
+                      setHabitCheckinTarget(null);
+                      setCheckinNote("");
+                      setCheckinRating(5);
+                      await loadHabits();
+                    }}
+                      className="flex-1 py-3 rounded-xl bg-amber-500 text-white text-sm font-medium">
+                      打卡
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {!showAddForm && (
               <button

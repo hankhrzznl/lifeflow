@@ -7,7 +7,7 @@ import {
   CalendarDays, ClipboardList, Flame, CheckSquare, XCircle,
   ChevronRight, PlusCircle,
 } from "lucide-react";
-import { createTask, deleteTask, restoreTask, updateTask, getTasksByType, getAllProjectsV2, getBoardsByProject, getSectionsByBoard } from "@/lib/db";
+import { createTask, deleteTask, restoreTask, updateTask, createSection, updateSection, getTasksByType, getAllProjectsV2, getBoardsByProject, getSectionsByBoard } from "@/lib/db";
 import type { Task, GoalViewType, ProjectV2, Board, Section, Priority } from "@/lib/types";
 import { PRIORITY_CONFIG } from "@/lib/types";
 import { showToast } from "@/components/ui/Toast";
@@ -26,7 +26,6 @@ function relativeTime(timestamp: number): string {
 }
 
 const CLASSIFICATION_OPTIONS = [
-  { key: "long-term", label: "长期目标", icon: Mountain, color: "text-indigo-500", bgColor: "bg-indigo-50" },
   { key: "short-term", label: "短期事件", icon: CalendarDays, color: "text-blue-500", bgColor: "bg-blue-50" },
   { key: "daily-trivial", label: "日常琐事", icon: ClipboardList, color: "text-green-500", bgColor: "bg-green-50" },
   { key: "habits", label: "习惯", icon: Flame, color: "text-orange-500", bgColor: "bg-orange-50" },
@@ -58,7 +57,10 @@ export default function CapturePage() {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
   const [classifyTarget, setClassifyTarget] = useState<Task | null>(null);
-  const [flowPhase, setFlowPhase] = useState<"idle" | "classify" | "create">("idle");
+  const [flowPhase, setFlowPhase] = useState<"idle" | "chooseType" | "moduleForm" | "taskClassify" | "taskForm">("idle");
+  const [stages, setStages] = useState<{ name: string; achievements: string[] }[]>([
+    { name: "", achievements: [""] }
+  ]);
   const [selectedClassification, setSelectedClassification] = useState<ClassificationType | null>(null);
   const [taskDraft, setTaskDraft] = useState<{
     title: string;
@@ -73,8 +75,7 @@ export default function CapturePage() {
     endTime: string;
     frequency: "daily" | "weekly" | "monthly";
     targetCount: string;
-    milestones: string[];
-  }>({ title: "", priority: "not-urgent-important", projectId: null, boardId: null, sectionId: null, note: "", dueDate: "", successCriteria: "", startTime: "", endTime: "", frequency: "daily", targetCount: "", milestones: [] });
+  }>({ title: "", priority: "not-urgent-important", projectId: null, boardId: null, sectionId: null, note: "", dueDate: "", successCriteria: "", startTime: "", endTime: "", frequency: "daily", targetCount: "" });
 
   const [projects, setProjects] = useState<ProjectV2[]>([]);
   const [boards, setBoards] = useState<Board[]>([]);
@@ -151,9 +152,17 @@ export default function CapturePage() {
 
   const charCount = content.length;
 
+  const addStage = () => setStages((prev) => [...prev, { name: "", achievements: [""] }]);
+  const updateStageName = (idx: number, name: string) => setStages((prev) => { const s = [...prev]; s[idx] = { ...s[idx], name }; return s; });
+  const removeStage = (idx: number) => setStages((prev) => prev.filter((_, i) => i !== idx));
+  const addAchievement = (stageIdx: number) => setStages((prev) => { const s = [...prev]; s[stageIdx] = { ...s[stageIdx], achievements: [...s[stageIdx].achievements, ""] }; return s; });
+  const updateAchievement = (stageIdx: number, achIdx: number, val: string) => setStages((prev) => { const s = [...prev]; const a = [...s[stageIdx].achievements]; a[achIdx] = val; s[stageIdx] = { ...s[stageIdx], achievements: a }; return s; });
+  const removeAchievement = (stageIdx: number, achIdx: number) => setStages((prev) => { const s = [...prev]; s[stageIdx] = { ...s[stageIdx], achievements: s[stageIdx].achievements.filter((_, i) => i !== achIdx) }; return s; });
+
   const handleNextStep = useCallback(async (item: Task) => {
     setClassifyTarget(item);
-    setFlowPhase("classify");
+    setFlowPhase("chooseType");
+    setStages([{ name: "", achievements: [""] }]);
     setTaskDraft({
       title: item.title,
       priority: "not-urgent-important",
@@ -167,13 +176,12 @@ export default function CapturePage() {
       endTime: "",
       frequency: "daily",
       targetCount: "",
-      milestones: [],
     });
   }, []);
 
   const handleClassifySelect = useCallback(async (classification: ClassificationType) => {
     setSelectedClassification(classification);
-    setFlowPhase("create");
+    setFlowPhase("taskForm");
     const [fetchedProjects] = await Promise.all([getAllProjectsV2().catch(() => [] as ProjectV2[])]);
     setProjects(fetchedProjects);
     setBoards([]);
@@ -184,6 +192,7 @@ export default function CapturePage() {
     setClassifyTarget(null);
     setFlowPhase("idle");
     setSelectedClassification(null);
+    setStages([{ name: "", achievements: [""] }]);
   }, []);
 
   const handleProjectChange = useCallback(async (projectId: number | null) => {
@@ -209,19 +218,11 @@ export default function CapturePage() {
     setTaskDraft((d) => ({ ...d, sectionId }));
   }, []);
 
-  const addMilestone = () => setTaskDraft((d) => ({ ...d, milestones: [...d.milestones, ""] }));
-  const updateMilestone = (idx: number, value: string) => setTaskDraft((d) => {
-    const m = [...d.milestones]; m[idx] = value; return { ...d, milestones: m };
-  });
-  const removeMilestone = (idx: number) => setTaskDraft((d) => ({
-    ...d, milestones: d.milestones.filter((_, i) => i !== idx)
-  }));
-
   const handleTaskCreate = useCallback(async () => {
     if (!classifyTarget || !taskDraft.title.trim() || !selectedClassification) return;
     const c = selectedClassification;
     const typeMap: Record<ClassificationType, Task["type"]> = {
-      "long-term": "longterm", "short-term": "shortterm", "daily-trivial": "daily", "habits": "habit",
+      "short-term": "shortterm", "daily-trivial": "daily", "habits": "habit",
     };
     try {
       await createTask({
@@ -238,19 +239,32 @@ export default function CapturePage() {
         endTime: taskDraft.endTime ? new Date(taskDraft.endTime).getTime() : undefined,
         frequency: (c === "habits" ? taskDraft.frequency : undefined),
       });
-      if (taskDraft.milestones.some((m) => m.trim())) {
-        for (const m of taskDraft.milestones) {
-          if (m.trim()) {
-            await createTask({ title: m, type: "longterm", classification: "long-term", status: "active" });
-          }
-        }
-      }
       await updateTask(classifyTarget.id!, { status: "done" });
       showToast({ message: `已创建为「${CLASSIFICATION_OPTIONS.find((o) => o.key === c)?.label}」`, type: "success" });
       closeFlow();
       await loadItems();
     } catch { showToast({ message: "创建失败，请重试", type: "error" }); }
   }, [classifyTarget, taskDraft, selectedClassification, loadItems, closeFlow]);
+
+  const handleCreateModule = async () => {
+    if (!classifyTarget || !taskDraft.title.trim() || !taskDraft.boardId) return;
+    try {
+      const sectionId = await createSection(taskDraft.title, taskDraft.boardId);
+      await updateSection(sectionId, {
+        note: taskDraft.note || undefined,
+        successCriteria: taskDraft.successCriteria || undefined,
+        startTime: taskDraft.startTime ? new Date(taskDraft.startTime).getTime() : undefined,
+        stages: stages.filter(s => s.name.trim()).map(s => ({
+          name: s.name.trim(),
+          achievements: s.achievements.filter(a => a.trim()),
+        })),
+      });
+      await updateTask(classifyTarget.id!, { status: "done" });
+      showToast({ message: "已创建为长期目标（子模块）", type: "success" });
+      closeFlow();
+      await loadItems();
+    } catch { showToast({ message: "创建失败", type: "error" }); }
+  };
 
   const handleAssignGoal = async (targetType: GoalViewType) => {
     const captureId = assignTargetId;
@@ -298,8 +312,10 @@ export default function CapturePage() {
 
   useEffect(() => { return () => { if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current); }; }, []);
 
-  const isClassifyOpen = flowPhase === "classify" && classifyTarget !== null;
-  const isCreateOpen = flowPhase === "create" && classifyTarget !== null;
+  const isChooseTypeOpen = flowPhase === "chooseType" && classifyTarget !== null;
+  const isModuleFormOpen = flowPhase === "moduleForm" && classifyTarget !== null;
+  const isTaskClassifyOpen = flowPhase === "taskClassify" && classifyTarget !== null;
+  const isTaskFormOpen = flowPhase === "taskForm" && classifyTarget !== null;
 
   return (
     <div className="flex flex-col h-full max-w-2xl mx-auto px-4 pt-6 pb-24">
@@ -437,14 +453,151 @@ export default function CapturePage() {
         )}
       </AnimatePresence>
 
-      {/* Classify Sheet */}
+      {/* Step 1 Sheet: Choose Type */}
       <AnimatePresence>
-        {isClassifyOpen && (
+        {isChooseTypeOpen && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-end justify-center" onClick={closeFlow}>
             <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", stiffness: 400, damping: 40 }} onClick={(e) => e.stopPropagation()} className="w-full max-w-lg bg-white dark:bg-gray-900 rounded-t-2xl">
               <div className="w-10 h-1 bg-gray-300 dark:bg-gray-700 rounded-full mx-auto mt-3 mb-1" />
               <div className="px-6 pt-4 pb-6">
-                <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-1">选择分类</h3>
+                <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-1">选择创建类型</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{`"${classifyTarget!.title.slice(0, 40)}" 要创建为？`}</p>
+                <div className="space-y-1">
+                  <button
+                    onClick={async () => { setFlowPhase("moduleForm"); const [p] = await Promise.all([getAllProjectsV2().catch(() => [] as ProjectV2[])]); setProjects(p); setBoards([]); setSections([]); }}
+                    className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left active:scale-[0.98]"
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center">
+                      <Mountain className="w-5 h-5 text-indigo-500" />
+                    </div>
+                    <span className="flex-1 text-sm font-medium text-gray-900 dark:text-gray-100">子模块（长期目标）</span>
+                    <ChevronRight className="w-5 h-5 text-gray-400" />
+                  </button>
+                  <button
+                    onClick={() => { setFlowPhase("taskClassify"); }}
+                    className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left active:scale-[0.98]"
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
+                      <CheckSquare className="w-5 h-5 text-blue-500" />
+                    </div>
+                    <span className="flex-1 text-sm font-medium text-gray-900 dark:text-gray-100">任务</span>
+                    <ChevronRight className="w-5 h-5 text-gray-400" />
+                  </button>
+                </div>
+                <button onClick={closeFlow} className="mt-3 w-full py-3 rounded-xl border border-gray-200 dark:border-gray-700 text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">取消</button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Module Form: Long-term Goal */}
+      <AnimatePresence>
+        {isModuleFormOpen && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-end justify-center" onClick={closeFlow}>
+            <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", stiffness: 400, damping: 40 }} onClick={(e) => e.stopPropagation()} className="w-full max-w-lg bg-white dark:bg-gray-900 rounded-t-2xl">
+              <div className="w-10 h-1 bg-gray-300 dark:bg-gray-700 rounded-full mx-auto mt-3 mb-1" />
+              <div className="px-6 pt-4 pb-6 space-y-4 max-h-[70vh] overflow-y-auto">
+
+                <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">创建长期目标</h3>
+
+                <div>
+                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">标题</label>
+                  <input
+                    type="text" value={taskDraft.title}
+                    onChange={(e) => setTaskDraft((d) => ({ ...d, title: e.target.value }))}
+                    placeholder="输入目标名称"
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400"
+                    maxLength={200}
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">阶段</label>
+                  <div className="space-y-3">
+                    {stages.map((stage, si) => (
+                      <div key={si} className="p-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <input
+                            value={stage.name}
+                            onChange={(e) => updateStageName(si, e.target.value)}
+                            placeholder={`阶段 ${si + 1}`}
+                            className="flex-1 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                          {stages.length > 1 && (
+                            <button onClick={() => removeStage(si)} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-red-400"><X className="w-4 h-4" /></button>
+                          )}
+                        </div>
+                        {stage.achievements.map((ach, ai) => (
+                          <div key={ai} className="flex items-center gap-2 ml-2">
+                            <input
+                              value={ach}
+                              onChange={(e) => updateAchievement(si, ai, e.target.value)}
+                              placeholder={`阶段 ${si + 1} 成就 ${ai + 1}`}
+                              className="flex-1 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-xs text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                            {stage.achievements.length > 1 && (
+                              <button onClick={() => removeAchievement(si, ai)} className="w-6 h-6 flex items-center justify-center rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-red-400"><X className="w-3.5 h-3.5" /></button>
+                            )}
+                          </div>
+                        ))}
+                        <button onClick={() => addAchievement(si)} className="flex items-center gap-1 text-xs text-indigo-500 hover:text-indigo-600 font-medium py-1"><PlusCircle className="w-3.5 h-3.5" />添加成就</button>
+                      </div>
+                    ))}
+                    <button onClick={addStage} className="flex items-center gap-1 text-xs text-indigo-500 hover:text-indigo-600 font-medium py-1"><PlusCircle className="w-3.5 h-3.5" />添加阶段</button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">成功标准</label>
+                  <textarea value={taskDraft.successCriteria} onChange={(e) => setTaskDraft((d) => ({ ...d, successCriteria: e.target.value }))} placeholder="如何判断这个目标已完成？" rows={2} className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400" maxLength={500} />
+                </div>
+
+                <div>
+                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">开始时间</label>
+                  <input type="datetime-local" value={taskDraft.startTime} onChange={(e) => setTaskDraft((d) => ({ ...d, startTime: e.target.value }))} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+
+                <div>
+                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">所属模块 <span className="text-red-400">*</span></label>
+                  <div className="space-y-2">
+                    <select value={taskDraft.projectId ?? ""} onChange={(e) => handleProjectChange(e.target.value ? parseInt(e.target.value) : null)} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                      <option value="">选择项目</option>
+                      {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                    </select>
+                    {boards.length > 0 && (
+                      <select value={taskDraft.boardId ?? ""} onChange={(e) => handleBoardChange(e.target.value ? parseInt(e.target.value) : null)} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="">选择大模块</option>
+                        {boards.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+                      </select>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">备注</label>
+                  <textarea value={taskDraft.note} rows={2} onChange={(e) => setTaskDraft((d) => ({ ...d, note: e.target.value }))} placeholder="添加备注信息..." className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400" maxLength={1000} />
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <button onClick={closeFlow} className="flex-1 py-3 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">取消</button>
+                  <button onClick={handleCreateModule} disabled={!taskDraft.title.trim() || !taskDraft.boardId} className="flex-1 py-3 rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition-colors disabled:opacity-40">创建长期目标</button>
+                </div>
+
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Step 2 Sheet: Task Classification */}
+      <AnimatePresence>
+        {isTaskClassifyOpen && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-end justify-center" onClick={closeFlow}>
+            <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", stiffness: 400, damping: 40 }} onClick={(e) => e.stopPropagation()} className="w-full max-w-lg bg-white dark:bg-gray-900 rounded-t-2xl">
+              <div className="w-10 h-1 bg-gray-300 dark:bg-gray-700 rounded-full mx-auto mt-3 mb-1" />
+              <div className="px-6 pt-4 pb-6">
+                <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-1">选择任务类型</h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{`"${classifyTarget!.title.slice(0, 40)}" 应该归属为？`}</p>
                 <div className="space-y-1">
                   {CLASSIFICATION_OPTIONS.map((opt) => (
@@ -470,14 +623,13 @@ export default function CapturePage() {
 
       {/* Task Create Sheet */}
       <AnimatePresence>
-        {isCreateOpen && (
+        {isTaskFormOpen && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-end justify-center" onClick={closeFlow}>
             <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", stiffness: 400, damping: 40 }} onClick={(e) => e.stopPropagation()} className="w-full max-w-lg bg-white dark:bg-gray-900 rounded-t-2xl">
               <div className="w-10 h-1 bg-gray-300 dark:bg-gray-700 rounded-full mx-auto mt-3 mb-1" />
               <div className="px-6 pt-4 pb-6 space-y-4 max-h-[70vh] overflow-y-auto">
 
                 <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">
-                  {selectedClassification === "long-term" && "创建长期目标"}
                   {selectedClassification === "short-term" && "创建短期事件"}
                   {selectedClassification === "daily-trivial" && "创建日常琐事"}
                   {selectedClassification === "habits" && "创建习惯"}
@@ -513,28 +665,6 @@ export default function CapturePage() {
                     ))}
                   </div>
                 </div>
-
-                {selectedClassification === "long-term" && (
-                  <div>
-                    <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">成功标准 <span className="text-red-400">*</span></label>
-                    <textarea value={taskDraft.successCriteria} onChange={(e) => setTaskDraft((d) => ({ ...d, successCriteria: e.target.value }))} placeholder="如何判断这个目标已完成？" rows={2} className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400" maxLength={500} />
-                  </div>
-                )}
-
-                {selectedClassification === "long-term" && (
-                  <div>
-                    <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">里程碑</label>
-                    <div className="space-y-2">
-                      {taskDraft.milestones.map((m, i) => (
-                        <div key={i} className="flex items-center gap-2">
-                          <input value={m} onChange={(e) => updateMilestone(i, e.target.value)} placeholder={`里程碑 ${i + 1}`} className="flex-1 px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                          <button onClick={() => removeMilestone(i)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400"><X className="w-4 h-4" /></button>
-                        </div>
-                      ))}
-                      <button onClick={addMilestone} className="flex items-center gap-1 text-xs text-indigo-500 hover:text-indigo-600 font-medium py-1"><PlusCircle className="w-3.5 h-3.5" />添加里程碑</button>
-                    </div>
-                  </div>
-                )}
 
                 {selectedClassification === "short-term" && (
                   <div className="grid grid-cols-2 gap-3">

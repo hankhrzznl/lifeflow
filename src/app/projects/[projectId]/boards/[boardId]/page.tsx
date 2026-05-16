@@ -87,7 +87,7 @@ export default function BoardSectionListPage() {
     if (!editName.trim() || editId === null) return;
     setSaving(true);
     try {
-      await updateSection(editId, editName.trim());
+      await updateSection(editId, { name: editName.trim() });
       closeEdit();
       await loadData();
       showToast({ message: "分区已更新", type: "success", duration: 2000 });

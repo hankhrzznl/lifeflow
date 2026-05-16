@@ -1,0 +1,257 @@
+"use client";
+
+import { useState, useEffect, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  X, Edit3, Save, Clock, Target, FileText, Layers, PlusCircle,
+  Check,
+} from "lucide-react";
+import { getSection, updateSection } from "@/lib/db";
+import { showToast } from "@/components/ui/Toast";
+import type { Section, StagePhase } from "@/lib/types";
+
+function formatDate(ts: number | undefined): string {
+  if (!ts) return "";
+  return new Date(ts).toLocaleString("zh-CN", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+}
+
+interface SectionDetailProps {
+  sectionId: number;
+  onClose: () => void;
+  onUpdate?: () => void;
+}
+
+export default function SectionDetail({ sectionId, onClose, onUpdate }: SectionDetailProps) {
+  const [section, setSection] = useState<Section | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const [draftName, setDraftName] = useState("");
+  const [draftNote, setDraftNote] = useState("");
+  const [draftSuccessCriteria, setDraftSuccessCriteria] = useState("");
+  const [draftStartTime, setDraftStartTime] = useState("");
+  const [draftStages, setDraftStages] = useState<StagePhase[]>([{ name: "", achievements: [""] }]);
+
+  const loadSection = useCallback(async () => {
+    setLoading(true);
+    try {
+      const s = await getSection(sectionId);
+      setSection(s || null);
+    } catch { }
+    finally { setLoading(false); }
+  }, [sectionId]);
+
+  useEffect(() => { const f = async () => { await loadSection(); }; f(); }, [loadSection]);
+
+  const handleStartEdit = () => {
+    if (!section) return;
+    setDraftName(section.name);
+    setDraftNote(section.note || "");
+    setDraftSuccessCriteria(section.successCriteria || "");
+    setDraftStartTime(section.startTime ? new Date(section.startTime).toISOString().slice(0, 16) : "");
+    setDraftStages(section.stages && section.stages.length > 0 ? section.stages : [{ name: "", achievements: [""] }]);
+    setEditing(true);
+  };
+
+  const handleSave = async () => {
+    if (!section || saving) return;
+    setSaving(true);
+    try {
+      await updateSection(section.id!, {
+        name: draftName,
+        note: draftNote || undefined,
+        successCriteria: draftSuccessCriteria || undefined,
+        startTime: draftStartTime ? new Date(draftStartTime).getTime() : undefined,
+        stages: draftStages.filter(s => s.name.trim()).map(s => ({
+          name: s.name.trim(),
+          achievements: s.achievements.filter(a => a.trim()),
+        })),
+      });
+      showToast({ message: "已保存", type: "success" });
+      setEditing(false);
+      await loadSection();
+      onUpdate?.();
+    } catch { showToast({ message: "保存失败", type: "error" }); }
+    finally { setSaving(false); }
+  };
+
+  const addStageDraft = () => setDraftStages(prev => [...prev, { name: "", achievements: [""] }]);
+  const addAchDraft = (si: number) => setDraftStages(prev => {
+    const s = [...prev]; s[si] = { ...s[si], achievements: [...s[si].achievements, ""] }; return s;
+  });
+
+  if (loading) return <LoadingSheet onClose={onClose} />;
+  if (!section) return <ErrorSheet onClose={onClose} />;
+
+  return (
+    <AnimatePresence>
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-end justify-center" onClick={onClose}>
+        <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
+          transition={{ type: "spring", stiffness: 400, damping: 40 }}
+          onClick={(e) => e.stopPropagation()}
+          className="w-full max-w-lg bg-white dark:bg-gray-900 rounded-t-2xl max-h-[85vh] overflow-y-auto">
+          <div className="w-10 h-1 bg-gray-300 dark:bg-gray-700 rounded-full mx-auto mt-3 mb-1" />
+          <div className="px-6 pt-4 pb-6">
+
+            <div className="flex items-start justify-between mb-3">
+              <span className="text-xs font-medium px-2 py-0.5 rounded-md bg-indigo-100 text-indigo-600">长期目标</span>
+              <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {editing ? (
+              <input value={draftName} onChange={(e) => setDraftName(e.target.value)}
+                className="w-full text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3 px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            ) : (
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 break-words">{section.name}</h2>
+            )}
+
+            <div className="flex items-center gap-2 mb-4">
+              <div className="flex-1" />
+              {!editing && (
+                <button onClick={handleStartEdit} className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-xs font-medium">
+                  <Edit3 className="w-3.5 h-3.5" />编辑
+                </button>
+              )}
+            </div>
+
+            <div className="border-t border-gray-100 dark:border-gray-800 my-3" />
+
+            <div className="space-y-3">
+              <InfoRow icon={<Clock className="w-4 h-4 text-gray-400" />} label="开始时间">
+                {editing ? (
+                  <input type="datetime-local" value={draftStartTime} onChange={(e) => setDraftStartTime(e.target.value)}
+                    className="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                ) : (
+                  <span className="text-sm text-gray-700 dark:text-gray-300">{formatDate(section.startTime) || "未设置"}</span>
+                )}
+              </InfoRow>
+
+              <InfoRow icon={<Target className="w-4 h-4 text-gray-400" />} label="成功标准">
+                {editing ? (
+                  <textarea value={draftSuccessCriteria} onChange={(e) => setDraftSuccessCriteria(e.target.value)} rows={2}
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="如何判断已完成？" />
+                ) : (
+                  <span className="text-sm text-gray-700 dark:text-gray-300">{section.successCriteria || "未设置"}</span>
+                )}
+              </InfoRow>
+
+              <InfoRow icon={<Layers className="w-4 h-4 text-gray-400" />} label="阶段">
+                {editing ? (
+                  <div className="space-y-3">
+                    {draftStages.map((stage, si) => (
+                      <div key={si} className="p-3 rounded-xl border border-gray-200 dark:border-gray-700">
+                        <div className="flex items-center gap-2 mb-2">
+                          <input value={stage.name} onChange={(e) => {
+                            const s = [...draftStages]; s[si] = { ...s[si], name: e.target.value }; setDraftStages(s);
+                          }} placeholder={`阶段 ${si + 1}`}
+                            className="flex-1 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                          <button onClick={() => setDraftStages(prev => prev.filter((_, i) => i !== si))}
+                            className="w-6 h-6 flex items-center justify-center rounded text-gray-400 hover:text-red-500"><X className="w-3.5 h-3.5" /></button>
+                        </div>
+                        {stage.achievements.map((ach, ai) => (
+                          <div key={ai} className="flex items-center gap-1.5 ml-2 mb-1">
+                            <Check className="w-3 h-3 text-gray-300 flex-shrink-0" />
+                            <input value={ach} onChange={(e) => {
+                              const s = [...draftStages];
+                              const a = [...s[si].achievements]; a[ai] = e.target.value;
+                              s[si] = { ...s[si], achievements: a }; setDraftStages(s);
+                            }} placeholder={`成就 ${ai + 1}`}
+                              className="flex-1 px-2 py-1 rounded border border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                            <button onClick={() => {
+                              const s = [...draftStages];
+                              s[si] = { ...s[si], achievements: s[si].achievements.filter((_, i) => i !== ai) };
+                              setDraftStages(s);
+                            }} className="w-5 h-5 flex items-center justify-center text-gray-300 hover:text-red-400"><X className="w-2.5 h-2.5" /></button>
+                          </div>
+                        ))}
+                        <button onClick={() => addAchDraft(si)}
+                          className="ml-2 text-xs text-blue-500 hover:text-blue-600 font-medium">+ 添加成就</button>
+                      </div>
+                    ))}
+                    <button onClick={addStageDraft}
+                      className="flex items-center gap-1 text-xs text-indigo-500 hover:text-indigo-600 font-medium">
+                      <PlusCircle className="w-3.5 h-3.5" />添加阶段
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {(section.stages || []).length === 0 ? (
+                      <span className="text-sm text-gray-400">未设置</span>
+                    ) : (
+                      (section.stages || []).map((stage, si) => (
+                        <div key={si} className="p-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-900/20">
+                          <p className="text-sm font-medium text-indigo-700 dark:text-indigo-300 mb-1">{stage.name}</p>
+                          {stage.achievements.map((ach, ai) => (
+                            <div key={ai} className="flex items-center gap-1.5 ml-2 text-xs text-gray-600 dark:text-gray-400 py-0.5">
+                              <Check className="w-3 h-3 text-indigo-400" />{ach}
+                            </div>
+                          ))}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+              </InfoRow>
+
+              <InfoRow icon={<FileText className="w-4 h-4 text-gray-400" />} label="备注">
+                {editing ? (
+                  <textarea value={draftNote} onChange={(e) => setDraftNote(e.target.value)} rows={2}
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="添加备注..." />
+                ) : (
+                  <span className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{section.note || "无备注"}</span>
+                )}
+              </InfoRow>
+            </div>
+
+            {editing && (
+              <div className="flex gap-3 mt-6 pt-3 border-t border-gray-100 dark:border-gray-800">
+                <button onClick={() => setEditing(false)}
+                  className="flex-1 py-3 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-500 dark:text-gray-400">取消</button>
+                <button onClick={handleSave} disabled={saving}
+                  className="flex-1 py-3 rounded-xl bg-blue-600 text-white text-sm font-medium disabled:opacity-40 flex items-center justify-center gap-1.5">
+                  {saving ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Save className="w-4 h-4" />}保存
+                </button>
+              </div>
+            )}
+          </div>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
+  );
+}
+
+function LoadingSheet({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 bg-black/40 flex items-end justify-center" onClick={onClose}>
+      <div className="w-full max-w-lg bg-white dark:bg-gray-900 rounded-t-2xl p-6 h-64 flex items-center justify-center">
+        <div className="w-6 h-6 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin" />
+      </div>
+    </div>
+  );
+}
+
+function ErrorSheet({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 bg-black/40 flex items-end justify-center" onClick={onClose}>
+      <div className="w-full max-w-lg bg-white dark:bg-gray-900 rounded-t-2xl p-6">
+        <p className="text-center text-gray-500 py-8">子模块不存在</p>
+      </div>
+    </div>
+  );
+}
+
+function InfoRow({ icon, label, children }: { icon: React.ReactNode; label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex gap-3">
+      <div className="flex items-center gap-2 w-24 flex-shrink-0 pt-0.5">
+        {icon}
+        <span className="text-xs text-gray-400 dark:text-gray-500">{label}</span>
+      </div>
+      <div className="flex-1 min-w-0">{children}</div>
+    </div>
+  );
+}

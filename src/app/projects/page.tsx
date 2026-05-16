@@ -15,6 +15,7 @@ import {
 } from "@/lib/db";
 import { showToast } from "@/components/ui/Toast";
 import TaskDetail from "@/components/ui/TaskDetail";
+import SectionDetail from "@/components/ui/SectionDetail";
 import { PRIORITY_CONFIG } from "@/lib/types";
 import type { ProjectV2, Board, Section, Task } from "@/lib/types";
 
@@ -34,6 +35,7 @@ export default function ProjectsPage() {
   const [newProjectColor, setNewProjectColor] = useState(COLORS[0]);
   const [editingProject, setEditingProject] = useState<ProjectV2 | null>(null);
   const [detailTaskId, setDetailTaskId] = useState<number | null>(null);
+  const [detailSectionId, setDetailSectionId] = useState<number | null>(null);
 
   const loadProjects = useCallback(async () => {
     try {
@@ -261,7 +263,8 @@ export default function ProjectsPage() {
                                           return (
                                             <div key={section.id} className="border-t border-gray-50 dark:border-gray-800/30">
                                               {/* Section header */}
-                                              <div className="flex items-center gap-3 pl-16 pr-4 py-2">
+                                              <div className="flex items-center gap-3 pl-16 pr-4 py-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/30"
+                                                onClick={() => setDetailSectionId(section.id!)}>
                                                 <Layers className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
                                                 <span className="flex-1 text-xs font-medium text-gray-600 dark:text-gray-400">{section.name}</span>
                                                 <span className="text-xs text-gray-400">{sectionTasks.length} 任务</span>
@@ -332,6 +335,13 @@ export default function ProjectsPage() {
         <TaskDetail
           taskId={detailTaskId}
           onClose={() => setDetailTaskId(null)}
+          onUpdate={loadProjects}
+        />
+      )}
+      {detailSectionId !== null && (
+        <SectionDetail
+          sectionId={detailSectionId}
+          onClose={() => setDetailSectionId(null)}
           onUpdate={loadProjects}
         />
       )}

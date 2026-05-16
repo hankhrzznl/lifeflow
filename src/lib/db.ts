@@ -134,6 +134,15 @@ export class LifeFlowDB extends Dexie {
         throw err;
       }
     });
+
+    this.version(5).stores({
+      tasks: "++id, type, classification, status, parentTaskId, sectionId, boardId, startTime, projectId, createdAt, [type+status], *tags",
+    }).upgrade(async () => {
+      // Non-structural index addition only — no data migration needed
+      if (typeof window !== "undefined" && window.location.hostname === "localhost") {
+        console.log("[LifeFlowDB v5] Added sectionId, classification, boardId indexes");
+      }
+    });
   }
 }
 

@@ -5,12 +5,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   X, Edit3, Check, Play, Trash2, Save,
   Mountain, CalendarDays, ClipboardList, Flame,
-  Clock, Calendar, Target, Tag, FileText, Link2,
+  Clock, Plus, Calendar, Target, Tag, FileText, Link2,
 } from "lucide-react";
-import { getTask, updateTask, deleteTask, restoreTask } from "@/lib/db";
+import { getTask, updateTask, deleteTask, restoreTask, getTimeSegments, addTimeSegment, deleteTimeSegment } from "@/lib/db";
 import { PRIORITY_CONFIG } from "@/lib/types";
 import { showToast } from "@/components/ui/Toast";
-import type { Task } from "@/lib/types";
+import type { Task, TimeSegment } from "@/lib/types";
 
 const CLASSIFICATION_LABELS: Record<string, { label: string; icon: typeof Mountain; color: string }> = {
   "long-term": { label: "长期目标", icon: Mountain, color: "text-indigo-500" },
@@ -49,6 +49,11 @@ export default function TaskDetail({ taskId, onClose, onUpdate }: TaskDetailProp
   const [draft, setDraft] = useState<Partial<Task>>({});
   const [draftTags, setDraftTags] = useState<string>("");
 
+  const [segments, setSegments] = useState<TimeSegment[]>([]);
+  const [addingSegment, setAddingSegment] = useState(false);
+  const [newSegStart, setNewSegStart] = useState("");
+  const [newSegEnd, setNewSegEnd] = useState("");
+
   const loadTask = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -56,6 +61,8 @@ export default function TaskDetail({ taskId, onClose, onUpdate }: TaskDetailProp
       const t = await getTask(taskId);
       if (!t) { setError("任务不存在"); return; }
       setTask(t);
+      const segs = await getTimeSegments(t.id!);
+      setSegments(segs.sort((a, b) => a.startTime - b.startTime));
       setDraft({});
       setDraftTags("");
     } catch { setError("加载失败"); }
@@ -117,6 +124,23 @@ export default function TaskDetail({ taskId, onClose, onUpdate }: TaskDetailProp
     await updateTask(task.id!, { status: newStatus });
     await loadTask();
     onUpdate?.();
+  };
+
+  const handleAddSegment = async () => {
+    if (!task || !newSegStart || !newSegEnd) return;
+    const start = new Date(newSegStart).getTime();
+    const end = new Date(newSegEnd).getTime();
+    if (end <= start) { showToast({ message: "结束时间必须晚于开始时间", type: "error" }); return; }
+    await addTimeSegment(task.id!, start, end);
+    const segs = await getTimeSegments(task.id!);
+    setSegments(segs.sort((a, b) => a.startTime - b.startTime));
+    setAddingSegment(false);
+    setNewSegStart(""); setNewSegEnd("");
+  };
+
+  const handleDeleteSegment = async (segId: number) => {
+    await deleteTimeSegment(segId);
+    setSegments((prev) => prev.filter((s) => s.id !== segId));
   };
 
   if (loading) {
@@ -284,6 +308,46 @@ export default function TaskDetail({ taskId, onClose, onUpdate }: TaskDetailProp
                   <textarea value={draft.successCriteria || task.successCriteria || ""} onChange={(e) => setDraft((d) => ({ ...d, successCriteria: e.target.value }))} rows={2} className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="如何判断已完成？" />
                 ) : (
                   <span className="text-sm text-gray-700 dark:text-gray-300">{task.successCriteria || "未设置"}</span>
+                )}
+              </InfoRow>
+
+              {/* Time segments */}
+              <InfoRow icon={<Clock className="w-4 h-4 text-gray-400" />} label="时间段">
+                {segments.length === 0 && !editing ? (
+                  <span className="text-sm text-gray-400">未设置</span>
+                ) : (
+                  <div className="space-y-1.5">
+                    {segments.map((seg) => {
+                      const startStr = new Date(seg.startTime).toLocaleString("zh-CN", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+                      const endStr = new Date(seg.endTime).toLocaleString("zh-CN", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+                      return (
+                        <div key={seg.id} className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                          <span>{startStr} → {endStr}</span>
+                          {editing && (
+                            <button onClick={() => handleDeleteSegment(seg.id!)} className="w-5 h-5 flex items-center justify-center rounded hover:bg-red-50 text-gray-400 hover:text-red-500"><X className="w-3 h-3" /></button>
+                          )}
+                        </div>
+                      );
+                    })}
+                    {editing && !addingSegment && (
+                      <button onClick={() => setAddingSegment(true)} className="flex items-center gap-1 text-xs text-blue-500 hover:text-blue-600 font-medium">
+                        <Plus className="w-3.5 h-3.5" />添加时间段
+                      </button>
+                    )}
+                    {addingSegment && (
+                      <div className="space-y-1.5 mt-1">
+                        <div className="flex items-center gap-2">
+                          <input type="datetime-local" value={newSegStart} onChange={(e) => setNewSegStart(e.target.value)} className="flex-1 px-2 py-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-xs text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                          <span className="text-xs text-gray-400">→</span>
+                          <input type="datetime-local" value={newSegEnd} onChange={(e) => setNewSegEnd(e.target.value)} className="flex-1 px-2 py-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-xs text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                        </div>
+                        <div className="flex gap-2">
+                          <button onClick={handleAddSegment} className="text-xs text-blue-600 font-medium">确定</button>
+                          <button onClick={() => { setAddingSegment(false); setNewSegStart(""); setNewSegEnd(""); }} className="text-xs text-gray-400">取消</button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 )}
               </InfoRow>
 

@@ -9,13 +9,13 @@ import {
   AlertCircle,
   RotateCcw,
   Zap,
-  Play,
 } from "lucide-react";
 import {
   getTasksByTimeRange,
   getAllProjects,
+  getTimeSegmentsByDateRange,
 } from "@/lib/db";
-import type { Task, LegacyProject } from "@/lib/types";
+import type { Task, LegacyProject, TimeSegment } from "@/lib/types";
 import TaskDetail from "@/components/ui/TaskDetail";
 import { PRIORITY_CONFIG } from "@/lib/types";
 
@@ -23,6 +23,11 @@ const SLOT_HEIGHT = 32;
 const MINUTES_PER_SLOT = 15;
 const PIXELS_PER_HOUR = (60 / MINUTES_PER_SLOT) * SLOT_HEIGHT;
 const CONTAINER_HEIGHT = 24 * PIXELS_PER_HOUR;
+
+interface TimelineSlot {
+  segment: TimeSegment;
+  task: Task;
+}
 
 function pad(n: number): string {
   return String(n).padStart(2, "0");
@@ -55,20 +60,6 @@ function formatDateLabel(d: Date): string {
 function formatTime(ts: number): string {
   const d = new Date(ts);
   return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
-
-function calculateEventPosition(
-  eventStart: number,
-  eventEnd: number,
-  dayStart: number
-): { top: number; height: number } {
-  const startMinutes = (eventStart - dayStart) / (1000 * 60);
-  const durationMinutes = (eventEnd - eventStart) / (1000 * 60);
-
-  const top = (startMinutes / MINUTES_PER_SLOT) * SLOT_HEIGHT;
-  const height = Math.max(durationMinutes / MINUTES_PER_SLOT * SLOT_HEIGHT, SLOT_HEIGHT);
-
-  return { top, height };
 }
 
 function calculateCurrentTimePosition(): number {
@@ -184,177 +175,6 @@ function EmptyState() {
   );
 }
 
-function CurrentTimeIndicator({ dayStart }: { dayStart: number }) {
-  const [position, setPosition] = useState(() => calculateCurrentTimePosition());
-
-  useEffect(() => {
-    const now = new Date();
-    const currentDay = getDayStart(Date.now());
-    if (currentDay !== dayStart) return;
-
-    requestAnimationFrame(() => {
-      setPosition(calculateCurrentTimePosition());
-    });
-
-    const msToNextMinute = (60 - now.getSeconds()) * 1000;
-    let timeoutId: ReturnType<typeof setTimeout>;
-
-    const schedule = () => {
-      timeoutId = setTimeout(() => {
-        setPosition(calculateCurrentTimePosition());
-        schedule();
-      }, 60000);
-    };
-
-    timeoutId = setTimeout(schedule, msToNextMinute);
-
-    return () => clearTimeout(timeoutId);
-  }, [dayStart]);
-
-  return (
-    <div
-      className="absolute left-0 right-0 z-20 pointer-events-none flex items-center"
-      style={{ top: `${position}px` }}
-    >
-      <div
-        className="absolute w-2 h-2 rounded-full bg-red-500"
-        style={{ left: "53px", marginTop: "-1px" }}
-      />
-      <div
-        className="absolute right-0 h-0.5 bg-red-500"
-        style={{ left: "56px", opacity: 0.6 }}
-      />
-    </div>
-  );
-}
-
-function TimelineEventBlock({
-  task,
-  dayStart,
-  projectColor,
-  isHighlighted,
-  isFocusEnabled,
-  onClick,
-}: {
-  task: Task & { _clippedStart?: number; _clippedEnd?: number };
-  dayStart: number;
-  projectColor?: string;
-  isHighlighted?: boolean;
-  isFocusEnabled?: boolean;
-  onClick: () => void;
-}) {
-  const start = task._clippedStart ?? task.startTime!;
-  const end = task._clippedEnd ?? task.endTime!;
-  const { top, height } = calculateEventPosition(start, end, dayStart);
-  const priorityConfig = task.priority ? PRIORITY_CONFIG.find((p) => p.key === task.priority) : null;
-  const color = task.status === "done" ? "#10B981" : (priorityConfig?.hex) || (projectColor || "#6366f1");
-
-  const typeLabel =
-    task.type === "shortterm"
-      ? "事件"
-      : task.type === "daily"
-        ? "琐事"
-        : task.type === "longterm"
-          ? "目标"
-          : "习惯";
-
-  const showFocusButton =
-    task.type === "shortterm" && task.status === "active" && isFocusEnabled;
-
-  return (
-    <div
-      id={`event-block-${task.id}`}
-      onClick={onClick}
-      className={`absolute rounded-xl cursor-pointer transition-all duration-150 hover:brightness-95 hover:shadow-md active:scale-[0.98] overflow-hidden ${
-        task.status === "done" ? "opacity-50" : ""
-      } ${isHighlighted ? "ring-2 ring-indigo-400 shadow-lg" : ""}`}
-      style={{
-        top: `${top}px`,
-        height: `${Math.max(height, 48)}px`,
-        left: "60px",
-        right: "16px",
-        backgroundColor: `${color}1A`,
-        border: `1px solid ${color}4D`,
-        padding: "6px 8px",
-      }}
-    >
-      <div className="flex items-center gap-1.5">
-        <span
-          className="text-[10px] font-medium px-1.5 py-0.5 rounded-md flex-shrink-0"
-          style={{ backgroundColor: `${color}33`, color }}
-        >
-          {typeLabel}
-        </span>
-        <p
-          className="text-xs font-medium truncate flex-1"
-          style={{ color }}
-        >
-          {task.status === "done" && "✓ "}
-          {task.title}
-        </p>
-        {showFocusButton && (
-          <a
-            href={`/plugins/focus-timer?taskId=${task.id}`}
-            onClick={(e) => e.stopPropagation()}
-            className="bg-purple-500 text-white text-xs rounded-full px-3 py-1 flex items-center gap-1 flex-shrink-0 hover:bg-purple-600 transition-colors"
-          >
-            <Play className="w-3 h-3" />
-            开始专注
-          </a>
-        )}
-      </div>
-      <p className="text-[10px] text-gray-400 mt-0.5">
-        {formatTime(start)} - {formatTime(end)}
-      </p>
-    </div>
-  );
-}
-
-function TimelineGridLines() {
-  const hours = Array.from({ length: 24 }, (_, i) => i);
-
-  return (
-    <div className="absolute inset-0 pointer-events-none">
-      {hours.map((hour) => (
-        <div
-          key={hour}
-          className="absolute right-0"
-          style={{ top: `${hour * PIXELS_PER_HOUR}px`, left: "56px" }}
-        >
-          <div className="border-t border-gray-200 dark:border-gray-800 w-full" />
-          {[1, 2, 3].map((i) => (
-            <div
-              key={i}
-              className="border-t border-gray-100 dark:border-gray-800/50 border-dashed w-full absolute"
-              style={{ top: `${i * SLOT_HEIGHT}px` }}
-            />
-          ))}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function TimeColumn() {
-  const hours = Array.from({ length: 24 }, (_, i) => i);
-
-  return (
-    <div className="absolute left-0 top-0" style={{ width: "56px" }}>
-      {hours.map((hour) => (
-        <div
-          key={hour}
-          className="absolute right-2 text-[11px] text-gray-400 dark:text-gray-500"
-          style={{
-            top: `${hour * PIXELS_PER_HOUR}px`,
-            transform: "translateY(-50%)",
-          }}
-        >
-          {`${pad(hour)}:00`}
-        </div>
-      ))}
-    </div>
-  );
-}
 
 function TaskListItem({
   task,
@@ -455,9 +275,9 @@ export default function TodayPage() {
   const [projects, setProjects] = useState<LegacyProject[]>([]);
   const [highlightedId, setHighlightedId] = useState<number | null>(null);
   const [detailTaskId, setDetailTaskId] = useState<number | null>(null);
+  const [slots, setSlots] = useState<TimelineSlot[]>([]);
 
   const isTimelineEnabled = usePluginStatus("timeline");
-  const isFocusEnabled = usePluginStatus("focus-timer");
 
   const projectColorMap = useMemo(() => {
     const map = new Map<string, string>();
@@ -473,8 +293,18 @@ export default function TodayPage() {
         getTasksByTimeRange(dayStart, dayEnd),
         getAllProjects(),
       ]);
-      setTasks(fetchedTasks.filter((t) => t.status !== "archived" && t.startTime && t.endTime));
+      setTasks(fetchedTasks.filter((t) => t.status !== "archived"));
       setProjects(fetchedProjects);
+
+      const todayStart = dayStart;
+      const todayEnd = dayStart + 24 * 60 * 60 * 1000;
+      const segs = await getTimeSegmentsByDateRange(todayStart, todayEnd);
+      const slotData: TimelineSlot[] = [];
+      for (const seg of segs) {
+        const task = fetchedTasks.find((t) => t.id === seg.taskId && t.status !== "archived");
+        if (task) slotData.push({ segment: seg, task });
+      }
+      setSlots(slotData);
     } catch {
       setError(true);
     } finally {
@@ -530,16 +360,6 @@ export default function TodayPage() {
     }
   }, [dayStart, scrollToCurrentTime]);
 
-  const handleBlockClick = useCallback((taskId: number) => {
-    setDetailTaskId(taskId);
-    const listItem = document.getElementById(`event-list-item-${taskId}`);
-    if (listItem) {
-      listItem.scrollIntoView({ behavior: "smooth", block: "center" });
-      setHighlightedId(taskId);
-      setTimeout(() => setHighlightedId(null), 2000);
-    }
-  }, []);
-
   const handleListItemClick = useCallback((taskId: number) => {
     setDetailTaskId(taskId);
     const block = document.getElementById(`event-block-${taskId}`);
@@ -572,7 +392,7 @@ export default function TodayPage() {
   }, [isToday, dayStart, goToday]);
 
   const clippedTasks = tasks
-    .filter((t) => t.type === "shortterm" || t.type === "daily")
+    .filter((t) => (t.type === "shortterm" || t.type === "daily") && t.startTime && t.endTime)
     .map((t) => {
       const { startTime, endTime } = getDayClippedEvent(t, dayStart);
       return { ...t, _clippedStart: startTime, _clippedEnd: endTime };
@@ -669,7 +489,7 @@ export default function TodayPage() {
         )}
       </AnimatePresence>
 
-      {clippedTasks.length === 0 ? (
+      {clippedTasks.length === 0 && slots.length === 0 ? (
         <div className="flex-1 overflow-y-auto">
           <EmptyState />
         </div>
@@ -693,44 +513,64 @@ export default function TodayPage() {
           </div>
         </div>
       ) : (
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <div className="flex-1 overflow-y-auto today-timeline-scroll">
-            <div className="relative" style={{ height: CONTAINER_HEIGHT }}>
-              <TimelineGridLines />
-              <TimeColumn />
-              {isToday && <CurrentTimeIndicator dayStart={dayStart} />}
+        <div className="flex-1 overflow-y-auto">
+          <div className="flex flex-col">
+            {Array.from({ length: 24 }, (_, hour) => {
+              const hourStart = dayStart + hour * 3600 * 1000;
+              const hourEnd = hourStart + 3600 * 1000;
 
-              {clippedTasks.map((task) => (
-                <TimelineEventBlock
-                  key={task.id}
-                  task={task}
-                  dayStart={dayStart}
-                  projectColor={task.projectId ? projectColorMap.get(task.projectId) : undefined}
-                  isHighlighted={highlightedId === task.id}
-                  isFocusEnabled={isFocusEnabled}
-                  onClick={() => handleBlockClick(task.id!)}
-                />
-              ))}
-            </div>
-          </div>
+              const hourSlots = slots.filter((slot) => {
+                const s = slot.segment.startTime;
+                const e = slot.segment.endTime;
+                return s < hourEnd && e > hourStart;
+              });
 
-          <div className="flex-shrink-0 border-t border-gray-100 dark:border-gray-800 max-h-[40vh] overflow-y-auto bg-white dark:bg-gray-900">
-            <div className="px-4 py-2">
-              <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
-                任务列表 ({clippedTasks.length})
-              </p>
-              <div className="space-y-1">
-                {clippedTasks.map((task) => (
-                  <TaskListItem
-                    key={task.id}
-                    task={task}
-                    projectColor={task.projectId ? projectColorMap.get(task.projectId) : undefined}
-                    isHighlighted={highlightedId === task.id}
-                    onClick={() => handleListItemClick(task.id!)}
-                  />
-                ))}
-              </div>
-            </div>
+              const priorityOrder = ["urgent-important", "not-urgent-important", "urgent-not-important", "not-urgent-not-important"];
+              hourSlots.sort((a, b) => {
+                const pa = priorityOrder.indexOf(a.task.priority || "not-urgent-not-important");
+                const pb = priorityOrder.indexOf(b.task.priority || "not-urgent-not-important");
+                if (pa !== pb) return pa - pb;
+                return a.segment.startTime - b.segment.startTime;
+              });
+
+              return (
+                <div key={hour} className="border-b border-gray-100 dark:border-gray-800">
+                  <div className="flex items-start">
+                    <div className="w-14 flex-shrink-0 py-1 px-2">
+                      <span className="text-xs font-medium text-gray-400 tabular-nums">{String(hour).padStart(2, "0")}:00</span>
+                    </div>
+                    <div className="flex-1 min-w-0 py-0.5 pr-2">
+                      {hourSlots.length === 0 ? (
+                        <div className="h-6" />
+                      ) : (
+                        <div className="space-y-0.5">
+                          {hourSlots.map((slot) => {
+                            const prio = PRIORITY_CONFIG.find((p) => p.key === (slot.task.priority || "not-urgent-not-important"));
+                            const segStart = new Date(slot.segment.startTime);
+                            const segEnd = new Date(slot.segment.endTime);
+                            const formatDt = (d: Date) => `${d.getMonth() + 1}月${d.getDate()}日 ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+                            const rangeStr = `${formatDt(segStart)} → ${formatDt(segEnd)}`;
+                            return (
+                              <div
+                                key={`${slot.segment.id}-${hour}`}
+                                onClick={() => setDetailTaskId(slot.task.id!)}
+                                className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors active:scale-[0.99] min-h-[44px]"
+                              >
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{slot.task.title}</p>
+                                  <p className="text-xs text-gray-400 truncate">{rangeStr}</p>
+                                </div>
+                                <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: prio?.hex || "#6B7280" }} title={prio?.label} />
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

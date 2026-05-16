@@ -182,3 +182,11 @@ export const PRIORITY_CONFIG: { key: Priority; label: string; color: string; bg:
   { key: 'urgent-not-important', label: '不重要但紧急', color: 'text-amber-600', bg: 'bg-amber-100', hex: '#F59E0B' },
   { key: 'not-urgent-not-important', label: '不重要不紧急', color: 'text-gray-500', bg: 'bg-gray-100', hex: '#6B7280' },
 ];
+
+export interface TimeSegment {
+  id?: number;
+  taskId: number;
+  startTime: number;
+  endTime: number;
+  createdAt: number;
+}

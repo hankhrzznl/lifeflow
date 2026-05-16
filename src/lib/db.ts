@@ -14,6 +14,7 @@ import type {
   Board,
   Section,
   PluginMetadata,
+  TimeSegment,
 } from "./types";
 
 export class LifeFlowDB extends Dexie {
@@ -31,6 +32,7 @@ export class LifeFlowDB extends Dexie {
   boards!: Table<Board, number>;
   sections!: Table<Section, number>;
   pluginsMeta!: Table<PluginMetadata, number>;
+  timeSegments!: Table<TimeSegment, number>;
 
   constructor() {
     super("LifeFlowDB");
@@ -141,6 +143,14 @@ export class LifeFlowDB extends Dexie {
       // Non-structural index addition only — no data migration needed
       if (typeof window !== "undefined" && window.location.hostname === "localhost") {
         console.log("[LifeFlowDB v5] Added sectionId, classification, boardId indexes");
+      }
+    });
+
+    this.version(6).stores({
+      timeSegments: "++id, taskId, startTime, [taskId+startTime]",
+    }).upgrade(async () => {
+      if (typeof window !== "undefined" && window.location.hostname === "localhost") {
+        console.log("[LifeFlowDB v6] Added time_segments table");
       }
     });
   }
@@ -1009,6 +1019,7 @@ export interface ExportData {
     sections: Section[];
     pluginsMeta: PluginMetadata[];
     trashStore: TrashItem[];
+    timeSegments: TimeSegment[];
   };
 }
 
@@ -1028,6 +1039,7 @@ export async function exportAllData(): Promise<ExportData> {
     sections,
     pluginsMeta,
     trashStore,
+    timeSegments,
   ] = await Promise.all([
     db.capture.toArray(),
     db.events.toArray(),
@@ -1043,6 +1055,7 @@ export async function exportAllData(): Promise<ExportData> {
     db.sections.toArray(),
     db.pluginsMeta.toArray(),
     db.trashStore.toArray(),
+    db.timeSegments.toArray(),
   ]);
 
   return {
@@ -1063,6 +1076,7 @@ export async function exportAllData(): Promise<ExportData> {
       sections,
       pluginsMeta,
       trashStore,
+      timeSegments,
     },
   };
 }
@@ -1090,6 +1104,7 @@ export async function importAllData(
       db.sections,
       db.pluginsMeta,
       db.trashStore,
+      db.timeSegments,
     ],
     async () => {
       await Promise.all([
@@ -1107,6 +1122,7 @@ export async function importAllData(
         db.sections.clear(),
         db.pluginsMeta.clear(),
         db.trashStore.clear(),
+        db.timeSegments.clear(),
       ]);
 
       await Promise.all([
@@ -1124,6 +1140,7 @@ export async function importAllData(
         db.sections.bulkAdd(data.sections || []),
         db.pluginsMeta.bulkAdd(data.pluginsMeta || []),
         db.trashStore.bulkAdd(data.trashStore || []),
+        db.timeSegments.bulkAdd(data.timeSegments || []),
       ]);
 
       imported.capture = data.capture?.length || 0;
@@ -1140,6 +1157,7 @@ export async function importAllData(
       imported.sections = data.sections?.length || 0;
       imported.pluginsMeta = data.pluginsMeta?.length || 0;
       imported.trashStore = data.trashStore?.length || 0;
+      imported.timeSegments = data.timeSegments?.length || 0;
     }
   );
 
@@ -1315,4 +1333,20 @@ export async function getAllPluginsMeta(): Promise<PluginMetadata[]> {
 
 export async function updatePluginMetaStatus(id: number, status: PluginMetadata["status"]): Promise<void> {
   await db.pluginsMeta.update(id, { status, updatedAt: Date.now() });
+}
+
+export async function addTimeSegment(taskId: number, startTime: number, endTime: number): Promise<number> {
+  return db.timeSegments.add({ taskId, startTime, endTime, createdAt: Date.now() });
+}
+
+export async function deleteTimeSegment(id: number): Promise<void> {
+  await db.timeSegments.delete(id);
+}
+
+export async function getTimeSegments(taskId: number): Promise<TimeSegment[]> {
+  return db.timeSegments.where("taskId").equals(taskId).toArray();
+}
+
+export async function getTimeSegmentsByDateRange(rangeStart: number, rangeEnd: number): Promise<TimeSegment[]> {
+  return db.timeSegments.where("startTime").between(rangeStart, rangeEnd).toArray();
 }

@@ -15,6 +15,7 @@ import type {
   Section,
   PluginMetadata,
   TimeSegment,
+  FinRecord,
 } from "./types";
 
 export class LifeFlowDB extends Dexie {
@@ -33,6 +34,7 @@ export class LifeFlowDB extends Dexie {
   sections!: Table<Section, number>;
   pluginsMeta!: Table<PluginMetadata, number>;
   timeSegments!: Table<TimeSegment, number>;
+  finRecords!: Table<FinRecord, number>;
 
   constructor() {
     super("LifeFlowDB");
@@ -159,6 +161,14 @@ export class LifeFlowDB extends Dexie {
     }).upgrade(async () => {
       if (typeof window !== "undefined" && window.location.hostname === "localhost") {
         console.log("[LifeFlowDB v7] Added startTime index to sections");
+      }
+    });
+
+    this.version(8).stores({
+      finRecords: "++id, type, date, category, createdAt",
+    }).upgrade(async () => {
+      if (typeof window !== "undefined" && window.location.hostname === "localhost") {
+        console.log("[LifeFlowDB v8] Added finRecords table");
       }
     });
   }
@@ -1290,6 +1300,17 @@ export async function initBuiltInPlugins(): Promise<void> {
       updatedAt: Date.now(),
     });
   }
+  if (!names.has("finance")) {
+    await db.pluginsMeta.add({
+      name: "finance",
+      version: "1.0.0",
+      description: "财务管理 · 收支记账",
+      status: "active",
+      isBuiltIn: true,
+      installedAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+  }
 }
 
 export async function getPluginMeta(name: string): Promise<PluginMetadata | undefined> {
@@ -1314,6 +1335,23 @@ export async function deleteTimeSegment(id: number): Promise<void> {
 
 export async function getTimeSegments(taskId: number): Promise<TimeSegment[]> {
   return db.timeSegments.where("taskId").equals(taskId).toArray();
+}
+
+export async function addFinRecord(record: Omit<FinRecord, "id" | "createdAt">): Promise<number> {
+  return db.finRecords.add({ ...record, createdAt: Date.now() });
+}
+
+export async function getFinRecordsByMonth(year: number, month: number): Promise<FinRecord[]> {
+  const prefix = `${year}-${String(month).padStart(2, "0")}`;
+  return db.finRecords
+    .where("date")
+    .startsWith(prefix)
+    .reverse()
+    .sortBy("createdAt");
+}
+
+export async function deleteFinRecord(id: number): Promise<void> {
+  await db.finRecords.delete(id);
 }
 
 export async function getTimeSegmentsByDateRange(rangeStart: number, rangeEnd: number): Promise<TimeSegment[]> {

@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Puzzle, Power, PowerOff, Trash2, Plus, Code2, Info, RotateCcw } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Puzzle, Power, PowerOff, Trash2, Plus, Code2, Info, RotateCcw, ExternalLink } from "lucide-react";
 import { initBuiltInPlugins, getAllPluginsMeta, updatePluginMetaStatus } from "@/lib/db";
 import { showToast } from "@/components/ui/Toast";
 import type { PluginMetadata } from "@/lib/types";
@@ -23,6 +24,7 @@ function validatePluginCode(code: string): { valid: boolean; error?: string } {
 }
 
 export default function PluginsPage() {
+  const router = useRouter();
   const [builtIn, setBuiltIn] = useState<PluginMetadata[]>([]);
   const [thirdParty, setThirdParty] = useState<PluginMetadata[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -124,8 +126,18 @@ export default function PluginsPage() {
     }
   }
 
+  function getPluginPath(name: string): string | null {
+    const paths: Record<string, string> = {
+      timeline: "/plugins/timeline",
+      "focus-timer": "/plugins/focus-timer",
+      finance: "/plugins/finance",
+    };
+    return paths[name] || null;
+  }
+
   function renderPluginCard(plugin: PluginMetadata) {
     const isActive = plugin.status === "active";
+    const pluginPath = getPluginPath(plugin.name);
 
     return (
       <div key={plugin.id} className="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-100 dark:border-gray-800">
@@ -171,6 +183,16 @@ export default function PluginsPage() {
             </div>
           </div>
           <div className="flex items-center gap-1 flex-shrink-0">
+            {pluginPath && (
+              <motion.button
+                whileTap={{ scale: 0.9 }}
+                onClick={() => router.push(pluginPath)}
+                className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-500 transition-colors"
+                aria-label={`打开 ${plugin.name}`}
+              >
+                <ExternalLink className="w-4 h-4" />
+              </motion.button>
+            )}
             <motion.button
               whileTap={{ scale: 0.9 }}
               onClick={() => handleToggleStatus(plugin)}

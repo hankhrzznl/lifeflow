@@ -98,27 +98,27 @@ export default function TaskDetail({ taskId, onClose, onUpdate }: TaskDetailProp
     if (!task || saving) return;
     setSaving(true);
     try {
+      const updates: Partial<Task> = { ...draft };
+      const tagsArr = draftTags.split(/[,，、]/).map((s) => s.trim()).filter(Boolean);
+      if (tagsArr.length > 0) updates.tags = tagsArr;
+
+      await updateTask(task.id!, updates);
+
       const segStartVal = newSegStart;
       const segEndVal = newSegEnd;
       if (addingSegment && segStartVal && segEndVal) {
         const start = new Date(segStartVal).getTime();
         const end = new Date(segEndVal).getTime();
         if (end <= start) {
-          showToast({ message: "结束时间必须晚于开始时间", type: "error" });
-          setSaving(false);
-          return;
+          showToast({ message: "时间段未添加：结束时间必须晚于开始时间", type: "error" });
+        } else {
+          await addTimeSegment(task.id!, start, end);
         }
-        await addTimeSegment(task.id!, start, end);
         setAddingSegment(false);
         setNewSegStart("");
         setNewSegEnd("");
       }
 
-      const updates: Partial<Task> = { ...draft };
-      const tagsArr = draftTags.split(/[,，、]/).map((s) => s.trim()).filter(Boolean);
-      if (tagsArr.length > 0) updates.tags = tagsArr;
-
-      await updateTask(task.id!, updates);
       showToast({ message: "已保存", type: "success" });
       setEditing(false);
       await loadTask();
@@ -148,11 +148,13 @@ export default function TaskDetail({ taskId, onClose, onUpdate }: TaskDetailProp
     const start = new Date(newSegStart).getTime();
     const end = new Date(newSegEnd).getTime();
     if (end <= start) { showToast({ message: "结束时间必须晚于开始时间", type: "error" }); return; }
-    await addTimeSegment(task.id!, start, end);
-    const segs = await getTimeSegments(task.id!);
-    setSegments(segs.sort((a, b) => a.startTime - b.startTime));
-    setAddingSegment(false);
-    setNewSegStart(""); setNewSegEnd("");
+    try {
+      await addTimeSegment(task.id!, start, end);
+      const segs = await getTimeSegments(task.id!);
+      setSegments(segs.sort((a, b) => a.startTime - b.startTime));
+      setAddingSegment(false);
+      setNewSegStart(""); setNewSegEnd("");
+    } catch { showToast({ message: "时间段添加失败", type: "error" }); }
   };
 
   const handleDeleteSegment = async (segId: number) => {

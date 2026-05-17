@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -270,6 +270,7 @@ export default function TodayPage() {
   const dayStart = getDayStart(currentDate.getTime());
   const dayEnd = getDayEnd(currentDate.getTime());
 
+  const loadingRef = useRef(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -287,6 +288,8 @@ export default function TodayPage() {
   }, [projects]);
 
   const loadData = useCallback(async () => {
+    if (loadingRef.current) return;
+    loadingRef.current = true;
     setLoading(true);
     setError(false);
     try {
@@ -328,6 +331,7 @@ export default function TodayPage() {
       setError(true);
     } finally {
       setLoading(false);
+      loadingRef.current = false;
     }
   }, [dayStart, dayEnd]);
 

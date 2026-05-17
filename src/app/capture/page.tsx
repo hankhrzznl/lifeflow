@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Inbox, Send, Trash2, X, Mountain,
   CalendarDays, ClipboardList, Flame, CheckSquare, XCircle,
-  ChevronRight, PlusCircle,
+  ChevronRight,
 } from "lucide-react";
 import { createTask, deleteTask, restoreTask, updateTask, createSection, updateSection, getTasksByType, getAllProjectsV2, getBoardsByProject, getSectionsByBoard } from "@/lib/db";
 import type { Task, GoalViewType, ProjectV2, Board, Section, Priority } from "@/lib/types";
@@ -58,9 +58,7 @@ export default function CapturePage() {
 
   const [classifyTarget, setClassifyTarget] = useState<Task | null>(null);
   const [flowPhase, setFlowPhase] = useState<"idle" | "chooseType" | "moduleForm" | "taskClassify" | "taskForm">("idle");
-  const [stages, setStages] = useState<{ name: string; achievements: string[] }[]>([
-    { name: "", achievements: [""] }
-  ]);
+  const [selectedStages, setSelectedStages] = useState<number | null>(null);
   const [selectedClassification, setSelectedClassification] = useState<ClassificationType | null>(null);
   const [taskDraft, setTaskDraft] = useState<{
     title: string;
@@ -152,17 +150,10 @@ export default function CapturePage() {
 
   const charCount = content.length;
 
-  const addStage = () => setStages((prev) => [...prev, { name: "", achievements: [""] }]);
-  const updateStageName = (idx: number, name: string) => setStages((prev) => { const s = [...prev]; s[idx] = { ...s[idx], name }; return s; });
-  const removeStage = (idx: number) => setStages((prev) => prev.filter((_, i) => i !== idx));
-  const addAchievement = (stageIdx: number) => setStages((prev) => { const s = [...prev]; s[stageIdx] = { ...s[stageIdx], achievements: [...s[stageIdx].achievements, ""] }; return s; });
-  const updateAchievement = (stageIdx: number, achIdx: number, val: string) => setStages((prev) => { const s = [...prev]; const a = [...s[stageIdx].achievements]; a[achIdx] = val; s[stageIdx] = { ...s[stageIdx], achievements: a }; return s; });
-  const removeAchievement = (stageIdx: number, achIdx: number) => setStages((prev) => { const s = [...prev]; s[stageIdx] = { ...s[stageIdx], achievements: s[stageIdx].achievements.filter((_, i) => i !== achIdx) }; return s; });
-
   const handleNextStep = useCallback(async (item: Task) => {
     setClassifyTarget(item);
     setFlowPhase("chooseType");
-    setStages([{ name: "", achievements: [""] }]);
+    setSelectedStages(null);
     setTaskDraft({
       title: item.title,
       priority: "not-urgent-important",
@@ -192,7 +183,7 @@ export default function CapturePage() {
     setClassifyTarget(null);
     setFlowPhase("idle");
     setSelectedClassification(null);
-    setStages([{ name: "", achievements: [""] }]);
+    setSelectedStages(null);
   }, []);
 
   const handleProjectChange = useCallback(async (projectId: number | null) => {
@@ -249,15 +240,13 @@ export default function CapturePage() {
   const handleCreateModule = async () => {
     if (!classifyTarget || !taskDraft.title.trim() || !taskDraft.boardId) return;
     try {
+      const stageIndex = selectedStages != null ? selectedStages : 0;
       const sectionId = await createSection(taskDraft.title, taskDraft.boardId);
       await updateSection(sectionId, {
         note: taskDraft.note || undefined,
         successCriteria: taskDraft.successCriteria || undefined,
         startTime: taskDraft.startTime ? new Date(taskDraft.startTime).getTime() : undefined,
-        stages: stages.filter(s => s.name.trim()).map(s => ({
-          name: s.name.trim(),
-          achievements: s.achievements.filter(a => a.trim()),
-        })),
+        stageIndex,
       });
       await updateTask(classifyTarget.id!, { status: "done" });
       showToast({ message: "已创建为长期目标（子模块）", type: "success" });
@@ -513,42 +502,6 @@ export default function CapturePage() {
                 </div>
 
                 <div>
-                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">阶段</label>
-                  <div className="space-y-3">
-                    {stages.map((stage, si) => (
-                      <div key={si} className="p-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 space-y-2">
-                        <div className="flex items-center gap-2">
-                          <input
-                            value={stage.name}
-                            onChange={(e) => updateStageName(si, e.target.value)}
-                            placeholder={`阶段 ${si + 1}`}
-                            className="flex-1 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          />
-                          {stages.length > 1 && (
-                            <button onClick={() => removeStage(si)} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-red-400"><X className="w-4 h-4" /></button>
-                          )}
-                        </div>
-                        {stage.achievements.map((ach, ai) => (
-                          <div key={ai} className="flex items-center gap-2 ml-2">
-                            <input
-                              value={ach}
-                              onChange={(e) => updateAchievement(si, ai, e.target.value)}
-                              placeholder={`阶段 ${si + 1} 成就 ${ai + 1}`}
-                              className="flex-1 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-xs text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            />
-                            {stage.achievements.length > 1 && (
-                              <button onClick={() => removeAchievement(si, ai)} className="w-6 h-6 flex items-center justify-center rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-red-400"><X className="w-3.5 h-3.5" /></button>
-                            )}
-                          </div>
-                        ))}
-                        <button onClick={() => addAchievement(si)} className="flex items-center gap-1 text-xs text-indigo-500 hover:text-indigo-600 font-medium py-1"><PlusCircle className="w-3.5 h-3.5" />添加成就</button>
-                      </div>
-                    ))}
-                    <button onClick={addStage} className="flex items-center gap-1 text-xs text-indigo-500 hover:text-indigo-600 font-medium py-1"><PlusCircle className="w-3.5 h-3.5" />添加阶段</button>
-                  </div>
-                </div>
-
-                <div>
                   <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">成功标准</label>
                   <textarea value={taskDraft.successCriteria} onChange={(e) => setTaskDraft((d) => ({ ...d, successCriteria: e.target.value }))} placeholder="如何判断这个目标已完成？" rows={2} className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400" maxLength={500} />
                 </div>
@@ -569,6 +522,14 @@ export default function CapturePage() {
                       <select value={taskDraft.boardId ?? ""} onChange={(e) => handleBoardChange(e.target.value ? parseInt(e.target.value) : null)} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500">
                         <option value="">选择大模块</option>
                         {boards.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+                      </select>
+                    )}
+                    {boards.length > 0 && (
+                      <select value={selectedStages ?? ""} onChange={(e) => setSelectedStages(e.target.value ? parseInt(e.target.value) : null)} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="">选择阶段</option>
+                        {boards.find(b => b.id === taskDraft.boardId)?.stages?.map((stage, idx) => (
+                          <option key={idx} value={idx}>{stage.name}</option>
+                        ))}
                       </select>
                     )}
                   </div>

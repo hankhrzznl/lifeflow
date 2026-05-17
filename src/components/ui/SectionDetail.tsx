@@ -3,12 +3,12 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  X, Edit3, Save, Clock, Target, FileText, Layers, PlusCircle,
+  X, Edit3, Save, Clock, Target, FileText, Layers,
   Check,
 } from "lucide-react";
-import { getSection, updateSection } from "@/lib/db";
+import { getSection, updateSection, getBoard } from "@/lib/db";
 import { showToast } from "@/components/ui/Toast";
-import type { Section, StagePhase } from "@/lib/types";
+import type { Section, Board } from "@/lib/types";
 
 function formatDate(ts: number | undefined): string {
   if (!ts) return "";
@@ -23,6 +23,7 @@ interface SectionDetailProps {
 
 export default function SectionDetail({ sectionId, onClose, onUpdate }: SectionDetailProps) {
   const [section, setSection] = useState<Section | null>(null);
+  const [board, setBoard] = useState<Board | null>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -31,13 +32,14 @@ export default function SectionDetail({ sectionId, onClose, onUpdate }: SectionD
   const [draftNote, setDraftNote] = useState("");
   const [draftSuccessCriteria, setDraftSuccessCriteria] = useState("");
   const [draftStartTime, setDraftStartTime] = useState("");
-  const [draftStages, setDraftStages] = useState<StagePhase[]>([{ name: "", achievements: [""] }]);
 
   const loadSection = useCallback(async () => {
     setLoading(true);
     try {
       const s = await getSection(sectionId);
       setSection(s || null);
+      const b = s?.boardId ? await getBoard(s.boardId) : null;
+      setBoard(b || null);
     } catch { }
     finally { setLoading(false); }
   }, [sectionId]);
@@ -50,7 +52,6 @@ export default function SectionDetail({ sectionId, onClose, onUpdate }: SectionD
     setDraftNote(section.note || "");
     setDraftSuccessCriteria(section.successCriteria || "");
     setDraftStartTime(section.startTime ? new Date(section.startTime).toISOString().slice(0, 16) : "");
-    setDraftStages(section.stages && section.stages.length > 0 ? section.stages : [{ name: "", achievements: [""] }]);
     setEditing(true);
   };
 
@@ -63,10 +64,6 @@ export default function SectionDetail({ sectionId, onClose, onUpdate }: SectionD
         note: draftNote || undefined,
         successCriteria: draftSuccessCriteria || undefined,
         startTime: draftStartTime ? new Date(draftStartTime).getTime() : undefined,
-        stages: draftStages.filter(s => s.name.trim()).map(s => ({
-          name: s.name.trim(),
-          achievements: s.achievements.filter(a => a.trim()),
-        })),
       });
       showToast({ message: "已保存", type: "success" });
       setEditing(false);
@@ -75,11 +72,6 @@ export default function SectionDetail({ sectionId, onClose, onUpdate }: SectionD
     } catch { showToast({ message: "保存失败", type: "error" }); }
     finally { setSaving(false); }
   };
-
-  const addStageDraft = () => setDraftStages(prev => [...prev, { name: "", achievements: [""] }]);
-  const addAchDraft = (si: number) => setDraftStages(prev => {
-    const s = [...prev]; s[si] = { ...s[si], achievements: [...s[si].achievements, ""] }; return s;
-  });
 
   if (loading) return <LoadingSheet onClose={onClose} />;
   if (!section) return <ErrorSheet onClose={onClose} />;
@@ -140,60 +132,17 @@ export default function SectionDetail({ sectionId, onClose, onUpdate }: SectionD
               </InfoRow>
 
               <InfoRow icon={<Layers className="w-4 h-4 text-gray-400" />} label="阶段">
-                {editing ? (
-                  <div className="space-y-3">
-                    {draftStages.map((stage, si) => (
-                      <div key={si} className="p-3 rounded-xl border border-gray-200 dark:border-gray-700">
-                        <div className="flex items-center gap-2 mb-2">
-                          <input value={stage.name} onChange={(e) => {
-                            const s = [...draftStages]; s[si] = { ...s[si], name: e.target.value }; setDraftStages(s);
-                          }} placeholder={`阶段 ${si + 1}`}
-                            className="flex-1 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                          <button onClick={() => setDraftStages(prev => prev.filter((_, i) => i !== si))}
-                            className="w-6 h-6 flex items-center justify-center rounded text-gray-400 hover:text-red-500"><X className="w-3.5 h-3.5" /></button>
-                        </div>
-                        {stage.achievements.map((ach, ai) => (
-                          <div key={ai} className="flex items-center gap-1.5 ml-2 mb-1">
-                            <Check className="w-3 h-3 text-gray-300 flex-shrink-0" />
-                            <input value={ach} onChange={(e) => {
-                              const s = [...draftStages];
-                              const a = [...s[si].achievements]; a[ai] = e.target.value;
-                              s[si] = { ...s[si], achievements: a }; setDraftStages(s);
-                            }} placeholder={`成就 ${ai + 1}`}
-                              className="flex-1 px-2 py-1 rounded border border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                            <button onClick={() => {
-                              const s = [...draftStages];
-                              s[si] = { ...s[si], achievements: s[si].achievements.filter((_, i) => i !== ai) };
-                              setDraftStages(s);
-                            }} className="w-5 h-5 flex items-center justify-center text-gray-300 hover:text-red-400"><X className="w-2.5 h-2.5" /></button>
-                          </div>
-                        ))}
-                        <button onClick={() => addAchDraft(si)}
-                          className="ml-2 text-xs text-blue-500 hover:text-blue-600 font-medium">+ 添加成就</button>
+                {section.stageIndex !== undefined && board && board.stages?.[section.stageIndex] ? (
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-indigo-600 dark:text-indigo-400">{board.stages[section.stageIndex].name}</p>
+                    {board.stages[section.stageIndex].achievements.map((a, i) => (
+                      <div key={i} className="flex items-center gap-1.5 text-xs text-gray-500">
+                        <Check className="w-3 h-3 text-indigo-400" />{a}
                       </div>
                     ))}
-                    <button onClick={addStageDraft}
-                      className="flex items-center gap-1 text-xs text-indigo-500 hover:text-indigo-600 font-medium">
-                      <PlusCircle className="w-3.5 h-3.5" />添加阶段
-                    </button>
                   </div>
                 ) : (
-                  <div className="space-y-2">
-                    {(section.stages || []).length === 0 ? (
-                      <span className="text-sm text-gray-400">未设置</span>
-                    ) : (
-                      (section.stages || []).map((stage, si) => (
-                        <div key={si} className="p-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-900/20">
-                          <p className="text-sm font-medium text-indigo-700 dark:text-indigo-300 mb-1">{stage.name}</p>
-                          {stage.achievements.map((ach, ai) => (
-                            <div key={ai} className="flex items-center gap-1.5 ml-2 text-xs text-gray-600 dark:text-gray-400 py-0.5">
-                              <Check className="w-3 h-3 text-indigo-400" />{ach}
-                            </div>
-                          ))}
-                        </div>
-                      ))
-                    )}
-                  </div>
+                  <span className="text-sm text-gray-400">未归属阶段</span>
                 )}
               </InfoRow>
 

@@ -10,6 +10,7 @@ import {
   Flame,
   Plus,
   ChevronRight,
+  ChevronDown,
   Check,
   Info,
   AlertCircle,
@@ -17,10 +18,12 @@ import {
   Clock,
   RotateCcw,
   Zap,
+  FolderKanban,
+  Layers,
+  Target,
 } from "lucide-react";
 import {
   db,
-  getTaskTree,
   getTasksByType,
   createTask,
   updateTask,
@@ -33,7 +36,7 @@ import { showToast as globalShowToast } from "@/components/ui/Toast";
 import TaskDetail from "@/components/ui/TaskDetail";
 import SectionDetail from "@/components/ui/SectionDetail";
 import { PRIORITY_CONFIG } from "@/lib/types";
-import type { Task, GoalViewType, HabitLog, Section } from "@/lib/types";
+import type { Task, GoalViewType, HabitLog, Section, Board } from "@/lib/types";
 
 interface TaskTreeNode extends Task {
   children: TaskTreeNode[];
@@ -48,7 +51,6 @@ const TABS: { key: GoalViewType; label: string; icon: typeof Mountain }[] = [
 
 type ShortTermFilter = "全部" | "进行中" | "已完成" | "已逾期" | "本周" | "本月";
 type DailyFilter = "全部" | "未完成" | "已完成";
-type LongtermFilter = "全部" | "进行中" | "已完成";
 
 function getLocalDateStr(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -611,6 +613,12 @@ function ShortTermCard({
     () => !isDone && task.endTime != null && task.endTime < Date.now(),
     [isDone, task.endTime]
   );
+  const countdownDays = (() => {
+    if (!task.dueDate) return null;
+    // eslint-disable-next-line react-hooks/purity
+    const diff = task.dueDate - Date.now();
+    return Math.ceil(diff / (1000 * 60 * 60 * 24));
+  })();
 
   return (
     <motion.div
@@ -655,14 +663,28 @@ function ShortTermCard({
           >
             {task.title}
           </p>
-          {(task.startTime || task.endTime) && (
+          {(task.startTime || task.endTime || countdownDays !== null) && (
             <div className="flex items-center gap-2 mt-0.5">
-              <Clock className="w-3 h-3 text-gray-400" />
-              <span className="text-xs text-gray-500 dark:text-gray-400">
-                {task.startTime ? formatTime(task.startTime) : "..."} -{" "}
-                {task.endTime ? formatTime(task.endTime) : "..."}
-              </span>
-              {isOverdue && (
+              {(task.startTime || task.endTime) && (
+                <>
+                  <Clock className="w-3 h-3 text-gray-400" />
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    {task.startTime ? formatTime(task.startTime) : "..."} -{" "}
+                    {task.endTime ? formatTime(task.endTime) : "..."}
+                  </span>
+                </>
+              )}
+              {countdownDays !== null && countdownDays >= 0 && (
+                <span className="text-[10px] font-medium text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-1.5 py-0.5 rounded-md">
+                  剩余 {countdownDays} 天
+                </span>
+              )}
+              {countdownDays !== null && countdownDays < 0 && (
+                <span className="text-[10px] font-medium text-red-500 bg-red-50 dark:bg-red-900/20 px-1.5 py-0.5 rounded-md">
+                  已逾期 {Math.abs(countdownDays)} 天
+                </span>
+              )}
+              {isOverdue && countdownDays === null && (
                 <span className="text-[10px] font-medium text-red-500 bg-red-50 dark:bg-red-900/20 px-1.5 py-0.5 rounded-md">
                   已逾期
                 </span>
@@ -922,8 +944,9 @@ export default function GoalsPage() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [tree, setTree] = useState<TaskTreeNode[]>([]);
-  const [sections, setSections] = useState<Section[]>([]);
+  const [boardGroups, setBoardGroups] = useState<{ board: Board; stages: Map<number, Section[]> }[]>([]);
+  const [expandedBoards, setExpandedBoards] = useState<Set<number>>(new Set());
+  const [expandedStages, setExpandedStages] = useState<Set<string>>(new Set());
   const [shorttermTasks, setShorttermTasks] = useState<Task[]>([]);
   const [detailSectionId, setDetailSectionId] = useState<number | null>(null);
   const [dailyTasks, setDailyTasks] = useState<Task[]>([]);
@@ -937,14 +960,12 @@ export default function GoalsPage() {
   const [checkinRating, setCheckinRating] = useState<number>(5);
 
   const [showAddForm, setShowAddForm] = useState(false);
-  const [addFormParentId, setAddFormParentId] = useState<number | null>(null);
   const [toast, setToast] = useState<ToastFeedback | null>(null);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const tabDirection = useRef<number>(0);
   const [tabAnimDir, setTabAnimDir] = useState(0);
   const [shorttermFilter, setShorttermFilter] = useState<ShortTermFilter>("全部");
   const [dailyFilter, setDailyFilter] = useState<DailyFilter>("全部");
-  const [longtermFilter, setLongtermFilter] = useState<LongtermFilter>("全部");
   const [shorttermCelebrationShrunk, setShorttermCelebrationShrunk] = useState(false);
   const [detailTaskId, setDetailTaskId] = useState<number | null>(null);
 
@@ -1008,7 +1029,6 @@ export default function GoalsPage() {
       setTabAnimDir(newIdx > oldIdx ? 1 : -1);
       router.push(`/goals?tab=${view}`, { scroll: false });
       setShowAddForm(false);
-      setAddFormParentId(null);
     },
     [currentView, router]
   );
@@ -1017,10 +1037,23 @@ export default function GoalsPage() {
     setLoading(true);
     setError(false);
     try {
-      const data = await getTaskTree("longterm");
-      setTree(data);
+      const allBoards = await db.boards.toArray();
       const allSections = await db.sections.toArray();
-      setSections(allSections);
+
+      const boardMap = new Map<number, { board: Board; stages: Map<number, Section[]> }>();
+      for (const b of allBoards) {
+        boardMap.set(b.id!, { board: b, stages: new Map() });
+      }
+      for (const s of allSections) {
+        if (s.boardId && boardMap.has(s.boardId)) {
+          const entry = boardMap.get(s.boardId)!;
+          const si = s.stageIndex ?? 0;
+          if (!entry.stages.has(si)) entry.stages.set(si, []);
+          entry.stages.get(si)!.push(s);
+        }
+      }
+
+      setBoardGroups(Array.from(boardMap.values()));
     } catch {
       setError(true);
     } finally {
@@ -1161,7 +1194,6 @@ export default function GoalsPage() {
 
         await createTask(taskData);
         setShowAddForm(false);
-        setAddFormParentId(null);
 
         switch (viewType) {
           case "long-term":
@@ -1227,18 +1259,6 @@ export default function GoalsPage() {
     [loadShortterm, showToast]
   );
 
-  const handleAddChildClick = useCallback(
-    (parentId: number, depth: number) => {
-      if (depth >= 3) {
-        showToast("已达最大嵌套层级（3级）", "error");
-        return;
-      }
-      setAddFormParentId(parentId);
-      setShowAddForm(true);
-    },
-    [showToast]
-  );
-
   const handleCheckIn = useCallback(
     (taskId: number, date: string, currentCount: number) => {
       setCheckinNote("");
@@ -1249,7 +1269,6 @@ export default function GoalsPage() {
   );
 
   const handleMainAddClick = useCallback(() => {
-    setAddFormParentId(null);
     setShowAddForm(true);
   }, []);
 
@@ -1329,121 +1348,105 @@ export default function GoalsPage() {
     return groups;
   }, [filteredDaily]);
 
-  const filteredTree = useMemo(() => {
-    if (longtermFilter === "全部") return tree;
-    if (longtermFilter === "进行中") return tree.filter((t) => t.status !== "done");
-    if (longtermFilter === "已完成") return tree.filter((t) => t.status === "done");
-    return tree;
-  }, [longtermFilter, tree]);
-
   const renderLongtermView = () => {
     if (loading) return <LongtermSkeleton />;
     if (error) return <ErrorStateView onRetry={loadLongterm} />;
 
-    if (tree.length === 0 && sections.length === 0) {
+    if (boardGroups.length === 0) {
       return (
-        <EmptyStateView
-          icon={Mountain}
-          title="从一座山开始"
-          description="设定一个长期目标，逐步攀登到顶峰"
-          actionLabel="创建首个长期目标"
-          onAction={handleMainAddClick}
-        />
+        <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
+          <Mountain className="w-12 h-12 text-gray-300 mb-4" />
+          <p className="text-gray-500 mb-2">暂无长期目标</p>
+          <p className="text-xs text-gray-400">在捕捉箱中将想法转化为子模块（长期目标）</p>
+        </div>
       );
     }
 
     return (
-      <div className="px-4 py-4">
-        <AnimatePresence>
-          {showAddForm && (
-            <AddTaskForm
-              placeholder={addFormParentId ? "输入子任务名称" : "输入长期目标名称"}
-              onSubmit={(title) => handleAddTask(title, "long-term", addFormParentId ?? undefined)}
-              onCancel={() => {
-                setShowAddForm(false);
-                setAddFormParentId(null);
+      <div className="px-4 py-4 space-y-2">
+        {boardGroups.map(({ board, stages }) => {
+          const isBoardExpanded = expandedBoards.has(board.id!);
+          const sortedStages = Array.from(stages.entries()).sort(([a], [b]) => a - b);
+          return (
+            <div key={board.id} className="rounded-xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 overflow-hidden">
+              <button onClick={() => {
+                setExpandedBoards(prev => {
+                  const next = new Set(prev);
+                  if (next.has(board.id!)) next.delete(board.id!);
+                  else next.add(board.id!);
+                  return next;
+                });
               }}
-            />
-          )}
-        </AnimatePresence>
-
-        {tree.length > 0 && (
-          <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-1">
-            {(["全部", "进行中", "已完成"] as LongtermFilter[]).map((f) => (
-              <button
-                key={f}
-                onClick={() => setLongtermFilter(f)}
-                className={`text-xs font-medium px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors ${
-                  longtermFilter === f
-                    ? "bg-indigo-600 text-white"
-                    : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
-                }`}
-              >
-                {f}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {sections.length > 0 && (
-          <div className="mb-4">
-            <p className="text-xs font-medium text-gray-400 dark:text-gray-500 mb-2 uppercase tracking-wide">子模块长期目标</p>
-            <div className="space-y-2">
-              {sections.map((section) => (
-                <div
-                  key={section.id}
-                  onClick={() => setDetailSectionId(section.id!)}
-                  className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white dark:bg-gray-800 border border-indigo-100 dark:border-indigo-900/30 cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors"
-                >
-                  <div className="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
-                    <Mountain className="w-4 h-4 text-indigo-500" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{section.name}</p>
-                    {section.stages && section.stages.length > 0 && (
-                      <p className="text-xs text-gray-400 mt-0.5">{section.stages.length} 个阶段 · {section.stages.reduce((s, st) => s + st.achievements.length, 0)} 个成就</p>
-                    )}
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0" />
+                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                  <FolderKanban className="w-4 h-4 text-blue-500" />
                 </div>
-              ))}
+                <span className="flex-1 text-left text-sm font-medium text-gray-900 dark:text-gray-100">{board.name}</span>
+                <span className="text-xs text-gray-400">{stages.size} 阶段</span>
+                {isBoardExpanded ? <ChevronDown className="w-4 h-4 text-gray-400" /> : <ChevronRight className="w-4 h-4 text-gray-400" />}
+              </button>
+
+              <AnimatePresence>
+                {isBoardExpanded && sortedStages.map(([stageIdx, stageSections]) => {
+                  const stageKey = `${board.id}-${stageIdx}`;
+                  const isStageExpanded = expandedStages.has(stageKey);
+                  const stageName = board.stages?.[stageIdx]?.name || `阶段 ${stageIdx + 1}`;
+                  const achievements = board.stages?.[stageIdx]?.achievements || [];
+                  return (
+                    <motion.div key={stageIdx} initial={{ height: 0 }} animate={{ height: "auto" }} exit={{ height: 0 }} className="overflow-hidden border-t border-gray-100 dark:border-gray-700">
+                      <button onClick={() => {
+                        setExpandedStages(prev => {
+                          const next = new Set(prev);
+                          if (next.has(stageKey)) next.delete(stageKey);
+                          else next.add(stageKey);
+                          return next;
+                        });
+                      }}
+                        className="w-full flex items-center gap-3 pl-10 pr-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+                        <div className="w-6 h-6 rounded bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
+                          <Layers className="w-3.5 h-3.5 text-indigo-500" />
+                        </div>
+                        <span className="flex-1 text-left text-xs font-medium text-gray-700 dark:text-gray-300">{stageName}</span>
+                        <span className="text-xs text-gray-400">{stageSections.length} 子模块 · {achievements.length} 成就</span>
+                        {isStageExpanded ? <ChevronDown className="w-3.5 h-3.5 text-gray-400" /> : <ChevronRight className="w-3.5 h-3.5 text-gray-400" />}
+                      </button>
+
+                      <AnimatePresence>
+                        {isStageExpanded && (
+                          <motion.div initial={{ height: 0 }} animate={{ height: "auto" }} exit={{ height: 0 }} className="overflow-hidden">
+                            {achievements.length > 0 && (
+                              <div className="pl-16 pr-4 py-1.5 space-y-1">
+                                {achievements.map((a, i) => (
+                                  <div key={i} className="flex items-center gap-1.5 text-xs text-gray-500">
+                                    <Check className="w-3 h-3 text-indigo-400 flex-shrink-0" />{a}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                            {stageSections.map((section) => (
+                              <div key={section.id}
+                                onClick={() => setDetailSectionId(section.id!)}
+                                className="flex items-center gap-3 pl-16 pr-4 py-2.5 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors border-t border-gray-50 dark:border-gray-700/30">
+                                <div className="w-5 h-5 rounded bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center flex-shrink-0">
+                                  <Target className="w-3 h-3 text-amber-500" />
+                                </div>
+                                <span className="flex-1 text-sm text-gray-700 dark:text-gray-300 truncate">{section.name}</span>
+                                {section.startTime && (
+                                  <span className="text-xs text-gray-400">{formatDate(section.startTime)}</span>
+                                )}
+                                <ChevronRight className="w-3.5 h-3.5 text-gray-300 flex-shrink-0" />
+                              </div>
+                            ))}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </motion.div>
+                  );
+                })}
+              </AnimatePresence>
             </div>
-            <div className="border-t border-gray-100 dark:border-gray-800 my-4" />
-          </div>
-        )}
-
-        <div className="space-y-1">
-          {filteredTree.map((node) => (
-            <TreeNode
-              key={node.id}
-              node={node}
-              depth={0}
-              onToggleDone={handleToggleDone}
-              onAddChild={(parentId) => handleAddChildClick(parentId, 1)}
-              onDelete={handleDeleteTask}
-              onDetailClick={setDetailTaskId}
-            />
-          ))}
-        </div>
-
-        {!showAddForm && (
-          <div className="mt-3 space-y-2">
-            <button
-              onClick={handleMainAddClick}
-              className="w-full flex items-center justify-center gap-1.5 py-3 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-700 text-sm text-gray-500 dark:text-gray-400 hover:border-indigo-300 dark:hover:border-indigo-700 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              添加长期目标
-            </button>
-            <button
-              onClick={handleMainAddClick}
-              className="w-full flex items-center justify-center gap-1.5 py-3 rounded-xl border-2 border-dashed border-amber-300 dark:border-amber-700 text-sm text-amber-600 dark:text-amber-400 hover:border-amber-400 dark:hover:border-amber-600 hover:text-amber-700 dark:hover:text-amber-300 transition-colors"
-            >
-              <Mountain className="w-4 h-4" />
-              添加里程碑
-            </button>
-          </div>
-        )}
+          );
+        })}
       </div>
     );
   };
@@ -1528,17 +1531,29 @@ export default function GoalsPage() {
         </div>
 
         <div className="space-y-3">
-          {filteredShortterm.map((task) => (
-            <div key={task.id} className="group">
-              <ShortTermCard
-                task={task}
-                onToggleDone={handleToggleDone}
-                onAssignToday={handleAssignToday}
-                onDelete={handleDeleteTask}
-                onDetailClick={setDetailTaskId}
-              />
-            </div>
-          ))}
+          {(() => {
+            const sorted = [...filteredShortterm].sort((a, b) => {
+              const priorityOrder = ["urgent-important", "not-urgent-important", "urgent-not-important", "not-urgent-not-important"];
+              const pa = priorityOrder.indexOf(a.priority || "not-urgent-not-important");
+              const pb = priorityOrder.indexOf(b.priority || "not-urgent-not-important");
+              if (pa !== pb) return pa - pb;
+              const now = Date.now();
+              const countdownA = a.dueDate ? a.dueDate - now : Infinity;
+              const countdownB = b.dueDate ? b.dueDate - now : Infinity;
+              return countdownA - countdownB;
+            });
+            return sorted.map((task) => (
+              <div key={task.id} className="group">
+                <ShortTermCard
+                  task={task}
+                  onToggleDone={handleToggleDone}
+                  onAssignToday={handleAssignToday}
+                  onDelete={handleDeleteTask}
+                  onDetailClick={setDetailTaskId}
+                />
+              </div>
+            ));
+          })()}
         </div>
 
         {!showAddForm && (
@@ -1618,7 +1633,20 @@ export default function GoalsPage() {
                 )}
               </div>
               <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 divide-y divide-gray-50 dark:divide-gray-800/50">
-                {group.tasks.map((task) => (
+                {[...group.tasks].sort((a, b) => {
+                  const priorityOrder = ["urgent-important", "not-urgent-important", "urgent-not-important", "not-urgent-not-important"];
+                  const pa = priorityOrder.indexOf(a.priority || "not-urgent-not-important");
+                  const pb = priorityOrder.indexOf(b.priority || "not-urgent-not-important");
+                  if (pa !== pb) return pa - pb;
+                  const now = Date.now();
+                  const countdownA = a.dueDate ? a.dueDate - now : Infinity;
+                  const countdownB = b.dueDate ? b.dueDate - now : Infinity;
+                  if (countdownA < 0 && countdownB >= 0) return 1;
+                  if (countdownB < 0 && countdownA >= 0) return -1;
+                  if (countdownA !== countdownB) return countdownA - countdownB;
+                  if (a.status !== b.status) return a.status === "done" ? 1 : -1;
+                  return 0;
+                }).map((task) => (
                   <DailyTaskItem
                     key={task.id}
                     task={task}

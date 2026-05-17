@@ -5,11 +5,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Folder, Plus, Trash2, Edit3, ChevronRight, ChevronDown,
   AlertCircle, RotateCcw, FolderKanban, CheckCircle,
-  Circle, Layers,
+  Circle, Layers, Check,
 } from "lucide-react";
 import {
   getAllProjectsV2, createProjectV2, updateProjectV2, deleteProjectToTrash,
-  getBoardsByProject, createBoard, deleteBoardToTrash,
+  getBoardsByProject, createBoard, updateBoard, deleteBoardToTrash,
   getSectionsByBoard, createSection, deleteSectionToTrash,
   getTasksBySection, updateTask,
 } from "@/lib/db";
@@ -17,7 +17,7 @@ import { showToast } from "@/components/ui/Toast";
 import TaskDetail from "@/components/ui/TaskDetail";
 import SectionDetail from "@/components/ui/SectionDetail";
 import { PRIORITY_CONFIG } from "@/lib/types";
-import type { ProjectV2, Board, Section, Task } from "@/lib/types";
+import type { ProjectV2, Board, BoardStage, Section, Task } from "@/lib/types";
 
 const COLORS = ["#007AFF", "#34C759", "#FF9500", "#FF3B30", "#AF52DE", "#5856D6"];
 
@@ -36,6 +36,8 @@ export default function ProjectsPage() {
   const [editingProject, setEditingProject] = useState<ProjectV2 | null>(null);
   const [detailTaskId, setDetailTaskId] = useState<number | null>(null);
   const [detailSectionId, setDetailSectionId] = useState<number | null>(null);
+  const [boardStagesMap, setBoardStagesMap] = useState<Map<number, BoardStage[]>>(new Map());
+  const [expandedBoardStages, setExpandedBoardStages] = useState<Set<string>>(new Set());
 
   const loadProjects = useCallback(async () => {
     try {
@@ -54,7 +56,14 @@ export default function ProjectsPage() {
       const next = new Set(prev);
       if (next.has(projectId)) { next.delete(projectId); return next; }
       next.add(projectId);
-      getBoardsByProject(projectId).then((b) => setBoards((prev) => new Map(prev).set(projectId, b)));
+      getBoardsByProject(projectId).then((b) => {
+        setBoards((prev) => new Map(prev).set(projectId, b));
+        const sm = new Map<number, BoardStage[]>();
+        for (const board of b) {
+          sm.set(board.id!, board.stages || []);
+        }
+        setBoardStagesMap(prev => new Map([...prev, ...sm]));
+      });
       return next;
     });
   }, []);
@@ -110,6 +119,31 @@ export default function ProjectsPage() {
     const b = await getBoardsByProject(projectId);
     setBoards((prev) => new Map(prev).set(projectId, b));
     showToast({ message: "大模块已移入回收站", type: "info" });
+  };
+
+  const handleEditBoardStages = (board: Board) => {
+    const stagesStr = prompt(
+      `编辑「${board.name}」的阶段，每行一个阶段名称，用逗号分隔成就\n格式：阶段名,成就1,成就2\n\n例如：\n需求调研,用户访谈,需求文档\n原型开发,低保真,用户测试`,
+      (board.stages || []).map(s => `${s.name},${s.achievements.join(",")}`).join("\n")
+    );
+    if (stagesStr === null) return;
+    const stages = stagesStr.split("\n").filter(s => s.trim()).map(line => {
+      const [name, ...achievements] = line.split(",").map(s => s.trim()).filter(Boolean);
+      return { name: name || "未命名阶段", achievements };
+    });
+    updateBoard(board.id!, { stages }).then(() => {
+      setBoards(prev => {
+        const next = new Map(prev);
+        for (const [pid, boards] of next) {
+          next.set(pid, boards.map(b => b.id === board.id ? { ...b, stages } : b));
+        }
+        return next;
+      });
+      setBoardStagesMap(prev => new Map(prev).set(board.id!, stages));
+      showToast({ message: "阶段已更新", type: "success" });
+    }).catch(() => {
+      showToast({ message: "更新阶段失败", type: "error" });
+    });
   };
 
   const handleCreateSection = async (boardId: number) => {
@@ -231,7 +265,8 @@ export default function ProjectsPage() {
                         ) : (
                           projectBoards.map((board) => {
                             const isBoardExpanded = expandedBoards.has(board.id!);
-                            const boardSections = sections.get(board.id!) || [];
+                            const boardStages = boardStagesMap.get(board.id!) || [];
+                            const allSectionsForBoard = sections.get(board.id!) || [];
                             return (
                               <div key={board.id} className="border-b border-gray-50 dark:border-gray-800/50 last:border-0">
                                 {/* Board header */}
@@ -242,6 +277,9 @@ export default function ProjectsPage() {
                                   <FolderKanban className="w-4 h-4 text-blue-400 flex-shrink-0" />
                                   <span className="flex-1 text-sm text-gray-700 dark:text-gray-300">{board.name}</span>
                                   <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                                    <button onClick={() => handleEditBoardStages(board)} className="w-6 h-6 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400" aria-label="编辑阶段">
+                                      <Edit3 className="w-3 h-3" />
+                                    </button>
                                     <button onClick={() => handleCreateSection(board.id!)} className="w-6 h-6 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400" aria-label="添加子模块">
                                       <Plus className="w-3 h-3" />
                                     </button>
@@ -251,47 +289,119 @@ export default function ProjectsPage() {
                                   </div>
                                 </div>
 
-                                {/* Sections */}
+                                {/* Stages and Sections inside expanded Board */}
                                 <AnimatePresence>
                                   {isBoardExpanded && (
                                     <motion.div initial={{ height: 0 }} animate={{ height: "auto" }} exit={{ height: 0 }} className="overflow-hidden">
-                                      {boardSections.length === 0 ? (
-                                        <div className="pl-16 pr-4 py-2 text-xs text-gray-400">暂无子模块</div>
-                                      ) : (
-                                        boardSections.map((section) => {
-                                          const sectionTasks = tasks.get(section.id!) || [];
-                                          return (
-                                            <div key={section.id} className="border-t border-gray-50 dark:border-gray-800/30">
-                                              {/* Section header */}
-                                              <div className="flex items-center gap-3 pl-16 pr-4 py-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/30"
-                                                onClick={() => setDetailSectionId(section.id!)}>
-                                                <Layers className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
-                                                <span className="flex-1 text-xs font-medium text-gray-600 dark:text-gray-400">{section.name}</span>
-                                                <span className="text-xs text-gray-400">{sectionTasks.length} 任务</span>
-                                                <button onClick={(e) => { e.stopPropagation(); handleDeleteSection(section.id!, board.id!); }} className="w-6 h-6 flex items-center justify-center rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-400 hover:text-red-500" aria-label="删除子模块">
-                                                  <Trash2 className="w-3 h-3" />
-                                                </button>
-                                              </div>
-
-                                              {/* Tasks */}
-                                              {sectionTasks.length > 0 && (
-                                                <div className="pb-2">
-                                                  {sectionTasks.map((task) => (
-                                                    <div key={task.id} className="flex items-center gap-2 pl-20 pr-4 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors" onClick={() => setDetailTaskId(task.id!)} style={{ cursor: "pointer" }}>
-                                                      <button onClick={(e) => { e.stopPropagation(); handleToggleTask(task); }} className="flex-shrink-0">
-                                                        {task.status === "done" ? <CheckCircle className="w-4 h-4 text-emerald-500" /> : <Circle className="w-4 h-4 text-gray-300" />}
-                                                      </button>
-                                                      <span className={`flex-1 text-xs ${task.status === "done" ? "line-through text-gray-400" : "text-gray-700 dark:text-gray-300"}`}>{task.title}</span>
-                                                      {task.priority && (
-                                                        <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: PRIORITY_CONFIG.find((p) => p.key === task.priority)?.hex || "#6B7280" }} title={PRIORITY_CONFIG.find((p) => p.key === task.priority)?.label} />
-                                                      )}
+                                      {boardStages.length === 0 ? (
+                                        <div>
+                                          {allSectionsForBoard.length === 0 ? (
+                                            <div className="pl-16 pr-4 py-2 text-xs text-gray-400">暂无子模块</div>
+                                          ) : (
+                                            allSectionsForBoard.map((section) => {
+                                              const sectionTasks = tasks.get(section.id!) || [];
+                                              return (
+                                                <div key={section.id} className="border-t border-gray-50 dark:border-gray-800/30">
+                                                  <div className="flex items-center gap-3 pl-16 pr-4 py-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/30"
+                                                    onClick={() => setDetailSectionId(section.id!)}>
+                                                    <Layers className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+                                                    <span className="flex-1 text-xs font-medium text-gray-600 dark:text-gray-400">{section.name}</span>
+                                                    <span className="text-xs text-gray-400">{sectionTasks.length} 任务</span>
+                                                    <button onClick={(e) => { e.stopPropagation(); handleDeleteSection(section.id!, board.id!); }} className="w-6 h-6 flex items-center justify-center rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-400 hover:text-red-500" aria-label="删除子模块">
+                                                      <Trash2 className="w-3 h-3" />
+                                                    </button>
+                                                  </div>
+                                                  {sectionTasks.length > 0 && (
+                                                    <div className="pb-2">
+                                                      {sectionTasks.map((task) => (
+                                                        <div key={task.id} className="flex items-center gap-2 pl-20 pr-4 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors" onClick={() => setDetailTaskId(task.id!)} style={{ cursor: "pointer" }}>
+                                                          <button onClick={(e) => { e.stopPropagation(); handleToggleTask(task); }} className="flex-shrink-0">
+                                                            {task.status === "done" ? <CheckCircle className="w-4 h-4 text-emerald-500" /> : <Circle className="w-4 h-4 text-gray-300" />}
+                                                          </button>
+                                                          <span className={`flex-1 text-xs ${task.status === "done" ? "line-through text-gray-400" : "text-gray-700 dark:text-gray-300"}`}>{task.title}</span>
+                                                          {task.priority && (
+                                                            <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: PRIORITY_CONFIG.find((p) => p.key === task.priority)?.hex || "#6B7280" }} title={PRIORITY_CONFIG.find((p) => p.key === task.priority)?.label} />
+                                                          )}
+                                                        </div>
+                                                      ))}
                                                     </div>
-                                                  ))}
+                                                  )}
                                                 </div>
-                                              )}
-                                            </div>
-                                          );
-                                        })
+                                              );
+                                            })
+                                          )}
+                                        </div>
+                                      ) : (
+                                        <div>
+                                          {boardStages.map((stage, stageIdx) => {
+                                            const stageSections = allSectionsForBoard.filter(s => (s.stageIndex ?? 0) === stageIdx);
+                                            const stageKey = `board-${board.id}-stage-${stageIdx}`;
+                                            const isStageExpanded = expandedBoardStages.has(stageKey);
+                                            return (
+                                              <div key={stageIdx}>
+                                                <div className="flex items-center gap-3 pl-10 pr-4 py-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/30" onClick={() => {
+                                                  setExpandedBoardStages(prev => {
+                                                    const next = new Set(prev);
+                                                    if (next.has(stageKey)) next.delete(stageKey);
+                                                    else next.add(stageKey);
+                                                    return next;
+                                                  });
+                                                }}>
+                                                  {isStageExpanded ? <ChevronDown className="w-3.5 h-3.5 text-gray-400" /> : <ChevronRight className="w-3.5 h-3.5 text-gray-400" />}
+                                                  <Layers className="w-4 h-4 text-indigo-400 flex-shrink-0" />
+                                                  <span className="flex-1 text-sm text-gray-700 dark:text-gray-300">{stage.name}</span>
+                                                  <span className="text-xs text-gray-400">{stageSections.length} 子模块 · {stage.achievements.length} 成就</span>
+                                                </div>
+                                                <AnimatePresence>
+                                                  {isStageExpanded && (
+                                                    <motion.div initial={{ height: 0 }} animate={{ height: "auto" }} exit={{ height: 0 }} className="overflow-hidden">
+                                                      {stage.achievements.length > 0 && (
+                                                        <div className="pl-16 pr-4 py-1 space-y-0.5">
+                                                          {stage.achievements.map((a, i) => (
+                                                            <div key={i} className="flex items-center gap-1.5 pl-2 text-xs text-gray-500">
+                                                              <Check className="w-3 h-3 text-indigo-400 flex-shrink-0" />{a}
+                                                            </div>
+                                                          ))}
+                                                        </div>
+                                                      )}
+                                                      {stageSections.map((section) => {
+                                                        const sectionTasks = tasks.get(section.id!) || [];
+                                                        return (
+                                                          <div key={section.id} className="border-t border-gray-50 dark:border-gray-800/30">
+                                                            <div className="flex items-center gap-3 pl-16 pr-4 py-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/30"
+                                                              onClick={() => setDetailSectionId(section.id!)}>
+                                                              <Layers className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+                                                              <span className="flex-1 text-xs font-medium text-gray-600 dark:text-gray-400">{section.name}</span>
+                                                              <span className="text-xs text-gray-400">{sectionTasks.length} 任务</span>
+                                                              <button onClick={(e) => { e.stopPropagation(); handleDeleteSection(section.id!, board.id!); }} className="w-6 h-6 flex items-center justify-center rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-400 hover:text-red-500" aria-label="删除子模块">
+                                                                <Trash2 className="w-3 h-3" />
+                                                              </button>
+                                                            </div>
+                                                            {sectionTasks.length > 0 && (
+                                                              <div className="pb-2">
+                                                                {sectionTasks.map((task) => (
+                                                                  <div key={task.id} className="flex items-center gap-2 pl-20 pr-4 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors" onClick={() => setDetailTaskId(task.id!)} style={{ cursor: "pointer" }}>
+                                                                    <button onClick={(e) => { e.stopPropagation(); handleToggleTask(task); }} className="flex-shrink-0">
+                                                                      {task.status === "done" ? <CheckCircle className="w-4 h-4 text-emerald-500" /> : <Circle className="w-4 h-4 text-gray-300" />}
+                                                                    </button>
+                                                                    <span className={`flex-1 text-xs ${task.status === "done" ? "line-through text-gray-400" : "text-gray-700 dark:text-gray-300"}`}>{task.title}</span>
+                                                                    {task.priority && (
+                                                                      <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: PRIORITY_CONFIG.find((p) => p.key === task.priority)?.hex || "#6B7280" }} title={PRIORITY_CONFIG.find((p) => p.key === task.priority)?.label} />
+                                                                    )}
+                                                                  </div>
+                                                                ))}
+                                                              </div>
+                                                            )}
+                                                          </div>
+                                                        );
+                                                      })}
+                                                    </motion.div>
+                                                  )}
+                                                </AnimatePresence>
+                                              </div>
+                                            );
+                                          })}
+                                        </div>
                                       )}
                                     </motion.div>
                                   )}

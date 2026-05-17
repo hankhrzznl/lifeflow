@@ -87,7 +87,7 @@ export default function ProjectBoardListPage() {
     if (!editName.trim() || editId === null) return;
     setSaving(true);
     try {
-      await updateBoard(editId, editName.trim());
+      await updateBoard(editId, { name: editName.trim() });
       closeEdit();
       await loadData();
       showToast({ message: "面板已更新", type: "success", duration: 2000 });

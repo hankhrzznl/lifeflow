@@ -142,25 +142,26 @@ export interface Board {
   id?: number;
   name: string;
   projectId?: number;
+  stages?: BoardStage[];
   createdAt: number;
+}
+
+export interface BoardStage {
+  name: string;
+  achievements: string[];
 }
 
 export interface Section {
   id?: number;
   name: string;
   boardId?: number;
+  stageIndex?: number;
   createdAt: number;
   note?: string;
   successCriteria?: string;
   priority?: Priority;
   startTime?: number;
   tags?: string[];
-  stages?: StagePhase[];
-}
-
-export interface StagePhase {
-  name: string;
-  achievements: string[];
 }
 
 export interface TrashItem {

@@ -1218,8 +1218,8 @@ export async function getBoard(id: number): Promise<Board | undefined> {
   return db.boards.get(id);
 }
 
-export async function updateBoard(id: number, name: string): Promise<void> {
-  await db.boards.update(id, { name });
+export async function updateBoard(id: number, updates: Partial<Board>): Promise<void> {
+  await db.boards.update(id, updates);
 }
 
 export async function deleteBoardToTrash(id: number): Promise<void> {

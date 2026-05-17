@@ -833,14 +833,14 @@ function GoalsPageInner() {
     };
   }, []);
 
+  const fromCaptureHandled = useRef(false);
   useEffect(() => {
-    if (fromCapture) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (fromCapture && !fromCaptureHandled.current) {
+      fromCaptureHandled.current = true;
       showToast("已从捕捉箱导入", "success");
       setShowAddForm(true);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [fromCapture, showToast]);
 
   const allShorttermDone =
     shorttermTasks.length > 0 &&
@@ -1758,7 +1758,7 @@ function GoalsPageInner() {
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        <AnimatePresence mode="wait" custom={tabAnimDir}>
+        <AnimatePresence mode="sync" custom={tabAnimDir}>
           <motion.div
             key={currentView}
             custom={tabAnimDir}

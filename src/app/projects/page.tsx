@@ -5,12 +5,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Folder, Plus, Trash2, Edit3, ChevronRight, ChevronDown,
   AlertCircle, RotateCcw, FolderKanban, CheckCircle,
-  Circle, Layers, Check,
+  Circle, Layers, Check, X,
 } from "lucide-react";
 import {
   getAllProjectsV2, createProjectV2, updateProjectV2, deleteProjectToTrash,
   getBoardsByProject, createBoard, updateBoard, deleteBoardToTrash,
-  getSectionsByBoard, createSection, deleteSectionToTrash,
+  getSectionsByBoard, createSection, updateSection, deleteSectionToTrash,
   getTasksBySection, updateTask,
 } from "@/lib/db";
 import { showToast } from "@/components/ui/Toast";
@@ -38,6 +38,12 @@ export default function ProjectsPage() {
   const [detailSectionId, setDetailSectionId] = useState<number | null>(null);
   const [boardStagesMap, setBoardStagesMap] = useState<Map<number, BoardStage[]>>(new Map());
   const [expandedBoardStages, setExpandedBoardStages] = useState<Set<string>>(new Set());
+  const [stageSheet, setStageSheet] = useState<{ boardId: number; boardName: string } | null>(null);
+  const [newStageName, setNewStageName] = useState("");
+  const [newStageAch, setNewStageAch] = useState<string[]>([""]);
+  const [editingStage, setEditingStage] = useState<{ boardId: number; stageIdx: number; stage: BoardStage } | null>(null);
+  const [editingStageName, setEditingStageName] = useState("");
+  const [editingStageAch, setEditingStageAch] = useState<string[]>([""]);
 
   const loadProjects = useCallback(async () => {
     try {
@@ -121,35 +127,70 @@ export default function ProjectsPage() {
     showToast({ message: "大模块已移入回收站", type: "info" });
   };
 
-  const handleEditBoardStages = (board: Board) => {
-    const stagesStr = prompt(
-      `编辑「${board.name}」的阶段，每行一个阶段名称，用逗号分隔成就\n格式：阶段名,成就1,成就2\n\n例如：\n需求调研,用户访谈,需求文档\n原型开发,低保真,用户测试`,
-      (board.stages || []).map(s => `${s.name},${s.achievements.join(",")}`).join("\n")
-    );
-    if (stagesStr === null) return;
-    const stages = stagesStr.split("\n").filter(s => s.trim()).map(line => {
-      const [name, ...achievements] = line.split(",").map(s => s.trim()).filter(Boolean);
-      return { name: name || "未命名阶段", achievements };
+  const handleAddStage = async () => {
+    if (!stageSheet || !newStageName.trim()) return;
+    const board = (boards.get(stageSheet.boardId) || []).find((b) => b.id === stageSheet.boardId);
+    if (!board) return;
+    const newStages = [...(board.stages || []), { name: newStageName.trim(), achievements: newStageAch.filter((a) => a.trim()) }];
+    await updateBoard(stageSheet.boardId, { stages: newStages });
+    setBoards((prev) => {
+      const next = new Map(prev);
+      for (const [pid, bds] of next) {
+        next.set(pid, bds.map((b) => (b.id === stageSheet.boardId ? { ...b, stages: newStages } : b)));
+      }
+      return next;
     });
-    updateBoard(board.id!, { stages }).then(() => {
-      setBoards(prev => {
-        const next = new Map(prev);
-        for (const [pid, boards] of next) {
-          next.set(pid, boards.map(b => b.id === board.id ? { ...b, stages } : b));
-        }
-        return next;
-      });
-      setBoardStagesMap(prev => new Map(prev).set(board.id!, stages));
-      showToast({ message: "阶段已更新", type: "success" });
-    }).catch(() => {
-      showToast({ message: "更新阶段失败", type: "error" });
-    });
+    setBoardStagesMap((prev) => new Map(prev).set(stageSheet.boardId, newStages));
+    showToast({ message: "阶段已添加", type: "success" });
+    setStageSheet(null);
+    setNewStageName("");
+    setNewStageAch([""]);
   };
 
-  const handleCreateSection = async (boardId: number) => {
+  const handleUpdateStage = async () => {
+    if (!editingStage || !editingStageName.trim()) return;
+    const board = (boards.get(editingStage.boardId) || []).find((b) => b.id === editingStage.boardId);
+    if (!board || !board.stages) return;
+    const newStages = [...board.stages];
+    newStages[editingStage.stageIdx] = { name: editingStageName.trim(), achievements: editingStageAch.filter((a) => a.trim()) };
+    await updateBoard(editingStage.boardId, { stages: newStages });
+    setBoards((prev) => {
+      const next = new Map(prev);
+      for (const [pid, bds] of next) {
+        next.set(pid, bds.map((b) => (b.id === editingStage.boardId ? { ...b, stages: newStages } : b)));
+      }
+      return next;
+    });
+    setBoardStagesMap((prev) => new Map(prev).set(editingStage.boardId, newStages));
+    showToast({ message: "阶段已更新", type: "success" });
+    setEditingStage(null);
+  };
+
+  const handleDeleteStage = async () => {
+    if (!editingStage) return;
+    const board = (boards.get(editingStage.boardId) || []).find((b) => b.id === editingStage.boardId);
+    if (!board || !board.stages) return;
+    const newStages = board.stages.filter((_, i) => i !== editingStage.stageIdx);
+    await updateBoard(editingStage.boardId, { stages: newStages });
+    setBoards((prev) => {
+      const next = new Map(prev);
+      for (const [pid, bds] of next) {
+        next.set(pid, bds.map((b) => (b.id === editingStage.boardId ? { ...b, stages: newStages } : b)));
+      }
+      return next;
+    });
+    setBoardStagesMap((prev) => new Map(prev).set(editingStage.boardId, newStages));
+    showToast({ message: "阶段已删除", type: "info" });
+    setEditingStage(null);
+  };
+
+  const handleCreateSection = async (boardId: number, stageIdx?: number) => {
     const name = prompt("子模块名称：");
     if (!name?.trim()) return;
-    await createSection(name.trim(), boardId);
+    const sectionId = await createSection(name.trim(), boardId);
+    if (stageIdx !== undefined) {
+      await updateSection(sectionId, { stageIndex: stageIdx });
+    }
     const s = await getSectionsByBoard(boardId);
     setSections((prev) => new Map(prev).set(boardId, s));
     showToast({ message: "子模块已创建", type: "success" });
@@ -277,8 +318,8 @@ export default function ProjectsPage() {
                                   <FolderKanban className="w-4 h-4 text-blue-400 flex-shrink-0" />
                                   <span className="flex-1 text-sm text-gray-700 dark:text-gray-300">{board.name}</span>
                                   <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                                    <button onClick={() => handleEditBoardStages(board)} className="w-6 h-6 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400" aria-label="编辑阶段">
-                                      <Edit3 className="w-3 h-3" />
+                                    <button onClick={() => { setStageSheet({ boardId: board.id!, boardName: board.name }); setNewStageName(""); setNewStageAch([""]); }} className="w-6 h-6 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400" aria-label="添加阶段">
+                                      <Plus className="w-3 h-3" />
                                     </button>
                                     <button onClick={() => handleCreateSection(board.id!)} className="w-6 h-6 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400" aria-label="添加子模块">
                                       <Plus className="w-3 h-3" />
@@ -351,6 +392,14 @@ export default function ProjectsPage() {
                                                   <Layers className="w-4 h-4 text-indigo-400 flex-shrink-0" />
                                                   <span className="flex-1 text-sm text-gray-700 dark:text-gray-300">{stage.name}</span>
                                                   <span className="text-xs text-gray-400">{stageSections.length} 子模块 · {stage.achievements.length} 成就</span>
+                                                  <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
+                                                    <button onClick={() => { setEditingStage({ boardId: board.id!, stageIdx, stage }); setEditingStageName(stage.name); setEditingStageAch(stage.achievements.length ? [...stage.achievements] : [""]); }} className="w-6 h-6 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400" aria-label="编辑阶段">
+                                                      <Edit3 className="w-3 h-3" />
+                                                    </button>
+                                                    <button onClick={() => handleCreateSection(board.id!, stageIdx)} className="w-6 h-6 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400" aria-label="添加子模块">
+                                                      <Plus className="w-3 h-3" />
+                                                    </button>
+                                                  </div>
                                                 </div>
                                                 <AnimatePresence>
                                                   {isStageExpanded && (
@@ -439,6 +488,58 @@ export default function ProjectsPage() {
             </motion.div>
           </motion.div>
         )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {stageSheet && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/40 flex items-end justify-center" onClick={() => setStageSheet(null)}>
+          <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", stiffness: 400, damping: 40 }} onClick={(e) => e.stopPropagation()} className="w-full max-w-lg bg-white dark:bg-gray-900 rounded-t-2xl p-6 max-h-[80vh] overflow-y-auto">
+            <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">添加阶段 · {stageSheet.boardName}</h3>
+            <input value={newStageName} onChange={(e) => setNewStageName(e.target.value)} placeholder="阶段名称" className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 mb-3 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <p className="text-xs font-medium text-gray-400 dark:text-gray-500 mb-1.5">阶段成就</p>
+            <div className="space-y-1 mb-3">
+              {newStageAch.map((ach, i) => (
+                <div key={i} className="flex items-center gap-1">
+                  <input value={ach} onChange={(e) => { const a = [...newStageAch]; a[i] = e.target.value; setNewStageAch(a); }} placeholder={`成就 ${i + 1}`} className="flex-1 px-2 py-1.5 rounded-lg border border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  <button onClick={() => setNewStageAch((prev) => prev.filter((_, j) => j !== i))} className="w-6 h-6 flex items-center justify-center rounded text-gray-400 hover:text-red-500"><X className="w-3 h-3" /></button>
+                </div>
+              ))}
+              <button onClick={() => setNewStageAch((prev) => [...prev, ""])} className="text-xs text-blue-500 hover:text-blue-600 font-medium">+ 添加成就</button>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => setStageSheet(null)} className="flex-1 py-3 rounded-xl border border-gray-200 dark:border-gray-700 text-sm text-gray-500 dark:text-gray-400">取消</button>
+              <button onClick={handleAddStage} className="flex-1 py-3 rounded-xl bg-indigo-600 text-white text-sm font-medium">添加</button>
+            </div>
+          </motion.div>
+        </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {editingStage && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/40 flex items-end justify-center" onClick={() => setEditingStage(null)}>
+          <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", stiffness: 400, damping: 40 }} onClick={(e) => e.stopPropagation()} className="w-full max-w-lg bg-white dark:bg-gray-900 rounded-t-2xl p-6 max-h-[80vh] overflow-y-auto">
+            <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">编辑阶段</h3>
+            <input value={editingStageName} onChange={(e) => setEditingStageName(e.target.value)} placeholder="阶段名称" className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 mb-3 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <p className="text-xs font-medium text-gray-400 dark:text-gray-500 mb-1.5">阶段成就</p>
+            <div className="space-y-1 mb-3">
+              {editingStageAch.map((ach, i) => (
+                <div key={i} className="flex items-center gap-1">
+                  <input value={ach} onChange={(e) => { const a = [...editingStageAch]; a[i] = e.target.value; setEditingStageAch(a); }} placeholder={`成就 ${i + 1}`} className="flex-1 px-2 py-1.5 rounded-lg border border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  <button onClick={() => setEditingStageAch((prev) => prev.filter((_, j) => j !== i))} className="w-6 h-6 flex items-center justify-center rounded text-gray-400 hover:text-red-500"><X className="w-3 h-3" /></button>
+                </div>
+              ))}
+              <button onClick={() => setEditingStageAch((prev) => [...prev, ""])} className="text-xs text-blue-500 hover:text-blue-600 font-medium">+ 添加成就</button>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={handleDeleteStage} className="py-3 px-4 rounded-xl border border-red-200 dark:border-red-800 text-red-500 text-sm font-medium">删除阶段</button>
+              <div className="flex-1" />
+              <button onClick={() => setEditingStage(null)} className="py-3 px-4 rounded-xl border border-gray-200 dark:border-gray-700 text-sm text-gray-500 dark:text-gray-400">取消</button>
+              <button onClick={handleUpdateStage} className="py-3 px-4 rounded-xl bg-indigo-600 text-white text-sm font-medium">保存</button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
       </AnimatePresence>
 
       {detailTaskId !== null && (

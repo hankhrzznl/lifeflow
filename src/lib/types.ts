@@ -204,3 +204,38 @@ export interface TimeSegment {
   endTime: number;
   createdAt: number;
 }
+
+export interface FinRecord {
+  id?: number;
+  type: 'income' | 'expense';
+  amount: number;
+  category: string;
+  date: string;
+  note?: string;
+  createdAt: number;
+}
+
+export const FIN_CATEGORIES = {
+  expense: [
+    { key: 'food', label: '餐饮', icon: '🍽️', color: '#FF6B6B', bg: '#FFF0F0' },
+    { key: 'transport', label: '交通', icon: '🚗', color: '#4ECDC4', bg: '#F0FFFE' },
+    { key: 'shopping', label: '购物', icon: '🛍️', color: '#FFD93D', bg: '#FFFDE8' },
+    { key: 'entertainment', label: '娱乐', icon: '🎮', color: '#A78BFA', bg: '#F3EFFF' },
+    { key: 'housing', label: '住房', icon: '🏠', color: '#60A5FA', bg: '#EFF6FF' },
+    { key: 'medical', label: '医疗', icon: '💊', color: '#FB7185', bg: '#FFF0F3' },
+    { key: 'education', label: '学习', icon: '📚', color: '#818CF8', bg: '#EEF0FF' },
+    { key: 'communication', label: '通讯', icon: '📱', color: '#34D399', bg: '#ECFDF5' },
+    { key: 'daily', label: '日用', icon: '🧴', color: '#FBBF24', bg: '#FFFBE6' },
+    { key: 'social', label: '社交', icon: '🎉', color: '#F472B6', bg: '#FFF0F7' },
+    { key: 'pet', label: '宠物', icon: '🐾', color: '#C084FC', bg: '#FAF5FF' },
+    { key: 'other', label: '其他', icon: '📋', color: '#9CA3AF', bg: '#F3F4F6' },
+  ],
+  income: [
+    { key: 'salary', label: '薪资', icon: '💰', color: '#10B981', bg: '#ECFDF5' },
+    { key: 'parttime', label: '兼职', icon: '💼', color: '#6366F1', bg: '#EEF2FF' },
+    { key: 'investment', label: '投资', icon: '📈', color: '#F59E0B', bg: '#FFFBEB' },
+    { key: 'gift', label: '礼金', icon: '🎁', color: '#EC4899', bg: '#FDF2F8' },
+    { key: 'refund', label: '退款', icon: '↩️', color: '#14B8A6', bg: '#F0FDFA' },
+    { key: 'other_income', label: '其他', icon: '📋', color: '#9CA3AF', bg: '#F3F4F6' },
+  ],
+};

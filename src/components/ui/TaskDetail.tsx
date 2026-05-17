@@ -75,6 +75,7 @@ export default function TaskDetail({ taskId, onClose, onUpdate }: TaskDetailProp
     if (!task) return;
     setDraft({
       title: task.title,
+      type: task.type,
       priority: task.priority,
       status: task.status,
       startTime: task.startTime,
@@ -97,9 +98,22 @@ export default function TaskDetail({ taskId, onClose, onUpdate }: TaskDetailProp
     if (!task || saving) return;
     setSaving(true);
     try {
-      if (addingSegment && newSegStart && newSegEnd) {
-        await handleAddSegment();
+      const segStartVal = newSegStart;
+      const segEndVal = newSegEnd;
+      if (addingSegment && segStartVal && segEndVal) {
+        const start = new Date(segStartVal).getTime();
+        const end = new Date(segEndVal).getTime();
+        if (end <= start) {
+          showToast({ message: "结束时间必须晚于开始时间", type: "error" });
+          setSaving(false);
+          return;
+        }
+        await addTimeSegment(task.id!, start, end);
+        setAddingSegment(false);
+        setNewSegStart("");
+        setNewSegEnd("");
       }
+
       const updates: Partial<Task> = { ...draft };
       const tagsArr = draftTags.split(/[,，、]/).map((s) => s.trim()).filter(Boolean);
       if (tagsArr.length > 0) updates.tags = tagsArr;
@@ -272,6 +286,28 @@ export default function TaskDetail({ taskId, onClose, onUpdate }: TaskDetailProp
                       >
                         <span className="w-2 h-2 rounded-full" style={{ backgroundColor: p.hex }} />
                         {p.label}
+                      </button>
+                    ))}
+                  </div>
+                </InfoRow>
+              )}
+
+              {/* Type selector */}
+              {editing && (
+                <InfoRow icon={<Target className="w-4 h-4 text-gray-400" />} label="类型">
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {(["shortterm", "daily", "longterm", "habit"] as const).map((t) => (
+                      <button
+                        key={t}
+                        onClick={() => setDraft((d) => ({ ...d, type: t }))}
+                        className={`px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                          (draft.type || task.type) === t ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600 border-blue-200 dark:border-blue-800" : "border-gray-200 dark:border-gray-700 text-gray-400"
+                        }`}
+                      >
+                        {t === "shortterm" && "短期事件"}
+                        {t === "daily" && "日常琐事"}
+                        {t === "longterm" && "长期目标"}
+                        {t === "habit" && "习惯"}
                       </button>
                     ))}
                   </div>

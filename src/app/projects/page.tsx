@@ -44,6 +44,8 @@ export default function ProjectsPage() {
   const [editingStage, setEditingStage] = useState<{ boardId: number; stageIdx: number; stage: BoardStage } | null>(null);
   const [editingStageName, setEditingStageName] = useState("");
   const [editingStageAch, setEditingStageAch] = useState<string[]>([""]);
+  const [batchStageSheet, setBatchStageSheet] = useState<{ boardId: number; boardName: string; stages: BoardStage[] } | null>(null);
+  const [batchDraftStages, setBatchDraftStages] = useState<{ name: string; achievements: string[] }[]>([]);
 
   const loadProjects = useCallback(async () => {
     try {
@@ -144,6 +146,24 @@ export default function ProjectsPage() {
     setStageSheet(null);
     setNewStageName("");
     setNewStageAch([""]);
+  };
+
+  const handleBatchSaveStages = async () => {
+    if (!batchStageSheet) return;
+    const newStages: BoardStage[] = batchDraftStages
+      .filter((s) => s.name.trim())
+      .map((s) => ({ name: s.name.trim(), achievements: s.achievements.filter((a) => a.trim()) }));
+    await updateBoard(batchStageSheet.boardId, { stages: newStages });
+    setBoards((prev) => {
+      const next = new Map(prev);
+      for (const [pid, bds] of next) {
+        next.set(pid, bds.map((b) => (b.id === batchStageSheet.boardId ? { ...b, stages: newStages } : b)));
+      }
+      return next;
+    });
+    setBoardStagesMap((prev) => new Map(prev).set(batchStageSheet.boardId, newStages));
+    showToast({ message: "阶段已更新", type: "success" });
+    setBatchStageSheet(null);
   };
 
   const handleUpdateStage = async () => {
@@ -322,8 +342,8 @@ export default function ProjectsPage() {
                                   <FolderKanban className="w-4 h-4 text-blue-400 flex-shrink-0" />
                                   <span className="flex-1 text-sm text-gray-700 dark:text-gray-300">{board.name}</span>
                                   <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                                    <button onClick={() => { setStageSheet({ boardId: board.id!, boardName: board.name }); setNewStageName(""); setNewStageAch([""]); }} className="w-6 h-6 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400" aria-label="添加阶段">
-                                      <Plus className="w-3 h-3" />
+                                    <button onClick={() => { setBatchStageSheet({ boardId: board.id!, boardName: board.name, stages: boardStagesMap.get(board.id!) || [] }); setBatchDraftStages((boardStagesMap.get(board.id!) || []).map((s) => ({ name: s.name, achievements: [...s.achievements] }))); }} className="w-6 h-6 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400" aria-label="编辑阶段">
+                                      <Edit3 className="w-3 h-3" />
                                     </button>
                                     <button onClick={() => handleDeleteBoard(board.id!, project.id!)} className="w-6 h-6 flex items-center justify-center rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-400 hover:text-red-500" aria-label="删除大模块">
                                       <Trash2 className="w-3 h-3" />
@@ -570,6 +590,90 @@ export default function ProjectsPage() {
           </motion.div>
         </motion.div>
       )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {batchStageSheet && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/40 flex items-end justify-center" onClick={() => setBatchStageSheet(null)}>
+            <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", stiffness: 400, damping: 40 }} onClick={(e) => e.stopPropagation()} className="w-full max-w-lg bg-white dark:bg-gray-900 rounded-t-2xl p-6 max-h-[85vh] overflow-y-auto">
+              <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">编辑阶段 · {batchStageSheet.boardName}</h3>
+              <div className="space-y-3 mb-4">
+                {batchDraftStages.map((stage, si) => (
+                  <div key={si} className="p-3 rounded-xl border border-gray-200 dark:border-gray-700">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-xs font-medium text-gray-400 w-12 flex-shrink-0">阶段{si + 1}</span>
+                      <input
+                        value={stage.name}
+                        onChange={(e) => {
+                          const s = [...batchDraftStages];
+                          s[si] = { ...s[si], name: e.target.value };
+                          setBatchDraftStages(s);
+                        }}
+                        placeholder="阶段名称"
+                        className="flex-1 px-2 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                      <button
+                        onClick={() => setBatchDraftStages((prev) => prev.filter((_, i) => i !== si))}
+                        className="w-6 h-6 flex items-center justify-center rounded text-gray-400 hover:text-red-500"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    <div className="pl-14 space-y-1">
+                      {stage.achievements.map((ach, ai) => (
+                        <div key={ai} className="flex items-center gap-1">
+                          <Check className="w-3 h-3 text-gray-300 flex-shrink-0" />
+                          <input
+                            value={ach}
+                            onChange={(e) => {
+                              const s = [...batchDraftStages];
+                              const a = [...s[si].achievements];
+                              a[ai] = e.target.value;
+                              s[si] = { ...s[si], achievements: a };
+                              setBatchDraftStages(s);
+                            }}
+                            placeholder={`成就 ${ai + 1}`}
+                            className="flex-1 px-2 py-1 rounded border border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                          <button
+                            onClick={() => {
+                              const s = [...batchDraftStages];
+                              s[si] = { ...s[si], achievements: s[si].achievements.filter((_, j) => j !== ai) };
+                              setBatchDraftStages(s);
+                            }}
+                            className="w-5 h-5 flex items-center justify-center text-gray-300 hover:text-red-400"
+                          >
+                            <X className="w-2.5 h-2.5" />
+                          </button>
+                        </div>
+                      ))}
+                      <button
+                        onClick={() => {
+                          const s = [...batchDraftStages];
+                          s[si] = { ...s[si], achievements: [...s[si].achievements, ""] };
+                          setBatchDraftStages(s);
+                        }}
+                        className="text-xs text-blue-500 hover:text-blue-600 font-medium ml-4"
+                      >
+                        + 添加成就
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <button
+                onClick={() => setBatchDraftStages((prev) => [...prev, { name: "", achievements: [""] }])}
+                className="flex items-center gap-1 text-sm text-indigo-500 hover:text-indigo-600 font-medium mb-4"
+              >
+                <Plus className="w-4 h-4" /> 添加阶段
+              </button>
+              <div className="flex gap-3">
+                <button onClick={() => setBatchStageSheet(null)} className="flex-1 py-3 rounded-xl border border-gray-200 dark:border-gray-700 text-sm text-gray-500 dark:text-gray-400">取消</button>
+                <button onClick={handleBatchSaveStages} className="flex-1 py-3 rounded-xl bg-indigo-600 text-white text-sm font-medium">保存</button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
       </AnimatePresence>
 
       {detailTaskId !== null && (

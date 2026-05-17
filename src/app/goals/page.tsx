@@ -422,13 +422,16 @@ function ShortTermCard({
   onAssignToday,
   onDelete,
   onDetailClick,
+  sectionPath,
 }: {
   task: Task;
   onToggleDone: (task: Task) => void;
   onAssignToday: (task: Task) => void;
   onDelete: (task: Task) => void;
   onDetailClick?: (taskId: number) => void;
+  sectionPath?: { projectName: string; boardName: string; stageName: string; sectionName: string; projectId: number };
 }) {
+  const router = useRouter();
   const [expanded, setExpanded] = useState(false);
   const isDone = task.status === "done";
   const isOverdue = useMemo(
@@ -515,6 +518,29 @@ function ShortTermCard({
             </div>
           )}
         </div>
+
+        {sectionPath && sectionPath.projectName && (
+          <div
+            onClick={() => router.push("/projects")}
+            className="flex items-center gap-1 mt-1 text-[10px] text-gray-400 dark:text-gray-500 truncate cursor-pointer hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors"
+            title={`${sectionPath.projectName} > ${sectionPath.boardName}${sectionPath.stageName ? ` > ${sectionPath.stageName}` : ""} > ${sectionPath.sectionName}`}
+          >
+            <FolderKanban className="w-3 h-3 flex-shrink-0" />
+            <span className="truncate">
+              {sectionPath.projectName}
+              <ChevronRight className="w-3 h-3 inline mx-0.5 text-gray-300" />
+              {sectionPath.boardName}
+              {sectionPath.stageName && (
+                <>
+                  <ChevronRight className="w-3 h-3 inline mx-0.5 text-gray-300" />
+                  {sectionPath.stageName}
+                </>
+              )}
+              <ChevronRight className="w-3 h-3 inline mx-0.5 text-gray-300" />
+              {sectionPath.sectionName}
+            </span>
+          </div>
+        )}
 
         <button
           onClick={() => onAssignToday(task)}
@@ -771,6 +797,7 @@ export default function GoalsPage() {
   const [expandedBoards, setExpandedBoards] = useState<Set<number>>(new Set());
   const [expandedStages, setExpandedStages] = useState<Set<string>>(new Set());
   const [shorttermTasks, setShorttermTasks] = useState<Task[]>([]);
+  const [sectionPathMap, setSectionPathMap] = useState<Map<number, { projectName: string; boardName: string; stageName: string; sectionName: string; projectId: number }>>(new Map());
   const [detailSectionId, setDetailSectionId] = useState<number | null>(null);
   const [dailyTasks, setDailyTasks] = useState<Task[]>([]);
   const [habits, setHabits] = useState<Task[]>([]);
@@ -891,6 +918,53 @@ export default function GoalsPage() {
       const data = await getTasksByType("shortterm");
       const active = data.filter((t) => t.status !== "archived");
       setShorttermTasks(active);
+
+      const sidSet = new Set(active.filter((t) => t.sectionId).map((t) => t.sectionId!));
+      const pathMap = new Map<number, { projectName: string; boardName: string; stageName: string; sectionName: string; projectId: number }>();
+      if (sidSet.size > 0) {
+        const sections = await db.sections.bulkGet([...sidSet]);
+        const bidSet = new Set<number>();
+        const secMap = new Map<number, Section>();
+        for (const s of sections) {
+          if (s) {
+            secMap.set(s.id!, s);
+            if (s.boardId) bidSet.add(s.boardId);
+          }
+        }
+        if (bidSet.size > 0) {
+          const boards = await db.boards.bulkGet([...bidSet]);
+          const pidSet = new Set<number>();
+          const brdMap = new Map<number, Board>();
+          for (const b of boards) {
+            if (b) {
+              brdMap.set(b.id!, b);
+              if (b.projectId) pidSet.add(b.projectId);
+            }
+          }
+          if (pidSet.size > 0) {
+            const projects = await db.projectV2s.bulkGet([...pidSet]);
+            const projMap = new Map<number, string>();
+            for (const p of projects) {
+              if (p) projMap.set(p.id!, p.name);
+            }
+            for (const [sid, section] of secMap) {
+              if (!section.boardId) continue;
+              const board = brdMap.get(section.boardId);
+              if (!board) continue;
+              const projName = board.projectId ? projMap.get(board.projectId) || "" : "";
+              const stageName = board.stages?.[section.stageIndex ?? 0]?.name || "";
+              pathMap.set(sid, {
+                projectName: projName,
+                boardName: board.name,
+                stageName,
+                sectionName: section.name,
+                projectId: board.projectId || 0,
+              });
+            }
+          }
+        }
+      }
+      setSectionPathMap(pathMap);
     } catch {
       setError(true);
     } finally {
@@ -1373,6 +1447,7 @@ export default function GoalsPage() {
                   onAssignToday={handleAssignToday}
                   onDelete={handleDeleteTask}
                   onDetailClick={setDetailTaskId}
+                  sectionPath={task.sectionId ? sectionPathMap.get(task.sectionId) : undefined}
                 />
               </div>
             ));

@@ -11,7 +11,7 @@ import {
   getAllProjectsV2, createProjectV2, updateProjectV2, deleteProjectToTrash,
   getBoardsByProject, createBoard, updateBoard, deleteBoardToTrash,
   getSectionsByBoard, createSection, updateSection, deleteSectionToTrash,
-  getTasksBySection, updateTask,
+  getTasksBySection, updateTask, deleteTask,
 } from "@/lib/db";
 import { showToast } from "@/components/ui/Toast";
 import TaskDetail from "@/components/ui/TaskDetail";
@@ -268,6 +268,21 @@ export default function ProjectsPage() {
     } catch { showToast({ message: "更新任务失败", type: "error" }); }
   };
 
+  const handleDeleteTask = async (task: Task) => {
+    if (!confirm("确定删除此任务？")) return;
+    try {
+      await deleteTask(task.id!);
+      setTasks((prev) => {
+        const next = new Map(prev);
+        for (const [sid, taskList] of next) {
+          next.set(sid, taskList.filter((t) => t.id !== task.id));
+        }
+        return next;
+      });
+      showToast({ message: "任务已移入回收站", type: "info" });
+    } catch { showToast({ message: "删除任务失败", type: "error" }); }
+  };
+
   if (loading) return (
     <div className="flex flex-col h-full max-w-2xl mx-auto px-4 pt-6 pb-24">
       <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-5">项目</h1>
@@ -404,7 +419,7 @@ export default function ProjectsPage() {
                                                   {sectionTasks.length > 0 && (
                                                     <div className="pb-2">
                                                       {sectionTasks.map((task) => (
-                                                        <div key={task.id} className="flex items-center gap-2 pl-20 pr-4 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors" onClick={() => setDetailTaskId(task.id!)} style={{ cursor: "pointer" }}>
+                                                        <div key={task.id} className="group flex items-center gap-2 pl-20 pr-4 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors" onClick={() => setDetailTaskId(task.id!)} style={{ cursor: "pointer" }}>
                                                           <button onClick={(e) => { e.stopPropagation(); handleToggleTask(task); }} className="flex-shrink-0">
                                                             {task.status === "done" ? <CheckCircle className="w-4 h-4 text-emerald-500" /> : <Circle className="w-4 h-4 text-gray-300" />}
                                                           </button>
@@ -412,6 +427,9 @@ export default function ProjectsPage() {
                                                           {task.priority && (
                                                             <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: PRIORITY_CONFIG.find((p) => p.key === task.priority)?.hex || "#6B7280" }} title={PRIORITY_CONFIG.find((p) => p.key === task.priority)?.label} />
                                                           )}
+                                                          <button onClick={(e) => { e.stopPropagation(); handleDeleteTask(task); }} className="w-5 h-5 flex items-center justify-center rounded hover:bg-red-50 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity" aria-label="删除任务">
+                                                            <Trash2 className="w-3 h-3" />
+                                                          </button>
                                                         </div>
                                                       ))}
                                                     </div>
@@ -478,7 +496,7 @@ export default function ProjectsPage() {
                                                             {sectionTasks.length > 0 && (
                                                               <div className="pb-2">
                                                                 {sectionTasks.map((task) => (
-                                                                  <div key={task.id} className="flex items-center gap-2 pl-20 pr-4 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors" onClick={() => setDetailTaskId(task.id!)} style={{ cursor: "pointer" }}>
+                                                                  <div key={task.id} className="group flex items-center gap-2 pl-20 pr-4 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors" onClick={() => setDetailTaskId(task.id!)} style={{ cursor: "pointer" }}>
                                                                     <button onClick={(e) => { e.stopPropagation(); handleToggleTask(task); }} className="flex-shrink-0">
                                                                       {task.status === "done" ? <CheckCircle className="w-4 h-4 text-emerald-500" /> : <Circle className="w-4 h-4 text-gray-300" />}
                                                                     </button>
@@ -486,6 +504,9 @@ export default function ProjectsPage() {
                                                                     {task.priority && (
                                                                       <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: PRIORITY_CONFIG.find((p) => p.key === task.priority)?.hex || "#6B7280" }} title={PRIORITY_CONFIG.find((p) => p.key === task.priority)?.label} />
                                                                     )}
+                                                                    <button onClick={(e) => { e.stopPropagation(); handleDeleteTask(task); }} className="w-5 h-5 flex items-center justify-center rounded hover:bg-red-50 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity" aria-label="删除任务">
+                                                                      <Trash2 className="w-3 h-3" />
+                                                                    </button>
                                                                   </div>
                                                                 ))}
                                                               </div>

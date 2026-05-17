@@ -321,9 +321,6 @@ export default function ProjectsPage() {
                                     <button onClick={() => { setStageSheet({ boardId: board.id!, boardName: board.name }); setNewStageName(""); setNewStageAch([""]); }} className="w-6 h-6 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400" aria-label="添加阶段">
                                       <Plus className="w-3 h-3" />
                                     </button>
-                                    <button onClick={() => handleCreateSection(board.id!)} className="w-6 h-6 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400" aria-label="添加子模块">
-                                      <Plus className="w-3 h-3" />
-                                    </button>
                                     <button onClick={() => handleDeleteBoard(board.id!, project.id!)} className="w-6 h-6 flex items-center justify-center rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-400 hover:text-red-500" aria-label="删除大模块">
                                       <Trash2 className="w-3 h-3" />
                                     </button>

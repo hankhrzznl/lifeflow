@@ -11,10 +11,10 @@ import {
   Zap,
 } from "lucide-react";
 import {
+  db,
   getTasksByTimeRange,
   getAllProjects,
   getTimeSegmentsByDateRange,
-  getTask,
 } from "@/lib/db";
 import type { Task, LegacyProject, TimeSegment } from "@/lib/types";
 import TaskDetail from "@/components/ui/TaskDetail";
@@ -297,33 +297,32 @@ export default function TodayPage() {
       setTasks(fetchedTasks.filter((t) => t.status !== "archived"));
       setProjects(fetchedProjects);
 
-      const todayStart = dayStart;
       const todayEnd = dayStart + 24 * 60 * 60 * 1000;
-      const segs = await getTimeSegmentsByDateRange(todayStart, todayEnd);
-      const slotData: TimelineSlot[] = [];
-      const unknownTaskIds = new Set<number>();
-      for (const seg of segs) {
-        const task = fetchedTasks.find((t) => t.id === seg.taskId && t.status !== "archived");
-        if (task) {
-          slotData.push({ segment: seg, task });
-        } else if (!fetchedTasks.some((t) => t.id === seg.taskId && t.status === "archived")) {
-          unknownTaskIds.add(seg.taskId);
+      const segs = await getTimeSegmentsByDateRange(dayStart, todayEnd);
+
+      const allTaskIds = [...new Set(segs.map((s) => s.taskId))];
+      const unknownIds = allTaskIds.filter(
+        (tid) => !fetchedTasks.some((t) => t.id === tid)
+      );
+
+      const extraMap = new Map<number, Task>();
+      if (unknownIds.length > 0) {
+        const loaded = await db.tasks.bulkGet(unknownIds);
+        for (const t of loaded) {
+          if (t && t.status !== "archived") extraMap.set(t.id!, t);
         }
       }
-      const newTasks: Task[] = [];
-      for (const tid of unknownTaskIds) {
-        const t = await getTask(tid);
-        if (t && t.status !== "archived") {
-          newTasks.push(t);
-          const matchingSegs = segs.filter((s) => s.taskId === tid);
-          for (const seg of matchingSegs) {
-            slotData.push({ segment: seg, task: t });
-          }
-        }
+
+      const allTasks = [...fetchedTasks.filter((t) => t.status !== "archived"), ...extraMap.values()];
+
+      const slotData: TimelineSlot[] = [];
+      for (const seg of segs) {
+        const task = allTasks.find((t) => t.id === seg.taskId);
+        if (task) slotData.push({ segment: seg, task });
       }
       setSlots(slotData);
-      if (newTasks.length > 0) {
-        setTasks((prev) => [...prev, ...newTasks]);
+      if (extraMap.size > 0) {
+        setTasks((prev) => [...prev, ...extraMap.values()]);
       }
     } catch {
       setError(true);

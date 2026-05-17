@@ -1217,8 +1217,7 @@ function GoalsPageInner() {
     const seen = new Set<string>();
 
     const todayTasks = filteredDaily.filter((t) => {
-      if (!t.startTime) return false;
-      const ds = getLocalDateStr(new Date(t.startTime));
+      const ds = t.startTime ? getLocalDateStr(new Date(t.startTime)) : todayStr;
       return ds === todayStr;
     });
 
@@ -1228,18 +1227,10 @@ function GoalsPageInner() {
     }
 
     for (const task of filteredDaily) {
-      if (!task.startTime) continue;
-      const ds = getLocalDateStr(new Date(task.startTime));
+      const ds = task.startTime ? getLocalDateStr(new Date(task.startTime)) : todayStr;
       if (seen.has(ds)) continue;
       seen.add(ds);
-      groups.push({ dateStr: ds, label: formatDate(task.startTime), isToday: false, tasks: [task] });
-    }
-
-    if (groups.length === 0 || (groups.length === 1 && groups[0].tasks.length === 0)) {
-      const todayOnly = groups[0];
-      if (todayOnly && todayOnly.tasks.length === 0) {
-        return groups;
-      }
+      groups.push({ dateStr: ds, label: ds === todayStr ? "今天" : formatDate(task.startTime || 0), isToday: ds === todayStr, tasks: [task] });
     }
 
     return groups;

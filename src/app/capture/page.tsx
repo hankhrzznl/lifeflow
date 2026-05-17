@@ -627,7 +627,7 @@ export default function CapturePage() {
                   </div>
                 </div>
 
-                {selectedClassification === "short-term" && (
+                {(selectedClassification === "short-term" || selectedClassification === "daily-trivial") && (
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">开始时间 <span className="text-red-400">*</span></label>

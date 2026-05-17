@@ -97,6 +97,9 @@ export default function TaskDetail({ taskId, onClose, onUpdate }: TaskDetailProp
     if (!task || saving) return;
     setSaving(true);
     try {
+      if (addingSegment && newSegStart && newSegEnd) {
+        await handleAddSegment();
+      }
       const updates: Partial<Task> = { ...draft };
       const tagsArr = draftTags.split(/[,，、]/).map((s) => s.trim()).filter(Boolean);
       if (tagsArr.length > 0) updates.tags = tagsArr;

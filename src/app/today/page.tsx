@@ -14,6 +14,7 @@ import {
   getTasksByTimeRange,
   getAllProjects,
   getTimeSegmentsByDateRange,
+  getTask,
 } from "@/lib/db";
 import type { Task, LegacyProject, TimeSegment } from "@/lib/types";
 import TaskDetail from "@/components/ui/TaskDetail";
@@ -300,11 +301,30 @@ export default function TodayPage() {
       const todayEnd = dayStart + 24 * 60 * 60 * 1000;
       const segs = await getTimeSegmentsByDateRange(todayStart, todayEnd);
       const slotData: TimelineSlot[] = [];
+      const unknownTaskIds = new Set<number>();
       for (const seg of segs) {
         const task = fetchedTasks.find((t) => t.id === seg.taskId && t.status !== "archived");
-        if (task) slotData.push({ segment: seg, task });
+        if (task) {
+          slotData.push({ segment: seg, task });
+        } else if (!fetchedTasks.some((t) => t.id === seg.taskId && t.status === "archived")) {
+          unknownTaskIds.add(seg.taskId);
+        }
+      }
+      const newTasks: Task[] = [];
+      for (const tid of unknownTaskIds) {
+        const t = await getTask(tid);
+        if (t && t.status !== "archived") {
+          newTasks.push(t);
+          const matchingSegs = segs.filter((s) => s.taskId === tid);
+          for (const seg of matchingSegs) {
+            slotData.push({ segment: seg, task: t });
+          }
+        }
       }
       setSlots(slotData);
+      if (newTasks.length > 0) {
+        setTasks((prev) => [...prev, ...newTasks]);
+      }
     } catch {
       setError(true);
     } finally {

@@ -129,18 +129,22 @@ export default function TaskDetail({ taskId, onClose, onUpdate }: TaskDetailProp
 
   const handleDelete = async () => {
     if (!task) return;
-    await deleteTask(task.id!);
-    showToast({ message: "已移入回收站", type: "info", undoAction: async () => { await restoreTask(task.id!); } });
-    onClose();
-    onUpdate?.();
+    try {
+      await deleteTask(task.id!);
+      showToast({ message: "已移入回收站", type: "info", undoAction: async () => { await restoreTask(task.id!); } });
+      onClose();
+      onUpdate?.();
+    } catch { showToast({ message: "删除失败", type: "error" }); }
   };
 
   const handleToggleStatus = async () => {
     if (!task) return;
     const newStatus = task.status === "done" ? "active" : "done";
-    await updateTask(task.id!, { status: newStatus });
-    await loadTask();
-    onUpdate?.();
+    try {
+      await updateTask(task.id!, { status: newStatus });
+      await loadTask();
+      onUpdate?.();
+    } catch { showToast({ message: "更新状态失败", type: "error" }); }
   };
 
   const handleAddSegment = async () => {
@@ -158,8 +162,10 @@ export default function TaskDetail({ taskId, onClose, onUpdate }: TaskDetailProp
   };
 
   const handleDeleteSegment = async (segId: number) => {
-    await deleteTimeSegment(segId);
-    setSegments((prev) => prev.filter((s) => s.id !== segId));
+    try {
+      await deleteTimeSegment(segId);
+      setSegments((prev) => prev.filter((s) => s.id !== segId));
+    } catch { showToast({ message: "删除时间段失败", type: "error" }); }
   };
 
   if (loading) {

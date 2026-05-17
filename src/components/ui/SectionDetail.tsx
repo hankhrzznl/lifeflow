@@ -27,6 +27,7 @@ export default function SectionDetail({ sectionId, onClose, onUpdate }: SectionD
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [loadError, setLoadError] = useState(false);
 
   const [draftName, setDraftName] = useState("");
   const [draftNote, setDraftNote] = useState("");
@@ -40,7 +41,7 @@ export default function SectionDetail({ sectionId, onClose, onUpdate }: SectionD
       setSection(s || null);
       const b = s?.boardId ? await getBoard(s.boardId) : null;
       setBoard(b || null);
-    } catch { }
+    } catch { setLoadError(true); }
     finally { setLoading(false); }
   }, [sectionId]);
 
@@ -74,7 +75,7 @@ export default function SectionDetail({ sectionId, onClose, onUpdate }: SectionD
   };
 
   if (loading) return <LoadingSheet onClose={onClose} />;
-  if (!section) return <ErrorSheet onClose={onClose} />;
+  if (loadError || !section) return <ErrorSheet onClose={onClose} isError={loadError} />;
 
   return (
     <AnimatePresence>
@@ -183,11 +184,11 @@ function LoadingSheet({ onClose }: { onClose: () => void }) {
   );
 }
 
-function ErrorSheet({ onClose }: { onClose: () => void }) {
+function ErrorSheet({ onClose, isError }: { onClose: () => void; isError: boolean }) {
   return (
     <div className="fixed inset-0 z-50 bg-black/40 flex items-end justify-center" onClick={onClose}>
       <div className="w-full max-w-lg bg-white dark:bg-gray-900 rounded-t-2xl p-6">
-        <p className="text-center text-gray-500 py-8">子模块不存在</p>
+        <p className="text-center text-gray-500 py-8">{isError ? "加载失败" : "子模块不存在"}</p>
       </div>
     </div>
   );

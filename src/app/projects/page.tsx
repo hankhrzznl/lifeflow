@@ -71,7 +71,7 @@ export default function ProjectsPage() {
           sm.set(board.id!, board.stages || []);
         }
         setBoardStagesMap(prev => new Map([...prev, ...sm]));
-      });
+      }).catch(() => { showToast({ message: "加载大模块失败", type: "error" }); });
       return next;
     });
   }, []);
@@ -86,158 +86,186 @@ export default function ProjectsPage() {
     const existingSections = sections.get(boardId) || await getSectionsByBoard(boardId);
     setSections((prev) => new Map(prev).set(boardId, existingSections));
     for (const s of existingSections) {
-      getTasksBySection(s.id!).then((t) => setTasks((prev) => new Map(prev).set(s.id!, t)));
+      getTasksBySection(s.id!).then((t) => setTasks((prev) => new Map(prev).set(s.id!, t)))
+        .catch(() => {});
     }
   }, [sections]);
 
   const handleCreateProject = async () => {
     if (!newProjectName.trim()) return;
-    await createProjectV2(newProjectName.trim(), newProjectColor);
-    setNewProjectName("");
-    setShowNewProject(false);
-    await loadProjects();
-    showToast({ message: "项目已创建", type: "success" });
+    try {
+      await createProjectV2(newProjectName.trim(), newProjectColor);
+      showToast({ message: "项目已创建", type: "success" });
+      setShowNewProject(false);
+      setNewProjectName("");
+      setNewProjectColor(COLORS[0]);
+      await loadProjects();
+    } catch { showToast({ message: "创建项目失败", type: "error" }); }
   };
 
   const handleUpdateProject = async () => {
     if (!editingProject || !editingProject.name.trim()) return;
-    await updateProjectV2(editingProject.id!, { name: editingProject.name.trim(), color: editingProject.color });
-    setEditingProject(null);
-    await loadProjects();
+    try {
+      await updateProjectV2(editingProject.id!, { name: editingProject.name.trim(), color: editingProject.color });
+      showToast({ message: "项目已更新", type: "success" });
+      setEditingProject(null);
+      await loadProjects();
+    } catch { showToast({ message: "更新项目失败", type: "error" }); }
   };
 
   const handleDeleteProject = async (id: number) => {
-    await deleteProjectToTrash(id);
-    await loadProjects();
-    showToast({ message: "项目已移入回收站", type: "info" });
+    if (!confirm("确定删除此项目？")) return;
+    try {
+      await deleteProjectToTrash(id);
+      showToast({ message: "项目已移入回收站", type: "info" });
+      await loadProjects();
+    } catch { showToast({ message: "删除项目失败", type: "error" }); }
   };
 
   const handleCreateBoard = async (projectId: number) => {
     const name = prompt("大模块名称：");
     if (!name?.trim()) return;
-    await createBoard(name.trim(), projectId);
-    const b = await getBoardsByProject(projectId);
-    setBoards((prev) => new Map(prev).set(projectId, b));
-    showToast({ message: "大模块已创建", type: "success" });
+    try {
+      await createBoard(name.trim(), projectId);
+      const b = await getBoardsByProject(projectId);
+      setBoards((prev) => new Map(prev).set(projectId, b));
+      showToast({ message: "大模块已创建", type: "success" });
+    } catch { showToast({ message: "创建大模块失败", type: "error" }); }
   };
 
   const handleDeleteBoard = async (boardId: number, projectId: number) => {
     if (!confirm("确定删除此大模块？")) return;
-    await deleteBoardToTrash(boardId);
-    const b = await getBoardsByProject(projectId);
-    setBoards((prev) => new Map(prev).set(projectId, b));
-    showToast({ message: "大模块已移入回收站", type: "info" });
+    try {
+      await deleteBoardToTrash(boardId);
+      const b = await getBoardsByProject(projectId);
+      setBoards((prev) => new Map(prev).set(projectId, b));
+      showToast({ message: "大模块已移入回收站", type: "info" });
+    } catch { showToast({ message: "删除大模块失败", type: "error" }); }
   };
 
   const handleAddStage = async () => {
     if (!stageSheet || !newStageName.trim()) return;
-    const existingStages = boardStagesMap.get(stageSheet.boardId) || [];
-    const newStages = [...existingStages, { name: newStageName.trim(), achievements: newStageAch.filter((a) => a.trim()) }];
-    await updateBoard(stageSheet.boardId, { stages: newStages });
-    setBoards((prev) => {
-      const next = new Map(prev);
-      for (const [pid, bds] of next) {
-        next.set(pid, bds.map((b) => (b.id === stageSheet.boardId ? { ...b, stages: newStages } : b)));
-      }
-      return next;
-    });
-    setBoardStagesMap((prev) => new Map(prev).set(stageSheet.boardId, newStages));
-    showToast({ message: "阶段已添加", type: "success" });
-    setStageSheet(null);
-    setNewStageName("");
-    setNewStageAch([""]);
+    try {
+      const existingStages = boardStagesMap.get(stageSheet.boardId) || [];
+      const newStages = [...existingStages, { name: newStageName.trim(), achievements: newStageAch.filter((a) => a.trim()) }];
+      await updateBoard(stageSheet.boardId, { stages: newStages });
+      setBoards((prev) => {
+        const next = new Map(prev);
+        for (const [pid, bds] of next) {
+          next.set(pid, bds.map((b) => (b.id === stageSheet.boardId ? { ...b, stages: newStages } : b)));
+        }
+        return next;
+      });
+      setBoardStagesMap((prev) => new Map(prev).set(stageSheet.boardId, newStages));
+      showToast({ message: "阶段已添加", type: "success" });
+      setStageSheet(null);
+      setNewStageName("");
+      setNewStageAch([""]);
+    } catch { showToast({ message: "添加阶段失败", type: "error" }); }
   };
 
   const handleBatchSaveStages = async () => {
     if (!batchStageSheet) return;
-    const newStages: BoardStage[] = batchDraftStages
-      .filter((s) => s.name.trim())
-      .map((s) => ({ name: s.name.trim(), achievements: s.achievements.filter((a) => a.trim()) }));
-    await updateBoard(batchStageSheet.boardId, { stages: newStages });
-    setBoards((prev) => {
-      const next = new Map(prev);
-      for (const [pid, bds] of next) {
-        next.set(pid, bds.map((b) => (b.id === batchStageSheet.boardId ? { ...b, stages: newStages } : b)));
-      }
-      return next;
-    });
-    setBoardStagesMap((prev) => new Map(prev).set(batchStageSheet.boardId, newStages));
-    showToast({ message: "阶段已更新", type: "success" });
-    setBatchStageSheet(null);
+    try {
+      const newStages: BoardStage[] = batchDraftStages
+        .filter((s) => s.name.trim())
+        .map((s) => ({ name: s.name.trim(), achievements: s.achievements.filter((a) => a.trim()) }));
+      await updateBoard(batchStageSheet.boardId, { stages: newStages });
+      setBoards((prev) => {
+        const next = new Map(prev);
+        for (const [pid, bds] of next) {
+          next.set(pid, bds.map((b) => (b.id === batchStageSheet.boardId ? { ...b, stages: newStages } : b)));
+        }
+        return next;
+      });
+      setBoardStagesMap((prev) => new Map(prev).set(batchStageSheet.boardId, newStages));
+      showToast({ message: "阶段已更新", type: "success" });
+      setBatchStageSheet(null);
+    } catch { showToast({ message: "批量保存阶段失败", type: "error" }); }
   };
 
   const handleUpdateStage = async () => {
     if (!editingStage || !editingStageName.trim()) return;
-    const existingStages = boardStagesMap.get(editingStage.boardId) || [];
-    const newStages = [...existingStages];
-    newStages[editingStage.stageIdx] = { name: editingStageName.trim(), achievements: editingStageAch.filter((a) => a.trim()) };
-    await updateBoard(editingStage.boardId, { stages: newStages });
-    setBoards((prev) => {
-      const next = new Map(prev);
-      for (const [pid, bds] of next) {
-        next.set(pid, bds.map((b) => (b.id === editingStage.boardId ? { ...b, stages: newStages } : b)));
-      }
-      return next;
-    });
-    setBoardStagesMap((prev) => new Map(prev).set(editingStage.boardId, newStages));
-    showToast({ message: "阶段已更新", type: "success" });
-    setEditingStage(null);
+    try {
+      const existingStages = boardStagesMap.get(editingStage.boardId) || [];
+      const newStages = [...existingStages];
+      newStages[editingStage.stageIdx] = { name: editingStageName.trim(), achievements: editingStageAch.filter((a) => a.trim()) };
+      await updateBoard(editingStage.boardId, { stages: newStages });
+      setBoards((prev) => {
+        const next = new Map(prev);
+        for (const [pid, bds] of next) {
+          next.set(pid, bds.map((b) => (b.id === editingStage.boardId ? { ...b, stages: newStages } : b)));
+        }
+        return next;
+      });
+      setBoardStagesMap((prev) => new Map(prev).set(editingStage.boardId, newStages));
+      showToast({ message: "阶段已更新", type: "success" });
+      setEditingStage(null);
+    } catch { showToast({ message: "更新阶段失败", type: "error" }); }
   };
 
   const handleDeleteStage = async () => {
     if (!editingStage) return;
-    const existingStages = boardStagesMap.get(editingStage.boardId) || [];
-    const newStages = existingStages.filter((_, i) => i !== editingStage.stageIdx);
-    await updateBoard(editingStage.boardId, { stages: newStages });
-    setBoards((prev) => {
-      const next = new Map(prev);
-      for (const [pid, bds] of next) {
-        next.set(pid, bds.map((b) => (b.id === editingStage.boardId ? { ...b, stages: newStages } : b)));
+    try {
+      const existingStages = boardStagesMap.get(editingStage.boardId) || [];
+      const newStages = existingStages.filter((_, i) => i !== editingStage.stageIdx);
+      await updateBoard(editingStage.boardId, { stages: newStages });
+      setBoards((prev) => {
+        const next = new Map(prev);
+        for (const [pid, bds] of next) {
+          next.set(pid, bds.map((b) => (b.id === editingStage.boardId ? { ...b, stages: newStages } : b)));
+        }
+        return next;
+      });
+      setBoardStagesMap((prev) => new Map(prev).set(editingStage.boardId, newStages));
+      showToast({ message: "阶段已删除", type: "info" });
+      setEditingStage(null);
+      const newStageCount = newStages.length;
+      const orphaned = (await getSectionsByBoard(editingStage.boardId)).filter((s) => (s.stageIndex ?? 0) >= newStageCount);
+      for (const s of orphaned) {
+        await updateSection(s.id!, { stageIndex: 0 });
       }
-      return next;
-    });
-    setBoardStagesMap((prev) => new Map(prev).set(editingStage.boardId, newStages));
-    showToast({ message: "阶段已删除", type: "info" });
-    setEditingStage(null);
-    const newStageCount = newStages.length;
-    const orphaned = (await getSectionsByBoard(editingStage.boardId)).filter((s) => (s.stageIndex ?? 0) >= newStageCount);
-    for (const s of orphaned) {
-      await updateSection(s.id!, { stageIndex: 0 });
-    }
-    const updated = await getSectionsByBoard(editingStage.boardId);
-    setSections((prev) => new Map(prev).set(editingStage.boardId, updated));
+      const updated = await getSectionsByBoard(editingStage.boardId);
+      setSections((prev) => new Map(prev).set(editingStage.boardId, updated));
+    } catch { showToast({ message: "删除阶段失败", type: "error" }); }
   };
 
   const handleCreateSection = async (boardId: number, stageIdx?: number) => {
     const name = prompt("子模块名称：");
     if (!name?.trim()) return;
-    const sectionId = await createSection(name.trim(), boardId);
-    if (stageIdx !== undefined) {
-      await updateSection(sectionId, { stageIndex: stageIdx });
-    }
-    const s = await getSectionsByBoard(boardId);
-    setSections((prev) => new Map(prev).set(boardId, s));
-    showToast({ message: "子模块已创建", type: "success" });
+    try {
+      const sectionId = await createSection(name.trim(), boardId);
+      if (stageIdx !== undefined) {
+        await updateSection(sectionId, { stageIndex: stageIdx });
+      }
+      const s = await getSectionsByBoard(boardId);
+      setSections((prev) => new Map(prev).set(boardId, s));
+      showToast({ message: "子模块已创建", type: "success" });
+    } catch { showToast({ message: "创建子模块失败", type: "error" }); }
   };
 
   const handleDeleteSection = async (sectionId: number, boardId: number) => {
     if (!confirm("确定删除此子模块？")) return;
-    await deleteSectionToTrash(sectionId);
-    const s = await getSectionsByBoard(boardId);
-    setSections((prev) => new Map(prev).set(boardId, s));
-    showToast({ message: "子模块已移入回收站", type: "info" });
+    try {
+      await deleteSectionToTrash(sectionId);
+      const s = await getSectionsByBoard(boardId);
+      setSections((prev) => new Map(prev).set(boardId, s));
+      showToast({ message: "子模块已移入回收站", type: "info" });
+    } catch { showToast({ message: "删除子模块失败", type: "error" }); }
   };
 
   const handleToggleTask = async (task: Task) => {
-    const newStatus = task.status === "done" ? "active" : "done";
-    await updateTask(task.id!, { status: newStatus });
-    setTasks((prev) => {
-      const next = new Map(prev);
-      for (const [sid, taskList] of next) {
-        next.set(sid, taskList.map((t) => t.id === task.id ? { ...t, status: newStatus } : t));
-      }
-      return next;
-    });
+    try {
+      const newStatus = task.status === "done" ? "active" : "done";
+      await updateTask(task.id!, { status: newStatus });
+      setTasks((prev) => {
+        const next = new Map(prev);
+        for (const [sid, taskList] of next) {
+          next.set(sid, taskList.map((t) => t.id === task.id ? { ...t, status: newStatus } : t));
+        }
+        return next;
+      });
+    } catch { showToast({ message: "更新任务失败", type: "error" }); }
   };
 
   if (loading) return (

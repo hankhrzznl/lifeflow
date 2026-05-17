@@ -337,6 +337,19 @@ export default function TodayPage() {
     load();
   }, [loadData]);
 
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === "visible") loadData();
+    };
+    const onFocus = () => loadData();
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onFocus);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [loadData]);
+
   const goToDate = useCallback(
     (d: Date) => {
       const formatted = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -513,7 +526,7 @@ export default function TodayPage() {
         <div className="flex-1 overflow-y-auto">
           <EmptyState />
         </div>
-      ) : !isTimelineEnabled ? (
+      ) : !isTimelineEnabled && slots.length === 0 ? (
         <div className="flex-1 overflow-y-auto">
           <div className="px-4 py-2">
             <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">

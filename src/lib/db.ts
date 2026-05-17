@@ -559,45 +559,6 @@ export async function getChildTasks(parentTaskId: number): Promise<Task[]> {
     .toArray();
 }
 
-export interface TaskTreeNode extends Task {
-  children: TaskTreeNode[];
-}
-
-export async function getTaskTree(type: Task["type"]): Promise<TaskTreeNode[]> {
-  const roots = await db.tasks
-    .where("type")
-    .equals(type)
-    .filter((t) => !t.parentTaskId && t.status !== "archived")
-    .toArray();
-
-  async function buildChildren(parentId: number, depth: number): Promise<TaskTreeNode[]> {
-    if (depth >= 3) return [];
-    const children = await db.tasks
-      .where("parentTaskId")
-      .equals(parentId)
-      .filter((t) => t.status !== "archived")
-      .toArray();
-
-    const result: TaskTreeNode[] = [];
-    for (const child of children) {
-      result.push({
-        ...child,
-        children: await buildChildren(child.id!, depth + 1),
-      } as TaskTreeNode);
-    }
-    return result;
-  }
-
-  const tree: TaskTreeNode[] = [];
-  for (const root of roots) {
-    tree.push({
-      ...root,
-      children: await buildChildren(root.id!, 1),
-    } as TaskTreeNode);
-  }
-  return tree;
-}
-
 export async function deleteTask(id: number): Promise<void> {
   return writeWithRetry(
     async () => { await db.tasks.update(id, { status: "archived", updatedAt: Date.now() }); },

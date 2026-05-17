@@ -38,10 +38,6 @@ import SectionDetail from "@/components/ui/SectionDetail";
 import { PRIORITY_CONFIG } from "@/lib/types";
 import type { Task, GoalViewType, HabitLog, Section, Board } from "@/lib/types";
 
-interface TaskTreeNode extends Task {
-  children: TaskTreeNode[];
-}
-
 const TABS: { key: GoalViewType; label: string; icon: typeof Mountain }[] = [
   { key: "long-term", label: "长期目标", icon: Mountain },
   { key: "short-term", label: "短期事件", icon: CalendarDays },
@@ -420,179 +416,6 @@ function HabitHeatmap({ taskId }: { taskId: number }) {
   );
 }
 
-function TreeNode({
-  node,
-  depth,
-  onToggleDone,
-  onAddChild,
-  onDelete,
-  onDetailClick,
-}: {
-  node: TaskTreeNode;
-  depth: number;
-  onToggleDone: (task: Task) => void;
-  onAddChild: (parentId: number) => void;
-  onDelete: (task: Task) => void;
-  onDetailClick?: (taskId: number) => void;
-}) {
-  const [expanded, setExpanded] = useState(depth === 0);
-  const isDone = node.status === "done";
-  const hasChildren = node.children.length > 0;
-  const maxDepthReached = depth >= 3;
-
-  const doneChildren = node.children.filter((c) => c.status === "done").length;
-  const totalChildren = node.children.length;
-  const progress = totalChildren > 0 ? doneChildren / totalChildren : 0;
-
-  return (
-    <div>
-      <div
-        className={`flex items-center gap-2 py-2.5 px-3 rounded-xl transition-colors group ${
-          isDone ? "opacity-60" : ""
-        }`}
-      >
-        {hasChildren ? (
-          <button
-            onClick={() => setExpanded(!expanded)}
-            aria-label={expanded ? "收起" : "展开"}
-            className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-          >
-            <motion.span
-              animate={{ rotate: expanded ? 90 : 0 }}
-              transition={{ duration: 0.15 }}
-            >
-              <ChevronRight className="w-4 h-4 text-gray-400" />
-            </motion.span>
-          </button>
-        ) : (
-          <div className="w-6 flex-shrink-0" />
-        )}
-
-        <button
-          onClick={() => onToggleDone(node)}
-          aria-label={isDone ? "标记为未完成" : "标记为已完成"}
-          className={`flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
-            isDone
-              ? "bg-emerald-500 border-emerald-500"
-              : "border-gray-300 dark:border-gray-600 hover:border-indigo-400"
-          }`}
-        >
-          {isDone && <Check className="w-3 h-3 text-white" />}
-        </button>
-
-        <span
-          onClick={() => onDetailClick?.(node.id!)}
-          className={`flex-1 text-sm cursor-pointer ${
-            isDone
-              ? "line-through text-gray-400 dark:text-gray-500"
-              : "text-gray-900 dark:text-gray-100 font-medium"
-          }`}
-        >
-          {node.title}
-        </span>
-
-        {node.priority && (
-          <span
-            className="w-2 h-2 rounded-full flex-shrink-0"
-            style={{ backgroundColor: PRIORITY_CONFIG.find(p => p.key === node.priority)?.hex || '#6B7280' }}
-            title={PRIORITY_CONFIG.find(p => p.key === node.priority)?.label}
-          />
-        )}
-
-        {node.isMilestone && (
-          <span className="text-[10px] font-medium text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 px-1.5 py-0.5 rounded-md flex-shrink-0">
-            里程碑
-          </span>
-        )}
-
-        {node.classification && !node.isMilestone && (
-          <span className="text-[10px] font-medium text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-900/30 px-1.5 py-0.5 rounded-md flex-shrink-0">
-            {node.classification === "long-term" && "长期"}
-            {node.classification === "short-term" && "短期"}
-            {node.classification === "daily-trivial" && "日常"}
-            {node.classification === "habit" && "习惯"}
-          </span>
-        )}
-
-        {hasChildren && (
-          <span className="text-xs text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded-full flex-shrink-0">
-            {node.children.length}
-          </span>
-        )}
-
-        {hasChildren && (
-          <div className="flex items-center gap-1 flex-shrink-0">
-            <div className="w-10 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-emerald-500 rounded-full transition-all"
-                style={{ width: `${Math.round(progress * 100)}%` }}
-              />
-            </div>
-            <span className="text-[10px] text-gray-400 dark:text-gray-500">
-              {doneChildren}/{totalChildren}
-            </span>
-          </div>
-        )}
-
-        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button
-            onClick={() => {
-              if (maxDepthReached) return;
-              onAddChild(node.id!);
-            }}
-            disabled={maxDepthReached}
-            aria-label="添加子任务"
-            className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors disabled:opacity-30"
-            title={maxDepthReached ? "已达最大嵌套层级（3级）" : "添加子任务"}
-          >
-            <Plus className="w-3.5 h-3.5 text-gray-400" />
-          </button>
-          <button
-            onClick={() => onDelete(node)}
-            aria-label="删除"
-            className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-          >
-            <Trash2 className="w-3.5 h-3.5 text-gray-400 hover:text-red-500" />
-          </button>
-        </div>
-      </div>
-
-      <AnimatePresence>
-        {expanded && hasChildren && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.2 }}
-            className="ml-5 border-l-2 border-gray-100 dark:border-gray-800 overflow-hidden"
-          >
-            <AnimatePresence>
-              {node.children.map((child, i) => (
-                <motion.div
-                  key={child.id}
-                  initial={{ opacity: 0, x: -8 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -8 }}
-                  transition={{ delay: i * 0.04, duration: 0.2 }}
-                >
-                  <TreeNode
-                    node={child}
-                    depth={depth + 1}
-                    onToggleDone={onToggleDone}
-                    onAddChild={onAddChild}
-                    onDelete={onDelete}
-                    onDetailClick={onDetailClick}
-                  />
-                </motion.div>
-              ))}
-            </AnimatePresence>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
-
 function ShortTermCard({
   task,
   onToggleDone,
@@ -624,7 +447,7 @@ function ShortTermCard({
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`bg-white dark:bg-gray-900 rounded-xl border shadow-sm overflow-hidden transition-colors ${
+      className={`bg-white dark:bg-gray-900 rounded-xl border shadow-sm overflow-hidden transition-colors group ${
         isDone
           ? "border-gray-100 dark:border-gray-800 opacity-60"
           : isOverdue

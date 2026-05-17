@@ -977,7 +977,7 @@ function GoalsPageInner() {
     setError(false);
     try {
       const data = await getTasksByType("daily");
-      const active = data.filter((t) => t.status !== "archived");
+      const active = data.filter((t) => t.status !== "archived" && t.classification === "daily-trivial");
       setDailyTasks(active);
     } catch {
       setError(true);
@@ -1083,10 +1083,20 @@ function GoalsPageInner() {
           taskData.parentTaskId = parentTaskId;
         }
 
+        if (viewType === "short-term") {
+          taskData.classification = "short-term";
+        }
         if (viewType === "daily-trivial") {
           const { start, end } = getTodayRange();
           taskData.startTime = start;
           taskData.endTime = end;
+          taskData.classification = "daily-trivial";
+        }
+        if (viewType === "habits") {
+          taskData.classification = "habit";
+        }
+        if (viewType === "long-term") {
+          taskData.classification = "long-term";
         }
 
         await createTask(taskData);

@@ -129,9 +129,8 @@ export default function ProjectsPage() {
 
   const handleAddStage = async () => {
     if (!stageSheet || !newStageName.trim()) return;
-    const board = (boards.get(stageSheet.boardId) || []).find((b) => b.id === stageSheet.boardId);
-    if (!board) return;
-    const newStages = [...(board.stages || []), { name: newStageName.trim(), achievements: newStageAch.filter((a) => a.trim()) }];
+    const existingStages = boardStagesMap.get(stageSheet.boardId) || [];
+    const newStages = [...existingStages, { name: newStageName.trim(), achievements: newStageAch.filter((a) => a.trim()) }];
     await updateBoard(stageSheet.boardId, { stages: newStages });
     setBoards((prev) => {
       const next = new Map(prev);
@@ -149,9 +148,8 @@ export default function ProjectsPage() {
 
   const handleUpdateStage = async () => {
     if (!editingStage || !editingStageName.trim()) return;
-    const board = (boards.get(editingStage.boardId) || []).find((b) => b.id === editingStage.boardId);
-    if (!board || !board.stages) return;
-    const newStages = [...board.stages];
+    const existingStages = boardStagesMap.get(editingStage.boardId) || [];
+    const newStages = [...existingStages];
     newStages[editingStage.stageIdx] = { name: editingStageName.trim(), achievements: editingStageAch.filter((a) => a.trim()) };
     await updateBoard(editingStage.boardId, { stages: newStages });
     setBoards((prev) => {
@@ -168,9 +166,8 @@ export default function ProjectsPage() {
 
   const handleDeleteStage = async () => {
     if (!editingStage) return;
-    const board = (boards.get(editingStage.boardId) || []).find((b) => b.id === editingStage.boardId);
-    if (!board || !board.stages) return;
-    const newStages = board.stages.filter((_, i) => i !== editingStage.stageIdx);
+    const existingStages = boardStagesMap.get(editingStage.boardId) || [];
+    const newStages = existingStages.filter((_, i) => i !== editingStage.stageIdx);
     await updateBoard(editingStage.boardId, { stages: newStages });
     setBoards((prev) => {
       const next = new Map(prev);

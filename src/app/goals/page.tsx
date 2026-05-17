@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -777,7 +777,7 @@ function useDayTransitionGuard(): { dayChanged: boolean; dismissOverlay: () => v
   return { dayChanged, dismissOverlay: () => setDayChanged(false) };
 }
 
-export default function GoalsPage() {
+function GoalsPageInner() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -1812,5 +1812,13 @@ export default function GoalsPage() {
         />
       )}
     </div>
+  );
+}
+
+export default function GoalsPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center h-64"><div className="w-6 h-6 border-2 border-gray-300 border-t-indigo-500 rounded-full animate-spin" /></div>}>
+      <GoalsPageInner />
+    </Suspense>
   );
 }

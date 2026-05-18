@@ -212,6 +212,14 @@ export interface FinRecord {
   category: string;
   date: string;
   note?: string;
+  accountId: number;
+  createdAt: number;
+}
+
+export interface FinAccount {
+  id?: number;
+  name: string;
+  initialBalance: number;
   createdAt: number;
 }
 

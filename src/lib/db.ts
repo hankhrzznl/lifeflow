@@ -16,6 +16,7 @@ import type {
   PluginMetadata,
   TimeSegment,
   FinRecord,
+  FinAccount,
 } from "./types";
 
 export class LifeFlowDB extends Dexie {
@@ -35,6 +36,7 @@ export class LifeFlowDB extends Dexie {
   pluginsMeta!: Table<PluginMetadata, number>;
   timeSegments!: Table<TimeSegment, number>;
   finRecords!: Table<FinRecord, number>;
+  finAccounts!: Table<FinAccount, number>;
 
   constructor() {
     super("LifeFlowDB");
@@ -165,10 +167,18 @@ export class LifeFlowDB extends Dexie {
     });
 
     this.version(8).stores({
-      finRecords: "++id, type, date, category, createdAt",
+      finRecords: "++id, type, date, category, accountId, createdAt",
     }).upgrade(async () => {
       if (typeof window !== "undefined" && window.location.hostname === "localhost") {
         console.log("[LifeFlowDB v8] Added finRecords table");
+      }
+    });
+
+    this.version(9).stores({
+      finAccounts: "++id, name, createdAt",
+    }).upgrade(async () => {
+      if (typeof window !== "undefined" && window.location.hostname === "localhost") {
+        console.log("[LifeFlowDB v9] Added finAccounts table");
       }
     });
   }
@@ -1311,6 +1321,26 @@ export async function initBuiltInPlugins(): Promise<void> {
       updatedAt: Date.now(),
     });
   }
+  if (!names.has("task-inbox")) {
+    await db.pluginsMeta.add({
+      name: "task-inbox",
+      version: "1.0.0",
+      description: "任务清单 · 按时间查看待办",
+      status: "active",
+      isBuiltIn: true,
+      installedAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+  }
+
+  const accountCount = await db.finAccounts.count();
+  if (accountCount === 0) {
+    await db.finAccounts.bulkAdd([
+      { name: "现金", initialBalance: 0, createdAt: Date.now() },
+      { name: "银行卡", initialBalance: 0, createdAt: Date.now() + 1 },
+      { name: "信用卡", initialBalance: 0, createdAt: Date.now() + 2 },
+    ]);
+  }
 }
 
 export async function getPluginMeta(name: string): Promise<PluginMetadata | undefined> {
@@ -1341,17 +1371,49 @@ export async function addFinRecord(record: Omit<FinRecord, "id" | "createdAt">):
   return db.finRecords.add({ ...record, createdAt: Date.now() });
 }
 
-export async function getFinRecordsByMonth(year: number, month: number): Promise<FinRecord[]> {
+export async function getFinRecordsByMonth(year: number, month: number, accountId?: number): Promise<FinRecord[]> {
   const prefix = `${year}-${String(month).padStart(2, "0")}`;
-  return db.finRecords
-    .where("date")
-    .startsWith(prefix)
-    .reverse()
-    .sortBy("createdAt");
+  let collection = db.finRecords.where("date").startsWith(prefix);
+  if (accountId != null) {
+    collection = collection.and((r) => r.accountId === accountId);
+  }
+  return collection.reverse().sortBy("createdAt");
 }
 
 export async function deleteFinRecord(id: number): Promise<void> {
   await db.finRecords.delete(id);
+}
+
+export async function createFinAccount(name: string, initialBalance: number): Promise<number> {
+  return db.finAccounts.add({ name, initialBalance, createdAt: Date.now() });
+}
+
+export async function getFinAccounts(): Promise<FinAccount[]> {
+  return db.finAccounts.orderBy("createdAt").toArray();
+}
+
+export async function deleteFinAccount(id: number): Promise<void> {
+  await db.transaction("rw", [db.finAccounts, db.finRecords], async () => {
+    await db.finRecords.where("accountId").equals(id).delete();
+    await db.finAccounts.delete(id);
+  });
+}
+
+export async function getAccountBalance(accountId: number): Promise<number> {
+  const account = await db.finAccounts.get(accountId);
+  if (!account) return 0;
+  const records = await db.finRecords.where("accountId").equals(accountId).toArray();
+  const net = records.reduce((s, r) => r.type === "income" ? s + r.amount : s - r.amount, 0);
+  return account.initialBalance + net;
+}
+
+export async function getTasksForInbox(): Promise<Task[]> {
+  const all = await db.tasks
+    .where("startTime")
+    .above(0)
+    .filter((t) => (t.type === "shortterm" || t.type === "daily" || t.type === "habit") && t.status === "active")
+    .toArray();
+  return all.sort((a, b) => (a.startTime ?? 0) - (b.startTime ?? 0));
 }
 
 export async function getTimeSegmentsByDateRange(rangeStart: number, rangeEnd: number): Promise<TimeSegment[]> {

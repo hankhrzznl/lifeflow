@@ -131,6 +131,7 @@ export default function PluginsPage() {
       timeline: "/plugins/timeline",
       "focus-timer": "/plugins/focus-timer",
       finance: "/plugins/finance",
+      "task-inbox": "/plugins/task-inbox",
     };
     return paths[name] || null;
   }

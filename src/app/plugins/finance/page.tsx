@@ -4,13 +4,17 @@ import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft, Plus, ChevronLeft, ChevronRight, Trash2,
-  TrendingUp, TrendingDown, Wallet,
+  TrendingUp, TrendingDown, Wallet, X,
+  Pencil,
 } from "lucide-react";
 import Link from "next/link";
-import { getPluginMeta, initBuiltInPlugins, addFinRecord, getFinRecordsByMonth, deleteFinRecord } from "@/lib/db";
+import {
+  getPluginMeta, initBuiltInPlugins, addFinRecord, getFinRecordsByMonth,
+  deleteFinRecord, getFinAccounts, createFinAccount, deleteFinAccount,
+} from "@/lib/db";
 import { showToast } from "@/components/ui/Toast";
 import { FIN_CATEGORIES } from "@/lib/types";
-import type { FinRecord } from "@/lib/types";
+import type { FinRecord, FinAccount } from "@/lib/types";
 
 function getTodayStr(): string {
   const d = new Date();
@@ -29,9 +33,14 @@ function formatDayHeader(dateStr: string): { day: string; weekday: string } {
 export default function FinancePluginPage() {
   const [active, setActive] = useState(false);
   const [records, setRecords] = useState<FinRecord[]>([]);
+  const [accounts, setAccounts] = useState<FinAccount[]>([]);
+  const [selectedAccountId, setSelectedAccountId] = useState<number | null>(null);
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth() + 1);
   const [showForm, setShowForm] = useState(false);
+  const [showAccountSheet, setShowAccountSheet] = useState(false);
+  const [newAccountName, setNewAccountName] = useState("");
+  const [newAccountBalance, setNewAccountBalance] = useState("");
 
   const [formType, setFormType] = useState<"expense" | "income">("expense");
   const [formAmount, setFormAmount] = useState("");
@@ -43,15 +52,32 @@ export default function FinancePluginPage() {
     getPluginMeta("finance").then((p) => setActive(p?.status === "active"));
   }, []);
 
-  const loadRecords = useCallback(async () => {
+  const loadAccounts = useCallback(async () => {
     await initBuiltInPlugins();
-    const data = await getFinRecordsByMonth(currentYear, currentMonth);
-    setRecords(data);
-  }, [currentYear, currentMonth]);
+    const all = await getFinAccounts();
+    setAccounts(all);
+    if (all.length > 0 && !selectedAccountId) {
+      setSelectedAccountId(all[0].id!);
+    }
+  }, [selectedAccountId]);
 
   useEffect(() => {
-    if (active) loadRecords();
-  }, [active, loadRecords]);
+    if (active) {
+      loadAccounts();
+    }
+  }, [active]);
+
+  const loadRecords = useCallback(async () => {
+    if (selectedAccountId == null) return;
+    const data = await getFinRecordsByMonth(currentYear, currentMonth, selectedAccountId);
+    setRecords(data);
+  }, [currentYear, currentMonth, selectedAccountId]);
+
+  useEffect(() => {
+    if (active && selectedAccountId != null) loadRecords();
+  }, [active, selectedAccountId, loadRecords]);
+
+  const currentAccount = accounts.find((a) => a.id === selectedAccountId);
 
   const prevMonth = () => {
     if (currentMonth === 1) {
@@ -79,7 +105,10 @@ export default function FinancePluginPage() {
     .filter((r) => r.type === "expense")
     .reduce((s, r) => s + r.amount, 0);
 
+  const accountBalance = (currentAccount?.initialBalance ?? 0) + totalIncome - totalExpense;
+
   const handleSubmit = async () => {
+    if (selectedAccountId == null) return;
     const amount = parseFloat(formAmount);
     if (isNaN(amount) || amount <= 0) return;
     try {
@@ -89,6 +118,7 @@ export default function FinancePluginPage() {
         category: formCategory,
         date: formDate,
         note: formNote || undefined,
+        accountId: selectedAccountId,
       });
       setFormAmount("");
       setFormNote("");
@@ -104,8 +134,40 @@ export default function FinancePluginPage() {
   const handleDelete = async (id: number) => {
     try {
       await deleteFinRecord(id);
-      setRecords((prev) => prev.filter((r) => r.id !== id));
+      await loadRecords();
       showToast({ message: "已删除", type: "info" });
+    } catch {
+      showToast({ message: "删除失败", type: "error" });
+    }
+  };
+
+  const handleCreateAccount = async () => {
+    if (!newAccountName.trim()) return;
+    const bal = parseFloat(newAccountBalance) || 0;
+    try {
+      const id = await createFinAccount(newAccountName.trim(), bal);
+      showToast({ message: "账户已创建", type: "success" });
+      setShowAccountSheet(false);
+      setNewAccountName("");
+      setNewAccountBalance("");
+      setSelectedAccountId(id);
+      await loadAccounts();
+    } catch {
+      showToast({ message: "创建失败", type: "error" });
+    }
+  };
+
+  const handleDeleteAccount = async (id: number) => {
+    if (accounts.length <= 1) {
+      showToast({ message: "至少保留一个账户", type: "error" });
+      return;
+    }
+    if (!confirm("删除此账户将同时删除其所有记账记录，确定？")) return;
+    try {
+      await deleteFinAccount(id);
+      showToast({ message: "账户已删除", type: "info" });
+      setSelectedAccountId(null);
+      await loadAccounts();
     } catch {
       showToast({ message: "删除失败", type: "error" });
     }
@@ -152,6 +214,36 @@ export default function FinancePluginPage() {
         <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">财务管理</h1>
       </div>
 
+      <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-1">
+        {accounts.map((acc) => (
+          <button
+            key={acc.id}
+            onClick={() => setSelectedAccountId(acc.id!)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium whitespace-nowrap transition-colors ${
+              selectedAccountId === acc.id
+                ? "bg-blue-500 text-white"
+                : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
+            }`}
+          >
+            {acc.name}
+            {selectedAccountId === acc.id && (
+              <button
+                onClick={(e) => { e.stopPropagation(); handleDeleteAccount(acc.id!); }}
+                className="w-4 h-4 flex items-center justify-center rounded hover:bg-white/20"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            )}
+          </button>
+        ))}
+        <button
+          onClick={() => { setNewAccountName(""); setNewAccountBalance(""); setShowAccountSheet(true); }}
+          className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+        >
+          <Plus className="w-3.5 h-3.5" />
+        </button>
+      </div>
+
       <div className="flex items-center justify-between mb-4">
         <button onClick={prevMonth} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
           <ChevronLeft className="w-5 h-5 text-gray-500" />
@@ -164,24 +256,35 @@ export default function FinancePluginPage() {
         </button>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 mb-5">
-        <div className="bg-white dark:bg-gray-900 rounded-2xl p-4 border border-gray-100 dark:border-gray-800">
-          <div className="flex items-center gap-2 mb-1">
-            <div className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
-              <TrendingUp className="w-4 h-4 text-emerald-500" />
+      <div className="grid grid-cols-3 gap-2 mb-5">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl p-3 border border-gray-100 dark:border-gray-800">
+          <div className="flex items-center gap-1.5 mb-0.5">
+            <div className="w-6 h-6 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+              <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />
             </div>
-            <span className="text-xs text-gray-500 dark:text-gray-400">收入</span>
+            <span className="text-[10px] text-gray-500 dark:text-gray-400">收入</span>
           </div>
-          <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{totalIncome.toFixed(2)}</p>
+          <p className="text-sm font-bold text-gray-900 dark:text-gray-100">{totalIncome.toFixed(2)}</p>
         </div>
-        <div className="bg-white dark:bg-gray-900 rounded-2xl p-4 border border-gray-100 dark:border-gray-800">
-          <div className="flex items-center gap-2 mb-1">
-            <div className="w-8 h-8 rounded-xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-              <TrendingDown className="w-4 h-4 text-red-500" />
+        <div className="bg-white dark:bg-gray-900 rounded-2xl p-3 border border-gray-100 dark:border-gray-800">
+          <div className="flex items-center gap-1.5 mb-0.5">
+            <div className="w-6 h-6 rounded-lg bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+              <TrendingDown className="w-3.5 h-3.5 text-red-500" />
             </div>
-            <span className="text-xs text-gray-500 dark:text-gray-400">支出</span>
+            <span className="text-[10px] text-gray-500 dark:text-gray-400">支出</span>
           </div>
-          <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{totalExpense.toFixed(2)}</p>
+          <p className="text-sm font-bold text-gray-900 dark:text-gray-100">{totalExpense.toFixed(2)}</p>
+        </div>
+        <div className="bg-white dark:bg-gray-900 rounded-2xl p-3 border border-gray-100 dark:border-gray-800">
+          <div className="flex items-center gap-1.5 mb-0.5">
+            <div className="w-6 h-6 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+              <Wallet className="w-3.5 h-3.5 text-blue-500" />
+            </div>
+            <span className="text-[10px] text-gray-500 dark:text-gray-400">结余</span>
+          </div>
+          <p className={`text-sm font-bold ${accountBalance >= 0 ? "text-gray-900 dark:text-gray-100" : "text-red-500"}`}>
+            {accountBalance.toFixed(2)}
+          </p>
         </div>
       </div>
 
@@ -252,6 +355,7 @@ export default function FinancePluginPage() {
 
       <button
         onClick={() => {
+          if (selectedAccountId == null) return;
           setFormType("expense");
           setFormAmount("");
           setFormCategory("food");
@@ -264,6 +368,56 @@ export default function FinancePluginPage() {
       >
         <Plus className="w-6 h-6 text-white" />
       </button>
+
+      <AnimatePresence>
+        {showAccountSheet && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/40 flex items-end justify-center"
+            onClick={() => setShowAccountSheet(false)}
+          >
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", stiffness: 400, damping: 40 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-lg bg-white dark:bg-gray-900 rounded-t-2xl p-6"
+            >
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">新建账户</h3>
+              <div className="mb-4">
+                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 block">账户名称</label>
+                <input
+                  type="text"
+                  value={newAccountName}
+                  onChange={(e) => setNewAccountName(e.target.value)}
+                  placeholder="如：工资卡"
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  autoFocus
+                  onKeyDown={(e) => { if (e.key === "Enter") handleCreateAccount(); }}
+                />
+              </div>
+              <div className="mb-4">
+                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 block">初始余额</label>
+                <input
+                  type="number"
+                  value={newAccountBalance}
+                  onChange={(e) => setNewAccountBalance(e.target.value)}
+                  placeholder="0.00"
+                  step="0.01"
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div className="flex gap-3">
+                <button onClick={() => setShowAccountSheet(false)} className="flex-1 py-3 rounded-xl border border-gray-200 dark:border-gray-700 text-sm text-gray-500 dark:text-gray-400">取消</button>
+                <button onClick={handleCreateAccount} disabled={!newAccountName.trim()} className="flex-1 py-3 rounded-xl bg-blue-600 text-white text-sm font-medium disabled:opacity-40">创建</button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {showForm && (

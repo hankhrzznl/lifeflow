@@ -69,11 +69,9 @@ export default function CapturePage() {
     note: string;
     dueDate: string;
     successCriteria: string;
-    startTime: string;
-    endTime: string;
     frequency: "daily" | "weekly" | "monthly";
     targetCount: string;
-  }>({ title: "", priority: "not-urgent-important", projectId: null, boardId: null, sectionId: null, note: "", dueDate: "", successCriteria: "", startTime: "", endTime: "", frequency: "daily", targetCount: "" });
+  }>({ title: "", priority: "not-urgent-important", projectId: null, boardId: null, sectionId: null, note: "", dueDate: "", successCriteria: "", frequency: "daily", targetCount: "" });
 
   const [projects, setProjects] = useState<ProjectV2[]>([]);
   const [boards, setBoards] = useState<Board[]>([]);
@@ -163,8 +161,6 @@ export default function CapturePage() {
       note: "",
       dueDate: "",
       successCriteria: "",
-      startTime: "",
-      endTime: "",
       frequency: "daily",
       targetCount: "",
     });
@@ -226,8 +222,6 @@ export default function CapturePage() {
         note: taskDraft.note || undefined,
         successCriteria: taskDraft.successCriteria || undefined,
         dueDate: taskDraft.dueDate ? new Date(taskDraft.dueDate).getTime() : undefined,
-        startTime: taskDraft.startTime ? new Date(taskDraft.startTime).getTime() : undefined,
-        endTime: taskDraft.endTime ? new Date(taskDraft.endTime).getTime() : undefined,
         frequency: (c === "habits" ? taskDraft.frequency : undefined),
       });
       await updateTask(classifyTarget.id!, { status: "done" });
@@ -245,7 +239,6 @@ export default function CapturePage() {
       await updateSection(sectionId, {
         note: taskDraft.note || undefined,
         successCriteria: taskDraft.successCriteria || undefined,
-        startTime: taskDraft.startTime ? new Date(taskDraft.startTime).getTime() : undefined,
         stageIndex,
       });
       await updateTask(classifyTarget.id!, { status: "done" });
@@ -507,11 +500,6 @@ export default function CapturePage() {
                 </div>
 
                 <div>
-                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">开始时间</label>
-                  <input type="datetime-local" value={taskDraft.startTime} onChange={(e) => setTaskDraft((d) => ({ ...d, startTime: e.target.value }))} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                </div>
-
-                <div>
                   <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">所属模块 <span className="text-red-400">*</span></label>
                   <div className="space-y-2">
                     <select value={taskDraft.projectId ?? ""} onChange={(e) => handleProjectChange(e.target.value ? parseInt(e.target.value) : null)} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -629,14 +617,6 @@ export default function CapturePage() {
 
                 {(selectedClassification === "short-term" || selectedClassification === "daily-trivial") && (
                   <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">开始时间 <span className="text-red-400">*</span></label>
-                      <input type="datetime-local" value={taskDraft.startTime} onChange={(e) => setTaskDraft((d) => ({ ...d, startTime: e.target.value }))} className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">结束时间 <span className="text-red-400">*</span></label>
-                      <input type="datetime-local" value={taskDraft.endTime} onChange={(e) => setTaskDraft((d) => ({ ...d, endTime: e.target.value }))} className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                    </div>
                   </div>
                 )}
 

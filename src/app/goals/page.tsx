@@ -1087,9 +1087,6 @@ function GoalsPageInner() {
           taskData.classification = "short-term";
         }
         if (viewType === "daily-trivial") {
-          const { start, end } = getTodayRange();
-          taskData.startTime = start;
-          taskData.endTime = end;
           taskData.classification = "daily-trivial";
         }
         if (viewType === "habits") {

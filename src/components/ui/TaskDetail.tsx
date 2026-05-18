@@ -78,8 +78,6 @@ export default function TaskDetail({ taskId, onClose, onUpdate }: TaskDetailProp
       type: task.type,
       priority: task.priority,
       status: task.status,
-      startTime: task.startTime,
-      endTime: task.endTime,
       dueDate: task.dueDate,
       successCriteria: task.successCriteria,
       note: task.note,
@@ -321,24 +319,6 @@ export default function TaskDetail({ taskId, onClose, onUpdate }: TaskDetailProp
                   </div>
                 </InfoRow>
               )}
-
-              {/* Start time */}
-              <InfoRow icon={<Clock className="w-4 h-4 text-gray-400" />} label="开始时间">
-                {editing ? (
-                  <input type="datetime-local" value={draft.startTime ? new Date(draft.startTime).toISOString().slice(0, 16) : ""} onChange={(e) => setDraft((d) => ({ ...d, startTime: e.target.value ? new Date(e.target.value).getTime() : undefined }))} className="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                ) : (
-                  <span className="text-sm text-gray-700 dark:text-gray-300">{formatDate(task.startTime) || "未设置"}</span>
-                )}
-              </InfoRow>
-
-              {/* End time */}
-              <InfoRow icon={<Clock className="w-4 h-4 text-gray-400" />} label="结束时间">
-                {editing ? (
-                  <input type="datetime-local" value={draft.endTime ? new Date(draft.endTime).toISOString().slice(0, 16) : ""} onChange={(e) => setDraft((d) => ({ ...d, endTime: e.target.value ? new Date(e.target.value).getTime() : undefined }))} className="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                ) : (
-                  <span className="text-sm text-gray-700 dark:text-gray-300">{formatDate(task.endTime) || "未设置"}</span>
-                )}
-              </InfoRow>
 
               {/* Due date */}
               <InfoRow icon={<Calendar className="w-4 h-4 text-gray-400" />} label="截止日期">

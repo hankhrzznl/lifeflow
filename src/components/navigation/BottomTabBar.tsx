@@ -92,57 +92,53 @@ export default function BottomTabBar() {
         </div>
       </nav>
 
+      {openPanel && (
+        <div
+          className="fixed inset-0 bg-black/40 z-50"
+          onClick={closePanel}
+        />
+      )}
       <AnimatePresence>
         {openPanel && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 200 }}
-              className="fixed inset-0 bg-black/40 z-50"
-              onClick={closePanel}
-            />
-            <motion.div
-              initial={{ y: "100%" }}
-              animate={{ y: 0 }}
-              exit={{ y: "100%" }}
-              transition={{ type: "spring", stiffness: 400, damping: 40 }}
-              className="fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-gray-900 rounded-t-2xl pb-[max(24px,env(safe-area-inset-bottom))]"
-            >
-              <div className="flex items-center justify-between px-4 pt-4 pb-2">
-                <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">
-                  {openPanel === "plan" ? "规划" : "更多"}
-                </h2>
-                <button
-                  onClick={closePanel}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
-                >
-                  <X className="w-5 h-5 text-gray-400" />
-                </button>
-              </div>
+          <motion.div
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            exit={{ y: "100%" }}
+            transition={{ type: "spring", stiffness: 400, damping: 40 }}
+            className="fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-gray-900 rounded-t-2xl pb-[max(24px,env(safe-area-inset-bottom))]"
+          >
+            <div className="flex items-center justify-between px-4 pt-4 pb-2">
+              <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">
+                {openPanel === "plan" ? "规划" : "更多"}
+              </h2>
+              <button
+                onClick={closePanel}
+                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+              >
+                <X className="w-5 h-5 text-gray-400" />
+              </button>
+            </div>
 
-              <div className="px-2 pb-2">
-                {(openPanel === "plan" ? planItems : moreItems).map((item) => (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={closePanel}
-                    className="flex items-center gap-3 h-14 px-4 rounded-xl text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors active:scale-[0.98]"
-                  >
-                    <item.icon className="w-5 h-5 text-gray-500 dark:text-gray-400" strokeWidth={1.5} />
-                    <div className="flex-1 min-w-0">
-                      <span className="text-sm">{item.label}</span>
-                      {"desc" in item && (
-                        <p className="text-xs text-gray-400 dark:text-gray-500 truncate">{(item as typeof planItems[number]).desc}</p>
-                      )}
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-gray-300 dark:text-gray-600" />
-                  </Link>
-                ))}
-              </div>
-            </motion.div>
-          </>
+            <div className="px-2 pb-2">
+              {(openPanel === "plan" ? planItems : moreItems).map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={closePanel}
+                  className="flex items-center gap-3 h-14 px-4 rounded-xl text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors active:scale-[0.98]"
+                >
+                  <item.icon className="w-5 h-5 text-gray-500 dark:text-gray-400" strokeWidth={1.5} />
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm">{item.label}</span>
+                    {"desc" in item && (
+                      <p className="text-xs text-gray-400 dark:text-gray-500 truncate">{(item as typeof planItems[number]).desc}</p>
+                    )}
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-gray-300 dark:text-gray-600" />
+                </Link>
+              ))}
+            </div>
+          </motion.div>
         )}
       </AnimatePresence>
     </>

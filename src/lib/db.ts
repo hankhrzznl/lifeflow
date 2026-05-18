@@ -1009,6 +1009,8 @@ export interface ExportData {
     pluginsMeta: PluginMetadata[];
     trashStore: TrashItem[];
     timeSegments: TimeSegment[];
+    finRecords: FinRecord[];
+    finAccounts: FinAccount[];
   };
 }
 
@@ -1029,6 +1031,8 @@ export async function exportAllData(): Promise<ExportData> {
     pluginsMeta,
     trashStore,
     timeSegments,
+    finRecords,
+    finAccounts,
   ] = await Promise.all([
     db.capture.toArray(),
     db.events.toArray(),
@@ -1045,6 +1049,8 @@ export async function exportAllData(): Promise<ExportData> {
     db.pluginsMeta.toArray(),
     db.trashStore.toArray(),
     db.timeSegments.toArray(),
+    db.finRecords.toArray(),
+    db.finAccounts.toArray(),
   ]);
 
   return {
@@ -1066,6 +1072,8 @@ export async function exportAllData(): Promise<ExportData> {
       pluginsMeta,
       trashStore,
       timeSegments,
+      finRecords,
+      finAccounts,
     },
   };
 }
@@ -1094,6 +1102,8 @@ export async function importAllData(
       db.pluginsMeta,
       db.trashStore,
       db.timeSegments,
+      db.finRecords,
+      db.finAccounts,
     ],
     async () => {
       await Promise.all([
@@ -1112,6 +1122,8 @@ export async function importAllData(
         db.pluginsMeta.clear(),
         db.trashStore.clear(),
         db.timeSegments.clear(),
+        db.finRecords.clear(),
+        db.finAccounts.clear(),
       ]);
 
       await Promise.all([
@@ -1130,6 +1142,8 @@ export async function importAllData(
         db.pluginsMeta.bulkAdd(data.pluginsMeta || []),
         db.trashStore.bulkAdd(data.trashStore || []),
         db.timeSegments.bulkAdd(data.timeSegments || []),
+        db.finRecords.bulkAdd(data.finRecords || []),
+        db.finAccounts.bulkAdd(data.finAccounts || []),
       ]);
 
       imported.capture = data.capture?.length || 0;
@@ -1147,6 +1161,8 @@ export async function importAllData(
       imported.pluginsMeta = data.pluginsMeta?.length || 0;
       imported.trashStore = data.trashStore?.length || 0;
       imported.timeSegments = data.timeSegments?.length || 0;
+      imported.finRecords = data.finRecords?.length || 0;
+      imported.finAccounts = data.finAccounts?.length || 0;
     }
   );
 

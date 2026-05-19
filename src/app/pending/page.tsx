@@ -72,9 +72,8 @@ function getReminderTimeline(dueDate: number, reminderDays: number, requiredSegm
   return stages;
 }
 
-function isPending(task: Task, segmentsCount: number): boolean {
-  if (segmentsCount === 0) return true;
-  if (task.requiredSegments && segmentsCount < task.requiredSegments) return true;
+function isPending(task: Task, _segmentsCount: number): boolean {
+  if (!task.requiredSegments) return true;
   return false;
 }
 
@@ -508,17 +507,21 @@ export default function PendingPage() {
         {tab === "scheduled" && scheduledTasks.map((task) => {
           const segCount = segmentsMap.get(task.id!)?.length ?? 0;
           const typeInfo = TYPE_LABELS[task.type] || TYPE_LABELS.daily;
+          const fullyArranged = task.requiredSegments ? segCount >= task.requiredSegments : segCount > 0;
           return (
-            <div key={task.id} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
+            <div key={task.id} className={`bg-white dark:bg-gray-900 rounded-2xl border shadow-sm overflow-hidden ${fullyArranged ? "border-emerald-100 dark:border-emerald-800" : "border-amber-100 dark:border-amber-800"}`}>
               <div className="flex items-center gap-3 px-4 py-3">
-                <div className="w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center flex-shrink-0">
-                  <Check className="w-3.5 h-3.5 text-emerald-500" />
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${fullyArranged ? "bg-emerald-100 dark:bg-emerald-900/30" : "bg-amber-100 dark:bg-amber-900/30"}`}>
+                  {fullyArranged ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Clock className="w-3.5 h-3.5 text-amber-500" />}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-gray-700 dark:text-gray-300 truncate">{task.title}</p>
                   <div className="flex items-center gap-2 mt-0.5">
                     <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-md ${typeInfo.bg} ${typeInfo.color}`}>{typeInfo.label}</span>
-                    <span className="text-[10px] text-emerald-500">已安排 {segCount}/{task.requiredSegments || segCount} 时段</span>
+                    <span className={`text-[10px] ${fullyArranged ? "text-emerald-500" : "text-amber-500"}`}>
+                      {segCount}/{task.requiredSegments || segCount} 时段
+                      {segCount === 0 ? " · 待添加" : ""}
+                    </span>
                   </div>
                 </div>
                 <div className="flex items-center gap-1">

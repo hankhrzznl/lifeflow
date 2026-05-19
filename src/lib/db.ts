@@ -1432,6 +1432,13 @@ export async function getTasksForInbox(): Promise<Task[]> {
   return all.sort((a, b) => (a.startTime ?? 0) - (b.startTime ?? 0));
 }
 
+export async function getActiveSchedulableTasks(): Promise<Task[]> {
+  const all = await db.tasks
+    .filter((t) => (t.type === "shortterm" || t.type === "daily" || t.type === "habit") && t.status === "active")
+    .toArray();
+  return all.sort((a, b) => b.createdAt - a.createdAt);
+}
+
 export async function getTimeSegmentsByDateRange(rangeStart: number, rangeEnd: number): Promise<TimeSegment[]> {
   return db.timeSegments.where("startTime").between(rangeStart, rangeEnd).toArray();
 }

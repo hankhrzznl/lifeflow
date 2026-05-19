@@ -99,6 +99,8 @@ export interface Task {
   sectionId?: number;
   boardId?: number;
   dueDate?: number;
+  requiredSegments?: number;
+  segmentReminderDays?: number;
   successCriteria?: string;
   frequency?: 'daily' | 'weekly' | 'monthly';
   captureSourceId?: number;

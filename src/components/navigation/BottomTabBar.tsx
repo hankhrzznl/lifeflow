@@ -6,10 +6,11 @@ import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Inbox, Calendar, Layers, Menu, X,
-  FolderKanban, Target, Settings, BarChart3, Trash2, Puzzle, ChevronRight,
+  FolderKanban, Target, Settings, BarChart3, Trash2, Puzzle, ChevronRight, ListTodo,
 } from "lucide-react";
 
 const planItems = [
+  { label: "安排事项", href: "/pending", icon: ListTodo, desc: "待安排与已安排的事务" },
   { label: "项目", href: "/projects", icon: FolderKanban, desc: "管理项目与大模块" },
   { label: "目标", href: "/goals", icon: Target, desc: "长期目标与日常习惯" },
 ];
@@ -38,7 +39,7 @@ export default function BottomTabBar() {
     },
     {
       id: "plan", label: "规划", icon: Layers, path: null,
-      active: pathname.startsWith("/projects") || pathname.startsWith("/goals"),
+      active: pathname.startsWith("/projects") || pathname.startsWith("/goals") || pathname.startsWith("/pending"),
     },
     {
       id: "more", label: "更多", icon: Menu, path: null,

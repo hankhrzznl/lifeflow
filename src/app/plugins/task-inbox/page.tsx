@@ -92,6 +92,8 @@ export default function TaskInboxPluginPage() {
 
     for (const task of tasks) {
       const segs = segmentsMap.get(task.id!) || [];
+      const isPending = segs.length === 0 || (task.requiredSegments != null && segs.length < task.requiredSegments);
+      if (isPending) continue;
       if (segs.length > 0) {
         for (const seg of segs) {
           expanded.push({ task, startTime: seg.startTime, endTime: seg.endTime, source: "segment" });

@@ -2,11 +2,12 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Inbox, Calendar, Folder, Target, Settings, BarChart3, Trash2, Puzzle } from 'lucide-react';
+import { Inbox, Calendar, Folder, Target, Settings, BarChart3, Trash2, Puzzle, ListTodo } from 'lucide-react';
 
 const coreNav = [
   { label: '捕捉', href: '/capture', icon: Inbox },
   { label: '今日', href: '/today', icon: Calendar },
+  { label: '安排', href: '/pending', icon: ListTodo },
   { label: '项目', href: '/projects', icon: Folder },
   { label: '目标', href: '/goals', icon: Target },
   { label: '设置', href: '/settings', icon: Settings },

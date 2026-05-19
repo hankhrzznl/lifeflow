@@ -1,641 +1,347 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { BarChart as BarChartIcon, Flame, Timer, Target, Zap } from "lucide-react";
-import Link from "next/link";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { motion } from "framer-motion";
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  Cell,
-} from "recharts";
-import { getFocusLogsByTimeRange } from "@/lib/db";
-import EmptyState from "@/components/ui/EmptyState";
-import { Skeleton } from "@/components/ui/Skeleton";
-import WeeklyReport from "@/components/review/WeeklyReport";
+  BarChart3, CheckCheck, ListTodo, Flame, Timer, Wallet,
+  TrendingUp, Inbox, ClipboardList, Target,
+} from "lucide-react";
+import {
+  initBuiltInPlugins,
+  getMonthlyTaskStats, getMonthlyHabitStats, getMonthlyFinanceStats,
+  getWeeklyTaskStats, getActiveSchedulableTasks, getReviewRecords,
+  createReviewRecord, getReviewRecordByKey,
+} from "@/lib/db";
+import { showToast } from "@/components/ui/Toast";
+import type { ReviewRecord, Task } from "@/lib/types";
 
-type Period = "week" | "month";
+type ReviewTab = "daily" | "weekly" | "monthly";
 
-const HEATMAP_HOURS = Array.from({ length: 24 }, (_, i) => i);
-const HEATMAP_DAYS = ["一", "二", "三", "四", "五", "六", "日"];
-
-const HEATMAP_GRADIENT = [
-  "fill-gray-100 dark:fill-gray-800",
-  "fill-indigo-50 dark:fill-indigo-950",
-  "fill-indigo-100 dark:fill-indigo-900",
-  "fill-indigo-200 dark:fill-indigo-800",
-  "fill-indigo-300 dark:fill-indigo-700",
-  "fill-indigo-500 dark:fill-indigo-500",
-];
-
-interface DayData {
-  date: string;
-  minutes: number;
-  sessions: number;
+function getTodayStr(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-interface PeriodStats {
-  dailyFocus: DayData[];
-  totalMinutes: number;
-  totalSessions: number;
-  completedSessions: number;
-  averageMinutesPerSession: number;
-  completionRate: number;
-  hourlyDistribution: number[][];
+function getWeekKey(d: Date): string {
+  const start = new Date(d);
+  start.setDate(d.getDate() - d.getDay());
+  return `${start.getFullYear()}-W${String(Math.ceil((start.getDate() - 1 + start.getDay()) / 7) + 1).padStart(2, "0")}`;
 }
 
-function getWeekRange(date: Date) {
-  const d = new Date(date);
-  const day = d.getDay();
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-  const monday = new Date(d.setDate(diff));
-  monday.setHours(0, 0, 0, 0);
-  const sunday = new Date(monday);
-  sunday.setDate(sunday.getDate() + 6);
-  sunday.setHours(23, 59, 59, 999);
-  return { start: monday.getTime(), end: sunday.getTime() };
+function getMonthKey(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
-
-function getMonthRange(date: Date) {
-  const start = new Date(date.getFullYear(), date.getMonth(), 1);
-  start.setHours(0, 0, 0, 0);
-  const end = new Date(date.getFullYear(), date.getMonth() + 1, 0);
-  end.setHours(23, 59, 59, 999);
-  return { start: start.getTime(), end: end.getTime() };
-}
-
-function formatPeriodLabel(period: Period, currentDate: Date) {
-  if (period === "week") {
-    const { start, end } = getWeekRange(currentDate);
-    const s = new Date(start);
-    const e = new Date(end);
-    return `${s.getMonth() + 1}月${s.getDate()}日 - ${e.getMonth() + 1}月${e.getDate()}日`;
-  }
-  return `${currentDate.getFullYear()}年${currentDate.getMonth() + 1}月`;
-}
-
-function getHeatIntensity(value: number, maxValue: number): number {
-  if (maxValue === 0 || value === 0) return 0;
-  const ratio = value / maxValue;
-  if (ratio < 0.1) return 1;
-  if (ratio < 0.3) return 2;
-  if (ratio < 0.5) return 3;
-  if (ratio < 0.75) return 4;
-  return 5;
-}
-
-function FocusHeatmap({ data }: { data: number[][] }) {
-  const maxValue = Math.max(...data.flat(), 1);
-
-  return (
-    <div className="bg-[var(--card-bg)] rounded-2xl border border-[var(--card-border)] p-4 md:p-6">
-      <h3 className="text-sm font-semibold text-[var(--foreground)] mb-4 flex items-center gap-2">
-        <Flame className="w-4 h-4 text-orange-400" />
-        专注时段热力图
-      </h3>
-
-      <div className="w-full overflow-x-auto" style={{ minWidth: 280 }}>
-        <svg
-          viewBox="0 0 350 220"
-          className="w-full h-auto"
-          style={{ maxWidth: 700 }}
-        >
-          {HEATMAP_DAYS.map((d, i) => (
-            <text
-              key={`day-${i}`}
-              x={22}
-              y={28 + i * 26}
-              textAnchor="middle"
-              fontSize={11}
-              fill="currentColor"
-              className="fill-gray-500 dark:fill-gray-400"
-            >
-              {d}
-            </text>
-          ))}
-
-          {HEATMAP_HOURS.map((h) => (
-            <text
-              key={`hour-${h}`}
-              x={40 + h * 12.5}
-              y={16}
-              textAnchor="middle"
-              fontSize={9}
-              fill="currentColor"
-              className="fill-gray-400 dark:fill-gray-500"
-            >
-              {h % 3 === 0 ? `${h}` : ""}
-            </text>
-          ))}
-
-          {data.map((day, dayIdx) =>
-            day.map((value, hour) => {
-              const intensity = getHeatIntensity(value, maxValue);
-              return (
-                <rect
-                  key={`${dayIdx}-${hour}`}
-                  x={30 + hour * 12.5}
-                  y={18 + dayIdx * 26}
-                  width={11.5}
-                  height={24}
-                  rx={3}
-                  className={
-                    HEATMAP_GRADIENT[intensity] || HEATMAP_GRADIENT[0]
-                  }
-                />
-              );
-            })
-          )}
-        </svg>
-      </div>
-
-      <div className="flex items-center gap-2 mt-4 justify-end">
-        <span className="text-[10px] text-gray-400">少</span>
-        {HEATMAP_GRADIENT.map((fill, i) => (
-          <div key={i} className={`w-3 h-3 rounded-sm ${fill}`} />
-        ))}
-        <span className="text-[10px] text-gray-400">多</span>
-      </div>
-    </div>
-  );
-}
-
-const cardVariants = {
-  hidden: { opacity: 0, y: 12 },
-  visible: (i: number) => ({
-    opacity: 1,
-    y: 0,
-    transition: { delay: i * 0.08, duration: 0.35 },
-  }),
-};
-
-const statCardConfigs = [
-  {
-    key: "totalMinutes",
-    label: "总专注",
-    unit: "分钟",
-    icon: Timer,
-    iconColor: "text-indigo-500",
-    bgColor: "bg-indigo-50 dark:bg-indigo-950",
-  },
-  {
-    key: "totalSessions",
-    label: "专注次数",
-    unit: "次",
-    icon: Flame,
-    iconColor: "text-orange-500",
-    bgColor: "bg-orange-50 dark:bg-orange-950",
-  },
-  {
-    key: "averageMinutesPerSession",
-    label: "平均每次",
-    unit: "分钟",
-    icon: Target,
-    iconColor: "text-emerald-500",
-    bgColor: "bg-emerald-50 dark:bg-emerald-950",
-  },
-  {
-    key: "completionRate",
-    label: "完成率",
-    unit: "%",
-    icon: Zap,
-    iconColor: "text-blue-500",
-    bgColor: "bg-blue-50 dark:bg-blue-950",
-  },
-];
 
 export default function ReviewPage() {
-  const [period, setPeriod] = useState<Period>("week");
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [stats, setStats] = useState<PeriodStats | null>(null);
+  const [tab, setTab] = useState<ReviewTab>("daily");
   const [loading, setLoading] = useState(true);
 
-  const dateRange = useMemo(() => {
-    return period === "week"
-      ? getWeekRange(currentDate)
-      : getMonthRange(currentDate);
-  }, [period, currentDate]);
+  const [taskStats, setTaskStats] = useState({ done: 0, active: 0, overdue: 0 });
+  const [habitStats, setHabitStats] = useState({ total: 0, totalChecks: 0 });
+  const [financeStats, setFinanceStats] = useState({ income: 0, expense: 0 });
+  const [weeklyDone, setWeeklyDone] = useState(0);
+  const [weeklyPending, setWeeklyPending] = useState(0);
+  const [pendingTasks, setPendingTasks] = useState<Task[]>([]);
+  const [summary, setSummary] = useState("");
+  const [savedRecord, setSavedRecord] = useState<ReviewRecord | null>(null);
+  const [prevMonthRecord, setPrevMonthRecord] = useState<ReviewRecord | null>(null);
 
-  const fetchStats = useCallback(async () => {
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1;
+
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const logs = await getFocusLogsByTimeRange(
-        dateRange.start,
-        dateRange.end
-      );
+      await initBuiltInPlugins();
 
-      const dailyMap = new Map<
-        string,
-        { minutes: number; sessions: number }
-      >();
+      const [monthTasks, monthHabits, monthFinance, weekTasks, pending] =
+        await Promise.all([
+          getMonthlyTaskStats(currentYear, currentMonth),
+          getMonthlyHabitStats(currentYear, currentMonth),
+          getMonthlyFinanceStats(currentYear, currentMonth),
+          getWeeklyTaskStats(),
+          getActiveSchedulableTasks(),
+        ]);
 
-      const hourlyDistribution: number[][] = Array.from({ length: 7 }, () =>
-        Array(24).fill(0)
-      );
+      setTaskStats(monthTasks);
+      setHabitStats(monthHabits);
+      setFinanceStats(monthFinance);
+      setWeeklyDone(weekTasks.done);
+      setWeeklyPending(weekTasks.pending);
+      setPendingTasks(pending.slice(0, 10));
 
-      let totalMinutes = 0;
-      const totalSessions = logs.length;
-      let completedSessions = 0;
-
-      for (const log of logs) {
-        totalMinutes += Math.round(log.duration / 60);
-        if (log.completed) completedSessions++;
-
-        const logDate = new Date(log.startTime);
-        const dateStr = `${logDate.getFullYear()}-${String(logDate.getMonth() + 1).padStart(2, "0")}-${String(logDate.getDate()).padStart(2, "0")}`;
-
-        if (!dailyMap.has(dateStr)) {
-          dailyMap.set(dateStr, { minutes: 0, sessions: 0 });
-        }
-        const dayEntry = dailyMap.get(dateStr)!;
-        dayEntry.minutes += Math.round(log.duration / 60);
-        dayEntry.sessions++;
-
-        let dayOfWeek = logDate.getDay();
-        dayOfWeek = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-        const hour = logDate.getHours();
-        if (dayOfWeek >= 0 && dayOfWeek < 7 && hour >= 0 && hour < 24) {
-          hourlyDistribution[dayOfWeek][hour] += Math.round(log.duration / 60);
-        }
+      const todayKey = getTodayStr();
+      const existingDaily = await getReviewRecordByKey(todayKey);
+      if (existingDaily) {
+        setSavedRecord(existingDaily);
+        setSummary(existingDaily.summary || "");
       }
 
-      const dailyFocus: DayData[] = [];
-      const sorted = Array.from(dailyMap.entries()).sort(
-        ([a], [b]) => a.localeCompare(b)
-      );
-
-      if (period === "week") {
-        const { start } = dateRange;
-        const monday = new Date(start);
-        for (let i = 0; i < 7; i++) {
-          const d = new Date(monday);
-          d.setDate(d.getDate() + i);
-          const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-          const entry = dailyMap.get(key);
-          dailyFocus.push({
-            date: key,
-            minutes: entry?.minutes ?? 0,
-            sessions: entry?.sessions ?? 0,
-          });
-        }
-      } else {
-        for (const [key, entry] of sorted) {
-          dailyFocus.push({
-            date: key,
-            minutes: entry.minutes,
-            sessions: entry.sessions,
-          });
-        }
+      if (tab === "monthly") {
+        const prevKey = `${currentMonth === 1 ? currentYear - 1 : currentYear}-${String(currentMonth === 1 ? 12 : currentMonth - 1).padStart(2, "0")}`;
+        const prev = await getReviewRecordByKey(prevKey);
+        setPrevMonthRecord(prev || null);
       }
+    } catch { /* ignore */ }
+    finally { setLoading(false); }
+  }, [currentYear, currentMonth, tab]);
 
-      const avgMinutesPerSession =
-        totalSessions > 0
-          ? Math.round((totalMinutes / totalSessions) * 10) / 10
-          : 0;
-      const completionRate =
-        totalSessions > 0
-          ? Math.round((completedSessions / totalSessions) * 100)
-          : 0;
+  useEffect(() => { loadData(); }, [loadData]);
 
-      setStats({
-        dailyFocus,
-        totalMinutes,
-        totalSessions,
-        completedSessions,
-        averageMinutesPerSession: avgMinutesPerSession,
-        completionRate,
-        hourlyDistribution,
+  const handleSaveRecord = async () => {
+    try {
+      const key = tab === "daily" ? getTodayStr() : tab === "weekly" ? getWeekKey(now) : getMonthKey(now);
+      await createReviewRecord({
+        type: tab === "weekly" ? "weekly" : tab === "monthly" ? "monthly" : "daily",
+        dateKey: key,
+        summary: summary || undefined,
+        stats: {
+          tasksDone: tab === "daily" ? weeklyDone : taskStats.done,
+          tasksPending: tab === "daily" ? weeklyPending : taskStats.active,
+          tasksOverdue: taskStats.overdue,
+          habitStreaks: habitStats.totalChecks,
+          focusMinutes: 0,
+          financeIncome: financeStats.income,
+          financeExpense: financeStats.expense,
+        },
       });
-    } finally {
-      setLoading(false);
+      showToast({ message: "回顾已保存", type: "success" });
+      const r = await getReviewRecordByKey(key);
+      if (r) setSavedRecord(r);
+    } catch {
+      showToast({ message: "保存失败", type: "error" });
     }
-  }, [dateRange, period]);
+  };
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchStats();
-  }, [fetchStats]);
-
-  function navigatePeriod(direction: -1 | 1) {
-    setCurrentDate((prev) => {
-      const d = new Date(prev);
-      if (period === "week") {
-        d.setDate(d.getDate() + direction * 7);
-      } else {
-        d.setMonth(d.getMonth() + direction);
-      }
-      return d;
-    });
+  if (loading) {
+    return (
+      <div className="flex flex-col h-full max-w-2xl mx-auto px-4 pt-6 pb-24">
+        <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-5">回顾</h1>
+        <div className="space-y-3">{[1,2,3,4].map((i) => <div key={i} className="skeleton h-24 rounded-xl" />)}</div>
+      </div>
+    );
   }
 
-  const statCards = useMemo(() => {
-    if (!stats) return statCardConfigs.map((c) => ({ ...c, value: "--" }));
-    return statCardConfigs.map((c) => ({
-      ...c,
-      value: String(stats[c.key as keyof PeriodStats] ?? "--"),
-    }));
-  }, [stats]);
-
-  const reportPayload = useMemo(() => {
-    if (!stats) return null;
-
-    let bestDay: { date: string; minutes: number } | null = null;
-    let hourlyPeak: { hour: number; minutes: number } | null = null;
-
-    for (const d of stats.dailyFocus) {
-      if (!bestDay || d.minutes > bestDay.minutes) {
-        bestDay = { date: d.date, minutes: d.minutes };
-      }
-    }
-
-    if (bestDay && bestDay.minutes === 0) {
-      bestDay = null;
-    }
-
-    let peakHour = 0;
-    let peakMinutes = 0;
-    for (let h = 0; h < 24; h++) {
-      let total = 0;
-      for (let d = 0; d < 7; d++) {
-        total += stats.hourlyDistribution[d]?.[h] ?? 0;
-      }
-      if (total > peakMinutes) {
-        peakMinutes = total;
-        peakHour = h;
-      }
-    }
-
-    if (peakMinutes > 0) {
-      hourlyPeak = { hour: peakHour, minutes: peakMinutes };
-    }
-
-    return {
-      period: {
-        start: new Date(dateRange.start).toISOString(),
-        end: new Date(dateRange.end).toISOString(),
-        type: period,
-      },
-      stats: {
-        totalMinutes: stats.totalMinutes,
-        totalSessions: stats.totalSessions,
-        completedSessions: stats.completedSessions,
-        averageSessionMinutes: stats.averageMinutesPerSession,
-        completionRate: stats.completionRate,
-        bestDay,
-        dailyBreakdown: stats.dailyFocus,
-        hourlyPeak,
-      },
-    };
-  }, [stats, dateRange, period]);
-
-  const hasData =
-    stats && stats.totalSessions > 0;
-
-  const barChartData = useMemo(() => {
-    if (!stats) return [];
-    return stats.dailyFocus.map((d) => ({
-      name: d.date.slice(5),
-      date: d.date,
-      minutes: d.minutes,
-      sessions: d.sessions,
-    }));
-  }, [stats]);
-
   return (
-    <div className="flex flex-col h-full">
-      <header className="flex-shrink-0 flex items-center justify-between px-4 py-3 border-b border-[var(--card-border)] bg-[var(--card-bg)]">
-        <div className="flex items-center gap-2">
-          <BarChartIcon className="w-5 h-5 text-primary-500" />
-          <h1 className="text-lg font-semibold text-[var(--foreground)]">回顾</h1>
-        </div>
-      </header>
+    <div className="flex flex-col h-full max-w-2xl mx-auto px-4 pt-6 pb-24">
+      <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">回顾</h1>
 
-      <div className="flex-1 overflow-y-auto">
-        <div className="px-4 py-4 flex flex-col gap-4">
-          <div className="sticky top-0 z-10 py-2 bg-[var(--background)]/80 backdrop-blur-md">
-            <div className="flex items-center justify-between">
-              <button
-                onClick={() => navigatePeriod(-1)}
-                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-              >
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 16 16"
-                  fill="none"
-                  className="text-[var(--foreground)]"
-                >
-                  <path
-                    d="M10 4L6 8L10 12"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                  />
-                </svg>
-              </button>
+      <div className="flex border-b border-gray-200 dark:border-gray-800 mb-4">
+        {([
+          { key: "daily" as const, label: "日回顾" },
+          { key: "weekly" as const, label: "周回顾" },
+          { key: "monthly" as const, label: "月复盘" },
+        ]).map(({ key, label }) => (
+          <button key={key} onClick={() => setTab(key)}
+            className={`flex-1 py-2.5 text-sm font-medium border-b-2 transition-colors ${tab === key ? "text-indigo-600 border-indigo-600" : "text-gray-500 border-transparent hover:text-gray-700"}`}>
+            {label}
+          </button>
+        ))}
+      </div>
 
-              <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5">
-                {(["week", "month"] as Period[]).map((p) => (
-                  <button
-                    key={p}
-                    onClick={() => setPeriod(p)}
-                    className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                      period === p
-                        ? "bg-white dark:bg-gray-700 text-[var(--foreground)] shadow-sm"
-                        : "text-[var(--muted-foreground)]"
-                    }`}
-                  >
-                    {p === "week" ? "周" : "月"}
-                  </button>
-                ))}
+      <div className="flex-1 overflow-y-auto space-y-4">
+        {/* Daily Review */}
+        {tab === "daily" && (
+          <>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-white dark:bg-gray-900 rounded-2xl p-4 border border-gray-100 dark:border-gray-800">
+                <div className="flex items-center gap-2 mb-1">
+                  <CheckCheck className="w-4 h-4 text-emerald-500" />
+                  <span className="text-xs text-gray-500">本周完成</span>
+                </div>
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{weeklyDone}</p>
               </div>
-
-              <button
-                onClick={() => navigatePeriod(1)}
-                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-              >
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 16 16"
-                  fill="none"
-                  className="text-[var(--foreground)]"
-                >
-                  <path
-                    d="M6 4L10 8L6 12"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                  />
-                </svg>
-              </button>
+              <div className="bg-white dark:bg-gray-900 rounded-2xl p-4 border border-gray-100 dark:border-gray-800">
+                <div className="flex items-center gap-2 mb-1">
+                  <ListTodo className="w-4 h-4 text-amber-500" />
+                  <span className="text-xs text-gray-500">待办</span>
+                </div>
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{weeklyPending}</p>
+              </div>
+              <div className="bg-white dark:bg-gray-900 rounded-2xl p-4 border border-gray-100 dark:border-gray-800">
+                <div className="flex items-center gap-2 mb-1">
+                  <Flame className="w-4 h-4 text-orange-500" />
+                  <span className="text-xs text-gray-500">习惯打卡</span>
+                </div>
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{habitStats.totalChecks}</p>
+              </div>
+              <div className="bg-white dark:bg-gray-900 rounded-2xl p-4 border border-gray-100 dark:border-gray-800">
+                <div className="flex items-center gap-2 mb-1">
+                  <Wallet className="w-4 h-4 text-blue-500" />
+                  <span className="text-xs text-gray-500">今日支出</span>
+                </div>
+                <p className="text-2xl font-bold text-red-500">{financeStats.expense.toFixed(0)}</p>
+              </div>
             </div>
 
-            <p className="text-center text-xs text-[var(--muted-foreground)] mt-2">
-              {formatPeriodLabel(period, currentDate)}
-            </p>
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <AnimatePresence mode="wait">
-              {loading ? (
-                <div
-                  key="loading-cards"
-                  className="contents"
-                >
-                  {Array.from({ length: 4 }).map((_, i) => (
-                    <Skeleton key={i} className="h-24 rounded-2xl" />
+            {pendingTasks.length > 0 && (
+              <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Target className="w-4 h-4 text-indigo-500" />
+                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">明天待办预览</h3>
+                </div>
+                <div className="space-y-1">
+                  {pendingTasks.slice(0, 5).map((t) => (
+                    <div key={t.id} className="text-xs text-gray-500 truncate">· {t.title}</div>
                   ))}
                 </div>
-              ) : (
-                statCards.map((card, i) => (
-                  <motion.div
-                    key={`${card.key}-${card.value}`}
-                    className="bg-[var(--card-bg)] rounded-2xl border border-[var(--card-border)] p-4"
-                    custom={i}
-                    variants={cardVariants}
-                    initial="hidden"
-                    animate="visible"
-                  >
-                    <div
-                      className={`w-8 h-8 rounded-lg ${card.bgColor} flex items-center justify-center mb-3`}
-                    >
-                      <card.icon
-                        className={`w-4 h-4 ${card.iconColor}`}
-                      />
-                    </div>
-                    <p className="text-xs text-[var(--muted-foreground)] mb-0.5">
-                      {card.label}
-                    </p>
-                    <p className="text-xl font-bold text-[var(--foreground)] tracking-tight">
-                      {card.value}
-                      <span className="text-xs font-normal text-[var(--muted-foreground)] ml-0.5">
-                        {card.unit}
-                      </span>
-                    </p>
-                  </motion.div>
-                ))
+              </div>
+            )}
+
+            <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-4">
+              <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">今日反思</p>
+              <textarea
+                value={summary}
+                onChange={(e) => setSummary(e.target.value)}
+                placeholder="今天完成了什么？有什么需要改进？"
+                rows={3}
+                className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <button onClick={handleSaveRecord}
+                className="mt-2 w-full py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition-colors">
+                保存日回顾
+              </button>
+            </div>
+          </>
+        )}
+
+        {/* Weekly Review */}
+        {tab === "weekly" && (
+          <>
+            <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Inbox className="w-4 h-4 text-amber-500" />
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Step 1 · 收件箱清理</h3>
+              </div>
+              <p className="text-xs text-gray-500 mb-3">本周待安排任务：{taskStats.active + taskStats.overdue} 个（{taskStats.overdue} 个已逾期）</p>
+              <a href="/pending" className="inline-block text-xs font-medium text-indigo-600 hover:text-indigo-700">
+                前往安排事项 →
+              </a>
+            </div>
+
+            <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <CheckCheck className="w-4 h-4 text-emerald-500" />
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Step 2 · 本周概览</h3>
+              </div>
+              <div className="grid grid-cols-2 gap-3 mt-3">
+                <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
+                  <p className="text-xs text-gray-400">完成任务</p>
+                  <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{weeklyDone}</p>
+                </div>
+                <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
+                  <p className="text-xs text-gray-400">待办任务</p>
+                  <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{weeklyPending}</p>
+                </div>
+                <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
+                  <p className="text-xs text-gray-400">习惯打卡</p>
+                  <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{habitStats.totalChecks}</p>
+                </div>
+                <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
+                  <p className="text-xs text-gray-400">本月收支</p>
+                  <p className={`text-lg font-bold ${financeStats.income - financeStats.expense >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+                    {(financeStats.income - financeStats.expense).toFixed(0)}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <ClipboardList className="w-4 h-4 text-indigo-500" />
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Step 3 · 下周计划</h3>
+              </div>
+              {pendingTasks.length > 0 && (
+                <div className="space-y-1 mb-3">
+                  {pendingTasks.slice(0, 8).map((t) => (
+                    <div key={t.id} className="text-xs text-gray-500 truncate">· {t.title}</div>
+                  ))}
+                </div>
               )}
-            </AnimatePresence>
-          </div>
-
-          {loading ? (
-            <Skeleton className="h-64 rounded-2xl" />
-          ) : hasData ? (
-            <div className="bg-[var(--card-bg)] rounded-2xl border border-[var(--card-border)] p-4 md:p-6">
-              <h3 className="text-sm font-semibold text-[var(--foreground)] mb-4 flex items-center gap-2">
-                <BarChartIcon className="w-4 h-4 text-indigo-500" />
-                每日专注时长
-              </h3>
-
-              <ResponsiveContainer width="100%" height={250}>
-                <BarChart data={barChartData}>
-                  <XAxis
-                    dataKey="name"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: "#6b7280", fontSize: 12 }}
-                  />
-                  <YAxis
-                    tickFormatter={(v) => `${v}m`}
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: "#6b7280", fontSize: 12 }}
-                  />
-                  <Tooltip
-                    formatter={(value) => {
-                      const v = Number(value) || 0;
-                      return [`${Math.floor(v / 60)}h ${v % 60}m`, "专注时长"];
-                    }}
-                    labelFormatter={(label) => String(label || "")}
-                    contentStyle={{
-                      borderRadius: 12,
-                      border: "none",
-                      boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-                      fontSize: 13,
-                    }}
-                  />
-                  <Bar
-                    dataKey="minutes"
-                    radius={[4, 4, 0, 0]}
-                    maxBarSize={48}
-                  >
-                    {barChartData.map((entry, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill="#6366f1"
-                        fillOpacity={entry.minutes > 0 ? 1 : 0.15}
-                      />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+              <a href="/pending" className="inline-block text-xs font-medium text-indigo-600 hover:text-indigo-700">
+                前往安排下周任务 →
+              </a>
             </div>
-          ) : (
-            <div className="bg-[var(--card-bg)] rounded-2xl border border-[var(--card-border)] p-4 md:p-6">
-              <h3 className="text-sm font-semibold text-[var(--foreground)] mb-4 flex items-center gap-2">
-                <BarChartIcon className="w-4 h-4 text-indigo-500" />
-                每日专注时长
-              </h3>
-              <EmptyState
-                icon={
-                  <BarChartIcon className="w-10 h-10 text-gray-300 dark:text-gray-600" />
-                }
-                title="暂无数据"
-                description="选中周期内没有专注记录"
+
+            <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-4">
+              <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">周反思笔记</p>
+              <textarea
+                value={summary}
+                onChange={(e) => setSummary(e.target.value)}
+                placeholder="这周完成了什么？有哪些收获和改进？"
+                rows={3}
+                className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
+              <button onClick={handleSaveRecord}
+                className="mt-2 w-full py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition-colors">
+                保存周回顾
+              </button>
             </div>
-          )}
+          </>
+        )}
 
-          {loading ? (
-            <Skeleton className="h-56 rounded-2xl" />
-          ) : hasData ? (
-            <FocusHeatmap
-              data={stats?.hourlyDistribution ?? Array.from({ length: 7 }, () => Array(24).fill(0))}
-            />
-          ) : (
-            <div className="bg-[var(--card-bg)] rounded-2xl border border-[var(--card-border)] p-4 md:p-6">
-              <h3 className="text-sm font-semibold text-[var(--foreground)] mb-4 flex items-center gap-2">
-                <Flame className="w-4 h-4 text-orange-400" />
-                专注时段热力图
-              </h3>
-              <EmptyState
-                icon={
-                  <Flame className="w-10 h-10 text-gray-300 dark:text-gray-600" />
-                }
-                title="暂无数据"
-                description="开始专注后将在此显示热力图"
+        {/* Monthly Review */}
+        {tab === "monthly" && (
+          <>
+            <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <TrendingUp className="w-4 h-4 text-indigo-500" />
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">{currentYear}年{currentMonth}月 复盘</h3>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
+                  <p className="text-xs text-gray-400">完成任务</p>
+                  <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{taskStats.done}</p>
+                  {prevMonthRecord && (
+                    <p className="text-[10px] text-gray-400 mt-0.5">
+                      {prevMonthRecord.stats.tasksDone > 0 ? `${taskStats.done > prevMonthRecord.stats.tasksDone ? "↑" : "↓"} 上月 ${prevMonthRecord.stats.tasksDone}` : ""}
+                    </p>
+                  )}
+                </div>
+                <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
+                  <p className="text-xs text-gray-400">逾期任务</p>
+                  <p className={`text-lg font-bold ${taskStats.overdue > 0 ? "text-red-500" : "text-gray-900 dark:text-gray-100"}`}>{taskStats.overdue}</p>
+                </div>
+                <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
+                  <p className="text-xs text-gray-400">习惯打卡</p>
+                  <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{habitStats.totalChecks}</p>
+                </div>
+                <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
+                  <p className="text-xs text-gray-400">习惯数量</p>
+                  <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{habitStats.total}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                <div className="p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl">
+                  <p className="text-xs text-emerald-600 dark:text-emerald-400">收入</p>
+                  <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">{financeStats.income.toFixed(0)}</p>
+                </div>
+                <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-xl">
+                  <p className="text-xs text-red-500">支出</p>
+                  <p className="text-lg font-bold text-red-500">{financeStats.expense.toFixed(0)}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-4">
+              <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">月度反思</p>
+              <textarea
+                value={summary}
+                onChange={(e) => setSummary(e.target.value)}
+                placeholder="这个月完成了什么？收入支出如何？有哪些收获和改进？"
+                rows={4}
+                className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
+              <button onClick={handleSaveRecord}
+                className="mt-2 w-full py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition-colors">
+                保存月复盘
+              </button>
             </div>
-          )}
-
-          {!loading && reportPayload && (
-            <WeeklyReport
-              period={reportPayload.period}
-              stats={reportPayload.stats}
-              hasData={hasData ?? false}
-            />
-          )}
-
-          {!loading && !hasData && (
-            <div className="bg-[var(--card-bg)] rounded-2xl border border-[var(--card-border)] p-6 text-center">
-              <p className="text-sm text-[var(--muted-foreground)] mb-4">
-                没有任何专注数据？去开始第一段专注吧
-              </p>
-              <Link
-                href="/plugins/focus-timer"
-                className="inline-flex items-center gap-1.5 bg-indigo-500 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-indigo-600 transition-colors"
-              >
-                <Timer className="w-4 h-4" />
-                开始专注
-              </Link>
-            </div>
-          )}
-        </div>
+          </>
+        )}
       </div>
     </div>
   );

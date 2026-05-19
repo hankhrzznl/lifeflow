@@ -101,6 +101,8 @@ export interface Task {
   dueDate?: number;
   requiredSegments?: number;
   segmentReminderDays?: number;
+  reminderStage?: 'none' | 'planning' | 'midpoint' | 'final';
+  lastReminderAt?: number;
   successCriteria?: string;
   frequency?: 'daily' | 'weekly' | 'monthly';
   captureSourceId?: number;
@@ -249,3 +251,20 @@ export const FIN_CATEGORIES = {
     { key: 'other_income', label: '其他', icon: '📋', color: '#9CA3AF', bg: '#F3F4F6' },
   ],
 };
+
+export interface ReviewRecord {
+  id?: number;
+  type: 'daily' | 'weekly' | 'monthly';
+  dateKey: string;
+  summary?: string;
+  stats: {
+    tasksDone: number;
+    tasksPending: number;
+    tasksOverdue: number;
+    habitStreaks: number;
+    focusMinutes: number;
+    financeIncome: number;
+    financeExpense: number;
+  };
+  createdAt: number;
+}

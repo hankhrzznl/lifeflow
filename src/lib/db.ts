@@ -17,6 +17,7 @@ import type {
   TimeSegment,
   FinRecord,
   FinAccount,
+  ReviewRecord,
 } from "./types";
 
 export class LifeFlowDB extends Dexie {
@@ -37,6 +38,7 @@ export class LifeFlowDB extends Dexie {
   timeSegments!: Table<TimeSegment, number>;
   finRecords!: Table<FinRecord, number>;
   finAccounts!: Table<FinAccount, number>;
+  reviewRecords!: Table<ReviewRecord, number>;
 
   constructor() {
     super("LifeFlowDB");
@@ -179,6 +181,14 @@ export class LifeFlowDB extends Dexie {
     }).upgrade(async () => {
       if (typeof window !== "undefined" && window.location.hostname === "localhost") {
         console.log("[LifeFlowDB v9] Added finAccounts table");
+      }
+    });
+
+    this.version(10).stores({
+      reviewRecords: "++id, type, dateKey, createdAt",
+    }).upgrade(async () => {
+      if (typeof window !== "undefined" && window.location.hostname === "localhost") {
+        console.log("[LifeFlowDB v10] Added reviewRecords table");
       }
     });
   }
@@ -1441,4 +1451,71 @@ export async function getActiveSchedulableTasks(): Promise<Task[]> {
 
 export async function getTimeSegmentsByDateRange(rangeStart: number, rangeEnd: number): Promise<TimeSegment[]> {
   return db.timeSegments.where("startTime").between(rangeStart, rangeEnd).toArray();
+}
+
+export async function createReviewRecord(record: Omit<ReviewRecord, "id" | "createdAt">): Promise<number> {
+  return db.reviewRecords.add({ ...record, createdAt: Date.now() });
+}
+
+export async function getReviewRecords(type: ReviewRecord["type"]): Promise<ReviewRecord[]> {
+  return db.reviewRecords.where("type").equals(type).reverse().sortBy("createdAt");
+}
+
+export async function getReviewRecordByKey(dateKey: string): Promise<ReviewRecord | undefined> {
+  return db.reviewRecords.where("dateKey").equals(dateKey).first();
+}
+
+export async function getMonthlyTaskStats(year: number, month: number): Promise<{ done: number; active: number; overdue: number }> {
+  const prefix = `${year}-${String(month).padStart(2, "0")}`;
+  const all = await db.tasks
+    .filter((t) => (t.type === "shortterm" || t.type === "daily" || t.type === "habit"))
+    .toArray();
+  const inMonth = all.filter((t) => {
+    const d = new Date(t.createdAt);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}` === prefix;
+  });
+  return {
+    done: inMonth.filter((t) => t.status === "done").length,
+    active: inMonth.filter((t) => t.status === "active").length,
+    overdue: inMonth.filter((t) => t.status === "active" && t.dueDate != null && t.dueDate < Date.now()).length,
+  };
+}
+
+export async function getMonthlyHabitStats(year: number, month: number): Promise<{ total: number; totalChecks: number }> {
+  const mStr = `${year}-${String(month).padStart(2, "0")}`;
+  const logs = await db.habit_logs
+    .filter((l) => l.date.startsWith(mStr))
+    .toArray();
+  const habits = await db.tasks.where("type").equals("habit").filter((t) => t.status === "active").toArray();
+  return {
+    total: habits.length,
+    totalChecks: logs.length,
+  };
+}
+
+export async function getMonthlyFinanceStats(year: number, month: number): Promise<{ income: number; expense: number }> {
+  const prefix = `${year}-${String(month).padStart(2, "0")}`;
+  const records = await db.finRecords
+    .where("date")
+    .startsWith(prefix)
+    .toArray();
+  return {
+    income: records.filter((r) => r.type === "income").reduce((s, r) => s + r.amount, 0),
+    expense: records.filter((r) => r.type === "expense").reduce((s, r) => s + r.amount, 0),
+  };
+}
+
+export async function getWeeklyTaskStats(): Promise<{ done: number; pending: number }> {
+  const now = new Date();
+  const weekStart = new Date(now);
+  weekStart.setDate(now.getDate() - now.getDay());
+  weekStart.setHours(0, 0, 0, 0);
+  const weekStartTs = weekStart.getTime();
+  const all = await db.tasks
+    .filter((t) => t.type === "shortterm" || t.type === "daily" || t.type === "habit")
+    .toArray();
+  return {
+    done: all.filter((t) => t.status === "done" && t.updatedAt >= weekStartTs).length,
+    pending: all.filter((t) => t.status === "active").length,
+  };
 }

@@ -5,12 +5,13 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft, Clock, ListTodo, ChevronRight,
   Calendar, Minus, Plus, Check, CheckCircle,
-  Target, FolderKanban, Layers, GripVertical,
+  Target, FolderKanban, Layers, GripVertical, Trash2,
 } from "lucide-react";
 import Link from "next/link";
 import {
   initBuiltInPlugins, getActiveSchedulableTasks, getTimeSegments,
   updateTask, getAllProjectsV2, getBoardsByProject, getSectionsByBoard,
+  createTask, getChildTasks,
 } from "@/lib/db";
 import { showToast } from "@/components/ui/Toast";
 import TaskDetail from "@/components/ui/TaskDetail";
@@ -95,9 +96,13 @@ export default function PendingPage() {
   const [draftSectionId, setDraftSectionId] = useState<number | null>(null);
   const [draftSegments, setDraftSegments] = useState(1);
   const [draftReminderDays, setDraftReminderDays] = useState(3);
+  const [draftFrequency, setDraftFrequency] = useState<Task["frequency"]>("daily");
   const [projects, setProjects] = useState<ProjectV2[]>([]);
   const [boards, setBoards] = useState<Board[]>([]);
   const [sections, setSections] = useState<Section[]>([]);
+  const [childTasks, setChildTasks] = useState<Task[]>([]);
+  const [showAddChild, setShowAddChild] = useState(false);
+  const [childTitle, setChildTitle] = useState("");
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -150,12 +155,46 @@ export default function PendingPage() {
     setDraftSectionId(task.sectionId ?? null);
     setDraftSegments(task.requiredSegments ?? 1);
     setDraftReminderDays(task.segmentReminderDays ?? 3);
+    setDraftFrequency(task.frequency ?? "daily");
     setProcessStep(1);
     setProjects([]);
     setBoards([]);
     setSections([]);
+    setShowAddChild(false);
+    setChildTitle("");
+    loadChildren(task.id!);
     if (!task.sectionId) loadProjects();
   }, [loadProjects]);
+
+  const loadChildren = useCallback(async (parentId: number) => {
+    const c = await getChildTasks(parentId).catch(() => [] as Task[]);
+    setChildTasks(c);
+  }, []);
+
+  const handleAddChild = async () => {
+    if (!currentTask || !childTitle.trim()) return;
+    try {
+      await createTask({
+        title: childTitle.trim(),
+        type: "shortterm",
+        status: "active",
+        parentTaskId: currentTask.id!,
+        priority: "not-urgent-important",
+      });
+      setChildTitle("");
+      setShowAddChild(false);
+      showToast({ message: "已添加子事项", type: "success" });
+      await loadChildren(currentTask.id!);
+    } catch { showToast({ message: "添加失败", type: "error" }); }
+  };
+
+  const handleDeleteChild = async (childId: number) => {
+    try {
+      await updateTask(childId, { status: "archived" });
+      showToast({ message: "已移除", type: "info" });
+      if (currentTask) loadChildren(currentTask.id!);
+    } catch { showToast({ message: "操作失败", type: "error" }); }
+  };
 
   const handleQuickType = async (task: Task, type: Task["type"]) => {
     try {
@@ -173,7 +212,8 @@ export default function PendingPage() {
       await updateTask(currentTask.id!, {
         type: draftType,
         priority: draftPriority,
-        dueDate: draftDueDate ? new Date(draftDueDate).getTime() : undefined,
+        dueDate: draftType === "habit" ? undefined : (draftDueDate ? new Date(draftDueDate).getTime() : undefined),
+        frequency: draftType === "habit" ? draftFrequency : undefined,
       });
       showToast({ message: "分类已保存", type: "success" });
       setProcessStep(2);
@@ -375,12 +415,27 @@ export default function PendingPage() {
                     ))}
                   </div>
                 </div>
-                <div>
-                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">截止日期</p>
-                  <input type="datetime-local" value={draftDueDate}
-                    onChange={(e) => setDraftDueDate(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                </div>
+                {draftType !== "habit" && (
+                  <div>
+                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">截止日期</p>
+                    <input type="datetime-local" value={draftDueDate}
+                      onChange={(e) => setDraftDueDate(e.target.value)}
+                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  </div>
+                )}
+                {draftType === "habit" && (
+                  <div>
+                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">频率</p>
+                    <div className="flex gap-2">
+                      {(["daily", "weekly", "monthly"] as const).map((f) => (
+                        <button key={f} onClick={() => setDraftFrequency(f)}
+                          className={`flex-1 py-2 rounded-xl text-sm font-medium border transition-colors ${draftFrequency === f ? "bg-orange-100 dark:bg-orange-900/30 text-orange-600 border-orange-300" : "bg-gray-50 dark:bg-gray-800 text-gray-500 border-gray-200 dark:border-gray-700 hover:bg-gray-100"}`}>
+                          {f === "daily" ? "每天" : f === "weekly" ? "每周" : "每月"}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 <div className="flex gap-3">
                   <button onClick={() => setExpandedTaskId(null)} className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm text-gray-500">跳过</button>
                   <button onClick={handleSaveStep1}
@@ -394,38 +449,46 @@ export default function PendingPage() {
             {processStep === 2 && (
               <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-4 space-y-4">
                 <div>
-                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">项目</p>
-                  <select value={draftProjectId ?? ""} onChange={(e) => handleProjectChange(e.target.value ? parseInt(e.target.value) : null)}
-                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    <option value="">不归属项目</option>
-                    {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-                  </select>
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">拆解子事项</p>
+                  <p className="text-xs text-gray-400 mb-3">将大事项拆解为可独立安排和执行的小任务</p>
+                  {childTasks.length > 0 && (
+                    <div className="space-y-1 mb-3">
+                      {childTasks.map((ct) => (
+                        <div key={ct.id} className="flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-xl">
+                          <span className="flex-1 text-xs text-gray-700 dark:text-gray-300 truncate">{ct.title}</span>
+                          <button onClick={() => handleDeleteChild(ct.id!)}
+                            className="text-gray-400 hover:text-red-500"><Trash2 className="w-3 h-3" /></button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {showAddChild ? (
+                    <div className="flex gap-2">
+                      <input type="text" value={childTitle} onChange={(e) => setChildTitle(e.target.value)}
+                        placeholder="子事项标题"
+                        className="flex-1 px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm"
+                        autoFocus
+                        onKeyDown={(e) => { if (e.key === "Enter") handleAddChild(); }} />
+                      <button onClick={handleAddChild} disabled={!childTitle.trim()}
+                        className="px-3 py-2 rounded-xl bg-indigo-500 text-white text-xs font-medium disabled:opacity-40">添加</button>
+                      <button onClick={() => setShowAddChild(false)}
+                        className="px-2 py-2 rounded-xl text-xs text-gray-400">取消</button>
+                    </div>
+                  ) : (
+                    <button onClick={() => setShowAddChild(true)}
+                      className="flex items-center gap-1 text-xs font-medium text-indigo-600 hover:text-indigo-700">
+                      <Plus className="w-3 h-3" />添加子事项
+                    </button>
+                  )}
                 </div>
-                {boards.length > 0 && (
-                  <div>
-                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">大模块</p>
-                    <select value={draftBoardId ?? ""} onChange={(e) => handleBoardChange(e.target.value ? parseInt(e.target.value) : null)}
-                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                      <option value="">不归大模块</option>
-                      {boards.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
-                    </select>
-                  </div>
-                )}
-                {sections.length > 0 && (
-                  <div>
-                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">子模块</p>
-                    <select value={draftSectionId ?? ""} onChange={(e) => setDraftSectionId(e.target.value ? parseInt(e.target.value) : null)}
-                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                      <option value="">不归子模块</option>
-                      {sections.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                    </select>
-                  </div>
+                {childTasks.length > 0 && (
+                  <p className="text-xs text-gray-400">父事项进度: 0/{childTasks.length} 子事项完成</p>
                 )}
                 <div className="flex gap-3">
                   <button onClick={() => setProcessStep(1)} className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm text-gray-500">上一步</button>
-                  <button onClick={handleSaveStep2}
+                  <button onClick={() => setProcessStep(3)}
                     className="flex-1 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition-colors">
-                    保存并继续
+                    继续安排
                   </button>
                 </div>
               </div>

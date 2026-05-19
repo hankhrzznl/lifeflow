@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Inbox, Send, Trash2, X, Mountain,
-  CalendarDays, ClipboardList, Flame, CheckSquare, XCircle,
+  CalendarDays, ClipboardList, CheckSquare, XCircle,
   ChevronRight,
 } from "lucide-react";
 import { createTask, deleteTask, restoreTask, updateTask, createSection, updateSection, getTasksByType, getAllProjectsV2, getBoardsByProject, getSectionsByBoard } from "@/lib/db";
@@ -28,7 +28,6 @@ function relativeTime(timestamp: number): string {
 const CLASSIFICATION_OPTIONS = [
   { key: "short-term", label: "短期事件", icon: CalendarDays, color: "text-blue-500", bgColor: "bg-blue-50" },
   { key: "daily-trivial", label: "日常琐事", icon: ClipboardList, color: "text-green-500", bgColor: "bg-green-50" },
-  { key: "habits", label: "习惯", icon: Flame, color: "text-orange-500", bgColor: "bg-orange-50" },
 ] as const;
 
 type ClassificationType = (typeof CLASSIFICATION_OPTIONS)[number]["key"];
@@ -37,7 +36,6 @@ const GOAL_TYPES: { type: GoalViewType; label: string; desc: string; icon: typeo
   { type: "long-term", label: "长期目标", desc: "成为一个更大目标的里程碑", icon: Mountain, color: "text-indigo-600" },
   { type: "short-term", label: "短期事件", desc: "作为独立事件执行", icon: CalendarDays, color: "text-blue-600" },
   { type: "daily-trivial", label: "日常琐事", desc: "转为每天重复的待办", icon: ClipboardList, color: "text-green-600" },
-  { type: "habits", label: "习惯追踪", desc: "建立一个新的日常习惯", icon: Flame, color: "text-orange-600" },
 ];
 
 export default function CapturePage() {
@@ -69,9 +67,7 @@ export default function CapturePage() {
     note: string;
     dueDate: string;
     successCriteria: string;
-    frequency: "daily" | "weekly" | "monthly";
-    targetCount: string;
-  }>({ title: "", priority: "not-urgent-important", projectId: null, boardId: null, sectionId: null, note: "", dueDate: "", successCriteria: "", frequency: "daily", targetCount: "" });
+  }>({ title: "", priority: "not-urgent-important", projectId: null, boardId: null, sectionId: null, note: "", dueDate: "", successCriteria: "" });
 
   const [projects, setProjects] = useState<ProjectV2[]>([]);
   const [boards, setBoards] = useState<Board[]>([]);
@@ -161,8 +157,6 @@ export default function CapturePage() {
       note: "",
       dueDate: "",
       successCriteria: "",
-      frequency: "daily",
-      targetCount: "",
     });
   }, []);
 
@@ -209,20 +203,19 @@ export default function CapturePage() {
     if (!classifyTarget || !taskDraft.title.trim() || !selectedClassification) return;
     const c = selectedClassification;
     const typeMap: Record<ClassificationType, Task["type"]> = {
-      "short-term": "shortterm", "daily-trivial": "daily", "habits": "habit",
+      "short-term": "shortterm", "daily-trivial": "daily",
     };
     try {
       await createTask({
         title: taskDraft.title,
         type: typeMap[c],
-        classification: (c === "habits" ? "habit" : c) as Task["classification"],
+        classification: c as Task["classification"],
         status: "active",
         priority: taskDraft.priority,
         sectionId: taskDraft.sectionId ?? undefined,
         note: taskDraft.note || undefined,
         successCriteria: taskDraft.successCriteria || undefined,
         dueDate: taskDraft.dueDate ? new Date(taskDraft.dueDate).getTime() : undefined,
-        frequency: (c === "habits" ? taskDraft.frequency : undefined),
       });
       await updateTask(classifyTarget.id!, { status: "done" });
       showToast({ message: `已创建为「${CLASSIFICATION_OPTIONS.find((o) => o.key === c)?.label}」`, type: "success" });
@@ -255,8 +248,8 @@ export default function CapturePage() {
     try {
       const item = allActiveRef.current.find((t) => t.id === captureId);
       if (!item) return;
-      const taskType = targetType === "habits" ? "habit" : (targetType === "long-term" ? "longterm" : targetType === "short-term" ? "shortterm" : "daily");
-      await createTask({ title: item.title, type: taskType, status: "active", tags: item.tags, classification: (targetType === "habits" ? "habit" : targetType) as Task["classification"] });
+      const taskType = targetType === "long-term" ? "longterm" : targetType === "short-term" ? "shortterm" : "daily";
+      await createTask({ title: item.title, type: taskType, status: "active", tags: item.tags, classification: targetType as Task["classification"] });
       await updateTask(captureId, { status: "done" });
       showToast({ message: `已分配到「${GOAL_TYPES.find((g) => g.type === targetType)?.label}」`, type: "success" });
       await loadItems();
@@ -581,7 +574,6 @@ export default function CapturePage() {
                 <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">
                   {selectedClassification === "short-term" && "创建短期事件"}
                   {selectedClassification === "daily-trivial" && "创建日常琐事"}
-                  {selectedClassification === "habits" && "创建习惯"}
                 </h3>
 
                 <div>
@@ -618,25 +610,6 @@ export default function CapturePage() {
                 {(selectedClassification === "short-term" || selectedClassification === "daily-trivial") && (
                   <div className="grid grid-cols-2 gap-3">
                   </div>
-                )}
-
-                {selectedClassification === "habits" && (
-                  <>
-                    <div>
-                      <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">频率</label>
-                      <div className="flex gap-2">
-                        {(["daily", "weekly", "monthly"] as const).map((f) => (
-                          <button key={f} onClick={() => setTaskDraft((d) => ({ ...d, frequency: f }))} className={`flex-1 py-2 rounded-xl text-sm font-medium border transition-all ${taskDraft.frequency === f ? "bg-orange-100 text-orange-600 border-orange-300" : "border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"}`}>
-                            {f === "daily" ? "每天" : f === "weekly" ? "每周" : "每月"}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">目标次数</label>
-                      <input type="number" value={taskDraft.targetCount} onChange={(e) => setTaskDraft((d) => ({ ...d, targetCount: e.target.value }))} placeholder={`每${taskDraft.frequency === "daily" ? "天" : taskDraft.frequency === "weekly" ? "周" : "月"}完成次数`} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                    </div>
-                  </>
                 )}
 
                 {selectedClassification !== "daily-trivial" && (

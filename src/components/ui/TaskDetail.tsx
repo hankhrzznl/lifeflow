@@ -53,6 +53,8 @@ export default function TaskDetail({ taskId, onClose, onUpdate }: TaskDetailProp
   const [addingSegment, setAddingSegment] = useState(false);
   const [newSegStart, setNewSegStart] = useState("");
   const [newSegEnd, setNewSegEnd] = useState("");
+  const [showDueWarn, setShowDueWarn] = useState(false);
+  const [expiredSegCount, setExpiredSegCount] = useState(0);
 
   const loadTask = useCallback(async () => {
     setLoading(true);
@@ -94,6 +96,25 @@ export default function TaskDetail({ taskId, onClose, onUpdate }: TaskDetailProp
 
   const handleSave = async () => {
     if (!task || saving) return;
+
+    const oldDue = task.dueDate;
+    const newDue = draft.dueDate;
+    const dueMovedEarlier = oldDue && newDue && newDue < oldDue;
+
+    if (dueMovedEarlier) {
+      const expired = segments.filter((s) => s.startTime > newDue);
+      if (expired.length > 0 || task.requiredSegments) {
+        setExpiredSegCount(expired.length);
+        setShowDueWarn(true);
+        return;
+      }
+    }
+
+    await doSave();
+  };
+
+  const doSave = async () => {
+    if (!task) return;
     setSaving(true);
     try {
       const updates: Partial<Task> = { ...draft };
@@ -118,6 +139,32 @@ export default function TaskDetail({ taskId, onClose, onUpdate }: TaskDetailProp
       }
 
       showToast({ message: "已保存", type: "success" });
+      setEditing(false);
+      await loadTask();
+      onUpdate?.();
+    } catch { showToast({ message: "保存失败", type: "error" }); }
+    finally { setSaving(false); }
+  };
+
+  const handleConfirmDueChange = async () => {
+    if (!task) return;
+    setShowDueWarn(false);
+    setSaving(true);
+    try {
+      const newDue = draft.dueDate!;
+      const updates: Partial<Task> = { ...draft, requiredSegments: undefined, segmentReminderDays: undefined, reminderStage: "none", lastReminderAt: undefined };
+      const tagsArr = draftTags.split(/[,，、]/).map((s) => s.trim()).filter(Boolean);
+      if (tagsArr.length > 0) updates.tags = tagsArr;
+
+      for (const seg of segments) {
+        if (seg.startTime > newDue || seg.endTime > newDue) {
+          await deleteTimeSegment(seg.id!);
+        }
+      }
+
+      await updateTask(task.id!, updates);
+
+      showToast({ message: `截止已提前，${expiredSegCount}个过期时段已删除，请重新规划`, type: "info" });
       setEditing(false);
       await loadTask();
       onUpdate?.();
@@ -425,6 +472,59 @@ export default function TaskDetail({ taskId, onClose, onUpdate }: TaskDetailProp
           </div>
         </motion.div>
       </motion.div>
+
+      <AnimatePresence>
+        {showDueWarn && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 px-6"
+            onClick={() => setShowDueWarn(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white dark:bg-gray-900 rounded-3xl p-6 max-w-sm w-full shadow-xl"
+            >
+              <div className="flex flex-col items-center text-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                  <Clock className="w-6 h-6 text-amber-500" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    截止日期已提前
+                  </h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    {expiredSegCount > 0
+                      ? `有 ${expiredSegCount} 个已安排的时间段将在新截止日期之后，将被自动删除。`
+                      : ""}
+                    任务将退回待安排状态，需要重新规划时间段。
+                  </p>
+                </div>
+
+                <div className="flex gap-3 w-full mt-1">
+                  <button
+                    onClick={() => setShowDueWarn(false)}
+                    className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                  >
+                    取消
+                  </button>
+                  <button
+                    onClick={handleConfirmDueChange}
+                    disabled={saving}
+                    className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium bg-amber-500 text-white hover:bg-amber-600 transition-colors disabled:opacity-50"
+                  >
+                    {saving ? "处理中..." : "确认更新"}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </AnimatePresence>
   );
 }

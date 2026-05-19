@@ -6,6 +6,7 @@ import {
   ArrowLeft, Clock, ListTodo, ChevronRight,
   Calendar, Minus, Plus, Check, CheckCircle,
   Target, FolderKanban, Layers, GripVertical,
+  Flame,
 } from "lucide-react";
 import Link from "next/link";
 import {
@@ -25,6 +26,20 @@ const TYPE_LABELS: Record<string, { label: string; color: string; bg: string }> 
   habit: { label: "习惯", color: "text-orange-600", bg: "bg-orange-100 dark:bg-orange-900/30" },
   longterm: { label: "长期目标", color: "text-indigo-600", bg: "bg-indigo-100 dark:bg-indigo-900/30" },
 };
+
+const HABIT_FREQUENCIES = [
+  { key: "daily", label: "每天", unit: "天" },
+  { key: "weekly", label: "每周", unit: "周" },
+  { key: "monthly", label: "每月", unit: "月" },
+] as const;
+
+const HABIT_CYCLES = [
+  { days: 21, label: "21天" },
+  { days: 30, label: "30天" },
+  { days: 66, label: "66天" },
+  { days: 100, label: "100天" },
+  { days: 365, label: "一年" },
+] as const;
 
 const SEG_SIZE_OPTIONS = [
   { key: "small", label: "小", range: "1-2", min: 1, max: 2 },
@@ -99,6 +114,11 @@ export default function PendingPage() {
   const [boards, setBoards] = useState<Board[]>([]);
   const [sections, setSections] = useState<Section[]>([]);
 
+  // 习惯相关状态
+  const [habitFrequency, setHabitFrequency] = useState<"daily" | "weekly" | "monthly">("daily");
+  const [habitGoal, setHabitGoal] = useState(1); // 目标次数/周期
+  const [habitCycle, setHabitCycle] = useState<number | null>(null); // 养成周期(天)
+
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
@@ -154,6 +174,15 @@ export default function PendingPage() {
     setProjects([]);
     setBoards([]);
     setSections([]);
+    // 加载习惯相关字段
+    if (task.type === "habit") {
+      setHabitFrequency(task.frequency || "daily");
+      setHabitGoal(task.requiredSegments ?? 1);
+    } else {
+      setHabitFrequency("daily");
+      setHabitGoal(1);
+    }
+    setHabitCycle(null);
     if (!task.sectionId) loadProjects();
   }, [loadProjects]);
 
@@ -170,11 +199,22 @@ export default function PendingPage() {
   const handleSaveStep1 = async () => {
     if (!currentTask) return;
     try {
-      await updateTask(currentTask.id!, {
-        type: draftType,
-        priority: draftPriority,
-        dueDate: draftDueDate ? new Date(draftDueDate).getTime() : undefined,
-      });
+      if (draftType === "habit") {
+        // 习惯：设置频率和目标次数（目标次数即为所需时间段数）
+        await updateTask(currentTask.id!, {
+          type: draftType,
+          priority: draftPriority,
+          frequency: habitFrequency,
+          requiredSegments: habitGoal, // 目标次数 = 所需时间段数
+          dueDate: undefined, // 习惯不需要截止日期
+        });
+      } else {
+        await updateTask(currentTask.id!, {
+          type: draftType,
+          priority: draftPriority,
+          dueDate: draftDueDate ? new Date(draftDueDate).getTime() : undefined,
+        });
+      }
       showToast({ message: "分类已保存", type: "success" });
       setProcessStep(2);
       await loadProjects();
@@ -296,6 +336,7 @@ export default function PendingPage() {
           const countdown = getCountdownDays(task.dueDate);
           const isOverdue = countdown !== null && countdown < 0;
           const isSelected = expandedTaskId === task.id;
+          const isHabit = task.type === "habit";
 
           return (
             <div key={task.id} className={`bg-white dark:bg-gray-900 rounded-2xl border shadow-sm overflow-hidden ${isOverdue ? "border-red-200 dark:border-red-800" : isSelected ? "border-indigo-200 dark:border-indigo-800" : "border-gray-100 dark:border-gray-800"}`}>
@@ -304,12 +345,19 @@ export default function PendingPage() {
                   <p className="text-sm text-gray-700 dark:text-gray-300 truncate">{task.title}</p>
                   <div className="flex items-center gap-2 mt-0.5">
                     <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-md ${typeInfo.bg} ${typeInfo.color}`}>{typeInfo.label}</span>
-                    <span className={`flex items-center gap-0.5 text-[10px] ${isOverdue ? "text-red-500" : "text-gray-400"}`}>
-                      <Calendar className="w-3 h-3" />
-                      {formatDate(task.dueDate)}
-                      {countdown !== null && countdown >= 0 && ` · 剩余${countdown}天`}
-                      {isOverdue && ` · 已逾期${Math.abs(countdown)}天`}
-                    </span>
+                    {isHabit ? (
+                      <span className="flex items-center gap-0.5 text-[10px] text-orange-500">
+                        <Flame className="w-3 h-3" />
+                        {task.frequency === "daily" ? "每天" : task.frequency === "weekly" ? "每周" : "每月"} {task.requiredSegments ?? 1}次
+                      </span>
+                    ) : (
+                      <span className={`flex items-center gap-0.5 text-[10px] ${isOverdue ? "text-red-500" : "text-gray-400"}`}>
+                        <Calendar className="w-3 h-3" />
+                        {formatDate(task.dueDate)}
+                        {countdown !== null && countdown >= 0 && ` · 剩余${countdown}天`}
+                        {isOverdue && ` · 已逾期${Math.abs(countdown)}天`}
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center gap-1 flex-shrink-0">
@@ -357,30 +405,93 @@ export default function PendingPage() {
                   <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">类型</p>
                   <div className="grid grid-cols-2 gap-2">
                     {TASK_TYPES.map(({ key, label }) => (
-                      <button key={key} onClick={() => setDraftType(key)}
+                      <button key={key} onClick={() => {
+                        setDraftType(key);
+                        if (key !== "habit") {
+                          setHabitFrequency("daily");
+                          setHabitGoal(1);
+                          setHabitCycle(null);
+                        }
+                      }}
                         className={`py-2.5 rounded-xl text-xs font-medium border transition-colors ${draftType === key ? "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 border-indigo-300" : "bg-gray-50 dark:bg-gray-800 text-gray-500 border-gray-200 dark:border-gray-700 hover:bg-gray-100"}`}>
                         {label}
                       </button>
                     ))}
                   </div>
                 </div>
-                <div>
-                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">优先级</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    {PRIORITY_CONFIG.map((opt) => (
-                      <button key={opt.key} onClick={() => setDraftPriority(opt.key)}
-                        className={`py-2.5 rounded-xl text-xs font-medium border transition-colors ${draftPriority === opt.key ? `${opt.bg} ${opt.color} border-2 border-current` : "bg-gray-50 dark:bg-gray-800 text-gray-500 border-gray-200 dark:border-gray-700"}`}>
-                        <span className="inline-block w-2 h-2 rounded-full mr-1.5" style={{ backgroundColor: opt.hex }} />{opt.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">截止日期</p>
-                  <input type="datetime-local" value={draftDueDate}
-                    onChange={(e) => setDraftDueDate(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                </div>
+
+                {/* 习惯类型特有的设置 */}
+                {draftType === "habit" ? (
+                  <>
+                    <div>
+                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">频率</p>
+                      <div className="grid grid-cols-3 gap-2">
+                        {HABIT_FREQUENCIES.map(({ key, label }) => (
+                          <button key={key} onClick={() => setHabitFrequency(key)}
+                            className={`py-2 rounded-xl text-xs font-medium border transition-colors ${habitFrequency === key ? "bg-orange-100 dark:bg-orange-900/30 text-orange-600 border-orange-300" : "bg-gray-50 dark:bg-gray-800 text-gray-500 border-gray-200 dark:border-gray-700 hover:bg-gray-100"}`}>
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">目标次数/周期 <span className="text-orange-500">（= 所需打卡次数 = 所需时间段）</span></p>
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2">
+                          <button onClick={() => setHabitGoal(Math.max(1, habitGoal - 1))}
+                            className="w-8 h-8 flex items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-500 hover:bg-gray-200">
+                            <Minus className="w-4 h-4" />
+                          </button>
+                          <span className="text-xl font-bold text-gray-700 dark:text-gray-300 w-8 text-center">{habitGoal}</span>
+                          <button onClick={() => setHabitGoal(habitGoal + 1)}
+                            className="w-8 h-8 flex items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-500 hover:bg-gray-200">
+                            <Plus className="w-4 h-4" />
+                          </button>
+                        </div>
+                        <span className="text-sm text-gray-500">次/{habitFrequency === "daily" ? "天" : habitFrequency === "weekly" ? "周" : "月"}</span>
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">养成周期（方案C · 可选）</p>
+                      <div className="grid grid-cols-5 gap-2">
+                        {HABIT_CYCLES.map(({ days, label }) => (
+                          <button key={days} onClick={() => setHabitCycle(habitCycle === days ? null : days)}
+                            className={`py-2 rounded-lg text-xs font-medium border transition-colors ${habitCycle === days ? "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 border-indigo-300" : "bg-gray-50 dark:bg-gray-800 text-gray-500 border-gray-200 dark:border-gray-700 hover:bg-gray-100"}`}>
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    {/* 习惯预览 */}
+                    <div className="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-xl border border-orange-100 dark:border-orange-800">
+                      <p className="text-xs text-orange-600 dark:text-orange-400">
+                        💡 {habitGoal} 次/天 → 需要 {habitGoal} 个时间段来完成每天的打卡
+                        {habitCycle && ` · 目标养成周期 ${habitCycle} 天（里程碑式）`}
+                      </p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div>
+                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">优先级</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        {PRIORITY_CONFIG.map((opt) => (
+                          <button key={opt.key} onClick={() => setDraftPriority(opt.key)}
+                            className={`py-2.5 rounded-xl text-xs font-medium border transition-colors ${draftPriority === opt.key ? `${opt.bg} ${opt.color} border-2 border-current` : "bg-gray-50 dark:bg-gray-800 text-gray-500 border-gray-200 dark:border-gray-700"}`}>
+                            <span className="inline-block w-2 h-2 rounded-full mr-1.5" style={{ backgroundColor: opt.hex }} />{opt.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">截止日期</p>
+                      <input type="datetime-local" value={draftDueDate}
+                        onChange={(e) => setDraftDueDate(e.target.value)}
+                        className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                  </>
+                )}
+
                 <div className="flex gap-3">
                   <button onClick={() => setExpandedTaskId(null)} className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm text-gray-500">跳过</button>
                   <button onClick={handleSaveStep1}
@@ -433,55 +544,91 @@ export default function PendingPage() {
 
             {processStep === 3 && (
               <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-4 space-y-4">
-                <div>
-                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">需要几个时间段?</p>
-                  <div className="flex items-center gap-2 flex-wrap mb-2">
-                    {SEG_SIZE_OPTIONS.map((opt) => {
-                      const isSelected = draftSegments >= opt.min && draftSegments <= opt.max;
-                      return (
-                        <button key={opt.key} onClick={() => handleSegSizeSelect(opt)}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-colors ${isSelected ? "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 border-indigo-300" : "bg-gray-50 dark:bg-gray-800 text-gray-500 border-gray-200 dark:border-gray-700 hover:bg-gray-100"}`}>
-                          {opt.label} ({opt.range})
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button onClick={() => setDraftSegments(Math.max(1, draftSegments - 1))}
-                      className="w-7 h-7 flex items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-500"><Minus className="w-3.5 h-3.5" /></button>
-                    <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 w-6 text-center">{draftSegments}</span>
-                    <button onClick={() => setDraftSegments(draftSegments + 1)}
-                      className="w-7 h-7 flex items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-500"><Plus className="w-3.5 h-3.5" /></button>
-                    <span className="text-xs text-gray-400">个</span>
-                  </div>
-                </div>
-
-                <div>
-                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">截止前多久提醒?</p>
-                  <div className="flex items-center gap-2">
-                    <button onClick={() => setDraftReminderDays(Math.max(1, draftReminderDays - 1))}
-                      className="w-7 h-7 flex items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-500"><Minus className="w-3.5 h-3.5" /></button>
-                    <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">{draftReminderDays}</span>
-                    <button onClick={() => setDraftReminderDays(Math.min(180, draftReminderDays + 1))}
-                      className="w-7 h-7 flex items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-500"><Plus className="w-3.5 h-3.5" /></button>
-                    <span className="text-xs text-gray-400">天前</span>
-                  </div>
-                </div>
-
-                {draftDueDate && (
-                  <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
-                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">安排计划预览</p>
-                    <div className="space-y-1">
-                      {getReminderTimeline(new Date(draftDueDate).getTime(), draftReminderDays, draftSegments).map((s, i) => (
-                        <div key={s.key} className="flex items-center gap-2">
-                          <div className={`w-1.5 h-1.5 rounded-full ${s.active ? "bg-indigo-500" : "bg-gray-300"}`} />
-                          <span className={`text-[10px] ${s.active ? "text-indigo-600 font-medium" : "text-gray-400"}`}>
-                            {s.label} · {s.date.toLocaleDateString("zh-CN", { month: "short", day: "numeric" })}
-                          </span>
-                        </div>
-                      ))}
+                {draftType === "habit" ? (
+                  <>
+                    <div className="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-xl border border-orange-100 dark:border-orange-800">
+                      <p className="text-sm font-medium text-orange-600 dark:text-orange-400 mb-1">习惯打卡安排</p>
+                      <p className="text-xs text-orange-500 dark:text-orange-500">
+                        目标：{habitGoal} 次/{habitFrequency === "daily" ? "每天" : habitFrequency === "weekly" ? "每周" : "每月"}
+                      </p>
+                      <p className="text-xs text-orange-500 dark:text-orange-500 mt-1">
+                        需要 {habitGoal} 个时间段来完成打卡
+                      </p>
+                      {habitCycle && (
+                        <p className="text-xs text-indigo-500 dark:text-indigo-400 mt-1">
+                          📍 里程碑周期：{habitCycle} 天
+                        </p>
+                      )}
                     </div>
-                  </div>
+                    <div>
+                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">打卡提醒设置</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          onClick={() => setDraftReminderDays(0)}
+                          className={`py-2.5 rounded-xl text-xs font-medium border transition-colors ${draftReminderDays === 0 ? "bg-orange-100 dark:bg-orange-900/30 text-orange-600 border-orange-300" : "bg-gray-50 dark:bg-gray-800 text-gray-500 border-gray-200 dark:border-gray-700 hover:bg-gray-100"}`}>
+                          不提醒
+                        </button>
+                        <button
+                          onClick={() => setDraftReminderDays(1)}
+                          className={`py-2.5 rounded-xl text-xs font-medium border transition-colors ${draftReminderDays === 1 ? "bg-orange-100 dark:bg-orange-900/30 text-orange-600 border-orange-300" : "bg-gray-50 dark:bg-gray-800 text-gray-500 border-gray-200 dark:border-gray-700 hover:bg-gray-100"}`}>
+                          每日提醒
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div>
+                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">需要几个时间段?</p>
+                      <div className="flex items-center gap-2 flex-wrap mb-2">
+                        {SEG_SIZE_OPTIONS.map((opt) => {
+                          const isSelected = draftSegments >= opt.min && draftSegments <= opt.max;
+                          return (
+                            <button key={opt.key} onClick={() => handleSegSizeSelect(opt)}
+                              className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-colors ${isSelected ? "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 border-indigo-300" : "bg-gray-50 dark:bg-gray-800 text-gray-500 border-gray-200 dark:border-gray-700 hover:bg-gray-100"}`}>
+                              {opt.label} ({opt.range})
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button onClick={() => setDraftSegments(Math.max(1, draftSegments - 1))}
+                          className="w-7 h-7 flex items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-500"><Minus className="w-3.5 h-3.5" /></button>
+                        <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 w-6 text-center">{draftSegments}</span>
+                        <button onClick={() => setDraftSegments(draftSegments + 1)}
+                          className="w-7 h-7 flex items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-500"><Plus className="w-3.5 h-3.5" /></button>
+                        <span className="text-xs text-gray-400">个</span>
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">截止前多久提醒?</p>
+                      <div className="flex items-center gap-2">
+                        <button onClick={() => setDraftReminderDays(Math.max(1, draftReminderDays - 1))}
+                          className="w-7 h-7 flex items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-500"><Minus className="w-3.5 h-3.5" /></button>
+                        <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">{draftReminderDays}</span>
+                        <button onClick={() => setDraftReminderDays(Math.min(180, draftReminderDays + 1))}
+                          className="w-7 h-7 flex items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-500"><Plus className="w-3.5 h-3.5" /></button>
+                        <span className="text-xs text-gray-400">天前</span>
+                      </div>
+                    </div>
+
+                    {draftDueDate && (
+                      <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
+                        <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">安排计划预览</p>
+                        <div className="space-y-1">
+                          {getReminderTimeline(new Date(draftDueDate).getTime(), draftReminderDays, draftSegments).map((s, i) => (
+                            <div key={s.key} className="flex items-center gap-2">
+                              <div className={`w-1.5 h-1.5 rounded-full ${s.active ? "bg-indigo-500" : "bg-gray-300"}`} />
+                              <span className={`text-[10px] ${s.active ? "text-indigo-600 font-medium" : "text-gray-400"}`}>
+                                {s.label} · {s.date.toLocaleDateString("zh-CN", { month: "short", day: "numeric" })}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
 
                 <div className="flex gap-3">

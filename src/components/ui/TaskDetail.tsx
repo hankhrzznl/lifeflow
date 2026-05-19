@@ -368,15 +368,13 @@ export default function TaskDetail({ taskId, onClose, onUpdate }: TaskDetailProp
               )}
 
               {/* Due date */}
-              {task.type !== "habit" && (
-                <InfoRow icon={<Calendar className="w-4 h-4 text-gray-400" />} label="截止日期">
-                  {editing ? (
-                    <input type="date" value={draft.dueDate ? new Date(draft.dueDate).toISOString().slice(0, 10) : ""} onChange={(e) => setDraft((d) => ({ ...d, dueDate: e.target.value ? new Date(e.target.value).getTime() : undefined }))} className="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                  ) : (
-                    <span className="text-sm text-gray-700 dark:text-gray-300">{formatDateOnly(task.dueDate) || "未设置"}</span>
-                  )}
-                </InfoRow>
-              )}
+              <InfoRow icon={<Calendar className="w-4 h-4 text-gray-400" />} label="截止日期">
+                {editing ? (
+                  <input type="date" value={draft.dueDate ? new Date(draft.dueDate).toISOString().slice(0, 10) : ""} onChange={(e) => setDraft((d) => ({ ...d, dueDate: e.target.value ? new Date(e.target.value).getTime() : undefined }))} className="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                ) : (
+                  <span className="text-sm text-gray-700 dark:text-gray-300">{formatDateOnly(task.dueDate) || "未设置"}</span>
+                )}
+              </InfoRow>
 
               {/* Success criteria */}
               <InfoRow icon={<Target className="w-4 h-4 text-gray-400" />} label="成功标准">

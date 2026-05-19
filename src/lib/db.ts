@@ -1444,7 +1444,7 @@ export async function getTasksForInbox(): Promise<Task[]> {
 
 export async function getActiveSchedulableTasks(): Promise<Task[]> {
   const all = await db.tasks
-    .filter((t) => (t.type === "shortterm" || t.type === "daily" || t.type === "habit" || t.type === "longterm") && t.status === "active")
+    .filter((t) => (t.type === "shortterm" || t.type === "daily" || t.type === "habit") && t.status === "active")
     .toArray();
   return all.sort((a, b) => b.createdAt - a.createdAt);
 }

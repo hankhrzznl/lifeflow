@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Plus, Minus, Check, Flame, Target } from "lucide-react";
 import Link from "next/link";
@@ -21,6 +22,7 @@ interface HabitWithStats extends Task {
 }
 
 export default function HabitPluginPage() {
+  const router = useRouter();
   const [habits, setHabits] = useState<HabitWithStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
@@ -312,7 +314,11 @@ export default function HabitPluginPage() {
           const completed = todayCount >= goal;
 
           return (
-            <div key={habit.id} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 overflow-hidden">
+            <div
+              key={habit.id}
+              className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 overflow-hidden cursor-pointer hover:border-orange-200 dark:hover:border-orange-800 transition-colors"
+              onClick={() => router.push(`/plugins/habit/detail?id=${habit.id}`)}
+            >
               <div className="p-4">
                 <div className="flex items-start gap-3">
                   <div className="flex-1 min-w-0">
@@ -331,7 +337,10 @@ export default function HabitPluginPage() {
                     </div>
                   </div>
                   <button
-                    onClick={() => handleCheckIn(habit)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleCheckIn(habit);
+                    }}
                     className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
                       completed
                         ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-500"

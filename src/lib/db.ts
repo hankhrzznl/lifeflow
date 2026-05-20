@@ -204,6 +204,21 @@ export class LifeFlowDB extends Dexie {
         console.log("[LifeFlowDB v11] Added reminders and reminderLogs tables");
       }
     });
+
+    this.version(12).stores({
+      pluginsMeta: "++id, name, status, showInNavbar",
+    }).upgrade(async (tx) => {
+      if (typeof window !== "undefined" && window.location.hostname === "localhost") {
+        console.log("[LifeFlowDB v12] Added showInNavbar index to pluginsMeta table");
+      }
+      // Initialize showInNavbar for existing plugins
+      const plugins = await tx.table("pluginsMeta").toArray();
+      for (const plugin of plugins) {
+        if (plugin.showInNavbar === undefined) {
+          await tx.table("pluginsMeta").update(plugin.id!, { showInNavbar: false });
+        }
+      }
+    });
   }
 }
 
@@ -1334,6 +1349,7 @@ export async function initBuiltInPlugins(): Promise<void> {
       description: "生命时间轴可视化",
       status: "active",
       isBuiltIn: true,
+      showInNavbar: false,
       installedAt: Date.now(),
       updatedAt: Date.now(),
     });
@@ -1345,6 +1361,7 @@ export async function initBuiltInPlugins(): Promise<void> {
       description: "专注计时器",
       status: "active",
       isBuiltIn: true,
+      showInNavbar: false,
       installedAt: Date.now(),
       updatedAt: Date.now(),
     });
@@ -1356,6 +1373,7 @@ export async function initBuiltInPlugins(): Promise<void> {
       description: "财务管理 · 收支记账",
       status: "active",
       isBuiltIn: true,
+      showInNavbar: false,
       installedAt: Date.now(),
       updatedAt: Date.now(),
     });
@@ -1367,6 +1385,7 @@ export async function initBuiltInPlugins(): Promise<void> {
       description: "任务清单 · 按时间查看待办",
       status: "active",
       isBuiltIn: true,
+      showInNavbar: false,
       installedAt: Date.now(),
       updatedAt: Date.now(),
     });
@@ -1378,6 +1397,7 @@ export async function initBuiltInPlugins(): Promise<void> {
       description: "习惯追踪 · 养成好习惯",
       status: "active",
       isBuiltIn: true,
+      showInNavbar: false,
       installedAt: Date.now(),
       updatedAt: Date.now(),
     });
@@ -1403,6 +1423,15 @@ export async function getAllPluginsMeta(): Promise<PluginMetadata[]> {
 
 export async function updatePluginMetaStatus(id: number, status: PluginMetadata["status"]): Promise<void> {
   await db.pluginsMeta.update(id, { status, updatedAt: Date.now() });
+}
+
+export async function updatePluginMetaShowInNavbar(id: number, showInNavbar: boolean): Promise<void> {
+  await db.pluginsMeta.update(id, { showInNavbar, updatedAt: Date.now() });
+}
+
+export async function getPluginsForNavbar(): Promise<PluginMetadata[]> {
+  const allPlugins = await db.pluginsMeta.toArray();
+  return allPlugins.filter(p => p.showInNavbar === true);
 }
 
 export async function addTimeSegment(taskId: number, startTime: number, endTime: number): Promise<number> {

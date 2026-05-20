@@ -1,13 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Inbox, Calendar, Layers, Menu, X,
-  FolderKanban, Target, Settings, BarChart3, Trash2, Puzzle, ChevronRight, ListTodo, Flame, Bell,
+  FolderKanban, Target, Settings, BarChart3, Trash2, Puzzle, ChevronRight, ListTodo, Bell,
 } from "lucide-react";
+import { getPluginsForNavbar } from "@/lib/db";
+import { getPluginConfig } from "@/lib/plugin-config";
+import type { PluginMetadata } from "@/lib/types";
 
 const planItems = [
   { label: "安排事项", href: "/pending", icon: ListTodo, desc: "待安排与已安排的事务" },
@@ -16,7 +19,6 @@ const planItems = [
 ];
 
 const moreItems = [
-  { label: "习惯", href: "/plugins/habit", icon: Flame },
   { label: "提醒", href: "/reminders", icon: Bell },
   { label: "设置", href: "/settings", icon: Settings },
   { label: "回顾", href: "/review", icon: BarChart3 },
@@ -27,10 +29,33 @@ const moreItems = [
 export default function BottomTabBar() {
   const pathname = usePathname();
   const [openPanel, setOpenPanel] = useState<"plan" | "more" | null>(null);
+  const [pinnedPlugins, setPinnedPlugins] = useState<PluginMetadata[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const isActive = (path: string) => pathname.startsWith(path);
+  const isActive = useCallback((path: string) => pathname.startsWith(path), [pathname]);
 
-  const tabs = [
+  const loadPinnedPlugins = useCallback(async () => {
+    try {
+      const plugins = await getPluginsForNavbar();
+      const activePlugins = plugins.filter(p => p.status === "active");
+      setPinnedPlugins(activePlugins);
+    } catch (err) {
+      console.error("Failed to load pinned plugins:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadPinnedPlugins();
+    // Refresh when navigation changes (in case user added/removed plugins)
+    const interval = setInterval(loadPinnedPlugins, 3000);
+    return () => clearInterval(interval);
+  }, [loadPinnedPlugins]);
+
+  const closePanel = () => setOpenPanel(null);
+
+  const baseTabs = [
     {
       id: "capture", label: "捕捉", icon: Inbox, path: "/capture",
       active: isActive("/capture"),
@@ -45,23 +70,41 @@ export default function BottomTabBar() {
     },
     {
       id: "more", label: "更多", icon: Menu, path: null,
-      active: pathname.startsWith("/settings") || pathname.startsWith("/review") || pathname.startsWith("/trash") || pathname.startsWith("/plugins") || pathname.startsWith("/plugins/habit") || pathname.startsWith("/reminders"),
+      active: pathname.startsWith("/settings") || pathname.startsWith("/review") || pathname.startsWith("/trash") || pathname.startsWith("/plugins") || pathname.startsWith("/reminders"),
     },
   ];
 
-  const closePanel = () => setOpenPanel(null);
+  const pluginTabs = pinnedPlugins.map(plugin => {
+    const config = getPluginConfig(plugin.name);
+    if (!config) return null;
+    return {
+      id: `plugin-${plugin.name}`,
+      label: config.label,
+      icon: config.icon,
+      path: config.path,
+      active: isActive(config.path),
+      isPlugin: true,
+    };
+  }).filter(Boolean);
+
+  const tabs = [
+    ...baseTabs,
+    ...pluginTabs,
+  ];
 
   return (
     <>
       <nav className="fixed bottom-0 left-0 right-0 z-40 h-16 bg-white/90 dark:bg-gray-950/90 backdrop-blur-xl border-t border-gray-200 dark:border-gray-800 pb-[max(8px,env(safe-area-inset-bottom))]">
         <div className="flex items-center justify-around h-full">
           {tabs.map((tab) => {
+            if (!tab) return null;
             const active = tab.active;
             if (tab.path) {
               return (
                 <Link
                   key={tab.id}
                   href={tab.path}
+                  onClick={closePanel}
                   className={`flex flex-col items-center justify-center gap-0.5 min-w-[44px] min-h-[44px] transition-colors duration-150 ease-out ${
                     active ? "text-blue-500" : "text-gray-400"
                   }`}

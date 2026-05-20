@@ -205,6 +205,7 @@ export interface PluginMetadata {
   code?: string;
   installedAt: number;
   updatedAt: number;
+  showInNavbar?: boolean;
 }
 
 export type GoalViewType = 'long-term' | 'short-term' | 'daily-trivial' | 'habits';

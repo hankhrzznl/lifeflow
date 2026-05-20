@@ -3,8 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { Puzzle, Power, PowerOff, Trash2, Plus, Code2, Info, RotateCcw, ExternalLink } from "lucide-react";
-import { initBuiltInPlugins, getAllPluginsMeta, updatePluginMetaStatus } from "@/lib/db";
+import { Puzzle, Power, PowerOff, Trash2, Plus, Code2, Info, RotateCcw, ExternalLink, Monitor, Pin } from "lucide-react";
+import { initBuiltInPlugins, getAllPluginsMeta, updatePluginMetaStatus, updatePluginMetaShowInNavbar } from "@/lib/db";
 import { showToast } from "@/components/ui/Toast";
 import type { PluginMetadata } from "@/lib/types";
 
@@ -70,6 +70,22 @@ export default function PluginsPage() {
       await loadPlugins();
     } catch {
       showToast({ message: "状态切换失败", type: "error", duration: 3000 });
+    }
+  }
+
+  async function handleToggleShowInNavbar(plugin: PluginMetadata) {
+    if (plugin.id == null) return;
+    const newShowInNavbar = !plugin.showInNavbar;
+    try {
+      await updatePluginMetaShowInNavbar(plugin.id, newShowInNavbar);
+      showToast({
+        message: newShowInNavbar ? `"${plugin.name}" 已添加到导航栏` : `"${plugin.name}" 已从导航栏移除`,
+        type: "success",
+        duration: 2000,
+      });
+      await loadPlugins();
+    } catch {
+      showToast({ message: "操作失败", type: "error", duration: 3000 });
     }
   }
 
@@ -182,6 +198,12 @@ export default function PluginsPage() {
                       ? "已禁用"
                       : "已安装"}
               </span>
+              {plugin.showInNavbar && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                  <Monitor className="w-3 h-3" />
+                  导航栏
+                </span>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-1 flex-shrink-0">
@@ -195,6 +217,18 @@ export default function PluginsPage() {
                 <ExternalLink className="w-4 h-4" />
               </motion.button>
             )}
+            <motion.button
+              whileTap={{ scale: 0.9 }}
+              onClick={() => handleToggleShowInNavbar(plugin)}
+              className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
+                plugin.showInNavbar
+                  ? "bg-blue-50 dark:bg-blue-900/20 text-blue-500 hover:bg-blue-100 dark:hover:bg-blue-900/30"
+                  : "hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 hover:text-gray-600"
+              }`}
+              aria-label={plugin.showInNavbar ? "从导航栏移除" : "添加到导航栏"}
+            >
+              <Pin className="w-4 h-4" />
+            </motion.button>
             <motion.button
               whileTap={{ scale: 0.9 }}
               onClick={() => handleToggleStatus(plugin)}

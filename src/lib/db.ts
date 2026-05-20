@@ -18,6 +18,8 @@ import type {
   FinRecord,
   FinAccount,
   ReviewRecord,
+  Reminder,
+  ReminderLog,
 } from "./types";
 
 export class LifeFlowDB extends Dexie {
@@ -39,6 +41,8 @@ export class LifeFlowDB extends Dexie {
   finRecords!: Table<FinRecord, number>;
   finAccounts!: Table<FinAccount, number>;
   reviewRecords!: Table<ReviewRecord, number>;
+  reminders!: Table<Reminder, number>;
+  reminderLogs!: Table<ReminderLog, number>;
 
   constructor() {
     super("LifeFlowDB");
@@ -189,6 +193,15 @@ export class LifeFlowDB extends Dexie {
     }).upgrade(async () => {
       if (typeof window !== "undefined" && window.location.hostname === "localhost") {
         console.log("[LifeFlowDB v10] Added reviewRecords table");
+      }
+    });
+
+    this.version(11).stores({
+      reminders: "++id, taskId, type, triggerTime, status, createdAt",
+      reminderLogs: "++id, reminderId, action, timestamp",
+    }).upgrade(async () => {
+      if (typeof window !== "undefined" && window.location.hostname === "localhost") {
+        console.log("[LifeFlowDB v11] Added reminders and reminderLogs tables");
       }
     });
   }
@@ -1518,4 +1531,120 @@ export async function getWeeklyTaskStats(): Promise<{ done: number; pending: num
     done: all.filter((t) => t.status === "done" && t.updatedAt >= weekStartTs).length,
     pending: all.filter((t) => t.status === "active").length,
   };
+}
+
+export async function createReminder(reminder: Omit<Reminder, "id" | "createdAt" | "updatedAt">): Promise<number> {
+  return db.reminders.add({
+    ...reminder,
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+  });
+}
+
+export async function getPendingReminders(): Promise<Reminder[]> {
+  const now = Date.now();
+  return db.reminders
+    .where("status")
+    .equals("pending")
+    .filter((r) => r.triggerTime <= now)
+    .toArray();
+}
+
+export async function getPendingRemindersByTime(endTime: number): Promise<Reminder[]> {
+  return db.reminders
+    .where("status")
+    .equals("pending")
+    .filter((r) => r.triggerTime <= endTime)
+    .toArray();
+}
+
+export async function getRemindersByTask(taskId: number): Promise<Reminder[]> {
+  return db.reminders.where("taskId").equals(taskId).toArray();
+}
+
+export async function updateReminderStatus(id: number, status: Reminder["status"], snoozeUntil?: number): Promise<void> {
+  await db.reminders.update(id, {
+    status,
+    snoozeUntil,
+    updatedAt: Date.now(),
+  });
+}
+
+export async function deleteReminder(id: number): Promise<void> {
+  await db.reminders.delete(id);
+}
+
+export async function addReminderLog(reminderId: number, action: ReminderLog["action"]): Promise<number> {
+  return db.reminderLogs.add({
+    reminderId,
+    action,
+    timestamp: Date.now(),
+  });
+}
+
+export async function getReminderLogs(reminderId: number): Promise<ReminderLog[]> {
+  return db.reminderLogs.where("reminderId").equals(reminderId).toArray();
+}
+
+export async function scheduleDeadlineReminders(taskId: number, dueDate: number, reminderDays: number): Promise<void> {
+  const task = await db.tasks.get(taskId);
+  if (!task) return;
+
+  const reminders = await getRemindersByTask(taskId);
+  for (const r of reminders) {
+    if (r.type === "deadline") {
+      await deleteReminder(r.id!);
+    }
+  }
+
+  const reminderTimes: number[] = [];
+  if (reminderDays >= 7) {
+    reminderTimes.push(dueDate - 7 * 24 * 60 * 60 * 1000);
+  }
+  if (reminderDays >= 3) {
+    reminderTimes.push(dueDate - 3 * 24 * 60 * 60 * 1000);
+  }
+  if (reminderDays >= 1) {
+    reminderTimes.push(dueDate - 1 * 24 * 60 * 60 * 1000);
+  }
+  reminderTimes.push(dueDate);
+
+  for (const triggerTime of reminderTimes) {
+    if (triggerTime > Date.now()) {
+      await createReminder({
+        taskId,
+        type: "deadline",
+        triggerTime,
+        message: `任务「${task.title}」即将截止`,
+        status: "pending",
+      });
+    }
+  }
+}
+
+export async function scheduleHabitReminder(taskId: number, hour: number = 9): Promise<void> {
+  const task = await db.tasks.get(taskId);
+  if (!task || task.type !== "habit") return;
+
+  const existing = await db.reminders
+    .where("taskId")
+    .equals(taskId)
+    .filter((r) => r.type === "habit")
+    .first();
+
+  if (existing) {
+    await deleteReminder(existing.id!);
+  }
+
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  tomorrow.setHours(hour, 0, 0, 0);
+
+  await createReminder({
+    taskId,
+    type: "habit",
+    triggerTime: tomorrow.getTime(),
+    message: `记得完成习惯「${task.title}」的打卡`,
+    status: "pending",
+  });
 }

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Plus, Minus, Check, Flame, Target, Calendar, Clock, Trophy, TrendingUp } from "lucide-react";
+import { ArrowLeft, Plus, Minus, Check, Flame, Target } from "lucide-react";
 import Link from "next/link";
 import { showToast } from "@/components/ui/Toast";
 import type { Task, HabitLog } from "@/lib/types";
@@ -13,18 +13,11 @@ const HABIT_FREQUENCIES = [
   { key: "monthly", label: "每月", unit: "月" },
 ] as const;
 
-const HABIT_CYCLES = [
-  { days: 21, label: "21天" },
-  { days: 30, label: "30天" },
-  { days: 66, label: "66天" },
-  { days: 100, label: "100天" },
-  { days: 365, label: "一年" },
-] as const;
-
 interface HabitWithStats extends Task {
   streak?: number;
   bestStreak?: number;
   logsCount?: number;
+  completionRate?: number;
 }
 
 export default function HabitPluginPage() {
@@ -34,8 +27,6 @@ export default function HabitPluginPage() {
   const [newTitle, setNewTitle] = useState("");
   const [newFrequency, setNewFrequency] = useState<"daily" | "weekly" | "monthly">("daily");
   const [newGoal, setNewGoal] = useState(1);
-  const [newCycle, setNewCycle] = useState<number | null>(null);
-  const [selectedHabit, setSelectedHabit] = useState<HabitWithStats | null>(null);
 
   const loadHabits = useCallback(async () => {
     try {
@@ -44,7 +35,6 @@ export default function HabitPluginPage() {
         .filter((t) => t.type === "habit" && t.status === "active")
         .toArray();
 
-      // 获取每个习惯的打卡记录来计算连续天数
       const habitsWithStats = await Promise.all(
         allTasks.map(async (habit) => {
           const logs = await db.habit_logs
@@ -52,24 +42,19 @@ export default function HabitPluginPage() {
             .equals(habit.id!)
             .toArray();
 
-          // 计算连续打卡天数
           const sortedLogs = logs.sort((a: HabitLog, b: HabitLog) => b.createdAt - a.createdAt);
           let streak = 0;
           let bestStreak = 0;
-          let currentStreak = 0;
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
 
-          // 简化计算：按日期分组
           const dateGroups = new Map<string, number>();
           sortedLogs.forEach((log: HabitLog) => {
             const dateKey = log.date || new Date(log.createdAt).toISOString().slice(0, 10);
             dateGroups.set(dateKey, (dateGroups.get(dateKey) || 0) + log.count);
           });
 
-          // 计算当前连续天数
           const sortedDates = Array.from(dateGroups.keys()).sort().reverse();
-          let expectedDate = new Date(today);
+          let expectedDate = new Date();
+          expectedDate.setHours(0, 0, 0, 0);
 
           for (const dateStr of sortedDates) {
             const logDate = new Date(dateStr);
@@ -77,16 +62,14 @@ export default function HabitPluginPage() {
             const diffDays = Math.round((expectedDate.getTime() - logDate.getTime()) / (1000 * 60 * 60 * 24));
 
             if (diffDays <= 1) {
-              currentStreak++;
+              streak++;
               expectedDate = logDate;
               expectedDate.setDate(expectedDate.getDate() - 1);
             } else {
               break;
             }
           }
-          streak = currentStreak;
 
-          // 计算最佳连续
           let tempStreak = 0;
           for (let i = 0; i < sortedDates.length; i++) {
             if (i === 0) {
@@ -104,11 +87,15 @@ export default function HabitPluginPage() {
             bestStreak = Math.max(bestStreak, tempStreak);
           }
 
+          const totalDays = habit.createdAt ? Math.floor((Date.now() - habit.createdAt) / (1000 * 60 * 60 * 24)) : 0;
+          const completionRate = totalDays > 0 ? Math.round((dateGroups.size / totalDays) * 100) : 0;
+
           return {
             ...habit,
             streak,
             bestStreak,
             logsCount: logs.length,
+            completionRate,
           };
         })
       );
@@ -146,7 +133,6 @@ export default function HabitPluginPage() {
       setNewTitle("");
       setNewFrequency("daily");
       setNewGoal(1);
-      setNewCycle(null);
       setShowAdd(false);
       loadHabits();
     } catch {
@@ -159,20 +145,17 @@ export default function HabitPluginPage() {
       const { db } = await import("@/lib/db");
       const today = new Date().toISOString().slice(0, 10);
 
-      // 检查今天是否已打卡
       const existingLog = await db.habit_logs
         .where(["taskId", "date"])
         .equals([habit.id!, today])
         .first();
 
       if (existingLog) {
-        // 增加打卡次数
         await db.habit_logs.update(existingLog.id!, {
           count: existingLog.count + 1,
         });
         showToast({ message: `打卡成功！今日第${existingLog.count + 1}次`, type: "success" });
       } else {
-        // 新增打卡记录
         await db.habit_logs.add({
           taskId: habit.id!,
           date: today,
@@ -188,28 +171,20 @@ export default function HabitPluginPage() {
     }
   };
 
-  const getTodayCount = async (habitId: number): Promise<number> => {
-    try {
-      const { db } = await import("@/lib/db");
-      const today = new Date().toISOString().slice(0, 10);
-      const log = await db.habit_logs
-        .where(["taskId", "date"])
-        .equals([habitId, today])
-        .first();
-      return log?.count || 0;
-    } catch {
-      return 0;
-    }
-  };
-
   const [todayCounts, setTodayCounts] = useState<Map<number, number>>(new Map());
 
   useEffect(() => {
     const loadTodayCounts = async () => {
+      const { db } = await import("@/lib/db");
       const counts = new Map<number, number>();
+      const today = new Date().toISOString().slice(0, 10);
       for (const habit of habits) {
         if (habit.id) {
-          counts.set(habit.id, await getTodayCount(habit.id));
+          const log = await db.habit_logs
+            .where(["taskId", "date"])
+            .equals([habit.id, today])
+            .first();
+          counts.set(habit.id, log?.count || 0);
         }
       }
       setTodayCounts(counts);
@@ -218,12 +193,6 @@ export default function HabitPluginPage() {
       loadTodayCounts();
     }
   }, [habits]);
-
-  const formatDate = (ts?: number) => {
-    if (!ts) return "";
-    const d = new Date(ts);
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  };
 
   if (loading) {
     return (
@@ -309,24 +278,6 @@ export default function HabitPluginPage() {
                   </button>
                 </div>
               </div>
-              <div>
-                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">养成周期（可选）</p>
-                <div className="grid grid-cols-5 gap-2">
-                  {HABIT_CYCLES.map(({ days, label }) => (
-                    <button
-                      key={days}
-                      onClick={() => setNewCycle(newCycle === days ? null : days)}
-                      className={`py-2 rounded-lg text-xs font-medium border transition-colors ${
-                        newCycle === days
-                          ? "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 border-indigo-300"
-                          : "bg-gray-50 dark:bg-gray-800 text-gray-500 border-gray-200 dark:border-gray-700"
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              </div>
               <div className="flex gap-3">
                 <button
                   onClick={() => setShowAdd(false)}
@@ -391,7 +342,6 @@ export default function HabitPluginPage() {
                   </button>
                 </div>
 
-                {/* 今日进度 */}
                 <div className="mt-3">
                   <div className="flex items-center justify-between text-xs text-gray-400 mb-1">
                     <span>今日进度</span>
@@ -406,9 +356,8 @@ export default function HabitPluginPage() {
                 </div>
               </div>
 
-              {/* 统计数据 */}
               <div className="px-4 py-3 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-800">
-                <div className="grid grid-cols-3 gap-2 text-center">
+                <div className="grid grid-cols-4 gap-2 text-center">
                   <div>
                     <p className="text-lg font-bold text-orange-500">{habit.streak || 0}</p>
                     <p className="text-[10px] text-gray-400">连续天数</p>
@@ -420,6 +369,10 @@ export default function HabitPluginPage() {
                   <div>
                     <p className="text-lg font-bold text-blue-500">{habit.logsCount || 0}</p>
                     <p className="text-[10px] text-gray-400">总打卡</p>
+                  </div>
+                  <div>
+                    <p className="text-lg font-bold text-cyan-500">{habit.completionRate || 0}%</p>
+                    <p className="text-[10px] text-gray-400">完成率</p>
                   </div>
                 </div>
               </div>

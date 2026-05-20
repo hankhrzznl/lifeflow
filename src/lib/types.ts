@@ -124,6 +124,25 @@ export interface HabitLog {
   createdAt: number;
 }
 
+export interface Reminder {
+  id?: number;
+  taskId: number;
+  type: 'deadline' | 'habit' | 'event' | 'custom';
+  triggerTime: number;
+  message: string;
+  status: 'pending' | 'dismissed' | 'completed' | 'snoozed';
+  snoozeUntil?: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface ReminderLog {
+  id?: number;
+  reminderId: number;
+  action: 'shown' | 'dismissed' | 'completed' | 'snoozed';
+  timestamp: number;
+}
+
 export interface PluginRegistry {
   id: string;
   name: string;

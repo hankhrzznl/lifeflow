@@ -12,7 +12,7 @@ import {
 const planItems = [
   { label: "安排事项", href: "/pending", icon: ListTodo, desc: "待安排与已安排的事务" },
   { label: "项目", href: "/projects", icon: FolderKanban, desc: "管理项目与大模块" },
-  { label: "目标", href: "/goals", icon: Target, desc: "长期目标与日常习惯" },
+  { label: "目标", href: "/goals", icon: Target, desc: "短期事件与日常琐事" },
 ];
 
 const moreItems = [

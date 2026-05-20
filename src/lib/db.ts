@@ -1371,6 +1371,17 @@ export async function initBuiltInPlugins(): Promise<void> {
       updatedAt: Date.now(),
     });
   }
+  if (!names.has("habit")) {
+    await db.pluginsMeta.add({
+      name: "habit",
+      version: "1.0.0",
+      description: "习惯追踪 · 养成好习惯",
+      status: "active",
+      isBuiltIn: true,
+      installedAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+  }
 
   const accountCount = await db.finAccounts.count();
   if (accountCount === 0) {

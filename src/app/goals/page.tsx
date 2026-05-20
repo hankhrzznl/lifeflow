@@ -4,45 +4,32 @@ import { useState, useEffect, useCallback, useMemo, useRef, Suspense } from "rea
 import { useSearchParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Mountain,
   CalendarDays,
   ClipboardList,
-  Flame,
   Plus,
   ChevronRight,
-  ChevronDown,
   Check,
   Info,
   AlertCircle,
   Trash2,
   Clock,
   RotateCcw,
-  Zap,
-  FolderKanban,
-  Layers,
-  Target,
 } from "lucide-react";
+import Link from "next/link";
 import {
-  db,
   getTasksByType,
   createTask,
   updateTask,
   deleteTask,
-  getStreak,
-  getHabitLogsByDateRange,
-  getAllHabits,
 } from "@/lib/db";
 import { showToast as globalShowToast } from "@/components/ui/Toast";
 import TaskDetail from "@/components/ui/TaskDetail";
-import SectionDetail from "@/components/ui/SectionDetail";
 import { PRIORITY_CONFIG } from "@/lib/types";
-import type { Task, GoalViewType, HabitLog, Section, Board } from "@/lib/types";
+import type { Task } from "@/lib/types";
 
-const TABS: { key: GoalViewType; label: string; icon: typeof Mountain }[] = [
-  { key: "long-term", label: "长期目标", icon: Mountain },
+const TABS: { key: "short-term" | "daily-trivial"; label: string; icon: typeof CalendarDays }[] = [
   { key: "short-term", label: "短期事件", icon: CalendarDays },
   { key: "daily-trivial", label: "日常琐事", icon: ClipboardList },
-  { key: "habits", label: "习惯追踪", icon: Flame },
 ];
 
 type ShortTermFilter = "全部" | "进行中" | "已完成" | "已逾期" | "本周" | "本月";
@@ -50,13 +37,6 @@ type DailyFilter = "全部" | "未完成" | "已完成";
 
 function getLocalDateStr(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
-function getTodayRange(): { start: number; end: number } {
-  const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-  const end = start + 24 * 60 * 60 * 1000;
-  return { start, end };
 }
 
 function formatDate(ts: number): string {
@@ -76,7 +56,7 @@ function EmptyStateView({
   actionLabel,
   onAction,
 }: {
-  icon: typeof Mountain;
+  icon: typeof CalendarDays;
   title: string;
   description: string;
   actionLabel: string;
@@ -99,67 +79,7 @@ function EmptyStateView({
   );
 }
 
-function ErrorStateView({ onRetry }: { onRetry: () => void }) {
-  return (
-    <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
-      <div className="w-16 h-16 rounded-2xl bg-red-50 dark:bg-red-900/30 flex items-center justify-center mb-4">
-        <AlertCircle className="w-8 h-8 text-red-500" />
-      </div>
-      <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-200 mb-1">数据加载失败</h3>
-      <p className="text-sm text-gray-500 dark:text-gray-400 max-w-xs mb-6">本地数据库暂时无法访问</p>
-      <button
-        onClick={onRetry}
-        className="bg-indigo-600 text-white rounded-xl h-12 px-6 font-medium hover:bg-indigo-700 transition-colors text-sm flex items-center gap-2"
-      >
-        <RotateCcw className="w-4 h-4" />
-        重试
-      </button>
-    </div>
-  );
-}
-
-function LongtermSkeleton() {
-  return (
-    <div className="space-y-3 px-4 py-4">
-      {[...Array(3)].map((_, i) => (
-        <div key={i} className="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 p-4">
-          <div className="flex items-center gap-3">
-            <div className="skeleton w-5 h-5 rounded" />
-            <div className="skeleton w-5 h-5 rounded" />
-            <div className="skeleton h-5 w-2/3 rounded" />
-          </div>
-          <div className="ml-12 mt-3 space-y-2">
-            {[...Array(2)].map((_, j) => (
-              <div key={j} className="flex items-center gap-3">
-                <div className="skeleton w-4 h-4 rounded" />
-                <div className="skeleton w-5 h-5 rounded" />
-                <div className="skeleton h-4 w-1/2 rounded" />
-              </div>
-            ))}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function CardListSkeleton({ count = 4 }: { count?: number }) {
-  return (
-    <div className="space-y-3 px-4 py-4">
-      {[...Array(count)].map((_, i) => (
-        <div key={i} className="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 p-4">
-          <div className="flex items-center gap-3">
-            <div className="skeleton w-5 h-5 rounded" />
-            <div className="skeleton h-5 w-3/4 rounded flex-1" />
-            <div className="skeleton w-6 h-6 rounded-lg" />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function HabitListSkeleton({ count = 3 }: { count?: number }) {
+function CardListSkeleton({ count = 3 }: { count?: number }) {
   return (
     <div className="space-y-3 px-4 py-4">
       {[...Array(count)].map((_, i) => (
@@ -175,244 +95,74 @@ function HabitListSkeleton({ count = 3 }: { count?: number }) {
   );
 }
 
-interface ToastFeedback {
-  message: string;
-  type: "success" | "error";
+function ErrorStateView({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+      <AlertCircle className="w-12 h-12 text-red-400 mb-4" />
+      <p className="text-gray-500 dark:text-gray-400 mb-4">加载失败</p>
+      <button
+        onClick={onRetry}
+        className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+      >
+        <RotateCcw className="w-4 h-4" />
+        重试
+      </button>
+    </div>
+  );
 }
-
-const TOAST_DURATION = 3000;
 
 function AddTaskForm({
   placeholder,
   onSubmit,
   onCancel,
-  typeLabel,
 }: {
   placeholder: string;
   onSubmit: (title: string) => void;
   onCancel: () => void;
-  typeLabel?: string;
 }) {
   const [title, setTitle] = useState("");
-  const inputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    inputRef.current?.focus();
-  }, []);
-
-  const handleSubmit = () => {
-    const trimmed = title.trim();
-    if (!trimmed) return;
-    onSubmit(trimmed);
-    setTitle("");
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (title.trim()) {
+      onSubmit(title.trim());
+    }
   };
 
   return (
-    <motion.div
+    <motion.form
       initial={{ opacity: 0, height: 0 }}
       animate={{ opacity: 1, height: "auto" }}
       exit={{ opacity: 0, height: 0 }}
       className="overflow-hidden"
+      onSubmit={handleSubmit}
     >
-      <div className="mx-4 mb-3 bg-white dark:bg-gray-900 rounded-xl border border-indigo-200 dark:border-indigo-800 p-3">
-        <div className="flex items-center gap-2">
-          {typeLabel && (
-            <span className="text-xs font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded-md">
-              {typeLabel}
-            </span>
-          )}
-          <input
-            ref={inputRef}
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") handleSubmit();
-              if (e.key === "Escape") onCancel();
-            }}
-            placeholder={placeholder}
-            className="flex-1 bg-transparent text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 outline-none"
-          />
+      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 p-4 mb-3">
+        <input
+          type="text"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder={placeholder}
+          className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          autoFocus
+        />
+        <div className="flex gap-3 mt-3">
           <button
-            onClick={handleSubmit}
-            disabled={!title.trim()}
-            className="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 disabled:opacity-40 transition-colors"
-          >
-            添加
-          </button>
-          <button
+            type="button"
             onClick={onCancel}
-            className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+            className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
           >
             取消
           </button>
+          <button
+            type="submit"
+            className="flex-1 py-2.5 rounded-xl bg-blue-500 text-white text-sm font-medium hover:bg-blue-600 transition-colors"
+          >
+            创建
+          </button>
         </div>
       </div>
-    </motion.div>
-  );
-}
-
-function HabitHeatmap({ taskId }: { taskId: number }) {
-  const [dates, setDates] = useState<Set<string>>(new Set());
-
-  useEffect(() => {
-    let cancelled = false;
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const startDate = new Date(today);
-    startDate.setDate(today.getDate() - 111);
-    const startStr = getLocalDateStr(startDate);
-    const endStr = getLocalDateStr(today);
-
-    getHabitLogsByDateRange(taskId, startStr, endStr).then((logs) => {
-      if (cancelled) return;
-      setDates(new Set(logs.map((l) => l.date)));
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [taskId]);
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const todayStr = getLocalDateStr(today);
-  const startDate = new Date(today);
-  startDate.setDate(today.getDate() - 111);
-
-  const CELL_SIZE = 12;
-  const GAP = 3;
-  const ROWS = 7;
-  const COLS = 16;
-  const LABEL_WIDTH = 22;
-  const MONTH_HEIGHT = 16;
-
-  const startDayOfWeek = startDate.getDay();
-  const firstSunday = new Date(startDate);
-  firstSunday.setDate(startDate.getDate() - startDayOfWeek);
-
-  const cells: {
-    date: Date | null;
-    dateStr: string | null;
-    checked: boolean;
-    isToday: boolean;
-    isFuture: boolean;
-  }[][] = [];
-
-  for (let row = 0; row < ROWS; row++) {
-    cells.push([]);
-    for (let col = 0; col < COLS; col++) {
-      const dayOffset = col * 7 + row;
-      const cellDate = new Date(firstSunday);
-      cellDate.setDate(firstSunday.getDate() + dayOffset);
-
-      if (cellDate < startDate || cellDate > today) {
-        cells[row][col] = {
-          date: null,
-          dateStr: null,
-          checked: false,
-          isToday: false,
-          isFuture: false,
-        };
-      } else {
-        const dateStr = getLocalDateStr(cellDate);
-        cells[row][col] = {
-          date: cellDate,
-          dateStr,
-          checked: dates.has(dateStr),
-          isToday: dateStr === todayStr,
-          isFuture: dateStr > todayStr,
-        };
-      }
-    }
-  }
-
-  const monthLabels: { label: string; col: number }[] = [];
-  let prevMonth = -1;
-  for (let col = 0; col < COLS; col++) {
-    for (let row = 0; row < ROWS; row++) {
-      const cell = cells[row][col];
-      if (cell.date) {
-        const m = cell.date.getMonth();
-        if (m !== prevMonth) {
-          monthLabels.push({ label: `${m + 1}月`, col });
-          prevMonth = m;
-        }
-        break;
-      }
-    }
-  }
-
-  const totalWidth = COLS * (CELL_SIZE + GAP) - GAP;
-  const totalHeight = ROWS * (CELL_SIZE + GAP) - GAP;
-  const svgWidth = LABEL_WIDTH + totalWidth;
-  const svgHeight = MONTH_HEIGHT + totalHeight;
-
-  return (
-    <svg
-      width={svgWidth}
-      height={svgHeight}
-      viewBox={`0 0 ${svgWidth} ${svgHeight}`}
-      className="overflow-visible"
-      role="img"
-      aria-label="习惯打卡热力图"
-    >
-      {monthLabels.map((ml, i) => (
-        <text
-          key={`m-${i}`}
-          x={LABEL_WIDTH + ml.col * (CELL_SIZE + GAP)}
-          y={11}
-          className="fill-gray-400 dark:fill-gray-500"
-          fontSize="10"
-        >
-          {ml.label}
-        </text>
-      ))}
-      {["日", "一", "二", "三", "四", "五", "六"].map((label, i) => (
-        <text
-          key={`d-${i}`}
-          x={LABEL_WIDTH - 4}
-          y={MONTH_HEIGHT + i * (CELL_SIZE + GAP) + CELL_SIZE / 2 + 4}
-          className="fill-gray-400 dark:fill-gray-500"
-          fontSize="9"
-          textAnchor="end"
-        >
-          {label}
-        </text>
-      ))}
-      {cells.map((row, ri) =>
-        row.map((cell, ci) => {
-          if (!cell.date || !cell.dateStr) return null;
-          const x = LABEL_WIDTH + ci * (CELL_SIZE + GAP);
-          const y = MONTH_HEIGHT + ri * (CELL_SIZE + GAP);
-
-          let fillClass = "fill-gray-100 dark:fill-gray-800";
-          if (cell.checked) {
-            fillClass = "fill-emerald-500 dark:fill-emerald-400";
-          } else if (cell.isFuture) {
-            fillClass = "fill-gray-50 dark:fill-gray-900 opacity-30";
-          }
-
-          return (
-            <rect
-              key={`${ri}-${ci}`}
-              x={x}
-              y={y}
-              width={CELL_SIZE}
-              height={CELL_SIZE}
-              rx={2}
-              className={`${fillClass} ${cell.isToday ? "stroke-indigo-500 dark:stroke-indigo-400" : ""}`}
-              strokeWidth={cell.isToday ? 1.5 : 0}
-            >
-              <title>
-                {cell.dateStr}
-                {cell.checked ? " ✅已打卡" : ""}
-              </title>
-            </rect>
-          );
-        })
-      )}
-    </svg>
+    </motion.form>
   );
 }
 
@@ -422,26 +172,22 @@ function ShortTermCard({
   onAssignToday,
   onDelete,
   onDetailClick,
-  sectionPath,
 }: {
   task: Task;
   onToggleDone: (task: Task) => void;
   onAssignToday: (task: Task) => void;
   onDelete: (task: Task) => void;
   onDetailClick?: (taskId: number) => void;
-  sectionPath?: { projectName: string; boardName: string; stageName: string; sectionName: string; projectId: number };
 }) {
   const router = useRouter();
   const [expanded, setExpanded] = useState(false);
   const isDone = task.status === "done";
   const isOverdue = useMemo(
-    // eslint-disable-next-line react-hooks/purity
     () => !isDone && task.endTime != null && task.endTime < Date.now(),
     [isDone, task.endTime]
   );
   const countdownDays = (() => {
     if (!task.dueDate) return null;
-    // eslint-disable-next-line react-hooks/purity
     const diff = task.dueDate - Date.now();
     return Math.ceil(diff / (1000 * 60 * 60 * 24));
   })();
@@ -450,177 +196,121 @@ function ShortTermCard({
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`bg-white dark:bg-gray-900 rounded-xl border shadow-sm overflow-hidden transition-colors group ${
-        isDone
-          ? "border-gray-100 dark:border-gray-800 opacity-60"
-          : isOverdue
-          ? "border-red-200 dark:border-red-800/50"
-          : "border-gray-100 dark:border-gray-800 hover:border-gray-200 dark:hover:border-gray-700"
-      }`}
+      className="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden"
     >
-      <div className="flex items-center gap-3 px-4 py-3">
-        <button
-          onClick={() => onToggleDone(task)}
-          className={`flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
-            isDone
-              ? "bg-emerald-500 border-emerald-500"
-              : "border-gray-300 dark:border-gray-600 hover:border-indigo-400"
-          }`}
-        >
-          {isDone && <Check className="w-3 h-3 text-white" />}
-        </button>
-
-        {task.priority && (
-          <span
-            className="w-2 h-2 rounded-full flex-shrink-0"
-            style={{ backgroundColor: PRIORITY_CONFIG.find(p => p.key === task.priority)?.hex || '#6B7280' }}
-            title={PRIORITY_CONFIG.find(p => p.key === task.priority)?.label}
-          />
-        )}
-
-        <div className="flex-1 min-w-0">
-          <p
-            onClick={() => onDetailClick?.(task.id!)}
-            className={`text-sm truncate cursor-pointer ${
+      <div
+        className="p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+        onClick={() => onDetailClick?.(task.id!)}
+      >
+        <div className="flex items-start gap-3">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleDone(task);
+            }}
+            className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors ${
               isDone
-                ? "line-through text-gray-400 dark:text-gray-500"
-                : "text-gray-900 dark:text-gray-100 font-medium"
+                ? "bg-green-100 dark:bg-green-900/30 text-green-600"
+                : "bg-gray-100 dark:bg-gray-800 text-gray-400 hover:bg-gray-200"
             }`}
           >
-            {task.title}
-          </p>
-          {(task.startTime || task.endTime || countdownDays !== null) && (
-            <div className="flex items-center gap-2 mt-0.5">
-              {(task.startTime || task.endTime) && (
-                <>
-                  <Clock className="w-3 h-3 text-gray-400" />
-                  <span className="text-xs text-gray-500 dark:text-gray-400">
-                    {task.startTime ? formatTime(task.startTime) : "..."} -{" "}
-                    {task.endTime ? formatTime(task.endTime) : "..."}
-                  </span>
-                </>
+            <Check className="w-4 h-4" />
+          </button>
+
+          <div className="flex-1 min-w-0">
+            <p className={`text-sm font-medium ${isDone ? "line-through text-gray-400" : "text-gray-900 dark:text-gray-100"} truncate`}>
+              {task.title}
+            </p>
+
+            <div className="flex items-center gap-2 mt-1 flex-wrap">
+              {task.priority && (
+                <span
+                  className="w-2 h-2 rounded-full flex-shrink-0"
+                  style={{ backgroundColor: PRIORITY_CONFIG.find(p => p.key === task.priority)?.hex || '#6B7280' }}
+                  title={PRIORITY_CONFIG.find(p => p.key === task.priority)?.label}
+                />
               )}
-              {countdownDays !== null && countdownDays >= 0 && (
-                <span className="text-[10px] font-medium text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-1.5 py-0.5 rounded-md">
-                  剩余 {countdownDays} 天
+
+              {task.dueDate && (
+                <span className={`text-xs flex items-center gap-0.5 flex-shrink-0 ${
+                  isOverdue ? "text-red-500" : countdownDays === 0 ? "text-amber-500" : "text-gray-400"
+                }`}>
+                  <Clock className="w-3 h-3" />
+                  {isOverdue ? `逾期${Math.abs(countdownDays!)}天` : countdownDays === 0 ? "今天" : `${countdownDays}天后`}
                 </span>
               )}
-              {countdownDays !== null && countdownDays < 0 && (
-                <span className="text-[10px] font-medium text-red-500 bg-red-50 dark:bg-red-900/20 px-1.5 py-0.5 rounded-md">
-                  已逾期 {Math.abs(countdownDays)} 天
-                </span>
-              )}
-              {isOverdue && countdownDays === null && (
-                <span className="text-[10px] font-medium text-red-500 bg-red-50 dark:bg-red-900/20 px-1.5 py-0.5 rounded-md">
-                  已逾期
+
+              {task.startTime && (
+                <span className="text-xs text-gray-400 flex-shrink-0">
+                  {formatDate(task.startTime)} {formatTime(task.startTime)}
                 </span>
               )}
             </div>
-          )}
-        </div>
-
-        {sectionPath && sectionPath.projectName && (
-          <div
-            onClick={() => router.push("/projects")}
-            className="flex items-center gap-1 mt-1 text-[10px] text-gray-400 dark:text-gray-500 truncate cursor-pointer hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors"
-            title={`${sectionPath.projectName} > ${sectionPath.boardName}${sectionPath.stageName ? ` > ${sectionPath.stageName}` : ""} > ${sectionPath.sectionName}`}
-          >
-            <FolderKanban className="w-3 h-3 flex-shrink-0" />
-            <span className="truncate">
-              {sectionPath.projectName}
-              <ChevronRight className="w-3 h-3 inline mx-0.5 text-gray-300" />
-              {sectionPath.boardName}
-              {sectionPath.stageName && (
-                <>
-                  <ChevronRight className="w-3 h-3 inline mx-0.5 text-gray-300" />
-                  {sectionPath.stageName}
-                </>
-              )}
-              <ChevronRight className="w-3 h-3 inline mx-0.5 text-gray-300" />
-              {sectionPath.sectionName}
-            </span>
           </div>
-        )}
-
-        <button
-          onClick={() => onAssignToday(task)}
-          disabled={isDone}
-          className="text-[10px] font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-1 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors disabled:opacity-30 flex-shrink-0"
-        >
-          今日
-        </button>
-        <button
-          onClick={() => setExpanded(!expanded)}
-          className="flex-shrink-0"
-        >
-          <motion.span
-            animate={{ rotate: expanded ? 90 : 0 }}
-            transition={{ duration: 0.15 }}
-          >
-            <ChevronRight className="w-4 h-4 text-gray-400" />
-          </motion.span>
-        </button>
-        <button
-          onClick={() => onDelete(task)}
-          className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
-        >
-          <Trash2 className="w-3.5 h-3.5 text-gray-400 hover:text-red-500" />
-        </button>
+        </div>
       </div>
 
-      <AnimatePresence>
-        {expanded && task.note && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            className="px-4 pb-3 overflow-hidden"
+      <div className="px-4 pb-4">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => onAssignToday(task)}
+            className="flex-1 flex items-center justify-center gap-1 py-2 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 text-xs font-medium hover:bg-blue-100 transition-colors"
           >
-            <p className="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 rounded-lg p-2.5">
-              {task.note}
-            </p>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            <CalendarDays className="w-3 h-3" />
+            今日安排
+          </button>
+          <button
+            onClick={() => router.push("/today")}
+            className="flex-1 flex items-center justify-center gap-1 py-2 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-600 text-xs font-medium hover:bg-gray-100 transition-colors"
+          >
+            <ClipboardList className="w-3 h-3" />
+            查看日程
+          </button>
+          <button
+            onClick={() => onDelete(task)}
+            className="w-8 h-8 flex items-center justify-center rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
     </motion.div>
   );
 }
 
-function DailyTaskItem({
+function DailyCard({
   task,
   onToggleDone,
-  isFuture,
-  onDetailClick,
+  onDelete,
 }: {
   task: Task;
   onToggleDone: (task: Task) => void;
-  isFuture: boolean;
-  onDetailClick?: (taskId: number) => void;
+  onDelete: (task: Task) => void;
 }) {
   const isDone = task.status === "done";
 
   return (
-    <div className="flex items-center gap-3 px-4 py-2.5">
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="flex items-center gap-3 p-3 bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800"
+    >
       <button
-        onClick={() => {
-          if (isFuture) {
-            globalShowToast({ message: "未来日期的琐事还不能标记完成哦", type: "warning" });
-            return;
-          }
-          onToggleDone(task);
-        }}
-        disabled={isFuture}
-        title={isFuture ? "未来的任务暂不可操作" : undefined}
-        className={`flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+        onClick={() => onToggleDone(task)}
+        className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors ${
           isDone
-            ? "bg-emerald-500 border-emerald-500"
-            : isFuture
-            ? "border-gray-200 dark:border-gray-700 cursor-not-allowed"
-            : "border-gray-300 dark:border-gray-600 hover:border-indigo-400"
+            ? "bg-green-100 dark:bg-green-900/30 text-green-600"
+            : "bg-gray-100 dark:bg-gray-800 text-gray-400 hover:bg-gray-200"
         }`}
       >
-        {isDone && <Check className="w-3 h-3 text-white" />}
+        <Check className="w-4 h-4" />
       </button>
+
+      <div className="flex-1 min-w-0">
+        <p className={`text-sm ${isDone ? "line-through text-gray-400" : "text-gray-900 dark:text-gray-100"} truncate`}>
+          {task.title}
+        </p>
+      </div>
 
       {task.priority && (
         <span
@@ -630,187 +320,34 @@ function DailyTaskItem({
         />
       )}
 
-      <span
-        onClick={() => onDetailClick?.(task.id!)}
-        className={`flex-1 text-sm cursor-pointer ${
-          isDone
-            ? "line-through text-gray-400 dark:text-gray-500"
-            : isFuture
-            ? "text-gray-400 dark:text-gray-500"
-            : "text-gray-900 dark:text-gray-100"
-        }`}
+      <button
+        onClick={() => onDelete(task)}
+        className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:text-red-500 transition-colors"
       >
-        {task.title}
-      </span>
-
-      {task.note && !isFuture && (
-        <span className="flex-1 text-xs text-gray-400 dark:text-gray-500 line-clamp-1 ml-2 truncate max-w-[120px]">
-          {task.note}
-        </span>
-      )}
-
-      {isFuture && (
-        <Info className="w-3.5 h-3.5 text-gray-300 dark:text-gray-600" />
-      )}
-    </div>
-  );
-}
-
-function HabitCard({
-  task,
-  streak,
-  todayChecked,
-  todayLog,
-  onCheckin,
-  onDelete,
-  celebrateIndex,
-  onDetailClick,
-}: {
-  task: Task;
-  streak: number;
-  todayChecked: boolean;
-  todayLog?: HabitLog;
-  onCheckin: (taskId: number, date: string, currentCount: number) => void;
-  onDelete: (task: Task) => void;
-  celebrateIndex?: number;
-  onDetailClick?: (taskId: number) => void;
-}) {
-  const todayStr = getLocalDateStr(new Date());
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm p-4"
-    >
-      <div className="flex items-center gap-3 mb-3">
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center flex-shrink-0">
-          <Flame className="w-4 h-4 text-white" />
-        </div>
-        {task.priority && (
-          <span
-            className="w-2 h-2 rounded-full flex-shrink-0"
-            style={{ backgroundColor: PRIORITY_CONFIG.find(p => p.key === task.priority)?.hex || '#6B7280' }}
-            title={PRIORITY_CONFIG.find(p => p.key === task.priority)?.label}
-          />
-        )}
-        <div className="flex-1 min-w-0">
-          <p
-            onClick={() => onDetailClick?.(task.id!)}
-            className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate cursor-pointer"
-          >
-            {task.title}
-          </p>
-          <div className="flex items-center gap-1 flex-wrap">
-            <Flame className="w-3 h-3 text-orange-500" />
-            <span className="text-xs font-semibold text-orange-500">{streak} 天连续</span>
-            {todayLog?.rating && (
-              <span className="text-xs text-amber-500 ml-1">{todayLog.rating}/10</span>
-            )}
-            {todayLog?.note && (
-              <span className="text-xs text-gray-400 truncate ml-1 max-w-[100px]">{todayLog.note}</span>
-            )}
-          </div>
-        </div>
-        {todayChecked ? (
-          celebrateIndex !== undefined ? (
-            <motion.span
-              key={`celebrate-${task.id}`}
-              initial={{ scale: 1 }}
-              animate={{ scale: [1, 1.3, 1] }}
-              transition={{
-                delay: celebrateIndex * 0.1,
-                duration: 0.4,
-                ease: "easeOut",
-              }}
-              className="flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-2.5 py-1.5 rounded-xl flex-shrink-0"
-            >
-              <Check className="w-3.5 h-3.5" />
-              已打卡
-            </motion.span>
-          ) : (
-            <span className="flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-2.5 py-1.5 rounded-xl flex-shrink-0">
-              <Check className="w-3.5 h-3.5" />
-              已打卡
-            </span>
-          )
-        ) : (
-          <button
-            onClick={() => onCheckin(task.id!, todayStr, todayLog?.count ?? 0)}
-            className="text-xs font-medium text-white bg-indigo-600 hover:bg-indigo-700 px-4 py-1.5 rounded-xl transition-colors flex-shrink-0"
-          >
-            打卡
-          </button>
-        )}
-        <button
-          onClick={() => onDelete(task)}
-          className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-        >
-          <Trash2 className="w-3.5 h-3.5 text-gray-400 hover:text-red-500" />
-        </button>
-      </div>
-
-      <div className="overflow-x-auto">
-        <HabitHeatmap taskId={task.id!} />
-      </div>
+        <Trash2 className="w-3.5 h-3.5" />
+      </button>
     </motion.div>
   );
 }
 
-function useDayTransitionGuard(): { dayChanged: boolean; dismissOverlay: () => void } {
-  const [dayChanged, setDayChanged] = useState(false);
-  const todayRef = useRef(getLocalDateStr(new Date()));
-
-  useEffect(() => {
-    const check = () => {
-      const newToday = getLocalDateStr(new Date());
-      if (newToday !== todayRef.current) {
-        todayRef.current = newToday;
-        setDayChanged(true);
-        setTimeout(() => setDayChanged(false), 5000);
-      }
-    };
-    const interval = setInterval(check, 30000);
-    return () => clearInterval(interval);
-  }, []);
-
-  return { dayChanged, dismissOverlay: () => setDayChanged(false) };
-}
-
-function GoalsPageInner() {
+function GoalsContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
   const tabParam = searchParams.get("tab");
   const fromCapture = searchParams.get("fromCapture") === "1";
-  const currentView: GoalViewType =
-    tabParam === "long-term" ||
-    tabParam === "short-term" ||
-    tabParam === "daily-trivial" ||
-    tabParam === "habits"
+  const currentView: "short-term" | "daily-trivial" =
+    tabParam === "short-term" || tabParam === "daily-trivial"
       ? tabParam
-      : "long-term";
+      : "short-term";
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [boardGroups, setBoardGroups] = useState<{ board: Board; stages: Map<number, Section[]> }[]>([]);
-  const [expandedBoards, setExpandedBoards] = useState<Set<number>>(new Set());
-  const [expandedStages, setExpandedStages] = useState<Set<string>>(new Set());
   const [shorttermTasks, setShorttermTasks] = useState<Task[]>([]);
-  const [sectionPathMap, setSectionPathMap] = useState<Map<number, { projectName: string; boardName: string; stageName: string; sectionName: string; projectId: number }>>(new Map());
-  const [detailSectionId, setDetailSectionId] = useState<number | null>(null);
   const [dailyTasks, setDailyTasks] = useState<Task[]>([]);
-  const [habits, setHabits] = useState<Task[]>([]);
-  const [habitStreaks, setHabitStreaks] = useState<Map<number, number>>(new Map());
-  const [todayCheckedHabits, setTodayCheckedHabits] = useState<Set<number>>(new Set());
-  const [habitLogs, setHabitLogs] = useState<Map<number, HabitLog>>(new Map());
-  const [monthlyLogs, setMonthlyLogs] = useState<HabitLog[]>([]);
-  const [habitCheckinTarget, setHabitCheckinTarget] = useState<{ taskId: number; date: string; count: number } | null>(null);
-  const [checkinNote, setCheckinNote] = useState("");
-  const [checkinRating, setCheckinRating] = useState<number>(5);
 
   const [showAddForm, setShowAddForm] = useState(false);
-  const [toast, setToast] = useState<ToastFeedback | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const tabDirection = useRef<number>(0);
   const [tabAnimDir, setTabAnimDir] = useState(0);
@@ -819,12 +356,10 @@ function GoalsPageInner() {
   const [shorttermCelebrationShrunk, setShorttermCelebrationShrunk] = useState(false);
   const [detailTaskId, setDetailTaskId] = useState<number | null>(null);
 
-  const { dayChanged, dismissOverlay } = useDayTransitionGuard();
-
   const showToast = useCallback((message: string, type: "success" | "error" = "success") => {
     setToast({ message, type });
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-    toastTimerRef.current = setTimeout(() => setToast(null), TOAST_DURATION);
+    toastTimerRef.current = setTimeout(() => setToast(null), 3000);
   }, []);
 
   useEffect(() => {
@@ -858,21 +393,8 @@ function GoalsPageInner() {
     }
   }, [allShorttermDone]);
 
-  const allHabitsDoneToday =
-    habits.length > 0 &&
-    habits.every((h) => todayCheckedHabits.has(h.id!));
-
-  const prevAllHabitsDoneRef = useRef(false);
-
-  useEffect(() => {
-    if (allHabitsDoneToday && !prevAllHabitsDoneRef.current && currentView === "habits") {
-      showToast("今日全部完成！");
-    }
-    prevAllHabitsDoneRef.current = allHabitsDoneToday;
-  }, [allHabitsDoneToday, currentView, showToast]);
-
   const handleTabClick = useCallback(
-    (view: GoalViewType) => {
+    (view: "short-term" | "daily-trivial") => {
       const oldIdx = TABS.findIndex((t) => t.key === currentView);
       const newIdx = TABS.findIndex((t) => t.key === view);
       tabDirection.current = newIdx > oldIdx ? 1 : -1;
@@ -883,34 +405,6 @@ function GoalsPageInner() {
     [currentView, router]
   );
 
-  const loadLongterm = useCallback(async () => {
-    setLoading(true);
-    setError(false);
-    try {
-      const allBoards = await db.boards.toArray();
-      const allSections = await db.sections.toArray();
-
-      const boardMap = new Map<number, { board: Board; stages: Map<number, Section[]> }>();
-      for (const b of allBoards) {
-        boardMap.set(b.id!, { board: b, stages: new Map() });
-      }
-      for (const s of allSections) {
-        if (s.boardId && boardMap.has(s.boardId)) {
-          const entry = boardMap.get(s.boardId)!;
-          const si = s.stageIndex ?? 0;
-          if (!entry.stages.has(si)) entry.stages.set(si, []);
-          entry.stages.get(si)!.push(s);
-        }
-      }
-
-      setBoardGroups(Array.from(boardMap.values()));
-    } catch {
-      setError(true);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   const loadShortterm = useCallback(async () => {
     setLoading(true);
     setError(false);
@@ -918,53 +412,6 @@ function GoalsPageInner() {
       const data = await getTasksByType("shortterm");
       const active = data.filter((t) => t.status !== "archived");
       setShorttermTasks(active);
-
-      const sidSet = new Set(active.filter((t) => t.sectionId).map((t) => t.sectionId!));
-      const pathMap = new Map<number, { projectName: string; boardName: string; stageName: string; sectionName: string; projectId: number }>();
-      if (sidSet.size > 0) {
-        const sections = await db.sections.bulkGet([...sidSet]);
-        const bidSet = new Set<number>();
-        const secMap = new Map<number, Section>();
-        for (const s of sections) {
-          if (s) {
-            secMap.set(s.id!, s);
-            if (s.boardId) bidSet.add(s.boardId);
-          }
-        }
-        if (bidSet.size > 0) {
-          const boards = await db.boards.bulkGet([...bidSet]);
-          const pidSet = new Set<number>();
-          const brdMap = new Map<number, Board>();
-          for (const b of boards) {
-            if (b) {
-              brdMap.set(b.id!, b);
-              if (b.projectId) pidSet.add(b.projectId);
-            }
-          }
-          if (pidSet.size > 0) {
-            const projects = await db.projectV2s.bulkGet([...pidSet]);
-            const projMap = new Map<number, string>();
-            for (const p of projects) {
-              if (p) projMap.set(p.id!, p.name);
-            }
-            for (const [sid, section] of secMap) {
-              if (!section.boardId) continue;
-              const board = brdMap.get(section.boardId);
-              if (!board) continue;
-              const projName = board.projectId ? projMap.get(board.projectId) || "" : "";
-              const stageName = board.stages?.[section.stageIndex ?? 0]?.name || "";
-              pathMap.set(sid, {
-                projectName: projName,
-                boardName: board.name,
-                stageName,
-                sectionName: section.name,
-                projectId: board.projectId || 0,
-              });
-            }
-          }
-        }
-      }
-      setSectionPathMap(pathMap);
     } catch {
       setError(true);
     } finally {
@@ -986,65 +433,19 @@ function GoalsPageInner() {
     }
   }, []);
 
-  const loadHabits = useCallback(async () => {
-    setLoading(true);
-    setError(false);
-    try {
-      const all = await getAllHabits();
-      setHabits(all);
-
-      const streaks = new Map<number, number>();
-      const checked = new Set<number>();
-      const logs = new Map<number, HabitLog>();
-      const todayStr = getLocalDateStr(new Date());
-      const today = new Date();
-      const monthStart = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().slice(0, 10);
-      const allMonthLogs: HabitLog[] = [];
-
-      for (const h of all) {
-        const s = await getStreak(h.id!);
-        streaks.set(h.id!, s);
-
-        const todayLogs = await getHabitLogsByDateRange(h.id!, todayStr, todayStr);
-        if (todayLogs.length > 0) {
-          checked.add(h.id!);
-          logs.set(h.id!, todayLogs[0]);
-        }
-
-        const monthLogs = await getHabitLogsByDateRange(h.id!, monthStart, todayStr);
-        allMonthLogs.push(...monthLogs);
-      }
-
-      setHabitStreaks(streaks);
-      setTodayCheckedHabits(checked);
-      setHabitLogs(logs);
-      setMonthlyLogs(allMonthLogs);
-    } catch {
-      setError(true);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
     const load = async () => {
       switch (currentView) {
-        case "long-term":
-          await loadLongterm();
-          break;
         case "short-term":
           await loadShortterm();
           break;
         case "daily-trivial":
           await loadDaily();
           break;
-        case "habits":
-          await loadHabits();
-          break;
       }
     };
     load();
-  }, [currentView, loadLongterm, loadShortterm, loadDaily, loadHabits]);
+  }, [currentView, loadShortterm, loadDaily]);
 
   const handleToggleDone = useCallback(
     async (task: Task) => {
@@ -1052,9 +453,6 @@ function GoalsPageInner() {
       try {
         await updateTask(task.id!, { status: newStatus });
         switch (currentView) {
-          case "long-term":
-            await loadLongterm();
-            break;
           case "short-term":
             await loadShortterm();
             break;
@@ -1066,58 +464,36 @@ function GoalsPageInner() {
         showToast("操作失败", "error");
       }
     },
-    [currentView, loadLongterm, loadShortterm, loadDaily, showToast]
+    [currentView, loadShortterm, loadDaily, showToast]
   );
 
   const handleAddTask = useCallback(
-    async (title: string, viewType: GoalViewType, parentTaskId?: number) => {
+    async (title: string, viewType: "short-term" | "daily-trivial") => {
       try {
-        const taskType = viewType === "habits" ? "habit" as const : viewType === "long-term" ? "longterm" as const : viewType === "short-term" ? "shortterm" as const : "daily" as const;
+        const taskType = viewType === "short-term" ? "shortterm" as const : "daily" as const;
         const taskData: Omit<Task, "id" | "createdAt" | "updatedAt"> = {
           title,
           type: taskType,
           status: "active",
+          classification: viewType,
         };
-
-        if (parentTaskId !== undefined) {
-          taskData.parentTaskId = parentTaskId;
-        }
-
-        if (viewType === "short-term") {
-          taskData.classification = "short-term";
-        }
-        if (viewType === "daily-trivial") {
-          taskData.classification = "daily-trivial";
-        }
-        if (viewType === "habits") {
-          taskData.classification = "habit";
-        }
-        if (viewType === "long-term") {
-          taskData.classification = "long-term";
-        }
 
         await createTask(taskData);
         setShowAddForm(false);
 
         switch (viewType) {
-          case "long-term":
-            await loadLongterm();
-            break;
           case "short-term":
             await loadShortterm();
             break;
           case "daily-trivial":
             await loadDaily();
             break;
-          case "habits":
-            await loadHabits();
-            break;
         }
       } catch {
         showToast("添加失败", "error");
       }
     },
-    [loadLongterm, loadShortterm, loadDaily, loadHabits, showToast]
+    [loadShortterm, loadDaily, showToast]
   );
 
   const handleDeleteTask = useCallback(
@@ -1126,30 +502,26 @@ function GoalsPageInner() {
         await deleteTask(task.id!);
         showToast("已移入回收站", "success");
         switch (currentView) {
-          case "long-term":
-            await loadLongterm();
-            break;
           case "short-term":
             await loadShortterm();
             break;
           case "daily-trivial":
             await loadDaily();
             break;
-          case "habits":
-            await loadHabits();
-            break;
         }
       } catch {
         showToast("删除失败", "error");
       }
     },
-    [currentView, loadLongterm, loadShortterm, loadDaily, loadHabits, showToast]
+    [currentView, loadShortterm, loadDaily, showToast]
   );
 
   const handleAssignToday = useCallback(
     async (task: Task) => {
       try {
-        const { start, end } = getTodayRange();
+        const today = new Date();
+        const start = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+        const end = start + 24 * 60 * 60 * 1000;
         await updateTask(task.id!, {
           startTime: start,
           endTime: end,
@@ -1163,188 +535,61 @@ function GoalsPageInner() {
     [loadShortterm, showToast]
   );
 
-  const handleCheckIn = useCallback(
-    (taskId: number, date: string, currentCount: number) => {
-      setCheckinNote("");
-      setCheckinRating(5);
-      setHabitCheckinTarget({ taskId, date, count: currentCount });
-    },
-    []
-  );
-
-  const handleMainAddClick = useCallback(() => {
+  const handleMainAddClick = () => {
     setShowAddForm(true);
-  }, []);
+  };
 
   const filteredShortterm = useMemo(() => {
-    // eslint-disable-next-line react-hooks/purity
-    const now = Date.now();
-    if (shorttermFilter === "全部") return shorttermTasks;
-    if (shorttermFilter === "进行中") return shorttermTasks.filter((t) => t.status === "active" && (!t.endTime || t.endTime >= now));
-    if (shorttermFilter === "已完成") return shorttermTasks.filter((t) => t.status === "done");
-    if (shorttermFilter === "已逾期") return shorttermTasks.filter((t) => t.status === "active" && t.endTime != null && t.endTime < now);
-    if (shorttermFilter === "本周") {
-      const today = new Date();
-      const dayOfWeek = today.getDay();
-      const monday = new Date(today);
-      monday.setDate(today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1));
-      monday.setHours(0, 0, 0, 0);
-      const sunday = new Date(monday);
-      sunday.setDate(monday.getDate() + 6);
-      sunday.setHours(23, 59, 59, 999);
-      return shorttermTasks.filter((t) => {
-        if (!t.endTime && !t.startTime) return false;
-        const taskTime = t.endTime ?? t.startTime ?? 0;
-        return taskTime >= monday.getTime() && taskTime <= sunday.getTime();
-      });
+    let filtered = [...shorttermTasks];
+    switch (shorttermFilter) {
+      case "进行中":
+        filtered = filtered.filter((t) => t.status === "active");
+        break;
+      case "已完成":
+        filtered = filtered.filter((t) => t.status === "done");
+        break;
+      case "已逾期":
+        filtered = filtered.filter((t) => t.status === "active" && t.endTime != null && t.endTime < Date.now());
+        break;
+      case "本周": {
+        const now = new Date();
+        const weekStart = new Date(now);
+        weekStart.setDate(now.getDate() - now.getDay());
+        weekStart.setHours(0, 0, 0, 0);
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekEnd.getDate() + 7);
+        filtered = filtered.filter((t) => t.startTime != null && t.startTime >= weekStart.getTime() && t.startTime < weekEnd.getTime());
+        break;
+      }
+      case "本月": {
+        const now = new Date();
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+        filtered = filtered.filter((t) => t.startTime != null && t.startTime >= monthStart.getTime() && t.startTime < monthEnd.getTime());
+        break;
+      }
     }
-    if (shorttermFilter === "本月") {
-      const today = new Date();
-      const firstDay = new Date(today.getFullYear(), today.getMonth(), 1).getTime();
-      const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999).getTime();
-      return shorttermTasks.filter((t) => {
-        if (!t.endTime && !t.startTime) return false;
-        const taskTime = t.endTime ?? t.startTime ?? 0;
-        return taskTime >= firstDay && taskTime <= lastDay;
-      });
-    }
-    return shorttermTasks;
-  }, [shorttermFilter, shorttermTasks]);
+    return filtered.sort((a, b) => {
+      const priorityOrder = ["urgent-important", "not-urgent-important", "urgent-not-important", "not-urgent-not-important"];
+      const pa = priorityOrder.indexOf(a.priority || "not-urgent-not-important");
+      const pb = priorityOrder.indexOf(b.priority || "not-urgent-not-important");
+      if (pa !== pb) return pa - pb;
+      return (a.dueDate || Infinity) - (b.dueDate || Infinity);
+    });
+  }, [shorttermTasks, shorttermFilter]);
 
   const filteredDaily = useMemo(() => {
-    if (dailyFilter === "全部") return dailyTasks;
-    if (dailyFilter === "未完成") return dailyTasks.filter((t) => t.status !== "done");
-    if (dailyFilter === "已完成") return dailyTasks.filter((t) => t.status === "done");
-    return dailyTasks;
-  }, [dailyFilter, dailyTasks]);
-
-  const dailyByDate = useMemo(() => {
-    const todayStr = getLocalDateStr(new Date());
-    const groups: { dateStr: string; label: string; isToday: boolean; tasks: Task[] }[] = [];
-    const seen = new Set<string>();
-
-    const todayTasks = filteredDaily.filter((t) => {
-      const ds = t.startTime ? getLocalDateStr(new Date(t.startTime)) : todayStr;
-      return ds === todayStr;
-    });
-
-    if (todayTasks.length > 0 || true) {
-      groups.push({ dateStr: todayStr, label: "今天", isToday: true, tasks: todayTasks });
-      seen.add(todayStr);
+    let filtered = [...dailyTasks];
+    switch (dailyFilter) {
+      case "未完成":
+        filtered = filtered.filter((t) => t.status !== "done");
+        break;
+      case "已完成":
+        filtered = filtered.filter((t) => t.status === "done");
+        break;
     }
-
-    for (const task of filteredDaily) {
-      const ds = task.startTime ? getLocalDateStr(new Date(task.startTime)) : todayStr;
-      if (seen.has(ds)) continue;
-      seen.add(ds);
-      groups.push({ dateStr: ds, label: ds === todayStr ? "今天" : formatDate(task.startTime || 0), isToday: ds === todayStr, tasks: [task] });
-    }
-
-    return groups;
-  }, [filteredDaily]);
-
-  const renderLongtermView = () => {
-    if (loading) return <LongtermSkeleton />;
-    if (error) return <ErrorStateView onRetry={loadLongterm} />;
-
-    if (boardGroups.length === 0) {
-      return (
-        <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
-          <Mountain className="w-12 h-12 text-gray-300 mb-4" />
-          <p className="text-gray-500 mb-2">暂无长期目标</p>
-          <p className="text-xs text-gray-400">在捕捉箱中将想法转化为子模块（长期目标）</p>
-        </div>
-      );
-    }
-
-    return (
-      <div className="px-4 py-4 space-y-2">
-        {boardGroups.map(({ board, stages }) => {
-          const isBoardExpanded = expandedBoards.has(board.id!);
-          const sortedStages = Array.from(stages.entries()).sort(([a], [b]) => a - b);
-          return (
-            <div key={board.id} className="rounded-xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 overflow-hidden">
-              <button onClick={() => {
-                setExpandedBoards(prev => {
-                  const next = new Set(prev);
-                  if (next.has(board.id!)) next.delete(board.id!);
-                  else next.add(board.id!);
-                  return next;
-                });
-              }}
-                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                  <FolderKanban className="w-4 h-4 text-blue-500" />
-                </div>
-                <span className="flex-1 text-left text-sm font-medium text-gray-900 dark:text-gray-100">{board.name}</span>
-                <span className="text-xs text-gray-400">{stages.size} 阶段</span>
-                {isBoardExpanded ? <ChevronDown className="w-4 h-4 text-gray-400" /> : <ChevronRight className="w-4 h-4 text-gray-400" />}
-              </button>
-
-              <AnimatePresence>
-                {isBoardExpanded && sortedStages.map(([stageIdx, stageSections]) => {
-                  const stageKey = `${board.id}-${stageIdx}`;
-                  const isStageExpanded = expandedStages.has(stageKey);
-                  const stageName = board.stages?.[stageIdx]?.name || `阶段 ${stageIdx + 1}`;
-                  const achievements = board.stages?.[stageIdx]?.achievements || [];
-                  return (
-                    <motion.div key={stageIdx} initial={{ height: 0 }} animate={{ height: "auto" }} exit={{ height: 0 }} className="overflow-hidden border-t border-gray-100 dark:border-gray-700">
-                      <button onClick={() => {
-                        setExpandedStages(prev => {
-                          const next = new Set(prev);
-                          if (next.has(stageKey)) next.delete(stageKey);
-                          else next.add(stageKey);
-                          return next;
-                        });
-                      }}
-                        className="w-full flex items-center gap-3 pl-10 pr-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
-                        <div className="w-6 h-6 rounded bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
-                          <Layers className="w-3.5 h-3.5 text-indigo-500" />
-                        </div>
-                        <span className="flex-1 text-left text-xs font-medium text-gray-700 dark:text-gray-300">{stageName}</span>
-                        <span className="text-xs text-gray-400">{stageSections.length} 子模块 · {achievements.length} 成就</span>
-                        {isStageExpanded ? <ChevronDown className="w-3.5 h-3.5 text-gray-400" /> : <ChevronRight className="w-3.5 h-3.5 text-gray-400" />}
-                      </button>
-
-                      <AnimatePresence>
-                        {isStageExpanded && (
-                          <motion.div initial={{ height: 0 }} animate={{ height: "auto" }} exit={{ height: 0 }} className="overflow-hidden">
-                            {achievements.length > 0 && (
-                              <div className="pl-16 pr-4 py-1.5 space-y-1">
-                                {achievements.map((a, i) => (
-                                  <div key={i} className="flex items-center gap-1.5 text-xs text-gray-500">
-                                    <Check className="w-3 h-3 text-indigo-400 flex-shrink-0" />{a}
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                            {stageSections.map((section) => (
-                              <div key={section.id}
-                                onClick={() => setDetailSectionId(section.id!)}
-                                className="flex items-center gap-3 pl-16 pr-4 py-2.5 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors border-t border-gray-50 dark:border-gray-700/30">
-                                <div className="w-5 h-5 rounded bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center flex-shrink-0">
-                                  <Target className="w-3 h-3 text-amber-500" />
-                                </div>
-                                <span className="flex-1 text-sm text-gray-700 dark:text-gray-300 truncate">{section.name}</span>
-                                {section.startTime && (
-                                  <span className="text-xs text-gray-400">{formatDate(section.startTime)}</span>
-                                )}
-                                <ChevronRight className="w-3.5 h-3.5 text-gray-300 flex-shrink-0" />
-                              </div>
-                            ))}
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </motion.div>
-                  );
-                })}
-              </AnimatePresence>
-            </div>
-          );
-        })}
-      </div>
-    );
-  };
+    return filtered;
+  }, [dailyTasks, dailyFilter]);
 
   const renderShorttermView = () => {
     if (loading) return <CardListSkeleton />;
@@ -1398,12 +643,12 @@ function GoalsPageInner() {
                 <span className="text-sm font-medium text-green-700 dark:text-green-300">
                   🎉 所有短期事件已完成！
                 </span>
-                <button
-                  onClick={() => router.push("/goals?tab=habits")}
-                  className="text-xs font-medium text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 underline underline-offset-2 ml-auto flex-shrink-0"
-                >
-                  查看习惯追踪
-                </button>
+                <Link
+                    href="/plugins/habit"
+                    className="text-xs font-medium text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 underline underline-offset-2 ml-auto flex-shrink-0"
+                  >
+                    查看习惯追踪
+                  </Link>
               </>
             )}
           </motion.div>
@@ -1426,30 +671,16 @@ function GoalsPageInner() {
         </div>
 
         <div className="space-y-3">
-          {(() => {
-            const sorted = [...filteredShortterm].sort((a, b) => {
-              const priorityOrder = ["urgent-important", "not-urgent-important", "urgent-not-important", "not-urgent-not-important"];
-              const pa = priorityOrder.indexOf(a.priority || "not-urgent-not-important");
-              const pb = priorityOrder.indexOf(b.priority || "not-urgent-not-important");
-              if (pa !== pb) return pa - pb;
-              const now = Date.now();
-              const countdownA = a.dueDate ? a.dueDate - now : Infinity;
-              const countdownB = b.dueDate ? b.dueDate - now : Infinity;
-              return countdownA - countdownB;
-            });
-            return sorted.map((task) => (
-              <div key={task.id} className="group">
-                <ShortTermCard
-                  task={task}
-                  onToggleDone={handleToggleDone}
-                  onAssignToday={handleAssignToday}
-                  onDelete={handleDeleteTask}
-                  onDetailClick={setDetailTaskId}
-                  sectionPath={task.sectionId ? sectionPathMap.get(task.sectionId) : undefined}
-                />
-              </div>
-            ));
-          })()}
+          {filteredShortterm.map((task) => (
+            <ShortTermCard
+              key={task.id}
+              task={task}
+              onToggleDone={handleToggleDone}
+              onAssignToday={handleAssignToday}
+              onDelete={handleDeleteTask}
+              onDetailClick={setDetailTaskId}
+            />
+          ))}
         </div>
 
         {!showAddForm && (
@@ -1473,13 +704,18 @@ function GoalsPageInner() {
       return (
         <EmptyStateView
           icon={ClipboardList}
-          title="日常琐事会出现在这里"
-          description="记录每天重复的待办事项"
-          actionLabel="添加日常琐事"
+          title="开始日常琐事"
+          description="记录每天需要完成的小任务"
+          actionLabel="创建日常琐事"
           onAction={handleMainAddClick}
         />
       );
     }
+
+    const filters: DailyFilter[] = ["全部", "未完成", "已完成"];
+
+    const completedCount = dailyTasks.filter((t) => t.status === "done").length;
+    const progress = dailyTasks.length > 0 ? Math.round((completedCount / dailyTasks.length) * 100) : 0;
 
     return (
       <div className="px-4 py-4">
@@ -1493,8 +729,23 @@ function GoalsPageInner() {
           )}
         </AnimatePresence>
 
+        <div className="mb-4">
+          <div className="flex items-center justify-between text-sm mb-1">
+            <span className="text-gray-500 dark:text-gray-400">完成进度</span>
+            <span className="font-medium text-gray-700 dark:text-gray-300">{completedCount}/{dailyTasks.length}</span>
+          </div>
+          <div className="h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${progress}%` }}
+              transition={{ duration: 0.5 }}
+              className="h-full bg-gradient-to-r from-green-400 to-emerald-500 rounded-full"
+            />
+          </div>
+        </div>
+
         <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-1">
-          {(["全部", "未完成", "已完成"] as DailyFilter[]).map((f) => (
+          {filters.map((f) => (
             <button
               key={f}
               onClick={() => setDailyFilter(f)}
@@ -1509,220 +760,27 @@ function GoalsPageInner() {
           ))}
         </div>
 
-        <div className="space-y-4">
-          {dailyByDate.map((group) => (
-            <div key={group.dateStr}>
-              <div className="flex items-center gap-2 mb-2">
-                <h3
-                  className={`text-sm font-semibold ${
-                    group.isToday
-                      ? "text-indigo-600 dark:text-indigo-400"
-                      : "text-gray-500 dark:text-gray-400"
-                  }`}
-                >
-                  {group.label}
-                </h3>
-                {group.isToday && (
-                  <span className="text-[10px] font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-1.5 py-0.5 rounded-full">
-                    今天
-                  </span>
-                )}
-              </div>
-              <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 divide-y divide-gray-50 dark:divide-gray-800/50">
-                {[...group.tasks].sort((a, b) => {
-                  const priorityOrder = ["urgent-important", "not-urgent-important", "urgent-not-important", "not-urgent-not-important"];
-                  const pa = priorityOrder.indexOf(a.priority || "not-urgent-not-important");
-                  const pb = priorityOrder.indexOf(b.priority || "not-urgent-not-important");
-                  if (pa !== pb) return pa - pb;
-                  const now = Date.now();
-                  const countdownA = a.dueDate ? a.dueDate - now : Infinity;
-                  const countdownB = b.dueDate ? b.dueDate - now : Infinity;
-                  if (countdownA < 0 && countdownB >= 0) return 1;
-                  if (countdownB < 0 && countdownA >= 0) return -1;
-                  if (countdownA !== countdownB) return countdownA - countdownB;
-                  if (a.status !== b.status) return a.status === "done" ? 1 : -1;
-                  return 0;
-                }).map((task) => (
-                  <DailyTaskItem
-                    key={task.id}
-                    task={task}
-                    onToggleDone={handleToggleDone}
-                    isFuture={!group.isToday}
-                    onDetailClick={setDetailTaskId}
-                  />
-                ))}
-              </div>
-            </div>
+        <div className="space-y-2">
+          {filteredDaily.map((task) => (
+            <DailyCard
+              key={task.id}
+              task={task}
+              onToggleDone={handleToggleDone}
+              onDelete={handleDeleteTask}
+            />
           ))}
         </div>
 
         {!showAddForm && (
           <button
             onClick={handleMainAddClick}
-            className="mt-4 w-full flex items-center justify-center gap-1.5 py-3 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-700 text-sm text-gray-500 dark:text-gray-400 hover:border-indigo-300 dark:hover:border-indigo-700 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+            className="mt-3 w-full flex items-center justify-center gap-1.5 py-3 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-700 text-sm text-gray-500 dark:text-gray-400 hover:border-indigo-300 dark:hover:border-indigo-700 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
           >
             <Plus className="w-4 h-4" />
             添加日常琐事
           </button>
         )}
       </div>
-    );
-  };
-
-  const renderHabitsView = () => {
-    if (loading) return <HabitListSkeleton />;
-    if (error) return <ErrorStateView onRetry={loadHabits} />;
-
-    const allDoneToday =
-      habits.length > 0 &&
-      habits.every((h) => todayCheckedHabits.has(h.id!));
-
-    return (
-      <>
-        <AnimatePresence>
-          {dayChanged && currentView === "habits" && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-50 bg-black/20 backdrop-blur-sm flex items-center justify-center"
-              onClick={dismissOverlay}
-            >
-              <motion.div
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.9, opacity: 0 }}
-                className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-xl mx-4 max-w-sm text-center"
-              >
-                <div className="w-12 h-12 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center mx-auto mb-3">
-                  <Zap className="w-6 h-6 text-indigo-500" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">
-                  日期已变更
-                </h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                  新的一天开始了，请刷新习惯数据
-                </p>
-                <button
-                  onClick={async () => {
-                    dismissOverlay();
-                    await loadHabits();
-                  }}
-                  className="w-full py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition-colors"
-                >
-                  刷新数据
-                </button>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-        {habits.length === 0 ? (
-          <EmptyStateView
-            icon={Flame}
-            title="培养一个好习惯"
-            description="每天打卡，见证坚持的力量"
-            actionLabel="创建新习惯"
-            onAction={handleMainAddClick}
-          />
-        ) : (
-          <div className="px-4 py-4">
-            <AnimatePresence>
-              {showAddForm && (
-                <AddTaskForm
-                  placeholder="输入习惯名称"
-                  onSubmit={(title) => handleAddTask(title, "habits")}
-                  onCancel={() => setShowAddForm(false)}
-                  typeLabel="习惯"
-                />
-              )}
-            </AnimatePresence>
-
-            {habits.length > 0 && (
-              <div className="mb-3 px-4 py-3 bg-amber-50 dark:bg-amber-900/20 rounded-xl">
-                <p className="text-sm font-medium text-amber-700 dark:text-amber-300">
-                  本月总评分：{(() => {
-                    if (monthlyLogs.length === 0) return "暂无";
-                    const avg = monthlyLogs.reduce((s, l) => s + (l.rating || 0), 0) / monthlyLogs.length;
-                    return `${avg.toFixed(1)} / 10`;
-                  })()}
-                </p>
-              </div>
-            )}
-
-            <div className="space-y-3">
-              {habits.map((habit, i) => (
-                <HabitCard
-                  key={habit.id}
-                  task={habit}
-                  streak={habitStreaks.get(habit.id!) ?? 0}
-                  todayChecked={todayCheckedHabits.has(habit.id!)}
-                  todayLog={habitLogs.get(habit.id!)}
-                  onCheckin={handleCheckIn}
-                  onDelete={handleDeleteTask}
-                  celebrateIndex={allDoneToday ? i : undefined}
-                  onDetailClick={setDetailTaskId}
-                />
-              ))}
-            </div>
-
-            {habitCheckinTarget && (
-              <div className="fixed inset-0 z-50 bg-black/40 flex items-end justify-center" onClick={() => setHabitCheckinTarget(null)}>
-                <div className="w-full max-w-sm bg-white dark:bg-gray-900 rounded-t-2xl p-6" onClick={(e) => e.stopPropagation()}>
-                  <h3 className="text-lg font-semibold mb-4">打卡</h3>
-
-                  <div className="mb-3">
-                    <label className="text-xs font-medium text-gray-500 mb-1 block">评分 (1-10)</label>
-                    <div className="flex items-center gap-1">
-                      {[1,2,3,4,5,6,7,8,9,10].map((n) => (
-                        <button key={n} onClick={() => setCheckinRating(n)}
-                          className={`w-8 h-8 rounded-lg text-xs font-medium transition-colors ${
-                            checkinRating >= n ? "bg-amber-400 text-white" : "bg-gray-100 dark:bg-gray-800 text-gray-400"
-                          }`}>
-                          {n}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="mb-4">
-                    <label className="text-xs font-medium text-gray-500 mb-1 block">备注</label>
-                    <textarea value={checkinNote} onChange={(e) => setCheckinNote(e.target.value)}
-                      rows={3} placeholder="今天完成情况..."
-                      className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                  </div>
-
-                  <div className="flex gap-3">
-                    <button onClick={() => setHabitCheckinTarget(null)}
-                      className="flex-1 py-3 rounded-xl border border-gray-200 dark:border-gray-700 text-sm text-gray-500">取消</button>
-                    <button onClick={async () => {
-                      const { taskId, date, count } = habitCheckinTarget;
-                      await db.habit_logs.put({ taskId, date, count: count + 1, note: checkinNote || undefined, rating: checkinRating, createdAt: Date.now() });
-                      showToast("打卡成功", "success");
-                      setHabitCheckinTarget(null);
-                      setCheckinNote("");
-                      setCheckinRating(5);
-                      await loadHabits();
-                    }}
-                      className="flex-1 py-3 rounded-xl bg-amber-500 text-white text-sm font-medium">
-                      打卡
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {!showAddForm && (
-              <button
-                onClick={handleMainAddClick}
-                className="mt-3 w-full flex items-center justify-center gap-1.5 py-3 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-700 text-sm text-gray-500 dark:text-gray-400 hover:border-indigo-300 dark:hover:border-indigo-700 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-                添加新习惯
-              </button>
-            )}
-          </div>
-        )}
-      </>
     );
   };
 
@@ -1763,10 +821,8 @@ function GoalsPageInner() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: tabAnimDir > 0 ? -30 : 30 }}
             transition={{ duration: 0.25, ease: [0.32, 0.72, 0, 1] }}>
-            {currentView === "long-term" && renderLongtermView()}
             {currentView === "short-term" && renderShorttermView()}
             {currentView === "daily-trivial" && renderDailyView()}
-            {currentView === "habits" && renderHabitsView()}
           </motion.div>
         </AnimatePresence>
       </div>
@@ -1802,13 +858,6 @@ function GoalsPageInner() {
           onClose={() => setDetailTaskId(null)}
         />
       )}
-      {detailSectionId !== null && (
-        <SectionDetail
-          sectionId={detailSectionId}
-          onClose={() => setDetailSectionId(null)}
-          onUpdate={loadLongterm}
-        />
-      )}
     </div>
   );
 }
@@ -1816,7 +865,7 @@ function GoalsPageInner() {
 export default function GoalsPage() {
   return (
     <Suspense fallback={<div className="flex items-center justify-center h-64"><div className="w-6 h-6 border-2 border-gray-300 border-t-indigo-500 rounded-full animate-spin" /></div>}>
-      <GoalsPageInner />
+      <GoalsContent />
     </Suspense>
   );
 }

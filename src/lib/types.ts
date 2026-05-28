@@ -269,7 +269,8 @@ export type HealthMetricType =
   | 'mindful_minutes'
   | 'oxygen_saturation'
   | 'respiratory_rate'
-  | 'body_temperature';
+  | 'body_temperature'
+  | 'blood_glucose';
 
 export interface HealthRecord {
   id?: number;
@@ -328,6 +329,7 @@ export const HEALTH_METRIC_CONFIG: Record<HealthMetricType, { label: string; uni
   oxygen_saturation: { label: '血氧', unit: '%', icon: '💨', color: '#34D399', bgColor: 'bg-emerald-100' },
   respiratory_rate: { label: '呼吸频率', unit: '次/分', icon: '🌬️', color: '#60A5FA', bgColor: 'bg-blue-100' },
   body_temperature: { label: '体温', unit: '°C', icon: '🌡️', color: '#F87171', bgColor: 'bg-red-100' },
+  blood_glucose: { label: '血糖', unit: 'mg/dL', icon: '💉', color: '#E879F9', bgColor: 'bg-fuchsia-100' },
 };
 
 export const FIN_CATEGORIES = {

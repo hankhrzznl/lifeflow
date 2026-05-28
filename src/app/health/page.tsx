@@ -192,7 +192,7 @@ function ImportSection({ onDataImport }: { onDataImport: () => void }) {
     e.preventDefault();
     setIsDragging(false);
     const droppedFile = e.dataTransfer.files[0];
-    if (droppedFile && droppedFile.name.endsWith('.csv')) {
+    if (droppedFile && (droppedFile.name.endsWith('.csv') || droppedFile.name.endsWith('.xml'))) {
       setFile(droppedFile);
     }
   };
@@ -209,53 +209,12 @@ function ImportSection({ onDataImport }: { onDataImport: () => void }) {
     
     try {
       const text = await file.text();
-      const lines = text.split('\n').filter(line => line.trim());
-      const headers = lines[0].split(',').map(h => h.trim());
+      let healthRecords: Omit<HealthRecord, "id" | "createdAt">[] = [];
       
-      const healthRecords: Omit<HealthRecord, "id" | "createdAt">[] = [];
-      const typeIndex = headers.indexOf('Type');
-      const unitIndex = headers.indexOf('Unit');
-      const valueIndex = headers.indexOf('Value');
-      const dateIndex = headers.indexOf('Date') !== -1 ? headers.indexOf('Date') : headers.indexOf('Start Date');
-      
-      for (let i = 1; i < lines.length; i++) {
-        const values = parseCSVLine(lines[i]);
-        
-        const type = values[typeIndex]?.trim();
-        const unit = values[unitIndex]?.trim();
-        const valueStr = values[valueIndex]?.trim();
-        const dateStr = values[dateIndex]?.trim();
-        
-        if (!type || !valueStr || !dateStr) continue;
-        
-        const metricType = mapAppleHealthTypeToMetric(type);
-        if (!metricType) continue;
-        
-        const value = parseFloat(valueStr);
-        if (isNaN(value)) continue;
-        
-        let normalizedValue = value;
-        let normalizedUnit = unit;
-        
-        if (metricType === 'water_intake' && unit === 'fl oz') {
-          normalizedValue = value * 29.5735;
-          normalizedUnit = 'ml';
-        } else if (metricType === 'distance' && unit === 'mi') {
-          normalizedValue = value * 1.60934;
-          normalizedUnit = 'km';
-        }
-        
-        const dateObj = new Date(dateStr);
-        const formattedDate = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${String(dateObj.getDate()).padStart(2, '0')}`;
-        
-        healthRecords.push({
-          metricType,
-          value: normalizedValue,
-          unit: normalizedUnit,
-          date: formattedDate,
-          timestamp: dateObj.getTime(),
-          source: 'imported',
-        });
+      if (file.name.endsWith('.xml')) {
+        healthRecords = parseXMLData(text);
+      } else {
+        healthRecords = parseCSVData(text);
       }
       
       if (healthRecords.length > 0) {
@@ -270,6 +229,109 @@ function ImportSection({ onDataImport }: { onDataImport: () => void }) {
       console.error('Import error:', err);
       showToast({ message: "导入失败，请检查文件格式", type: "error", duration: 2000 });
     }
+  };
+  
+  const parseCSVData = (text: string): Omit<HealthRecord, "id" | "createdAt">[] => {
+    const lines = text.split('\n').filter(line => line.trim());
+    const headers = lines[0].split(',').map(h => h.trim());
+    const healthRecords: Omit<HealthRecord, "id" | "createdAt">[] = [];
+    
+    const typeIndex = headers.indexOf('Type');
+    const unitIndex = headers.indexOf('Unit');
+    const valueIndex = headers.indexOf('Value');
+    const dateIndex = headers.indexOf('Date') !== -1 ? headers.indexOf('Date') : headers.indexOf('Start Date');
+    
+    for (let i = 1; i < lines.length; i++) {
+      const values = parseCSVLine(lines[i]);
+      
+      const type = values[typeIndex]?.trim();
+      const unit = values[unitIndex]?.trim();
+      const valueStr = values[valueIndex]?.trim();
+      const dateStr = values[dateIndex]?.trim();
+      
+      if (!type || !valueStr || !dateStr) continue;
+      
+      const metricType = mapAppleHealthTypeToMetric(type);
+      if (!metricType) continue;
+      
+      const value = parseFloat(valueStr);
+      if (isNaN(value)) continue;
+      
+      let normalizedValue = value;
+      let normalizedUnit = unit;
+      
+      if (metricType === 'water_intake' && unit === 'fl oz') {
+        normalizedValue = value * 29.5735;
+        normalizedUnit = 'ml';
+      } else if (metricType === 'distance' && unit === 'mi') {
+        normalizedValue = value * 1.60934;
+        normalizedUnit = 'km';
+      }
+      
+      const dateObj = new Date(dateStr);
+      const formattedDate = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${String(dateObj.getDate()).padStart(2, '0')}`;
+      
+      healthRecords.push({
+        metricType,
+        value: normalizedValue,
+        unit: normalizedUnit,
+        date: formattedDate,
+        timestamp: dateObj.getTime(),
+        source: 'imported',
+      });
+    }
+    
+    return healthRecords;
+  };
+  
+  const parseXMLData = (xmlText: string): Omit<HealthRecord, "id" | "createdAt">[] => {
+    const healthRecords: Omit<HealthRecord, "id" | "createdAt">[] = [];
+    const parser = new DOMParser();
+    const xmlDoc = parser.parseFromString(xmlText, "text/xml");
+    const observations = xmlDoc.getElementsByTagName("observation");
+    
+    for (let i = 0; i < observations.length; i++) {
+      const obs = observations[i];
+      
+      const textEl = obs.getElementsByTagName("text")[0];
+      if (!textEl) continue;
+      
+      const typeEl = textEl.getElementsByTagName("type")[0];
+      const valueEl = textEl.getElementsByTagName("value")[0];
+      const unitEl = textEl.getElementsByTagName("unit")[0];
+      const lowTimeEl = obs.getElementsByTagName("low")[0];
+      
+      if (!typeEl || !valueEl || !lowTimeEl) continue;
+      
+      const type = typeEl.textContent || '';
+      const valueStr = valueEl.textContent || '';
+      const unit = unitEl?.textContent || '';
+      const dateStr = lowTimeEl.getAttribute('value') || '';
+      
+      if (!type || !valueStr || !dateStr) continue;
+      
+      const metricType = mapAppleHealthTypeToMetric(type);
+      if (!metricType) continue;
+      
+      const value = parseFloat(valueStr);
+      if (isNaN(value)) continue;
+      
+      const dateObj = new Date(dateStr.replace(/(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2}).*/, '$1-$2-$3T$4:$5:$6'));
+      if (isNaN(dateObj.getTime())) continue;
+      
+      const formattedDate = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${String(dateObj.getDate()).padStart(2, '0')}`;
+      
+      healthRecords.push({
+        metricType,
+        value,
+        unit,
+        date: formattedDate,
+        timestamp: dateObj.getTime(),
+        source: 'imported',
+      });
+    }
+    
+    return healthRecords;
   };
   
   const parseCSVLine = (line: string): string[] => {
@@ -301,25 +363,48 @@ function ImportSection({ onDataImport }: { onDataImport: () => void }) {
   const mapAppleHealthTypeToMetric = (appleType: string): HealthMetricType | null => {
     const mapping: Record<string, HealthMetricType> = {
       'Water': 'water_intake',
+      'HKQuantityTypeIdentifierDietaryWater': 'water_intake',
       'Sleep Analysis': 'sleep_duration',
+      'HKCategoryTypeIdentifierSleepAnalysis': 'sleep_duration',
       'Heart Rate': 'heart_rate',
+      'HKQuantityTypeIdentifierHeartRate': 'heart_rate',
       'Step Count': 'steps',
+      'HKQuantityTypeIdentifierStepCount': 'steps',
       'Distance Walking/Running': 'distance',
+      'HKQuantityTypeIdentifierDistanceWalkingRunning': 'distance',
       'Flights Climbed': 'flights_climbed',
+      'HKQuantityTypeIdentifierFlightsClimbed': 'flights_climbed',
       'Active Energy Burned': 'active_energy',
+      'HKQuantityTypeIdentifierActiveEnergyBurned': 'active_energy',
       'Basal Energy Burned': 'basal_energy',
+      'HKQuantityTypeIdentifierBasalEnergyBurned': 'basal_energy',
       'Apple Stand Time': 'standing_time',
+      'HKQuantityTypeIdentifierAppleStandTime': 'standing_time',
       'Mindful Session': 'mindful_minutes',
+      'HKCategoryTypeIdentifierMindfulSession': 'mindful_minutes',
       'Oxygen Saturation': 'oxygen_saturation',
+      'HKQuantityTypeIdentifierOxygenSaturation': 'oxygen_saturation',
       'Respiratory Rate': 'respiratory_rate',
+      'HKQuantityTypeIdentifierRespiratoryRate': 'respiratory_rate',
       'Body Temperature': 'body_temperature',
+      'HKQuantityTypeIdentifierBodyTemperature': 'body_temperature',
       'Weight': 'weight',
+      'HKQuantityTypeIdentifierBodyMass': 'weight',
       'Height': 'height',
+      'HKQuantityTypeIdentifierHeight': 'height',
+      'Blood Pressure Systolic': 'blood_pressure_systolic',
+      'HKQuantityTypeIdentifierBloodPressureSystolic': 'blood_pressure_systolic',
+      'Blood Pressure Diastolic': 'blood_pressure_diastolic',
+      'HKQuantityTypeIdentifierBloodPressureDiastolic': 'blood_pressure_diastolic',
+      'Blood Glucose': 'blood_glucose',
+      'HKQuantityTypeIdentifierBloodGlucose': 'blood_glucose',
+      'BMI': 'bmi',
+      'HKQuantityTypeIdentifierBodyMassIndex': 'bmi',
     };
     
     const lowerType = appleType.toLowerCase().trim();
     for (const [key, value] of Object.entries(mapping)) {
-      if (key.toLowerCase().includes(lowerType) || lowerType.includes(key.toLowerCase())) {
+      if (key.toLowerCase() === lowerType || lowerType.includes(key.toLowerCase()) || key.toLowerCase().includes(lowerType)) {
         return value;
       }
     }
@@ -346,7 +431,7 @@ function ImportSection({ onDataImport }: { onDataImport: () => void }) {
       >
         <input
           type="file"
-          accept=".csv"
+          accept=".csv,.xml"
           onChange={handleFileSelect}
           className="hidden"
           id="health-import-file"
@@ -356,7 +441,7 @@ function ImportSection({ onDataImport }: { onDataImport: () => void }) {
             <Upload className="w-8 h-8 text-indigo-500" />
           </div>
           <p className="text-base font-medium text-gray-900 dark:text-white mb-1">
-            拖拽 CSV 文件到这里
+            拖拽 CSV 或 XML 文件到这里
           </p>
           <p className="text-sm text-gray-500 dark:text-gray-400">
             或点击选择文件
@@ -384,7 +469,7 @@ function ImportSection({ onDataImport }: { onDataImport: () => void }) {
 
       <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-xl">
         <p className="text-sm text-amber-800 dark:text-amber-300">
-          💡 提示：从 Apple Health 导出 CSV 文件，选择"所有数据"，然后导入到这里
+          💡 提示：从 Apple Health 导出数据（支持 CSV 或 XML 格式），然后导入到这里
         </p>
       </div>
     </div>

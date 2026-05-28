@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Inbox, Calendar, Layers, Menu, X,
-  FolderKanban, Target, Settings, BarChart3, Trash2, Puzzle, ChevronRight, ListTodo, Bell,
+  FolderKanban, Target, Settings, BarChart3, Trash2, Puzzle, ChevronRight, ListTodo, Bell, Heart,
 } from "lucide-react";
 import { getPluginsForNavbar } from "@/lib/db";
 import { getPluginConfig } from "@/lib/plugin-config";
@@ -19,6 +19,7 @@ const planItems = [
 ];
 
 const moreItems = [
+  { label: "健康", href: "/health", icon: Heart },
   { label: "提醒", href: "/reminders", icon: Bell },
   { label: "设置", href: "/settings", icon: Settings },
   { label: "回顾", href: "/review", icon: BarChart3 },
@@ -70,7 +71,7 @@ export default function BottomTabBar() {
     },
     {
       id: "more", label: "更多", icon: Menu, path: null,
-      active: pathname.startsWith("/settings") || pathname.startsWith("/review") || pathname.startsWith("/trash") || pathname.startsWith("/plugins") || pathname.startsWith("/reminders"),
+      active: pathname.startsWith("/settings") || pathname.startsWith("/review") || pathname.startsWith("/trash") || pathname.startsWith("/plugins") || pathname.startsWith("/reminders") || pathname.startsWith("/health"),
     },
   ];
 

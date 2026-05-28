@@ -20,6 +20,7 @@ import type {
   ReviewRecord,
   Reminder,
   ReminderLog,
+  HealthRecord,
 } from "./types";
 
 export class LifeFlowDB extends Dexie {
@@ -43,6 +44,7 @@ export class LifeFlowDB extends Dexie {
   reviewRecords!: Table<ReviewRecord, number>;
   reminders!: Table<Reminder, number>;
   reminderLogs!: Table<ReminderLog, number>;
+  healthRecords!: Table<HealthRecord, number>;
 
   constructor() {
     super("LifeFlowDB");
@@ -206,19 +208,26 @@ export class LifeFlowDB extends Dexie {
     });
 
     this.version(12).stores({
-      pluginsMeta: "++id, name, status, showInNavbar",
-    }).upgrade(async (tx) => {
-      if (typeof window !== "undefined" && window.location.hostname === "localhost") {
-        console.log("[LifeFlowDB v12] Added showInNavbar index to pluginsMeta table");
+    pluginsMeta: "++id, name, status, showInNavbar",
+  }).upgrade(async (tx) => {
+    if (typeof window !== "undefined" && window.location.hostname === "localhost") {
+      console.log("[LifeFlowDB v12] Added showInNavbar index to pluginsMeta table");
+    }
+    const plugins = await tx.table("pluginsMeta").toArray();
+    for (const plugin of plugins) {
+      if (plugin.showInNavbar === undefined) {
+        await tx.table("pluginsMeta").update(plugin.id!, { showInNavbar: false });
       }
-      // Initialize showInNavbar for existing plugins
-      const plugins = await tx.table("pluginsMeta").toArray();
-      for (const plugin of plugins) {
-        if (plugin.showInNavbar === undefined) {
-          await tx.table("pluginsMeta").update(plugin.id!, { showInNavbar: false });
-        }
-      }
-    });
+    }
+  });
+
+  this.version(13).stores({
+    healthRecords: "++id, metricType, date, timestamp, createdAt",
+  }).upgrade(async () => {
+    if (typeof window !== "undefined" && window.location.hostname === "localhost") {
+      console.log("[LifeFlowDB v13] Added healthRecords table");
+    }
+  });
   }
 }
 
@@ -1687,4 +1696,158 @@ export async function scheduleHabitReminder(taskId: number, hour: number = 9): P
     message: `记得完成习惯「${task.title}」的打卡`,
     status: "pending",
   });
+}
+
+// ─── Health Records CRUD ─────────────────────────────────────
+
+export async function addHealthRecord(record: Omit<HealthRecord, "id" | "createdAt">): Promise<number> {
+  return db.healthRecords.add({
+    ...record,
+    createdAt: Date.now(),
+  });
+}
+
+export async function bulkAddHealthRecords(records: Omit<HealthRecord, "id" | "createdAt">[]): Promise<void> {
+  await db.healthRecords.bulkAdd(records.map(r => ({ ...r, createdAt: Date.now() })));
+}
+
+export async function getHealthRecordsByType(metricType: string): Promise<HealthRecord[]> {
+  return db.healthRecords.where("metricType").equals(metricType).reverse().sortBy("timestamp");
+}
+
+export async function getHealthRecordsByDate(date: string): Promise<HealthRecord[]> {
+  return db.healthRecords.where("date").equals(date).toArray();
+}
+
+export async function getHealthRecordsByDateRange(startDate: string, endDate: string): Promise<HealthRecord[]> {
+  return db.healthRecords
+    .where("date")
+    .between(startDate, endDate)
+    .toArray();
+}
+
+export async function getHealthRecordsByTypeAndDate(metricType: string, date: string): Promise<HealthRecord[]> {
+  return db.healthRecords
+    .where("metricType")
+    .equals(metricType)
+    .filter((r) => r.date === date)
+    .toArray();
+}
+
+export async function getHealthRecord(id: number): Promise<HealthRecord | undefined> {
+  return db.healthRecords.get(id);
+}
+
+export async function updateHealthRecord(id: number, updates: Partial<Omit<HealthRecord, "id" | "createdAt">>): Promise<void> {
+  await db.healthRecords.update(id, updates);
+}
+
+export async function deleteHealthRecord(id: number): Promise<void> {
+  await db.healthRecords.delete(id);
+}
+
+export async function getTodayHealthRecords(): Promise<HealthRecord[]> {
+  const today = new Date();
+  const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  return db.healthRecords.where("date").equals(dateStr).toArray();
+}
+
+export async function getDailyHealthSummary(date: string): Promise<{ [key: string]: number | undefined }> {
+  const records = await getHealthRecordsByDate(date);
+  const summary: Record<string, number> = {};
+  
+  for (const record of records) {
+    if (summary[record.metricType] === undefined) {
+      summary[record.metricType] = record.value;
+    } else {
+      summary[record.metricType] = (summary[record.metricType] || 0) + record.value;
+    }
+  }
+  
+  return summary;
+}
+
+export async function getWeeklyHealthSummary(): Promise<{ [key: string]: { avg: number; total: number; count: number } }> {
+  const now = new Date();
+  const weekStart = new Date(now);
+  weekStart.setDate(now.getDate() - now.getDay());
+  weekStart.setHours(0, 0, 0, 0);
+  
+  const startDateStr = `${weekStart.getFullYear()}-${String(weekStart.getMonth() + 1).padStart(2, "0")}-${String(weekStart.getDate()).padStart(2, "0")}`;
+  const endDateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  
+  const records = await getHealthRecordsByDateRange(startDateStr, endDateStr);
+  const summary: Record<string, { values: number[]; total: number }> = {};
+  
+  for (const record of records) {
+    if (!summary[record.metricType]) {
+      summary[record.metricType] = { values: [], total: 0 };
+    }
+    summary[record.metricType].values.push(record.value);
+    summary[record.metricType].total += record.value;
+  }
+  
+  const result: Record<string, { avg: number; total: number; count: number }> = {};
+  for (const [metric, data] of Object.entries(summary)) {
+    result[metric] = {
+      avg: data.values.length > 0 ? data.total / data.values.length : 0,
+      total: data.total,
+      count: data.values.length,
+    };
+  }
+  
+  return result;
+}
+
+export async function calculateHealthScore(summary: Record<string, number>): Promise<number> {
+  let score = 0;
+  let totalWeight = 0;
+  
+  const weights: Record<string, number> = {
+    water_intake: 15,
+    sleep_duration: 20,
+    sleep_quality: 15,
+    heart_rate: 15,
+    steps: 15,
+    mood: 20,
+  };
+  
+  if (summary.water_intake !== undefined) {
+    const waterScore = Math.min((summary.water_intake / 2000) * 100, 100);
+    score += waterScore * (weights.water_intake / 100);
+    totalWeight += weights.water_intake;
+  }
+  
+  if (summary.sleep_duration !== undefined) {
+    const sleepScore = summary.sleep_duration >= 7 ? 100 : summary.sleep_duration >= 6 ? 80 : summary.sleep_duration >= 5 ? 60 : 40;
+    score += sleepScore * (weights.sleep_duration / 100);
+    totalWeight += weights.sleep_duration;
+  }
+  
+  if (summary.sleep_quality !== undefined) {
+    score += summary.sleep_quality * (weights.sleep_quality / 100);
+    totalWeight += weights.sleep_quality;
+  }
+  
+  if (summary.heart_rate !== undefined) {
+    let heartScore = 100;
+    if (summary.heart_rate < 60 || summary.heart_rate > 100) heartScore = 70;
+    if (summary.heart_rate < 50 || summary.heart_rate > 120) heartScore = 40;
+    score += heartScore * (weights.heart_rate / 100);
+    totalWeight += weights.heart_rate;
+  }
+  
+  if (summary.steps !== undefined) {
+    const stepsScore = Math.min((summary.steps / 10000) * 100, 100);
+    score += stepsScore * (weights.steps / 100);
+    totalWeight += weights.steps;
+  }
+  
+  if (summary.mood !== undefined) {
+    score += summary.mood * (weights.mood / 100);
+    totalWeight += weights.mood;
+  }
+  
+  if (totalWeight === 0) return 0;
+  return Math.round((score / totalWeight) * 100);
 }

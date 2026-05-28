@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect, useCallback } from 'react';
-import { Inbox, Calendar, Folder, Target, Settings, BarChart3, Trash2, Puzzle, ListTodo } from 'lucide-react';
+import { Inbox, Calendar, Folder, Target, Settings, BarChart3, Trash2, Puzzle, ListTodo, Heart } from 'lucide-react';
 import { getPluginsForNavbar } from '@/lib/db';
 import { getPluginConfig } from '@/lib/plugin-config';
 import type { PluginMetadata } from '@/lib/types';
@@ -18,6 +18,7 @@ const coreNav = [
 ];
 
 const moreNav = [
+  { label: '健康', href: '/health', icon: Heart },
   { label: '回顾', href: '/review', icon: BarChart3 },
   { label: '回收站', href: '/trash', icon: Trash2 },
   { label: '插件', href: '/plugins', icon: Puzzle },

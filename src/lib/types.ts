@@ -247,6 +247,89 @@ export interface FinAccount {
   createdAt: number;
 }
 
+export type HealthMetricType =
+  | 'water_intake'
+  | 'sleep_duration'
+  | 'sleep_quality'
+  | 'heart_rate'
+  | 'blood_pressure_systolic'
+  | 'blood_pressure_diastolic'
+  | 'weight'
+  | 'height'
+  | 'bmi'
+  | 'steps'
+  | 'distance'
+  | 'flights_climbed'
+  | 'active_energy'
+  | 'basal_energy'
+  | 'standing_time'
+  | 'exercise_duration'
+  | 'mood'
+  | 'stress_level'
+  | 'mindful_minutes'
+  | 'oxygen_saturation'
+  | 'respiratory_rate'
+  | 'body_temperature';
+
+export interface HealthRecord {
+  id?: number;
+  metricType: HealthMetricType;
+  value: number;
+  unit: string;
+  date: string;
+  timestamp: number;
+  note?: string;
+  source: 'manual' | 'imported' | 'device';
+  createdAt: number;
+}
+
+export interface HealthDailySummary {
+  date: string;
+  waterIntake?: number;
+  sleepDuration?: number;
+  sleepQuality?: number;
+  heartRate?: number;
+  steps?: number;
+  activeEnergy?: number;
+  mood?: number;
+  stressLevel?: number;
+}
+
+export interface HealthWeeklySummary {
+  weekStart: string;
+  avgWaterIntake: number;
+  avgSleepDuration: number;
+  avgSleepQuality: number;
+  avgHeartRate: number;
+  totalSteps: number;
+  avgMood: number;
+}
+
+export const HEALTH_METRIC_CONFIG: Record<HealthMetricType, { label: string; unit: string; icon: string; color: string; bgColor: string }> = {
+  water_intake: { label: '饮水量', unit: 'ml', icon: '💧', color: '#3B82F6', bgColor: 'bg-blue-100' },
+  sleep_duration: { label: '睡眠时长', unit: '小时', icon: '😴', color: '#8B5CF6', bgColor: 'bg-purple-100' },
+  sleep_quality: { label: '睡眠质量', unit: '分', icon: '⭐', color: '#F59E0B', bgColor: 'bg-amber-100' },
+  heart_rate: { label: '心率', unit: 'bpm', icon: '❤️', color: '#EF4444', bgColor: 'bg-red-100' },
+  blood_pressure_systolic: { label: '收缩压', unit: 'mmHg', icon: '🩺', color: '#EC4899', bgColor: 'bg-pink-100' },
+  blood_pressure_diastolic: { label: '舒张压', unit: 'mmHg', icon: '🩺', color: '#EC4899', bgColor: 'bg-pink-100' },
+  weight: { label: '体重', unit: 'kg', icon: '⚖️', color: '#10B981', bgColor: 'bg-emerald-100' },
+  height: { label: '身高', unit: 'cm', icon: '📏', color: '#06B6D4', bgColor: 'bg-cyan-100' },
+  bmi: { label: 'BMI', unit: '', icon: '📊', color: '#84CC16', bgColor: 'bg-lime-100' },
+  steps: { label: '步数', unit: '步', icon: '👣', color: '#F97316', bgColor: 'bg-orange-100' },
+  distance: { label: '距离', unit: 'km', icon: '🚶', color: '#6366F1', bgColor: 'bg-indigo-100' },
+  flights_climbed: { label: '爬楼', unit: '层', icon: '🏢', color: '#14B8A6', bgColor: 'bg-teal-100' },
+  active_energy: { label: '活动能量', unit: 'kcal', icon: '⚡', color: '#FBBF24', bgColor: 'bg-yellow-100' },
+  basal_energy: { label: '基础能量', unit: 'kcal', icon: '🔥', color: '#FB923C', bgColor: 'bg-orange-100' },
+  standing_time: { label: '站立时间', unit: '分钟', icon: '🦵', color: '#0EA5E9', bgColor: 'bg-sky-100' },
+  exercise_duration: { label: '运动时长', unit: '分钟', icon: '🏃', color: '#22C55E', bgColor: 'bg-green-100' },
+  mood: { label: '心情', unit: '分', icon: '😊', color: '#A855F7', bgColor: 'bg-violet-100' },
+  stress_level: { label: '压力', unit: '分', icon: '😰', color: '#DC2626', bgColor: 'bg-red-100' },
+  mindful_minutes: { label: '正念时间', unit: '分钟', icon: '🧘', color: '#6EE7B7', bgColor: 'bg-emerald-100' },
+  oxygen_saturation: { label: '血氧', unit: '%', icon: '💨', color: '#34D399', bgColor: 'bg-emerald-100' },
+  respiratory_rate: { label: '呼吸频率', unit: '次/分', icon: '🌬️', color: '#60A5FA', bgColor: 'bg-blue-100' },
+  body_temperature: { label: '体温', unit: '°C', icon: '🌡️', color: '#F87171', bgColor: 'bg-red-100' },
+};
+
 export const FIN_CATEGORIES = {
   expense: [
     { key: 'food', label: '餐饮', icon: '🍽️', color: '#FF6B6B', bg: '#FFF0F0' },

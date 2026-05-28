@@ -1746,6 +1746,49 @@ export async function deleteHealthRecord(id: number): Promise<void> {
   await db.healthRecords.delete(id);
 }
 
+export async function getAllHealthRecords(): Promise<HealthRecord[]> {
+  return db.healthRecords.orderBy('timestamp').reverse().toArray();
+}
+
+export async function getHealthRecordsStats(): Promise<{ 
+  totalRecords: number; 
+  dateRange: { start: string; end: string } | null;
+  metricCounts: Record<string, number>;
+}> {
+  const records = await db.healthRecords.toArray();
+  
+  if (records.length === 0) {
+    return { totalRecords: 0, dateRange: null, metricCounts: {} };
+  }
+  
+  const dates = records.map(r => r.date).sort();
+  const metricCounts: Record<string, number> = {};
+  
+  for (const record of records) {
+    metricCounts[record.metricType] = (metricCounts[record.metricType] || 0) + 1;
+  }
+  
+  return {
+    totalRecords: records.length,
+    dateRange: { start: dates[0], end: dates[dates.length - 1] },
+    metricCounts,
+  };
+}
+
+export async function getHealthRecordsGroupedByDate(): Promise<Record<string, HealthRecord[]>> {
+  const records = await db.healthRecords.orderBy('date').reverse().toArray();
+  const grouped: Record<string, HealthRecord[]> = {};
+  
+  for (const record of records) {
+    if (!grouped[record.date]) {
+      grouped[record.date] = [];
+    }
+    grouped[record.date].push(record);
+  }
+  
+  return grouped;
+}
+
 export async function getTodayHealthRecords(): Promise<HealthRecord[]> {
   const today = new Date();
   const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;

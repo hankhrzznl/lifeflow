@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Heart, Droplets, Moon, Activity, Smile, Gauge, TrendingUp, Upload, Calendar, Plus } from "lucide-react";
-import { addHealthRecord, getTodayHealthRecords, getDailyHealthSummary, calculateHealthScore, getWeeklyHealthSummary, bulkAddHealthRecords } from "@/lib/db";
+import { Heart, Droplets, Moon, Activity, Smile, Gauge, TrendingUp, Upload, Calendar, Plus, History, Database } from "lucide-react";
+import { addHealthRecord, getTodayHealthRecords, getDailyHealthSummary, calculateHealthScore, getWeeklyHealthSummary, bulkAddHealthRecords, getAllHealthRecords, getHealthRecordsStats, getHealthRecordsGroupedByDate } from "@/lib/db";
 import { HealthMetricType, HEALTH_METRIC_CONFIG, HealthRecord } from "@/lib/types";
 import { showToast } from "@/components/ui/Toast";
 
-type TabType = "dashboard" | "log" | "trends" | "import";
+type TabType = "dashboard" | "log" | "history" | "trends" | "import";
 
 interface HealthCardProps {
   metricType: HealthMetricType;
@@ -175,6 +175,159 @@ function QuickLogModal({ onClose, onSubmit }: { onClose: () => void; onSubmit: (
   );
 }
 
+function HistorySection() {
+  const [stats, setStats] = useState<{ totalRecords: number; dateRange: { start: string; end: string } | null; metricCounts: Record<string, number> }>({ totalRecords: 0, dateRange: null, metricCounts: {} });
+  const [groupedRecords, setGroupedRecords] = useState<Record<string, HealthRecord[]>>({});
+  const [expandedDates, setExpandedDates] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const statsData = await getHealthRecordsStats();
+      setStats(statsData);
+      const groupedData = await getHealthRecordsGroupedByDate();
+      setGroupedRecords(groupedData);
+    };
+    fetchData();
+  }, []);
+
+  const toggleDate = (date: string) => {
+    const newExpanded = new Set(expandedDates);
+    if (newExpanded.has(date)) {
+      newExpanded.delete(date);
+    } else {
+      newExpanded.add(date);
+    }
+    setExpandedDates(newExpanded);
+  };
+
+  if (stats.totalRecords === 0) {
+    return (
+      <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-100 dark:border-gray-800 text-center">
+        <Database className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">暂无历史数据</h3>
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          请先导入健康数据或手动记录
+        </p>
+      </div>
+    );
+  }
+
+  const sortedDates = Object.keys(groupedRecords).sort((a, b) => b.localeCompare(a));
+  const displayDates = sortedDates.slice(0, 30);
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl p-4 border border-gray-100 dark:border-gray-800">
+        <div className="flex items-center gap-2 mb-3">
+          <Database className="w-5 h-5 text-indigo-500" />
+          <h3 className="font-semibold text-gray-900 dark:text-white">数据统计</h3>
+        </div>
+        <div className="grid grid-cols-3 gap-4">
+          <div className="text-center">
+            <div className="text-2xl font-bold text-indigo-600">{stats.totalRecords}</div>
+            <div className="text-sm text-gray-500 dark:text-gray-400">总记录数</div>
+          </div>
+          <div className="text-center">
+            <div className="text-lg font-bold text-green-600">{stats.dateRange?.start || '--'}</div>
+            <div className="text-sm text-gray-500 dark:text-gray-400">最早日期</div>
+          </div>
+          <div className="text-center">
+            <div className="text-lg font-bold text-blue-600">{stats.dateRange?.end || '--'}</div>
+            <div className="text-sm text-gray-500 dark:text-gray-400">最近日期</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white dark:bg-gray-900 rounded-2xl p-4 border border-gray-100 dark:border-gray-800">
+        <div className="flex items-center gap-2 mb-3">
+          <History className="w-5 h-5 text-indigo-500" />
+          <h3 className="font-semibold text-gray-900 dark:text-white">历史记录</h3>
+          <span className="text-sm text-gray-500 dark:text-gray-400 ml-auto">显示最近30天</span>
+        </div>
+        <div className="space-y-2">
+          {displayDates.map((date) => {
+            const records = groupedRecords[date];
+            const isExpanded = expandedDates.has(date);
+            
+            return (
+              <div key={date} className="border border-gray-100 dark:border-gray-800 rounded-xl">
+                <button
+                  onClick={() => toggleDate(date)}
+                  className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-gray-400" />
+                    <span className="font-medium text-gray-900 dark:text-white">{date}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-500 dark:text-gray-400">{records.length} 条记录</span>
+                    <motion.span
+                      animate={{ rotate: isExpanded ? 180 : 0 }}
+                      className="text-gray-400"
+                    >
+                      ▼
+                    </motion.span>
+                  </div>
+                </button>
+                <AnimatePresence>
+                  {isExpanded && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="px-4 pb-3 divide-y divide-gray-100 dark:divide-gray-800">
+                        {records.map((record) => {
+                          const config = HEALTH_METRIC_CONFIG[record.metricType];
+                          if (!config) return null;
+                          return (
+                            <div key={record.id} className="py-2 flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <span>{config.icon}</span>
+                                <span className="text-gray-700 dark:text-gray-300">{config.label}</span>
+                              </div>
+                              <div className="text-right">
+                                <span className="font-medium text-gray-900 dark:text-white">
+                                  {record.value.toFixed(config.unit === '小时' ? 1 : 0)} {record.unit}
+                                </span>
+                                <span className="text-xs text-gray-400 ml-2">
+                                  {record.source === 'imported' ? '导入' : '手动'}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="bg-white dark:bg-gray-900 rounded-2xl p-4 border border-gray-100 dark:border-gray-800">
+        <h3 className="font-semibold text-gray-900 dark:text-white mb-3">各类型数据统计</h3>
+        <div className="grid grid-cols-2 gap-2">
+          {Object.entries(stats.metricCounts).map(([metric, count]) => {
+            const config = HEALTH_METRIC_CONFIG[metric as HealthMetricType];
+            if (!config) return null;
+            return (
+              <div key={metric} className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <span>{config.icon}</span>
+                <span className="text-sm text-gray-700 dark:text-gray-300">{config.label}</span>
+                <span className="text-sm font-medium text-indigo-600 ml-auto">{count} 条</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ImportSection({ onDataImport }: { onDataImport: () => void }) {
   const [isDragging, setIsDragging] = useState(false);
   const [file, setFile] = useState<File | null>(null);
@@ -219,7 +372,7 @@ function ImportSection({ onDataImport }: { onDataImport: () => void }) {
       
       if (healthRecords.length > 0) {
         await bulkAddHealthRecords(healthRecords);
-        showToast({ message: `成功导入 ${healthRecords.length} 条健康数据`, type: "success", duration: 2000 });
+        showToast({ message: `成功导入 ${healthRecords.length} 条健康数据`, type: "success", duration: 3000 });
         setFile(null);
         onDataImport();
       } else {
@@ -469,7 +622,7 @@ function ImportSection({ onDataImport }: { onDataImport: () => void }) {
 
       <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-xl">
         <p className="text-sm text-amber-800 dark:text-amber-300">
-          💡 提示：从 Apple Health 导出数据（支持 CSV 或 XML 格式），然后导入到这里
+          💡 提示：从 Apple Health 导出数据（支持 CSV 或 XML 格式），然后导入到这里。导入的历史数据可在"历史"标签页查看。
         </p>
       </div>
     </div>
@@ -489,6 +642,18 @@ function TrendsSection() {
 
   const displayMetrics: HealthMetricType[] = ['water_intake', 'sleep_duration', 'steps', 'heart_rate'];
 
+  if (Object.keys(weeklyData).length === 0) {
+    return (
+      <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-100 dark:border-gray-800 text-center">
+        <TrendingUp className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">暂无趋势数据</h3>
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          请先导入或记录健康数据
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       {displayMetrics.map((metric) => {
@@ -504,7 +669,7 @@ function TrendsSection() {
                 <span className="font-medium text-gray-900 dark:text-white">{config.label}</span>
               </span>
               <span className="text-sm text-gray-500 dark:text-gray-400">
-                本周 {data.count} 天
+                本周 {data.count} 条记录
               </span>
             </div>
             <div className="flex items-end gap-1 h-16">
@@ -596,6 +761,7 @@ export default function HealthPage() {
   const tabs: { key: TabType; label: string; icon: React.ReactNode }[] = [
     { key: "dashboard", label: "仪表盘", icon: <Gauge className="w-4 h-4" /> },
     { key: "log", label: "记录", icon: <Calendar className="w-4 h-4" /> },
+    { key: "history", label: "历史", icon: <History className="w-4 h-4" /> },
     { key: "trends", label: "趋势", icon: <TrendingUp className="w-4 h-4" /> },
     { key: "import", label: "导入", icon: <Upload className="w-4 h-4" /> },
   ];
@@ -751,7 +917,7 @@ export default function HealthPage() {
                     <div className="text-center py-8 text-gray-500 dark:text-gray-400">
                       <Heart className="w-12 h-12 mx-auto mb-2 opacity-50" />
                       <p>还没有今日记录</p>
-                      <p className="text-sm">点击右上角按钮添加记录</p>
+                      <p className="text-sm">点击右上角按钮添加记录，或在"导入"标签页导入历史数据</p>
                     </div>
                   )}
                 </div>
@@ -830,6 +996,17 @@ export default function HealthPage() {
                   )}
                 </div>
               </div>
+            </motion.div>
+          )}
+
+          {activeTab === "history" && (
+            <motion.div
+              key="history"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+            >
+              <HistorySection />
             </motion.div>
           )}
 

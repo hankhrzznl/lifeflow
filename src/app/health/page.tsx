@@ -1,53 +1,104 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Heart, Droplets, Moon, Activity, Smile, Gauge, TrendingUp, Upload, Calendar, Plus, History, Database } from "lucide-react";
-import { addHealthRecord, getTodayHealthRecords, getDailyHealthSummary, calculateHealthScore, getWeeklyHealthSummary, bulkAddHealthRecords, getAllHealthRecords, getHealthRecordsStats, getHealthRecordsGroupedByDate } from "@/lib/db";
+import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "framer-motion";
+import { Heart, Droplets, Moon, Activity, Smile, Gauge, TrendingUp, Upload, Calendar, Plus, History, Database, ChevronRight, Target, Zap, Leaf, Star, Clock, ArrowUpDown } from "lucide-react";
+import { addHealthRecord, getDailyHealthSummary, calculateHealthScore, getWeeklyHealthSummary, bulkAddHealthRecords, getHealthRecordsStats, getHealthRecordsGroupedByDate } from "@/lib/db";
 import { HealthMetricType, HEALTH_METRIC_CONFIG, HealthRecord } from "@/lib/types";
 import { showToast } from "@/components/ui/Toast";
 
-type TabType = "dashboard" | "log" | "history" | "trends" | "import";
+type TabType = "dashboard" | "metrics" | "history" | "import";
 
-interface HealthCardProps {
+interface MetricCardProps {
   metricType: HealthMetricType;
   value: number | undefined;
-  unit: string;
-  icon: string;
+  target?: number;
+  trend?: number;
+  icon: React.ReactNode;
   color: string;
-  bgColor: string;
-  label: string;
-  onClick?: () => void;
+  gradient: string;
 }
 
-function HealthCard({ metricType, value, unit, icon, color, bgColor, label, onClick }: HealthCardProps) {
+function MetricCard({ metricType, value, target, trend, icon, color, gradient }: MetricCardProps) {
   const config = HEALTH_METRIC_CONFIG[metricType];
+  const progress = value && target ? Math.min((value / target) * 100, 100) : 0;
+  
+  const radius = 40;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (progress / 100) * circumference;
   
   return (
     <motion.div
-      whileHover={{ scale: 1.02 }}
+      whileHover={{ scale: 1.02, y: -2 }}
       whileTap={{ scale: 0.98 }}
-      onClick={onClick}
-      className={`${bgColor} rounded-2xl p-4 cursor-pointer transition-all duration-200 hover:shadow-lg`}
+      className="relative bg-gradient-to-br from-gray-800/80 to-gray-900/80 backdrop-blur-lg rounded-2xl p-4 border border-gray-700/50"
     >
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="text-2xl mb-1">{icon}</div>
-          <div className="text-sm font-medium text-gray-600 dark:text-gray-400">{label}</div>
+      <div className="flex items-start justify-between mb-3">
+        <div className={`p-2.5 rounded-xl ${gradient}`}>
+          {icon}
         </div>
-        <div className="text-right">
-          <div className={`text-xl font-bold ${color}`}>
-            {value !== undefined ? value.toFixed(unit === '小时' ? 1 : 0) : '--'}
+        {trend !== undefined && (
+          <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${trend >= 0 ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
+            {trend >= 0 ? <ArrowUpDown className="w-3 h-3 rotate-45" /> : <ArrowUpDown className="w-3 h-3 -rotate-45" />}
+            {Math.abs(trend)}%
           </div>
-          <div className="text-xs text-gray-500 dark:text-gray-500">{unit}</div>
-        </div>
+        )}
       </div>
+      
+      <div className="flex items-end gap-3">
+        <div>
+          <div className="text-3xl font-bold text-white">
+            {value !== undefined ? value.toFixed(config.unit === '小时' || metricType === 'bmi' ? 1 : 0) : '--'}
+          </div>
+          <div className="text-sm text-gray-400">{config.label}</div>
+        </div>
+        
+        {target && (
+          <div className="relative w-16 h-16">
+            <svg className="w-full h-full transform -rotate-90">
+              <circle
+                cx="32"
+                cy="32"
+                r={radius}
+                stroke="#374151"
+                strokeWidth="6"
+                fill="none"
+              />
+              <motion.circle
+                cx="32"
+                cy="32"
+                r={radius}
+                stroke={color}
+                strokeWidth="6"
+                fill="none"
+                strokeLinecap="round"
+                strokeDasharray={circumference}
+                initial={{ strokeDashoffset: circumference }}
+                animate={{ strokeDashoffset: offset }}
+                transition={{ duration: 1, ease: "easeOut" }}
+              />
+            </svg>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="text-xs font-medium text-gray-300">{progress.toFixed(0)}%</span>
+            </div>
+          </div>
+        )}
+      </div>
+      
+      {target && (
+        <div className="mt-3 pt-3 border-t border-gray-700/50">
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-gray-400">目标</span>
+            <span className="text-gray-300">{target} {config.unit}</span>
+          </div>
+        </div>
+      )}
     </motion.div>
   );
 }
 
 function HealthScoreRing({ score }: { score: number }) {
-  const circumference = 2 * Math.PI * 45;
+  const circumference = 2 * Math.PI * 65;
   const offset = circumference - (score / 100) * circumference;
   
   const getScoreColor = () => {
@@ -56,33 +107,49 @@ function HealthScoreRing({ score }: { score: number }) {
     return "#EF4444";
   };
   
+  const getScoreLabel = () => {
+    if (score >= 80) return "优秀";
+    if (score >= 60) return "良好";
+    return "需关注";
+  };
+  
   return (
-    <div className="relative w-32 h-32">
+    <div className="relative w-40 h-40">
       <svg className="w-full h-full transform -rotate-90">
         <circle
-          cx="64"
-          cy="64"
-          r="45"
-          stroke="#E5E7EB"
-          strokeWidth="8"
+          cx="80"
+          cy="80"
+          r="65"
+          stroke="#1F2937"
+          strokeWidth="12"
           fill="none"
         />
-        <circle
-          cx="64"
-          cy="64"
-          r="45"
+        <motion.circle
+          cx="80"
+          cy="80"
+          r="65"
           stroke={getScoreColor()}
-          strokeWidth="8"
+          strokeWidth="12"
           fill="none"
           strokeLinecap="round"
           strokeDasharray={circumference}
-          strokeDashoffset={offset}
-          className="transition-all duration-1000 ease-out"
+          initial={{ strokeDashoffset: circumference }}
+          animate={{ strokeDashoffset: offset }}
+          transition={{ duration: 1.5, ease: "easeOut" }}
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-2xl font-bold text-gray-900 dark:text-white">{score}</span>
-        <span className="text-xs text-gray-500 dark:text-gray-400">健康分</span>
+        <motion.span 
+          className="text-4xl font-bold text-white"
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.5 }}
+        >
+          {score}
+        </motion.span>
+        <span className={`text-sm font-medium ${score >= 80 ? 'text-emerald-400' : score >= 60 ? 'text-amber-400' : 'text-red-400'}`}>
+          {getScoreLabel()}
+        </span>
       </div>
     </div>
   );
@@ -96,32 +163,46 @@ function QuickLogModal({ onClose, onSubmit }: { onClose: () => void; onSubmit: (
 
   if (!selectedMetric) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
-        <div className="bg-white dark:bg-gray-900 rounded-3xl p-6 w-full max-w-md mx-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">快速记录</h3>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.9, y: 20 }}
+          className="bg-gray-900/95 backdrop-blur-lg rounded-3xl p-6 w-full max-w-md mx-4 border border-gray-700/50 shadow-2xl"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <h3 className="text-xl font-semibold text-white mb-6 text-center">添加记录</h3>
           <div className="grid grid-cols-3 gap-3">
             {commonMetrics.map((metric) => {
               const config = HEALTH_METRIC_CONFIG[metric];
+              const colors: Record<string, string> = {
+                water_intake: 'bg-blue-500/20 text-blue-400',
+                sleep_duration: 'bg-purple-500/20 text-purple-400',
+                heart_rate: 'bg-red-500/20 text-red-400',
+                steps: 'bg-orange-500/20 text-orange-400',
+                mood: 'bg-pink-500/20 text-pink-400',
+                weight: 'bg-green-500/20 text-green-400',
+              };
               return (
                 <motion.button
                   key={metric}
                   whileTap={{ scale: 0.95 }}
                   onClick={() => setSelectedMetric(metric)}
-                  className={`${config.bgColor} rounded-xl p-3 flex flex-col items-center gap-1`}
+                  className={`${colors[metric] || 'bg-gray-700/50'} rounded-xl p-4 flex flex-col items-center gap-2 transition-all hover:scale-105`}
                 >
-                  <span className="text-xl">{config.icon}</span>
-                  <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{config.label}</span>
+                  <span className="text-2xl">{config.icon}</span>
+                  <span className="text-xs font-medium">{config.label}</span>
                 </motion.button>
               );
             })}
           </div>
           <button
             onClick={onClose}
-            className="mt-4 w-full py-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            className="mt-6 w-full py-3 text-gray-400 hover:text-white transition-colors"
           >
             取消
           </button>
-        </div>
+        </motion.div>
       </div>
     );
   }
@@ -139,38 +220,44 @@ function QuickLogModal({ onClose, onSubmit }: { onClose: () => void; onSubmit: (
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
-      <div className="bg-white dark:bg-gray-900 rounded-3xl p-6 w-full max-w-md mx-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">记录{config.label}</h3>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{config.icon} {config.label} ({config.unit})</p>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.9, y: 20 }}
+        className="bg-gray-900/95 backdrop-blur-lg rounded-3xl p-6 w-full max-w-md mx-4 border border-gray-700/50 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 className="text-xl font-semibold text-white mb-2 text-center">{config.icon} {config.label}</h3>
+        <p className="text-sm text-gray-400 mb-6 text-center">记录您的{config.label}</p>
         
         <div className="relative">
           <input
             type="number"
             value={value}
             onChange={(e) => setValue(e.target.value)}
-            placeholder={`输入${config.label}`}
-            className="w-full px-4 py-4 text-2xl font-bold text-center bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+            placeholder="0"
+            className="w-full px-6 py-5 text-3xl font-bold text-center bg-gray-800/50 rounded-2xl border border-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 text-white"
             autoFocus
           />
-          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-lg text-gray-400">{config.unit}</span>
+          <span className="absolute right-6 top-1/2 -translate-y-1/2 text-xl text-gray-500">{config.unit}</span>
         </div>
         
-        <div className="flex gap-3 mt-4">
+        <div className="flex gap-3 mt-6">
           <button
             onClick={onClose}
-            className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-medium"
+            className="flex-1 py-3 rounded-xl border border-gray-700 text-gray-300 font-medium hover:bg-gray-800/50 transition-colors"
           >
             取消
           </button>
           <button
             onClick={handleSubmit}
-            className="flex-1 py-2.5 rounded-xl bg-indigo-500 text-white font-medium hover:bg-indigo-600 transition-colors"
+            className="flex-1 py-3 rounded-xl bg-indigo-500 text-white font-medium hover:bg-indigo-600 transition-colors"
           >
             保存
           </button>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }
@@ -202,12 +289,10 @@ function HistorySection() {
 
   if (stats.totalRecords === 0) {
     return (
-      <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-100 dark:border-gray-800 text-center">
-        <Database className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">暂无历史数据</h3>
-        <p className="text-sm text-gray-500 dark:text-gray-400">
-          请先导入健康数据或手动记录
-        </p>
+      <div className="bg-gradient-to-br from-gray-800/80 to-gray-900/80 backdrop-blur-lg rounded-2xl p-8 border border-gray-700/50 text-center">
+        <Database className="w-16 h-16 mx-auto mb-4 text-gray-600" />
+        <h3 className="text-xl font-semibold text-white mb-2">暂无数据</h3>
+        <p className="text-gray-400">导入数据或添加记录后，历史数据将在这里显示</p>
       </div>
     );
   }
@@ -217,55 +302,67 @@ function HistorySection() {
 
   return (
     <div className="space-y-4">
-      <div className="bg-white dark:bg-gray-900 rounded-2xl p-4 border border-gray-100 dark:border-gray-800">
-        <div className="flex items-center gap-2 mb-3">
-          <Database className="w-5 h-5 text-indigo-500" />
-          <h3 className="font-semibold text-gray-900 dark:text-white">数据统计</h3>
+      <div className="bg-gradient-to-br from-gray-800/80 to-gray-900/80 backdrop-blur-lg rounded-2xl p-5 border border-gray-700/50">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="p-2 rounded-xl bg-indigo-500/20">
+            <Database className="w-5 h-5 text-indigo-400" />
+          </div>
+          <h3 className="text-lg font-semibold text-white">数据统计</h3>
         </div>
         <div className="grid grid-cols-3 gap-4">
-          <div className="text-center">
-            <div className="text-2xl font-bold text-indigo-600">{stats.totalRecords}</div>
-            <div className="text-sm text-gray-500 dark:text-gray-400">总记录数</div>
+          <div className="text-center p-3 bg-gray-800/50 rounded-xl">
+            <div className="text-2xl font-bold text-indigo-400">{stats.totalRecords}</div>
+            <div className="text-xs text-gray-400 mt-1">总记录数</div>
           </div>
-          <div className="text-center">
-            <div className="text-lg font-bold text-green-600">{stats.dateRange?.start || '--'}</div>
-            <div className="text-sm text-gray-500 dark:text-gray-400">最早日期</div>
+          <div className="text-center p-3 bg-gray-800/50 rounded-xl">
+            <div className="text-lg font-bold text-green-400">{stats.dateRange?.start || '--'}</div>
+            <div className="text-xs text-gray-400 mt-1">最早记录</div>
           </div>
-          <div className="text-center">
-            <div className="text-lg font-bold text-blue-600">{stats.dateRange?.end || '--'}</div>
-            <div className="text-sm text-gray-500 dark:text-gray-400">最近日期</div>
+          <div className="text-center p-3 bg-gray-800/50 rounded-xl">
+            <div className="text-lg font-bold text-blue-400">{stats.dateRange?.end || '--'}</div>
+            <div className="text-xs text-gray-400 mt-1">最近记录</div>
           </div>
         </div>
       </div>
 
-      <div className="bg-white dark:bg-gray-900 rounded-2xl p-4 border border-gray-100 dark:border-gray-800">
-        <div className="flex items-center gap-2 mb-3">
-          <History className="w-5 h-5 text-indigo-500" />
-          <h3 className="font-semibold text-gray-900 dark:text-white">历史记录</h3>
-          <span className="text-sm text-gray-500 dark:text-gray-400 ml-auto">显示最近30天</span>
+      <div className="bg-gradient-to-br from-gray-800/80 to-gray-900/80 backdrop-blur-lg rounded-2xl p-5 border border-gray-700/50">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="p-2 rounded-xl bg-purple-500/20">
+            <History className="w-5 h-5 text-purple-400" />
+          </div>
+          <div className="flex-1">
+            <h3 className="text-lg font-semibold text-white">历史记录</h3>
+            <p className="text-xs text-gray-400">最近30天</p>
+          </div>
         </div>
-        <div className="space-y-2">
+        <div className="space-y-2 max-h-96 overflow-y-auto pr-2">
           {displayDates.map((date) => {
             const records = groupedRecords[date];
             const isExpanded = expandedDates.has(date);
             
             return (
-              <div key={date} className="border border-gray-100 dark:border-gray-800 rounded-xl">
+              <motion.div
+                key={date}
+                className="border border-gray-700/50 rounded-xl overflow-hidden"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+              >
                 <button
                   onClick={() => toggleDate(date)}
-                  className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                  className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-800/50 transition-colors"
                 >
                   <div className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4 text-gray-400" />
-                    <span className="font-medium text-gray-900 dark:text-white">{date}</span>
+                    <Calendar className="w-4 h-4 text-gray-500" />
+                    <span className="font-medium text-white">{date}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-500 dark:text-gray-400">{records.length} 条记录</span>
+                    <span className="text-sm text-gray-400">{records.length} 条</span>
                     <motion.span
-                      animate={{ rotate: isExpanded ? 180 : 0 }}
+                      animate={{ rotate: isExpanded ? 90 : 0 }}
                       className="text-gray-400"
+                      transition={{ duration: 0.2 }}
                     >
-                      ▼
+                      <ChevronRight className="w-4 h-4" />
                     </motion.span>
                   </div>
                 </button>
@@ -277,21 +374,21 @@ function HistorySection() {
                       exit={{ height: 0, opacity: 0 }}
                       className="overflow-hidden"
                     >
-                      <div className="px-4 pb-3 divide-y divide-gray-100 dark:divide-gray-800">
+                      <div className="px-4 pb-3 space-y-2">
                         {records.map((record) => {
                           const config = HEALTH_METRIC_CONFIG[record.metricType];
                           if (!config) return null;
                           return (
-                            <div key={record.id} className="py-2 flex items-center justify-between">
+                            <div key={record.id} className="flex items-center justify-between p-2 bg-gray-800/30 rounded-lg">
                               <div className="flex items-center gap-2">
                                 <span>{config.icon}</span>
-                                <span className="text-gray-700 dark:text-gray-300">{config.label}</span>
+                                <span className="text-sm text-gray-300">{config.label}</span>
                               </div>
                               <div className="text-right">
-                                <span className="font-medium text-gray-900 dark:text-white">
+                                <span className="font-medium text-white">
                                   {record.value.toFixed(config.unit === '小时' ? 1 : 0)} {record.unit}
                                 </span>
-                                <span className="text-xs text-gray-400 ml-2">
+                                <span className="text-xs text-gray-500 ml-2">
                                   {record.source === 'imported' ? '导入' : '手动'}
                                 </span>
                               </div>
@@ -302,28 +399,55 @@ function HistorySection() {
                     </motion.div>
                   )}
                 </AnimatePresence>
-              </div>
+              </motion.div>
             );
           })}
         </div>
       </div>
 
-      <div className="bg-white dark:bg-gray-900 rounded-2xl p-4 border border-gray-100 dark:border-gray-800">
-        <h3 className="font-semibold text-gray-900 dark:text-white mb-3">各类型数据统计</h3>
+      <div className="bg-gradient-to-br from-gray-800/80 to-gray-900/80 backdrop-blur-lg rounded-2xl p-5 border border-gray-700/50">
+        <h3 className="text-lg font-semibold text-white mb-4">数据类型分布</h3>
         <div className="grid grid-cols-2 gap-2">
           {Object.entries(stats.metricCounts).map(([metric, count]) => {
             const config = HEALTH_METRIC_CONFIG[metric as HealthMetricType];
             if (!config) return null;
             return (
-              <div key={metric} className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
+              <div key={metric} className="flex items-center gap-2 p-2 bg-gray-800/50 rounded-lg">
                 <span>{config.icon}</span>
-                <span className="text-sm text-gray-700 dark:text-gray-300">{config.label}</span>
-                <span className="text-sm font-medium text-indigo-600 ml-auto">{count} 条</span>
+                <span className="text-sm text-gray-300">{config.label}</span>
+                <span className="text-sm font-medium text-indigo-400 ml-auto">{count}</span>
               </div>
             );
           })}
         </div>
       </div>
+    </div>
+  );
+}
+
+function MetricsSection({ todayRecords }: { todayRecords: Record<string, number | undefined> }) {
+  const metrics: { metricType: HealthMetricType; icon: React.ReactNode; color: string; gradient: string; target: number }[] = [
+    { metricType: 'water_intake', icon: <Droplets className="w-5 h-5" />, color: '#3B82F6', gradient: 'bg-blue-500/20', target: 2000 },
+    { metricType: 'sleep_duration', icon: <Moon className="w-5 h-5" />, color: '#8B5CF6', gradient: 'bg-purple-500/20', target: 8 },
+    { metricType: 'heart_rate', icon: <Activity className="w-5 h-5" />, color: '#EF4444', gradient: 'bg-red-500/20', target: 100 },
+    { metricType: 'steps', icon: <Target className="w-5 h-5" />, color: '#F97316', gradient: 'bg-orange-500/20', target: 10000 },
+    { metricType: 'mood', icon: <Smile className="w-5 h-5" />, color: '#EC4899', gradient: 'bg-pink-500/20', target: 8 },
+    { metricType: 'weight', icon: <Leaf className="w-5 h-5" />, color: '#10B981', gradient: 'bg-green-500/20', target: 70 },
+  ];
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {metrics.map((metric) => (
+        <MetricCard
+          key={metric.metricType}
+          metricType={metric.metricType}
+          value={todayRecords[metric.metricType]}
+          target={metric.target}
+          icon={metric.icon}
+          color={metric.color}
+          gradient={metric.gradient}
+        />
+      ))}
     </div>
   );
 }
@@ -566,20 +690,25 @@ function ImportSection({ onDataImport }: { onDataImport: () => void }) {
   };
 
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-100 dark:border-gray-800">
-      <div className="flex items-center gap-2 mb-4">
-        <Upload className="w-5 h-5 text-indigo-500" />
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">导入健康数据</h3>
+    <div className="bg-gradient-to-br from-gray-800/80 to-gray-900/80 backdrop-blur-lg rounded-2xl p-6 border border-gray-700/50">
+      <div className="flex items-center gap-3 mb-6">
+        <div className="p-2 rounded-xl bg-green-500/20">
+          <Upload className="w-5 h-5 text-green-400" />
+        </div>
+        <div>
+          <h3 className="text-lg font-semibold text-white">导入健康数据</h3>
+          <p className="text-sm text-gray-400">从 Apple Health 导入数据</p>
+        </div>
       </div>
       
       <div
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors cursor-pointer ${
+        className={`border-2 border-dashed rounded-2xl p-8 text-center transition-all cursor-pointer ${
           isDragging 
-            ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20' 
-            : 'border-gray-200 dark:border-gray-700 hover:border-indigo-300'
+            ? 'border-indigo-500 bg-indigo-500/10' 
+            : 'border-gray-600 hover:border-gray-500'
         }`}
       >
         <input
@@ -590,113 +719,168 @@ function ImportSection({ onDataImport }: { onDataImport: () => void }) {
           id="health-import-file"
         />
         <label htmlFor="health-import-file" className="cursor-pointer">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
-            <Upload className="w-8 h-8 text-indigo-500" />
+          <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gray-800 flex items-center justify-center">
+            <Upload className="w-10 h-10 text-gray-400" />
           </div>
-          <p className="text-base font-medium text-gray-900 dark:text-white mb-1">
-            拖拽 CSV 或 XML 文件到这里
+          <p className="text-base font-medium text-white mb-1">
+            拖拽文件到这里
           </p>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            或点击选择文件
+          <p className="text-sm text-gray-400">
+            或点击选择 CSV 或 XML 文件
           </p>
         </label>
       </div>
 
       {file && (
-        <div className="mt-4 flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mt-4 flex items-center justify-between p-4 bg-gray-800/50 rounded-xl"
+        >
           <div>
-            <p className="font-medium text-gray-900 dark:text-white">{file.name}</p>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
+            <p className="font-medium text-white">{file.name}</p>
+            <p className="text-sm text-gray-400">
               {(file.size / 1024).toFixed(1)} KB
             </p>
           </div>
           <motion.button
             whileTap={{ scale: 0.95 }}
             onClick={handleImport}
-            className="px-4 py-2 bg-indigo-500 text-white rounded-lg font-medium hover:bg-indigo-600 transition-colors"
+            className="px-5 py-2.5 bg-indigo-500 text-white rounded-xl font-medium hover:bg-indigo-600 transition-colors"
           >
             开始导入
           </motion.button>
-        </div>
+        </motion.div>
       )}
 
-      <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-xl">
-        <p className="text-sm text-amber-800 dark:text-amber-300">
-          💡 提示：从 Apple Health 导出数据（支持 CSV 或 XML 格式），然后导入到这里。导入的历史数据可在"历史"标签页查看。
-        </p>
+      <div className="mt-4 p-4 bg-amber-500/10 rounded-xl border border-amber-500/20">
+        <div className="flex items-start gap-3">
+          <Star className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-medium text-amber-300">提示</p>
+            <p className="text-sm text-amber-200/80 mt-1">
+              从 Apple Health 导出数据（支持 CSV 或 XML 格式），然后导入到这里。导入的历史数据可在"历史"标签页查看。
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );
 }
 
-function TrendsSection() {
-  const [weeklyData, setWeeklyData] = useState<Record<string, { avg: number; total: number; count: number }>>({});
-
-  useEffect(() => {
-    const fetchData = async () => {
-      const data = await getWeeklyHealthSummary();
-      setWeeklyData(data);
-    };
-    fetchData();
-  }, []);
-
-  const displayMetrics: HealthMetricType[] = ['water_intake', 'sleep_duration', 'steps', 'heart_rate'];
-
-  if (Object.keys(weeklyData).length === 0) {
-    return (
-      <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-100 dark:border-gray-800 text-center">
-        <TrendingUp className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">暂无趋势数据</h3>
-        <p className="text-sm text-gray-500 dark:text-gray-400">
-          请先导入或记录健康数据
-        </p>
-      </div>
-    );
-  }
-
+function DashboardSection({ todayRecords, healthScore }: { todayRecords: Record<string, number | undefined>; healthScore: number }) {
+  const scoreColor = healthScore >= 80 ? '#10B981' : healthScore >= 60 ? '#F59E0B' : '#EF444';
+  
   return (
-    <div className="space-y-4">
-      {displayMetrics.map((metric) => {
-        const config = HEALTH_METRIC_CONFIG[metric];
-        const data = weeklyData[metric];
-        if (!data) return null;
-        
-        return (
-          <div key={metric} className="bg-white dark:bg-gray-900 rounded-xl p-4 border border-gray-100 dark:border-gray-800">
-            <div className="flex items-center justify-between mb-2">
-              <span className="flex items-center gap-2">
-                <span>{config.icon}</span>
-                <span className="font-medium text-gray-900 dark:text-white">{config.label}</span>
-              </span>
-              <span className="text-sm text-gray-500 dark:text-gray-400">
-                本周 {data.count} 条记录
-              </span>
+    <div className="space-y-6">
+      <motion.div 
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-gradient-to-br from-indigo-600/20 to-purple-600/20 backdrop-blur-lg rounded-3xl p-6 border border-indigo-500/20"
+      >
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <Heart className="w-5 h-5 text-pink-400" />
+              <span className="text-sm text-gray-300">今日健康评分</span>
             </div>
-            <div className="flex items-end gap-1 h-16">
-              {[0, 1, 2, 3, 4, 5, 6].map((day) => {
-                const height = Math.random() * 80 + 20;
-                return (
-                  <div
-                    key={day}
-                    className={`flex-1 rounded-t transition-all duration-500 ${
-                      day === 6 ? 'bg-indigo-500' : 'bg-indigo-200 dark:bg-indigo-800'
-                    }`}
-                    style={{ height: `${height}%` }}
-                  />
-                );
-              })}
-            </div>
-            <div className="mt-2 text-right">
-              <span className="text-lg font-bold text-gray-900 dark:text-white">
-                {metric === 'water_intake' ? (data.total / 1000).toFixed(1) : data.total.toFixed(0)}
-              </span>
-              <span className="text-sm text-gray-500 dark:text-gray-400 ml-1">
-                {metric === 'water_intake' ? 'L' : config.unit}
-              </span>
-            </div>
+            <p className="text-sm text-gray-400">基于今日记录的数据计算</p>
           </div>
-        );
-      })}
+          <HealthScoreRing score={healthScore} />
+        </div>
+        
+        <motion.div 
+          className="mt-6 flex gap-4"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.5 }}
+        >
+          <div className="flex-1 bg-black/20 rounded-xl p-3 text-center">
+            <Clock className="w-4 h-4 text-gray-400 mx-auto mb-1" />
+            <div className="text-sm text-gray-300">数据更新于</div>
+            <div className="text-xs text-gray-500">{new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}</div>
+          </div>
+          <div className="flex-1 bg-black/20 rounded-xl p-3 text-center">
+            <Zap className="w-4 h-4 text-yellow-400 mx-auto mb-1" />
+            <div className="text-sm text-gray-300">今日记录</div>
+            <div className="text-xs text-gray-500">{Object.values(todayRecords).filter(v => v !== undefined).length} 项</div>
+          </div>
+        </motion.div>
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+      >
+        <div className="flex items-center gap-3 mb-4">
+          <Target className="w-5 h-5 text-indigo-400" />
+          <h3 className="text-lg font-semibold text-white">今日指标</h3>
+        </div>
+        <MetricsSection todayRecords={todayRecords} />
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+        className="bg-gradient-to-br from-gray-800/80 to-gray-900/80 backdrop-blur-lg rounded-2xl p-5 border border-gray-700/50"
+      >
+        <div className="flex items-center gap-3 mb-4">
+          <Activity className="w-5 h-5 text-green-400" />
+          <h3 className="text-lg font-semibold text-white">健康建议</h3>
+        </div>
+        <div className="space-y-3">
+          {todayRecords.water_intake !== undefined && todayRecords.water_intake < 1500 && (
+            <motion.div 
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="flex items-start gap-3 p-3 bg-blue-500/10 rounded-xl border border-blue-500/20"
+            >
+              <Droplets className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-medium text-blue-300">多喝水</p>
+                <p className="text-sm text-blue-200/70">今日饮水量不足，建议再喝 {Math.ceil((1500 - todayRecords.water_intake) / 250)} 杯水</p>
+              </div>
+            </motion.div>
+          )}
+          {todayRecords.sleep_duration !== undefined && todayRecords.sleep_duration < 7 && (
+            <motion.div 
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.1 }}
+              className="flex items-start gap-3 p-3 bg-purple-500/10 rounded-xl border border-purple-500/20"
+            >
+              <Moon className="w-5 h-5 text-purple-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-medium text-purple-300">保证睡眠</p>
+                <p className="text-sm text-purple-200/70">今日睡眠不足7小时，建议早点休息</p>
+              </div>
+            </motion.div>
+          )}
+          {todayRecords.steps !== undefined && todayRecords.steps < 5000 && (
+            <motion.div 
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.2 }}
+              className="flex items-start gap-3 p-3 bg-orange-500/10 rounded-xl border border-orange-500/20"
+            >
+              <Target className="w-5 h-5 text-orange-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-medium text-orange-300">多运动</p>
+                <p className="text-sm text-orange-200/70">今日步数较少，建议起身活动一下</p>
+              </div>
+            </motion.div>
+          )}
+          {Object.keys(todayRecords).length === 0 && (
+            <div className="text-center py-8">
+              <Heart className="w-12 h-12 mx-auto mb-3 text-gray-600" />
+              <p className="text-gray-400">还没有今日记录</p>
+              <p className="text-sm text-gray-500 mt-1">点击右上角按钮添加记录</p>
+            </div>
+          )}
+        </div>
+      </motion.div>
     </div>
   );
 }
@@ -760,242 +944,72 @@ export default function HealthPage() {
 
   const tabs: { key: TabType; label: string; icon: React.ReactNode }[] = [
     { key: "dashboard", label: "仪表盘", icon: <Gauge className="w-4 h-4" /> },
-    { key: "log", label: "记录", icon: <Calendar className="w-4 h-4" /> },
+    { key: "metrics", label: "指标", icon: <Target className="w-4 h-4" /> },
     { key: "history", label: "历史", icon: <History className="w-4 h-4" /> },
-    { key: "trends", label: "趋势", icon: <TrendingUp className="w-4 h-4" /> },
     { key: "import", label: "导入", icon: <Upload className="w-4 h-4" /> },
   ];
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-gray-50 dark:bg-gray-950">
-      <div className="px-5 pt-6 pb-3">
+    <div className="flex-1 flex flex-col h-full bg-gradient-to-br from-gray-900 via-gray-900 to-gray-800">
+      <div className="px-4 sm:px-6 lg:px-8 pt-6 pb-3">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold text-gray-900 dark:text-white">健康中心</h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            <h1 className="text-2xl font-bold text-white">健康中心</h1>
+            <p className="text-sm text-gray-400 mt-1">
               追踪你的健康数据，保持健康生活
             </p>
           </div>
           <motion.button
             whileTap={{ scale: 0.95 }}
             onClick={() => setShowQuickLog(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-500 text-white rounded-xl font-medium hover:bg-indigo-600 transition-colors"
+            className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-xl font-medium hover:opacity-90 transition-opacity shadow-lg shadow-indigo-500/20"
           >
             <Plus className="w-4 h-4" />
-            <span>快速记录</span>
+            <span>添加记录</span>
           </motion.button>
         </div>
       </div>
 
-      <div className="px-5">
-        <div className="flex gap-2 p-1 bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 w-fit">
+      <div className="px-4 sm:px-6 lg:px-8">
+        <div className="inline-flex gap-1 p-1 bg-gray-800/50 rounded-xl border border-gray-700/50">
           {tabs.map((tab) => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
                 activeTab === tab.key
-                  ? "bg-indigo-500 text-white"
-                  : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                  ? "bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-lg"
+                  : "text-gray-400 hover:text-white hover:bg-gray-700/50"
               }`}
             >
               {tab.icon}
-              <span>{tab.label}</span>
+              <span className="hidden sm:inline">{tab.label}</span>
             </button>
           ))}
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-5 pb-24 pt-4">
+      <div className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 py-6 pb-24">
         <AnimatePresence mode="wait">
           {activeTab === "dashboard" && (
             <motion.div
               key="dashboard"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="space-y-5"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
             >
-              <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-100 dark:border-gray-800">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">今日健康评分</h2>
-                    <p className="text-sm text-gray-600 dark:text-gray-300">基于今日记录的数据计算</p>
-                  </div>
-                  <HealthScoreRing score={healthScore} />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-                <HealthCard
-                  metricType="water_intake"
-                  value={todayRecords.water_intake}
-                  unit="ml"
-                  icon="💧"
-                  color="text-blue-600"
-                  bgColor="bg-blue-50"
-                  label="饮水量"
-                />
-                <HealthCard
-                  metricType="sleep_duration"
-                  value={todayRecords.sleep_duration}
-                  unit="小时"
-                  icon="😴"
-                  color="text-purple-600"
-                  bgColor="bg-purple-50"
-                  label="睡眠时长"
-                />
-                <HealthCard
-                  metricType="sleep_quality"
-                  value={todayRecords.sleep_quality}
-                  unit="分"
-                  icon="⭐"
-                  color="text-amber-600"
-                  bgColor="bg-amber-50"
-                  label="睡眠质量"
-                />
-                <HealthCard
-                  metricType="heart_rate"
-                  value={todayRecords.heart_rate}
-                  unit="bpm"
-                  icon="❤️"
-                  color="text-red-600"
-                  bgColor="bg-red-50"
-                  label="心率"
-                />
-                <HealthCard
-                  metricType="steps"
-                  value={todayRecords.steps}
-                  unit="步"
-                  icon="👣"
-                  color="text-orange-600"
-                  bgColor="bg-orange-50"
-                  label="步数"
-                />
-                <HealthCard
-                  metricType="mood"
-                  value={todayRecords.mood}
-                  unit="分"
-                  icon="😊"
-                  color="text-violet-600"
-                  bgColor="bg-violet-50"
-                  label="心情"
-                />
-              </div>
-
-              <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-100 dark:border-gray-800">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">健康建议</h3>
-                <div className="space-y-3">
-                  {todayRecords.water_intake !== undefined && todayRecords.water_intake < 1500 && (
-                    <div className="flex items-start gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
-                      <Droplets className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
-                      <div>
-                        <p className="font-medium text-blue-800 dark:text-blue-300">多喝水</p>
-                        <p className="text-sm text-blue-700 dark:text-blue-400">今日饮水量不足，建议再喝一杯水</p>
-                      </div>
-                    </div>
-                  )}
-                  {todayRecords.sleep_duration !== undefined && todayRecords.sleep_duration < 7 && (
-                    <div className="flex items-start gap-3 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-xl">
-                      <Moon className="w-5 h-5 text-purple-500 flex-shrink-0 mt-0.5" />
-                      <div>
-                        <p className="font-medium text-purple-800 dark:text-purple-300">保证睡眠</p>
-                        <p className="text-sm text-purple-700 dark:text-purple-400">今日睡眠不足7小时，建议早点休息</p>
-                      </div>
-                    </div>
-                  )}
-                  {todayRecords.steps !== undefined && todayRecords.steps < 5000 && (
-                    <div className="flex items-start gap-3 p-3 bg-orange-50 dark:bg-orange-900/20 rounded-xl">
-                      <Activity className="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5" />
-                      <div>
-                        <p className="font-medium text-orange-800 dark:text-orange-300">多运动</p>
-                        <p className="text-sm text-orange-700 dark:text-orange-400">今日步数较少，建议起身活动一下</p>
-                      </div>
-                    </div>
-                  )}
-                  {Object.keys(todayRecords).length === 0 && (
-                    <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                      <Heart className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                      <p>还没有今日记录</p>
-                      <p className="text-sm">点击右上角按钮添加记录，或在"导入"标签页导入历史数据</p>
-                    </div>
-                  )}
-                </div>
-              </div>
+              <DashboardSection todayRecords={todayRecords} healthScore={healthScore} />
             </motion.div>
           )}
 
-          {activeTab === "log" && (
+          {activeTab === "metrics" && (
             <motion.div
-              key="log"
+              key="metrics"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="space-y-4"
             >
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                <motion.button
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => { setShowQuickLog(true); }}
-                  className="bg-white dark:bg-gray-900 rounded-xl p-4 border border-gray-100 dark:border-gray-800 text-center hover:shadow-md transition-shadow"
-                >
-                  <div className="text-3xl mb-2">💧</div>
-                  <div className="text-sm font-medium text-gray-900 dark:text-white">饮水</div>
-                </motion.button>
-                <motion.button
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => { setShowQuickLog(true); }}
-                  className="bg-white dark:bg-gray-900 rounded-xl p-4 border border-gray-100 dark:border-gray-800 text-center hover:shadow-md transition-shadow"
-                >
-                  <div className="text-3xl mb-2">😴</div>
-                  <div className="text-sm font-medium text-gray-900 dark:text-white">睡眠</div>
-                </motion.button>
-                <motion.button
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => { setShowQuickLog(true); }}
-                  className="bg-white dark:bg-gray-900 rounded-xl p-4 border border-gray-100 dark:border-gray-800 text-center hover:shadow-md transition-shadow"
-                >
-                  <div className="text-3xl mb-2">❤️</div>
-                  <div className="text-sm font-medium text-gray-900 dark:text-white">心率</div>
-                </motion.button>
-                <motion.button
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => { setShowQuickLog(true); }}
-                  className="bg-white dark:bg-gray-900 rounded-xl p-4 border border-gray-100 dark:border-gray-800 text-center hover:shadow-md transition-shadow"
-                >
-                  <div className="text-3xl mb-2">😊</div>
-                  <div className="text-sm font-medium text-gray-900 dark:text-white">心情</div>
-                </motion.button>
-              </div>
-
-              <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800">
-                <div className="px-5 py-3 border-b border-gray-100 dark:border-gray-800">
-                  <h3 className="font-semibold text-gray-900 dark:text-white">今日记录</h3>
-                </div>
-                <div className="divide-y divide-gray-100 dark:divide-gray-800">
-                  {Object.entries(todayRecords).filter(([, v]) => v !== undefined).length > 0 ? (
-                    Object.entries(todayRecords).map(([metric, value]) => {
-                      const config = HEALTH_METRIC_CONFIG[metric as HealthMetricType];
-                      if (!config || value === undefined) return null;
-                      return (
-                        <div key={metric} className="px-5 py-3 flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span>{config.icon}</span>
-                            <span className="text-gray-900 dark:text-white">{config.label}</span>
-                          </div>
-                          <span className="font-medium text-gray-700 dark:text-gray-300">
-                            {value.toFixed(config.unit === '小时' ? 1 : 0)} {config.unit}
-                          </span>
-                        </div>
-                      );
-                    })
-                  ) : (
-                    <div className="px-5 py-8 text-center text-gray-500 dark:text-gray-400">
-                      暂无记录
-                    </div>
-                  )}
-                </div>
-              </div>
+              <MetricsSection todayRecords={todayRecords} />
             </motion.div>
           )}
 
@@ -1007,17 +1021,6 @@ export default function HealthPage() {
               exit={{ opacity: 0, y: -10 }}
             >
               <HistorySection />
-            </motion.div>
-          )}
-
-          {activeTab === "trends" && (
-            <motion.div
-              key="trends"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-            >
-              <TrendsSection />
             </motion.div>
           )}
 

@@ -769,7 +769,11 @@ function ImportSection({ onDataImport }: { onDataImport: () => void }) {
 }
 
 function DashboardSection({ todayRecords, healthScore }: { todayRecords: Record<string, number | undefined>; healthScore: number }) {
-  const scoreColor = healthScore >= 80 ? '#10B981' : healthScore >= 60 ? '#F59E0B' : '#EF444';
+  const [currentTime, setCurrentTime] = useState<string>('--');
+  
+  useEffect(() => {
+    setCurrentTime(new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }));
+  }, []);
   
   return (
     <div className="space-y-6">
@@ -798,7 +802,7 @@ function DashboardSection({ todayRecords, healthScore }: { todayRecords: Record<
           <div className="flex-1 bg-black/20 rounded-xl p-3 text-center">
             <Clock className="w-4 h-4 text-gray-400 mx-auto mb-1" />
             <div className="text-sm text-gray-300">数据更新于</div>
-            <div className="text-xs text-gray-500">{new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}</div>
+            <div className="text-xs text-gray-500">{currentTime}</div>
           </div>
           <div className="flex-1 bg-black/20 rounded-xl p-3 text-center">
             <Zap className="w-4 h-4 text-yellow-400 mx-auto mb-1" />

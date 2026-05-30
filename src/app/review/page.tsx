@@ -36,9 +36,9 @@ export default function ReviewPage() {
   const [tab, setTab] = useState<ReviewTab>("daily");
   const [loading, setLoading] = useState(true);
 
-  const [taskStats, setTaskStats] = useState({ done: 0, active: 0, overdue: 0 });
-  const [habitStats, setHabitStats] = useState({ total: 0, totalChecks: 0 });
-  const [financeStats, setFinanceStats] = useState({ income: 0, expense: 0 });
+  const [taskStats, setTaskStats] = useState({ completed: 0, active: 0, new: 0 });
+  const [habitStats, setHabitStats] = useState({ completed: 0, total: 0, streak: 0 });
+  const [financeStats, setFinanceStats] = useState({ income: 0, expense: 0, balance: 0 });
   const [weeklyDone, setWeeklyDone] = useState(0);
   const [weeklyPending, setWeeklyPending] = useState(0);
   const [pendingTasks, setPendingTasks] = useState<Task[]>([]);
@@ -67,8 +67,8 @@ export default function ReviewPage() {
       setTaskStats(monthTasks);
       setHabitStats(monthHabits);
       setFinanceStats(monthFinance);
-      setWeeklyDone(weekTasks.done);
-      setWeeklyPending(weekTasks.pending);
+      setWeeklyDone(weekTasks.completed);
+      setWeeklyPending(weekTasks.active);
       setPendingTasks(pending.slice(0, 10));
 
       const todayKey = getTodayStr();
@@ -97,10 +97,10 @@ export default function ReviewPage() {
         dateKey: key,
         summary: summary || undefined,
         stats: {
-          tasksDone: tab === "daily" ? weeklyDone : taskStats.done,
+          tasksDone: tab === "daily" ? weeklyDone : taskStats.completed,
           tasksPending: tab === "daily" ? weeklyPending : taskStats.active,
-          tasksOverdue: taskStats.overdue,
-          habitStreaks: habitStats.totalChecks,
+          tasksOverdue: 0,
+          habitStreaks: habitStats.completed,
           focusMinutes: 0,
           financeIncome: financeStats.income,
           financeExpense: financeStats.expense,
@@ -164,7 +164,7 @@ export default function ReviewPage() {
                   <Flame className="w-4 h-4 text-orange-500" />
                   <span className="text-xs text-gray-500">习惯打卡</span>
                 </div>
-                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{habitStats.totalChecks}</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{habitStats.completed}</p>
               </div>
               <div className="bg-white dark:bg-gray-900 rounded-2xl p-4 border border-gray-100 dark:border-gray-800">
                 <div className="flex items-center gap-2 mb-1">
@@ -214,7 +214,7 @@ export default function ReviewPage() {
                 <Inbox className="w-4 h-4 text-amber-500" />
                 <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Step 1 · 收件箱清理</h3>
               </div>
-              <p className="text-xs text-gray-500 mb-3">本周待安排任务：{taskStats.active + taskStats.overdue} 个（{taskStats.overdue} 个已逾期）</p>
+              <p className="text-xs text-gray-500 mb-3">本周待安排任务：{taskStats.active} 个</p>
               <a href="/pending" className="inline-block text-xs font-medium text-indigo-600 hover:text-indigo-700">
                 前往安排事项 →
               </a>
@@ -236,7 +236,7 @@ export default function ReviewPage() {
                 </div>
                 <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
                   <p className="text-xs text-gray-400">习惯打卡</p>
-                  <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{habitStats.totalChecks}</p>
+                  <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{habitStats.completed}</p>
                 </div>
                 <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
                   <p className="text-xs text-gray-400">本月收支</p>
@@ -293,20 +293,20 @@ export default function ReviewPage() {
               <div className="grid grid-cols-2 gap-3 mb-4">
                 <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
                   <p className="text-xs text-gray-400">完成任务</p>
-                  <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{taskStats.done}</p>
+                  <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{taskStats.completed}</p>
                   {prevMonthRecord && (
                     <p className="text-[10px] text-gray-400 mt-0.5">
-                      {prevMonthRecord.stats.tasksDone > 0 ? `${taskStats.done > prevMonthRecord.stats.tasksDone ? "↑" : "↓"} 上月 ${prevMonthRecord.stats.tasksDone}` : ""}
+                      {prevMonthRecord.stats.tasksDone > 0 ? `${taskStats.completed > prevMonthRecord.stats.tasksDone ? "↑" : "↓"} 上月 ${prevMonthRecord.stats.tasksDone}` : ""}
                     </p>
                   )}
                 </div>
                 <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
-                  <p className="text-xs text-gray-400">逾期任务</p>
-                  <p className={`text-lg font-bold ${taskStats.overdue > 0 ? "text-red-500" : "text-gray-900 dark:text-gray-100"}`}>{taskStats.overdue}</p>
+                  <p className="text-xs text-gray-400">新增任务</p>
+                  <p className={`text-lg font-bold ${taskStats.new > 0 ? "text-blue-500" : "text-gray-900 dark:text-gray-100"}`}>{taskStats.new}</p>
                 </div>
                 <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
                   <p className="text-xs text-gray-400">习惯打卡</p>
-                  <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{habitStats.totalChecks}</p>
+                  <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{habitStats.completed}</p>
                 </div>
                 <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
                   <p className="text-xs text-gray-400">习惯数量</p>

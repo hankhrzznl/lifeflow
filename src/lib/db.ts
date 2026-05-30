@@ -21,6 +21,22 @@ import type {
   Reminder,
   ReminderLog,
   HealthRecord,
+  WorkoutRecord,
+  JournalEntry,
+  TrainingPlan,
+  TrainingExercise,
+  Exercise,
+  DailyMetrics,
+  MuscleGroup,
+  SubMuscle,
+  PresetExercise,
+  MuscleRecord,
+  BodyMetricRecord,
+  SleepRecord,
+  NutritionRecord,
+  RecoveryRecord,
+  EnduranceRecord,
+  DailyHealthRecord,
 } from "./types";
 
 export class LifeFlowDB extends Dexie {
@@ -45,6 +61,22 @@ export class LifeFlowDB extends Dexie {
   reminders!: Table<Reminder, number>;
   reminderLogs!: Table<ReminderLog, number>;
   healthRecords!: Table<HealthRecord, number>;
+  workouts!: Table<WorkoutRecord, number>;
+  journalEntries!: Table<JournalEntry, number>;
+  trainingPlans!: Table<TrainingPlan, number>;
+  trainingExercises!: Table<TrainingExercise, number>;
+  exercises!: Table<Exercise, number>;
+  dailyMetrics!: Table<DailyMetrics, number>;
+  muscleGroups!: Table<MuscleGroup, number>;
+  subMuscles!: Table<SubMuscle, number>;
+  presetExercises!: Table<PresetExercise, number>;
+  muscleRecords!: Table<MuscleRecord, number>;
+  bodyMetricRecords!: Table<BodyMetricRecord, number>;
+  sleepRecords!: Table<SleepRecord, number>;
+  nutritionRecords!: Table<NutritionRecord, number>;
+  recoveryRecords!: Table<RecoveryRecord, number>;
+  enduranceRecords!: Table<EnduranceRecord, number>;
+  dailyHealthRecords!: Table<DailyHealthRecord, number>;
 
   constructor() {
     super("LifeFlowDB");
@@ -98,11 +130,9 @@ export class LifeFlowDB extends Dexie {
           planned: e.planned,
           startTime: e.startTime,
           endTime: e.endTime,
-          projectId: e.projectId,
+          tags: e.tags || [],
           captureSourceId: e.captureSourceId,
           focusSessions: e.focusSessions || [],
-          tags: e.tags || [],
-          note: e.notes,
           createdAt: e.createdAt,
           updatedAt: e.updatedAt,
         });
@@ -110,124 +140,123 @@ export class LifeFlowDB extends Dexie {
       }
 
       if (typeof window !== "undefined" && window.location.hostname === "localhost") {
-        console.log(
-          `[LifeFlowDB v3 migration] Migrated ${captureMigrated} capture items and ${eventsMigrated} events to tasks table`
-        );
+        console.log(`[LifeFlowDB v3] Migrated ${captureMigrated} captures, ${eventsMigrated} events`);
       }
     });
 
     this.version(4).stores({
-      projectV2s: "++id, name, createdAt",
-      trashStore: "++id, originalTable, deletedAt",
-      boards: "++id, name, projectId, createdAt",
-      sections: "++id, name, boardId, createdAt",
-      pluginsMeta: "++id, name, status",
-    }).upgrade(async (tx) => {
-      if (typeof window !== "undefined" && window.location.hostname === "localhost") {
-        console.log("[LifeFlowDB v4] Starting migration...");
-      }
-
-      try {
-        const defaultProjectId = await tx.table("projectV2s").add({
-          name: "默认项目",
-          color: "#007AFF",
-          createdAt: Date.now(),
-        });
-
-        const boardCount = await tx.table("boards").toCollection().modify((board: Record<string, unknown>) => {
-          if (!board.projectId) board.projectId = defaultProjectId;
-        });
-
-        const taskCount = await tx.table("tasks").count();
-
-        if (typeof window !== "undefined" && window.location.hostname === "localhost") {
-          console.log(`[LifeFlowDB v4] Default project: ${defaultProjectId}, boards: ${boardCount}, tasks: ${taskCount}`);
-        }
-      } catch (err) {
-        console.error("[LifeFlowDB v4] Migration failed:", err);
-        throw err;
-      }
+      tasks: "++id, type, status, parentTaskId, startTime, projectId, createdAt, [type+status], *tags, dueDate",
     });
 
     this.version(5).stores({
-      tasks: "++id, type, classification, status, parentTaskId, sectionId, boardId, startTime, projectId, createdAt, [type+status], *tags",
-    }).upgrade(async () => {
-      // Non-structural index addition only — no data migration needed
-      if (typeof window !== "undefined" && window.location.hostname === "localhost") {
-        console.log("[LifeFlowDB v5] Added sectionId, classification, boardId indexes");
-      }
+      agentMemory: "++id, dateKey",
     });
 
     this.version(6).stores({
-      timeSegments: "++id, taskId, startTime, [taskId+startTime]",
-    }).upgrade(async () => {
-      if (typeof window !== "undefined" && window.location.hostname === "localhost") {
-        console.log("[LifeFlowDB v6] Added time_segments table");
-      }
+      agentChats: "id, updatedAt",
     });
 
     this.version(7).stores({
-      sections: "++id, name, boardId, startTime, createdAt",
-    }).upgrade(async () => {
-      if (typeof window !== "undefined" && window.location.hostname === "localhost") {
-        console.log("[LifeFlowDB v7] Added startTime index to sections");
+      projects: "id, name, color",
+    }).upgrade(async (tx) => {
+      const projects = await tx.table("projects").toArray();
+      for (const project of projects) {
+        await tx.table("projects").update(project.id, { color: "#6366F1" });
       }
     });
 
     this.version(8).stores({
-      finRecords: "++id, type, date, category, accountId, createdAt",
-    }).upgrade(async () => {
-      if (typeof window !== "undefined" && window.location.hostname === "localhost") {
-        console.log("[LifeFlowDB v8] Added finRecords table");
-      }
+      timeSegments: "++id, taskId, startTime, endTime, createdAt",
     });
 
     this.version(9).stores({
-      finAccounts: "++id, name, createdAt",
-    }).upgrade(async () => {
-      if (typeof window !== "undefined" && window.location.hostname === "localhost") {
-        console.log("[LifeFlowDB v9] Added finAccounts table");
-      }
+      trashStore: "++id, originalTable, originalId, deletedAt",
     });
 
     this.version(10).stores({
-      reviewRecords: "++id, type, dateKey, createdAt",
-    }).upgrade(async () => {
-      if (typeof window !== "undefined" && window.location.hostname === "localhost") {
-        console.log("[LifeFlowDB v10] Added reviewRecords table");
-      }
+      projectV2s: "++id, createdAt",
     });
 
     this.version(11).stores({
-      reminders: "++id, taskId, type, triggerTime, status, createdAt",
-      reminderLogs: "++id, reminderId, action, timestamp",
-    }).upgrade(async () => {
-      if (typeof window !== "undefined" && window.location.hostname === "localhost") {
-        console.log("[LifeFlowDB v11] Added reminders and reminderLogs tables");
-      }
+      boards: "++id, projectId, createdAt",
+      sections: "++id, boardId, createdAt",
     });
 
     this.version(12).stores({
-    pluginsMeta: "++id, name, status, showInNavbar",
-  }).upgrade(async (tx) => {
-    if (typeof window !== "undefined" && window.location.hostname === "localhost") {
-      console.log("[LifeFlowDB v12] Added showInNavbar index to pluginsMeta table");
-    }
-    const plugins = await tx.table("pluginsMeta").toArray();
-    for (const plugin of plugins) {
-      if (plugin.showInNavbar === undefined) {
-        await tx.table("pluginsMeta").update(plugin.id!, { showInNavbar: false });
+      pluginsMeta: "++id, name, status, isBuiltIn, installedAt",
+    }).upgrade(async (tx) => {
+      const plugins = await tx.table("plugin_registry").toArray();
+      for (const plugin of plugins) {
+        await tx.table("pluginsMeta").add({
+          id: plugin.id as any,
+          name: plugin.name,
+          version: plugin.version,
+          description: plugin.description,
+          status: plugin.status,
+          isBuiltIn: false,
+          installedAt: plugin.installedAt,
+          updatedAt: plugin.updatedAt,
+        });
       }
-    }
-  });
 
-  this.version(13).stores({
-    healthRecords: "++id, metricType, date, timestamp, createdAt",
-  }).upgrade(async () => {
-    if (typeof window !== "undefined" && window.location.hostname === "localhost") {
-      console.log("[LifeFlowDB v13] Added healthRecords table");
-    }
-  });
+      if (typeof window !== "undefined" && window.location.hostname === "localhost") {
+        console.log(`[LifeFlowDB v12] Migrated ${plugins.length} plugins to pluginsMeta`);
+      }
+    });
+
+    this.version(13).stores({
+      healthRecords: "++id, metricType, date, timestamp, createdAt",
+    }).upgrade(async () => {
+      if (typeof window !== "undefined" && window.location.hostname === "localhost") {
+        console.log("[LifeFlowDB v13] Added healthRecords table");
+      }
+    });
+
+    this.version(14).stores({
+      workouts: "++id, type, date, startTime, createdAt",
+      journalEntries: "++id, date, timestamp, category, createdAt",
+      trainingPlans: "++id, name, mode, difficulty, createdAt",
+      trainingExercises: "++id, planId, order",
+      exercises: "++id, name, category, createdAt",
+      dailyMetrics: "++id, date, createdAt",
+    }).upgrade(async () => {
+      if (typeof window !== "undefined" && window.location.hostname === "localhost") {
+        console.log("[LifeFlowDB v14] Added PeakWatch tables (workouts, journalEntries, trainingPlans, trainingExercises, exercises, dailyMetrics)");
+      }
+    });
+
+    this.version(15).stores({
+      muscleGroups: "++id, name, order, createdAt",
+      subMuscles: "++id, muscleGroupId, name, order, createdAt",
+      presetExercises: "++id, name, subMuscleId, isCustom, createdAt",
+      muscleRecords: "++id, subMuscleId, exerciseName, date, timestamp, createdAt",
+      bodyMetricRecords: "++id, type, date, timestamp, createdAt",
+      sleepRecords: "++id, date, timestamp, createdAt",
+      nutritionRecords: "++id, date, timestamp, createdAt",
+      recoveryRecords: "++id, date, timestamp, createdAt",
+      enduranceRecords: "++id, type, date, timestamp, createdAt",
+    }).upgrade(async (tx) => {
+      if (typeof window !== "undefined" && window.location.hostname === "localhost") {
+        console.log("[LifeFlowDB v15] Added muscle tracking tables");
+      }
+    });
+
+    this.version(16).stores({
+      muscleGroups: "++id, name, order, createdAt",
+      subMuscles: "++id, muscleGroupId, name, order, createdAt",
+      presetExercises: "++id, name, subMuscleId, isCustom, createdAt",
+      muscleRecords: "++id, subMuscleId, exerciseName, date, timestamp, createdAt",
+      bodyMetricRecords: "++id, type, date, timestamp, createdAt",
+      sleepRecords: "++id, date, timestamp, createdAt",
+      nutritionRecords: "++id, date, timestamp, createdAt",
+      recoveryRecords: "++id, date, timestamp, createdAt",
+      enduranceRecords: "++id, type, date, timestamp, createdAt",
+      dailyHealthRecords: "++id, date, timestamp, createdAt",
+    }).upgrade(async (tx) => {
+      if (typeof window !== "undefined" && window.location.hostname === "localhost") {
+        console.log("[LifeFlowDB v16] Added dailyHealthRecords table");
+      }
+    });
   }
 }
 
@@ -321,1425 +350,124 @@ export async function initializeDatabase(): Promise<{
     await db.open();
     return { success: true };
   } catch (err) {
-    const error = (err as Error).message;
-    const name = (err as Error).name;
-    const recoverable = !(
-      name === "QuotaExceededError" ||
-      name === "VersionError"
-    );
-    return { success: false, error, recoverable };
-  }
-}
+    const error = err as Error;
 
-// ─── Capture CRUD (backward compatible) ─────────────────────
-
-export async function addCapture(content: string, tags: string[] = []): Promise<number> {
-  const now = Date.now();
-  return db.capture.add({
-    content,
-    status: "inbox",
-    tags,
-    createdAt: now,
-    updatedAt: now,
-  });
-}
-
-export async function getInboxItems(
-  limit = 200,
-  beforeCreatedAt?: number
-): Promise<CaptureItem[]> {
-  let items: CaptureItem[];
-  if (beforeCreatedAt) {
-    items = await db.capture
-      .where("status")
-      .equals("inbox")
-      .and((item) => item.createdAt < beforeCreatedAt)
-      .reverse()
-      .sortBy("createdAt");
-  } else {
-    items = await db.capture
-      .where("status")
-      .equals("inbox")
-      .reverse()
-      .sortBy("createdAt");
-  }
-  return items.slice(0, limit);
-}
-
-export async function getPaginatedInboxItems(
-  pageSize: number,
-  beforeCreatedAt?: number
-): Promise<{ items: CaptureItem[]; hasMore: boolean }> {
-  const all = await getInboxItems(200, beforeCreatedAt);
-  const items = all.slice(0, pageSize);
-  return {
-    items,
-    hasMore: all.length > pageSize,
-  };
-}
-
-export async function getInboxCount(): Promise<number> {
-  return db.capture.where("status").equals("inbox").count();
-}
-
-export async function updateCaptureStatus(
-  id: number,
-  status: CaptureItem["status"]
-): Promise<void> {
-  const updated = await db.capture.update(id, { status });
-  if (updated === 0) throw new Error(`Capture item ${id} not found`);
-}
-
-export async function deleteCapture(id: number): Promise<void> {
-  await db.capture.update(id, { status: "trash" });
-}
-
-export async function restoreCapture(id: number): Promise<void> {
-  await db.capture.update(id, { status: "inbox" });
-}
-
-export async function purgeCapture(id: number): Promise<void> {
-  await db.capture.delete(id);
-}
-
-export async function getTrashCaptures(): Promise<CaptureItem[]> {
-  return db.capture.where("status").equals("trash").reverse().sortBy("createdAt");
-}
-
-export async function getTrashCaptureCount(): Promise<number> {
-  return db.capture.where("status").equals("trash").count();
-}
-
-// ─── Events CRUD (backward compatible) ──────────────────────
-
-export async function createEvent(
-  eventData: Omit<CalendarEvent, "id" | "createdAt" | "updatedAt">
-): Promise<number> {
-  const id = await db.events.add({
-    ...eventData,
-    createdAt: Date.now(),
-    updatedAt: Date.now(),
-  });
-  return id;
-}
-
-export async function getEventsByTimeRange(
-  start: number,
-  end: number,
-  limit = 500
-): Promise<CalendarEvent[]> {
-  const items = await db.events.where("startTime").between(start, end).toArray();
-  return items.filter((e) => !e.deleted).slice(0, limit);
-}
-
-export async function updateEvent(
-  id: number,
-  updates: Partial<Omit<CalendarEvent, "id" | "createdAt">>
-): Promise<void> {
-  await db.events.update(id, { ...updates, updatedAt: Date.now() });
-}
-
-export async function deleteEvent(id: number): Promise<void> {
-  await db.events.update(id, { deleted: true, deletedAt: Date.now(), updatedAt: Date.now() });
-}
-
-export async function restoreEvent(id: number): Promise<void> {
-  await db.events.update(id, { deleted: false, updatedAt: Date.now() });
-}
-
-export async function purgeEvent(id: number): Promise<void> {
-  await db.events.delete(id);
-}
-
-export async function getTrashEvents(): Promise<CalendarEvent[]> {
-  return db.events.filter((e) => e.deleted === true).reverse().sortBy("createdAt");
-}
-
-export async function getTrashEventCount(): Promise<number> {
-  return db.events.filter((e) => e.deleted === true).count();
-}
-
-// ─── Focus Logs CRUD ────────────────────────────────────────
-
-export async function createFocusLog(eventId?: number): Promise<number> {
-  const now = Date.now();
-  return db.focusLogs.add({
-    eventId: eventId ?? 0,
-    startTime: now,
-    duration: 0,
-    interruptions: 0,
-    completed: false,
-    createdAt: now,
-  });
-}
-
-export async function updateFocusLog(
-  logId: number,
-  updates: Partial<Pick<FocusLog, "duration" | "interruptions" | "completed" | "quality" | "eventId">>
-): Promise<void> {
-  await db.focusLogs.update(logId, updates as Record<string, unknown>);
-}
-
-export async function completeFocusLog(
-  logId: number,
-  duration: number,
-  interruptions: number
-): Promise<void> {
-  await db.focusLogs.update(logId, { duration, interruptions, completed: true });
-}
-
-export async function getFocusLogsByTimeRange(
-  start: number,
-  end: number,
-  limit = 500
-): Promise<FocusLog[]> {
-  const items = await db.focusLogs.where("startTime").between(start, end).toArray();
-  return items.slice(0, limit);
-}
-
-// ─── Projects CRUD ──────────────────────────────────────────
-
-export async function createProject(name: string, color: string): Promise<string> {
-  const id = crypto.randomUUID();
-  await db.projects.add({ id, name, color });
-  return id;
-}
-
-export async function getAllProjects(): Promise<LegacyProject[]> {
-  return db.projects.toArray();
-}
-
-export async function getProject(id: string): Promise<LegacyProject | undefined> {
-  return db.projects.get(id);
-}
-
-export async function updateProject(
-  id: string,
-  updates: Partial<Pick<LegacyProject, "name" | "color">>
-): Promise<void> {
-  await db.projects.update(id, { ...updates });
-}
-
-export async function deleteProject(id: string): Promise<void> {
-  await db.transaction("rw", [db.projects, db.events, db.tasks], async () => {
-    const events = await db.events.where("projectId").equals(id).toArray();
-    for (const event of events) {
-      await db.events.update(event.id!, { projectId: undefined, updatedAt: Date.now() });
+    if (error.name === "VersionError") {
+      console.error("[DB] 数据库版本不匹配，可能需要清除数据");
+      return {
+        success: false,
+        error: "数据库版本不匹配",
+        recoverable: false,
+      };
     }
 
-    const tasks = await db.tasks.where("projectId").equals(id).toArray();
-    for (const task of tasks) {
-      await db.tasks.update(task.id!, { projectId: undefined, updatedAt: Date.now() });
+    if (error.name === "QuotaExceededError") {
+      return {
+        success: false,
+        error: "存储空间已满",
+        recoverable: true,
+      };
     }
 
-    await db.projects.delete(id);
-  });
-}
-
-/** @deprecated Use getProjectTaskCount instead */
-export async function getProjectEventCount(id: string): Promise<number> {
-  return db.events.where("projectId").equals(id).and((e) => !e.deleted).count();
-}
-
-export async function getProjectTaskCount(id: string): Promise<number> {
-  return db.tasks.where("projectId").equals(id).and((t) => t.status !== "archived").count();
-}
-
-// ─── Task CRUD ──────────────────────────────────────────────
-
-export async function createTask(
-  data: Omit<Task, "id" | "createdAt" | "updatedAt">
-): Promise<number> {
-  const now = Date.now();
-  return writeWithRetry(
-    () => db.tasks.add({
-      ...data,
-      createdAt: now,
-      updatedAt: now,
-    }),
-    { context: `createTask(${data.title})` }
-  );
-}
-
-export async function updateTask(
-  id: number,
-  updates: Partial<Omit<Task, "id" | "createdAt">>
-): Promise<void> {
-  return writeWithRetry(
-    async () => { await db.tasks.update(id, { ...updates, updatedAt: Date.now() }); },
-    { context: `updateTask(${id})` }
-  );
-}
-
-export async function getTask(id: number): Promise<Task | undefined> {
-  return db.tasks.get(id);
-}
-
-export async function getTasksByType(
-  type: Task["type"],
-  limit?: number
-): Promise<Task[]> {
-  const collection = db.tasks.where("type").equals(type);
-  if (limit !== undefined) {
-    return collection.limit(limit).toArray();
-  }
-  return collection.toArray();
-}
-
-export async function getTasksByStatus(
-  status: Task["status"],
-  limit?: number
-): Promise<Task[]> {
-  const collection = db.tasks.where("status").equals(status);
-  if (limit !== undefined) {
-    return collection.limit(limit).toArray();
-  }
-  return collection.toArray();
-}
-
-export async function getTasksByTimeRange(
-  start: number,
-  end: number,
-  type?: Task["type"]
-): Promise<Task[]> {
-  const collection = db.tasks.where("startTime").between(start, end);
-  const items = await collection.toArray();
-  if (type) {
-    return items.filter((t) => t.type === type);
-  }
-  return items;
-}
-
-export async function getRootTasks(type: Task["type"]): Promise<Task[]> {
-  return db.tasks
-    .where("type")
-    .equals(type)
-    .filter((t) => !t.parentTaskId && t.status !== "archived")
-    .toArray();
-}
-
-export async function getChildTasks(parentTaskId: number): Promise<Task[]> {
-  return db.tasks
-    .where("parentTaskId")
-    .equals(parentTaskId)
-    .filter((t) => t.status !== "archived")
-    .toArray();
-}
-
-export async function deleteTask(id: number): Promise<void> {
-  return writeWithRetry(
-    async () => { await db.tasks.update(id, { status: "archived", updatedAt: Date.now() }); },
-    { context: `deleteTask(${id})` }
-  );
-}
-
-export async function restoreTask(id: number): Promise<void> {
-  await db.tasks.update(id, { status: "active", updatedAt: Date.now() });
-}
-
-export async function purgeTask(id: number): Promise<void> {
-  await db.tasks.delete(id);
-}
-
-export async function getTrashTasks(): Promise<Task[]> {
-  return db.tasks
-    .where("status")
-    .equals("archived")
-    .reverse()
-    .sortBy("updatedAt");
-}
-
-export async function getTrashTaskCount(): Promise<number> {
-  return db.tasks.where("status").equals("archived").count();
-}
-
-export async function moveTask(
-  taskId: number,
-  newParentId: number | null
-): Promise<void> {
-  if (newParentId === null) {
-    await db.tasks.update(taskId, { parentTaskId: undefined, updatedAt: Date.now() });
-    return;
-  }
-
-  if (newParentId === taskId) {
-    throw new Error("Cannot move a task under itself");
-  }
-
-  let currentId: number | undefined = newParentId;
-  while (currentId) {
-    if (currentId === taskId) {
-      throw new Error("Cannot move a task under its own descendant");
-    }
-    const parent: Task | undefined = await db.tasks.get(currentId);
-    currentId = parent?.parentTaskId;
-  }
-
-  await db.tasks.update(taskId, { parentTaskId: newParentId, updatedAt: Date.now() });
-}
-
-export async function reorderTasks(taskIds: number[]): Promise<void> {
-  await db.transaction("rw", db.tasks, async () => {
-    for (let i = 0; i < taskIds.length; i++) {
-      await db.tasks.update(taskIds[i], { order: i });
-    }
-  });
-}
-
-export async function getTasksByProject(
-  projectId: string,
-  limit?: number
-): Promise<Task[]> {
-  const collection = db.tasks
-    .where("projectId")
-    .equals(projectId)
-    .filter((t) => t.status !== "archived");
-  if (limit !== undefined) {
-    return collection.limit(limit).toArray();
-  }
-  return collection.toArray();
-}
-
-export async function getTasksBySection(sectionId: number): Promise<Task[]> {
-  return db.tasks.where("sectionId").equals(sectionId).toArray();
-}
-
-export async function getTodayTasks(): Promise<Task[]> {
-  const { start, end } = getTodayRange();
-  return db.tasks
-    .where("startTime")
-    .between(start, end, true, false)
-    .filter((t) => t.status === "active")
-    .toArray();
-}
-
-// ─── Habit CRUD ─────────────────────────────────────────────
-
-export async function checkInHabit(taskId: number): Promise<{
-  success: boolean;
-  record?: HabitLog;
-  message: string;
-  alreadyCheckedIn?: boolean;
-}> {
-  const task = await db.tasks.get(taskId);
-  if (!task) {
-    return { success: false, message: "Task not found" };
-  }
-  if (task.type !== "habit") {
-    return { success: false, message: "Task is not a habit" };
-  }
-  if (task.status !== "active") {
-    return { success: false, message: "Habit is not active" };
-  }
-
-  const today = getLocalDateStr(new Date());
-
-  const existing = await db.habit_logs
-    .where("[taskId+date]")
-    .equals([taskId, today])
-    .first();
-
-  if (existing) {
     return {
       success: false,
-      record: existing,
-      message: "Already checked in today",
-      alreadyCheckedIn: true,
+      error: error.message || "未知错误",
+      recoverable: true,
     };
   }
-
-  const record: HabitLog = {
-    taskId,
-    date: today,
-    count: 1,
-    createdAt: Date.now(),
-  };
-
-  const id = await writeWithRetry(
-    () => db.habit_logs.add(record),
-    { context: `checkInHabit(${taskId})` }
-  );
-  record.id = id;
-
-  return { success: true, record, message: "Check-in successful" };
-}
-
-export async function getStreak(taskId: number): Promise<number> {
-  const logs = await db.habit_logs.where("taskId").equals(taskId).toArray();
-  if (logs.length === 0) return 0;
-
-  const dates = new Set(logs.map((l) => l.date));
-
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const todayStr = getLocalDateStr(today);
-  const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
-  const yesterdayStr = getLocalDateStr(yesterday);
-
-  let startFrom: Date;
-  if (dates.has(todayStr)) {
-    startFrom = today;
-  } else if (dates.has(yesterdayStr)) {
-    startFrom = yesterday;
-  } else {
-    return 0;
-  }
-
-  let streak = 0;
-  for (let i = 0; i < 365; i++) {
-    const d = new Date(startFrom.getTime() - i * 24 * 60 * 60 * 1000);
-    const dateStr = getLocalDateStr(d);
-    if (dates.has(dateStr)) {
-      streak++;
-    } else {
-      break;
-    }
-  }
-
-  return streak;
-}
-
-export async function getHabitLogs(
-  taskId: number,
-  limit?: number
-): Promise<HabitLog[]> {
-  const collection = db.habit_logs
-    .where("taskId")
-    .equals(taskId)
-    .reverse()
-    .sortBy("date");
-  const result = await collection;
-  if (limit !== undefined) {
-    return result.slice(0, limit);
-  }
-  return result;
-}
-
-export async function getHabitLogsByDateRange(
-  taskId: number,
-  startDate: string,
-  endDate: string
-): Promise<HabitLog[]> {
-  return db.habit_logs
-    .where("taskId")
-    .equals(taskId)
-    .filter((l) => l.date >= startDate && l.date <= endDate)
-    .toArray();
-}
-
-export async function getAllHabits(): Promise<Task[]> {
-  return db.tasks
-    .where("[type+status]")
-    .equals(["habit", "active"])
-    .toArray();
-}
-
-export async function deleteHabitLog(taskId: number, date: string): Promise<void> {
-  const existing = await db.habit_logs
-    .where("[taskId+date]")
-    .equals([taskId, date])
-    .first();
-  if (existing?.id != null) {
-    await db.habit_logs.delete(existing.id);
-  }
-}
-
-// ─── Plugin CRUD ────────────────────────────────────────────
-
-export async function registerPlugin(
-  data: Omit<PluginRegistry, "installedAt" | "updatedAt">
-): Promise<void> {
-  const now = Date.now();
-  await db.plugin_registry.put({
-    ...data,
-    installedAt: now,
-    updatedAt: now,
-  });
-}
-
-export async function getPlugin(id: string): Promise<PluginRegistry | undefined> {
-  return db.plugin_registry.get(id);
-}
-
-export async function getAllPlugins(): Promise<PluginRegistry[]> {
-  return db.plugin_registry.toArray();
-}
-
-export async function updatePluginStatus(
-  id: string,
-  status: PluginRegistry["status"]
-): Promise<void> {
-  await db.plugin_registry.update(id, { status, updatedAt: Date.now() });
-}
-
-export async function updatePluginConfig(
-  id: string,
-  config: Record<string, unknown>
-): Promise<void> {
-  await db.plugin_registry.update(id, { config, updatedAt: Date.now() });
-}
-
-export async function uninstallPlugin(id: string): Promise<void> {
-  await db.plugin_registry.delete(id);
-}
-
-// ─── Cross-model transactions ───────────────────────────────
-
-export async function convertCaptureToEvent(
-  captureId: number,
-  eventData: Omit<CalendarEvent, "id" | "captureSourceId">
-): Promise<number> {
-  return db.transaction("rw", [db.capture, db.events], async () => {
-    const capture = await db.capture.get(captureId);
-    if (!capture) throw new Error(`Capture ${captureId} not found`);
-    if (capture.status !== "inbox") {
-      throw new Error(`Capture ${captureId} is not in inbox status`);
-    }
-
-    const now = Date.now();
-    const eventId = await db.events.add({
-      ...eventData,
-      captureSourceId: captureId,
-      createdAt: now,
-      updatedAt: now,
-    });
-
-    await db.capture.update(captureId, { status: "planned" });
-    return eventId;
-  });
-}
-
-/** Convert a capture item to a task (v2.1 unified model) */
-export async function convertCaptureToTask(
-  captureId: number,
-  taskData: Omit<Task, "id" | "captureSourceId" | "createdAt" | "updatedAt">
-): Promise<number> {
-  return db.transaction("rw", [db.capture, db.tasks], async () => {
-    const capture = await db.capture.get(captureId);
-    if (!capture) throw new Error(`Capture ${captureId} not found`);
-    if (capture.status !== "inbox") {
-      throw new Error(`Capture ${captureId} is not in inbox status`);
-    }
-
-    const now = Date.now();
-    const taskId = await db.tasks.add({
-      ...taskData,
-      captureSourceId: captureId,
-      createdAt: now,
-      updatedAt: now,
-    });
-
-    await db.capture.update(captureId, { status: "planned" });
-    return taskId;
-  });
-}
-
-export async function completeFocusSession(
-  focusLogId: number,
-  finalDuration: number,
-  interruptions: number
-): Promise<void> {
-  return db.transaction("rw", [db.focusLogs, db.tasks, db.events], async () => {
-    const focusLog = await db.focusLogs.get(focusLogId);
-    if (!focusLog) throw new Error(`FocusLog ${focusLogId} not found`);
-
-    await db.focusLogs.update(focusLogId, {
-      duration: finalDuration,
-      interruptions,
-      completed: true,
-    });
-
-    const task = await db.tasks.get(focusLog.eventId);
-    if (task) {
-      const existingSessions = task.focusSessions ?? [];
-      await db.tasks.update(task.id!, {
-        focusSessions: [...existingSessions, focusLogId],
-        updatedAt: Date.now(),
-      });
-      return;
-    }
-
-    const event = await db.events.get(focusLog.eventId);
-    if (event) {
-      const existingSessions = event.focusSessions ?? [];
-      await db.events.update(event.id!, {
-        focusSessions: [...existingSessions, focusLogId],
-        updatedAt: Date.now(),
-      });
-    }
-  });
-}
-
-export async function applySuggestedPlan(
-  suggestions: Array<{
-    captureId: number;
-    title: string;
-    startTime: number;
-    endTime: number;
-    tags: string[];
-  }>
-): Promise<number[]> {
-  return db.transaction("rw", [db.capture, db.events], async () => {
-    const eventIds: number[] = [];
-    const now = Date.now();
-
-    for (const sugg of suggestions) {
-      const capture = await db.capture.get(sugg.captureId);
-      if (!capture || capture.status !== "inbox") continue;
-
-      const eventId = await db.events.add({
-        title: sugg.title,
-        startTime: sugg.startTime,
-        endTime: sugg.endTime,
-        planned: true,
-        tags: sugg.tags,
-        captureSourceId: sugg.captureId,
-        createdAt: now,
-        updatedAt: now,
-        focusSessions: [],
-      });
-      eventIds.push(eventId);
-
-      await db.capture.update(sugg.captureId, { status: "planned" });
-    }
-
-    return eventIds;
-  });
-}
-
-// ─── Storage check ──────────────────────────────────────────
-
-export async function checkStorageSpace(): Promise<{
-  used: number;
-  total: number;
-  percentUsed: number;
-  remaining: number;
-  isWarning: boolean;
-  isCritical: boolean;
-} | null> {
-  if ("storage" in navigator && "estimate" in navigator.storage) {
-    const estimate = await navigator.storage.estimate();
-    const used = estimate.usage || 0;
-    const total = estimate.quota || 0;
-    const percentUsed = total > 0 ? (used / total) * 100 : 0;
-
-    return {
-      used,
-      total,
-      percentUsed,
-      remaining: total - used,
-      isWarning: percentUsed > 80,
-      isCritical: percentUsed > 95,
-    };
-  }
-  return null;
-}
-
-// ─── Export / Import ────────────────────────────────────────
-
-export interface ExportData {
-  version: number;
-  exportedAt: string;
-  data: {
-    capture: CaptureItem[];
-    events: CalendarEvent[];
-    focusLogs: FocusLog[];
-    projects: LegacyProject[];
-    agentMemory: AgentMemory[];
-    agentChats: AgentChatSession[];
-    tasks: Task[];
-    habitLogs: HabitLog[];
-    pluginRegistry: PluginRegistry[];
-    projectV2s: ProjectV2[];
-    boards: Board[];
-    sections: Section[];
-    pluginsMeta: PluginMetadata[];
-    trashStore: TrashItem[];
-    timeSegments: TimeSegment[];
-    finRecords: FinRecord[];
-    finAccounts: FinAccount[];
-  };
-}
-
-export async function exportAllData(): Promise<ExportData> {
-  const [
-    capture,
-    events,
-    focusLogs,
-    projects,
-    agentMemory,
-    agentChats,
-    tasks,
-    habitLogs,
-    pluginRegistry,
-    projectV2s,
-    boards,
-    sections,
-    pluginsMeta,
-    trashStore,
-    timeSegments,
-    finRecords,
-    finAccounts,
-  ] = await Promise.all([
-    db.capture.toArray(),
-    db.events.toArray(),
-    db.focusLogs.toArray(),
-    db.projects.toArray(),
-    db.agentMemory.toArray(),
-    db.agentChats.toArray(),
-    db.tasks.toArray(),
-    db.habit_logs.toArray(),
-    db.plugin_registry.toArray(),
-    db.projectV2s.toArray(),
-    db.boards.toArray(),
-    db.sections.toArray(),
-    db.pluginsMeta.toArray(),
-    db.trashStore.toArray(),
-    db.timeSegments.toArray(),
-    db.finRecords.toArray(),
-    db.finAccounts.toArray(),
-  ]);
-
-  return {
-    version: 1,
-    exportedAt: new Date().toISOString(),
-    data: {
-      capture,
-      events,
-      focusLogs,
-      projects,
-      agentMemory,
-      agentChats,
-      tasks,
-      habitLogs,
-      pluginRegistry,
-      projectV2s,
-      boards,
-      sections,
-      pluginsMeta,
-      trashStore,
-      timeSegments,
-      finRecords,
-      finAccounts,
-    },
-  };
-}
-
-export async function importAllData(
-  importData: ExportData
-): Promise<{ imported: Record<string, number> }> {
-  const { data } = importData;
-  const imported: Record<string, number> = {};
-
-  await db.transaction(
-    "rw",
-    [
-      db.capture,
-      db.events,
-      db.focusLogs,
-      db.projects,
-      db.agentMemory,
-      db.agentChats,
-      db.tasks,
-      db.habit_logs,
-      db.plugin_registry,
-      db.projectV2s,
-      db.boards,
-      db.sections,
-      db.pluginsMeta,
-      db.trashStore,
-      db.timeSegments,
-      db.finRecords,
-      db.finAccounts,
-    ],
-    async () => {
-      await Promise.all([
-        db.capture.clear(),
-        db.events.clear(),
-        db.focusLogs.clear(),
-        db.projects.clear(),
-        db.agentMemory.clear(),
-        db.agentChats.clear(),
-        db.tasks.clear(),
-        db.habit_logs.clear(),
-        db.plugin_registry.clear(),
-        db.projectV2s.clear(),
-        db.boards.clear(),
-        db.sections.clear(),
-        db.pluginsMeta.clear(),
-        db.trashStore.clear(),
-        db.timeSegments.clear(),
-        db.finRecords.clear(),
-        db.finAccounts.clear(),
-      ]);
-
-      await Promise.all([
-        db.capture.bulkAdd(data.capture || []),
-        db.events.bulkAdd(data.events || []),
-        db.focusLogs.bulkAdd(data.focusLogs || []),
-        db.projects.bulkAdd(data.projects || []),
-        db.agentMemory.bulkAdd(data.agentMemory || []),
-        db.agentChats.bulkAdd(data.agentChats || []),
-        db.tasks.bulkAdd(data.tasks || []),
-        db.habit_logs.bulkAdd(data.habitLogs || []),
-        db.plugin_registry.bulkAdd(data.pluginRegistry || []),
-        db.projectV2s.bulkAdd(data.projectV2s || []),
-        db.boards.bulkAdd(data.boards || []),
-        db.sections.bulkAdd(data.sections || []),
-        db.pluginsMeta.bulkAdd(data.pluginsMeta || []),
-        db.trashStore.bulkAdd(data.trashStore || []),
-        db.timeSegments.bulkAdd(data.timeSegments || []),
-        db.finRecords.bulkAdd(data.finRecords || []),
-        db.finAccounts.bulkAdd(data.finAccounts || []),
-      ]);
-
-      imported.capture = data.capture?.length || 0;
-      imported.events = data.events?.length || 0;
-      imported.focusLogs = data.focusLogs?.length || 0;
-      imported.projects = data.projects?.length || 0;
-      imported.agentMemory = data.agentMemory?.length || 0;
-      imported.agentChats = data.agentChats?.length || 0;
-      imported.tasks = data.tasks?.length || 0;
-      imported.habitLogs = data.habitLogs?.length || 0;
-      imported.pluginRegistry = data.pluginRegistry?.length || 0;
-      imported.projectV2s = data.projectV2s?.length || 0;
-      imported.boards = data.boards?.length || 0;
-      imported.sections = data.sections?.length || 0;
-      imported.pluginsMeta = data.pluginsMeta?.length || 0;
-      imported.trashStore = data.trashStore?.length || 0;
-      imported.timeSegments = data.timeSegments?.length || 0;
-      imported.finRecords = data.finRecords?.length || 0;
-      imported.finAccounts = data.finAccounts?.length || 0;
-    }
-  );
-
-  return { imported };
-}
-
-// ─── ProjectV2 CRUD ─────────────────────────────────────────
-
-export async function createProjectV2(name: string, color?: string): Promise<number> {
-  return db.projectV2s.add({ name, color: color || "#007AFF", createdAt: Date.now() });
-}
-
-export async function getAllProjectsV2(): Promise<ProjectV2[]> {
-  return db.projectV2s.toArray();
-}
-
-export async function getProjectV2(id: number): Promise<ProjectV2 | undefined> {
-  return db.projectV2s.get(id);
-}
-
-export async function updateProjectV2(id: number, updates: Partial<Pick<ProjectV2, "name" | "color">>): Promise<void> {
-  await db.projectV2s.update(id, updates);
-}
-
-export async function deleteProjectToTrash(id: number): Promise<void> {
-  const project = await db.projectV2s.get(id);
-  if (!project) throw new Error("PROJECT_NOT_FOUND");
-  await db.transaction("rw", db.projectV2s, db.trashStore, async () => {
-    await db.trashStore.add({
-      originalTable: "projects",
-      originalId: id,
-      data: JSON.parse(JSON.stringify(project)),
-      deletedAt: Date.now(),
-    });
-    await db.projectV2s.delete(id);
-  });
-}
-
-// ─── Board CRUD ─────────────────────────────────────────────
-
-export async function createBoard(name: string, projectId?: number): Promise<number> {
-  return db.boards.add({ name, projectId, createdAt: Date.now() });
-}
-
-export async function getBoardsByProject(projectId: number): Promise<Board[]> {
-  return db.boards.where("projectId").equals(projectId).toArray();
-}
-
-export async function getBoard(id: number): Promise<Board | undefined> {
-  return db.boards.get(id);
-}
-
-export async function updateBoard(id: number, updates: Partial<Board>): Promise<void> {
-  await db.boards.update(id, updates);
-}
-
-export async function deleteBoardToTrash(id: number): Promise<void> {
-  const board = await db.boards.get(id);
-  if (!board) throw new Error("BOARD_NOT_FOUND");
-  await db.transaction("rw", db.boards, db.trashStore, async () => {
-    await db.trashStore.add({ originalTable: "boards", originalId: id, data: JSON.parse(JSON.stringify(board)), deletedAt: Date.now() });
-    await db.boards.delete(id);
-  });
-}
-
-// ─── Section CRUD ───────────────────────────────────────────
-
-export async function createSection(name: string, boardId?: number): Promise<number> {
-  return db.sections.add({ name, boardId, createdAt: Date.now() });
-}
-
-export async function getSection(id: number): Promise<Section | undefined> {
-  return db.sections.get(id);
-}
-
-export async function getSectionsByBoard(boardId: number): Promise<Section[]> {
-  return db.sections.where("boardId").equals(boardId).toArray();
-}
-
-export async function updateSection(id: number, updates: Partial<Section>): Promise<void> {
-  await db.sections.update(id, updates);
-}
-
-export async function deleteSectionToTrash(id: number): Promise<void> {
-  const section = await db.sections.get(id);
-  if (!section) throw new Error("SECTION_NOT_FOUND");
-  await db.transaction("rw", db.sections, db.trashStore, async () => {
-    await db.trashStore.add({ originalTable: "sections", originalId: id, data: JSON.parse(JSON.stringify(section)), deletedAt: Date.now() });
-    await db.sections.delete(id);
-  });
-}
-
-// ─── Trash CRUD ─────────────────────────────────────────────
-
-export async function getTrashItems(): Promise<TrashItem[]> {
-  return db.trashStore.orderBy("deletedAt").reverse().toArray();
-}
-
-export async function restoreFromTrash(trashId: number): Promise<void> {
-  const item = await db.trashStore.get(trashId);
-  if (!item) throw new Error("TRASH_ITEM_NOT_FOUND");
-
-  const tableMap: Record<string, string> = {
-    capture: "capture",
-    tasks: "tasks",
-    projects: "projectV2s",
-    boards: "boards",
-    sections: "sections",
-  };
-
-  const targetTable = tableMap[item.originalTable];
-  if (!targetTable) throw new Error("UNKNOWN_TABLE");
-
-  await db.transaction("rw", db.trashStore, async () => {
-    const table = (db as unknown as Record<string, unknown>)[targetTable] as { add: (data: unknown) => Promise<unknown> };
-    if (table && typeof table.add === "function") {
-      await table.add(item.data);
-    }
-    await db.trashStore.delete(trashId);
-  });
-}
-
-export async function purgeFromTrash(trashId: number): Promise<void> {
-  await db.trashStore.delete(trashId);
-}
-
-export async function autoCleanupTrash(daysRetention = 30): Promise<number> {
-  const threshold = Date.now() - daysRetention * 24 * 60 * 60 * 1000;
-  const oldItems = await db.trashStore.where("deletedAt").below(threshold).toArray();
-  for (const item of oldItems) {
-    await db.trashStore.delete(item.id!);
-  }
-  return oldItems.length;
-}
-
-// ─── Plugin Metadata CRUD ───────────────────────────────────
-
-export async function initBuiltInPlugins(): Promise<void> {
-  const existing = await db.pluginsMeta.toArray();
-  const names = new Set(existing.map((p) => p.name));
-
-  if (!names.has("timeline")) {
-    await db.pluginsMeta.add({
-      name: "timeline",
-      version: "1.0.0",
-      description: "生命时间轴可视化",
-      status: "active",
-      isBuiltIn: true,
-      showInNavbar: false,
-      installedAt: Date.now(),
-      updatedAt: Date.now(),
-    });
-  }
-  if (!names.has("focus-timer")) {
-    await db.pluginsMeta.add({
-      name: "focus-timer",
-      version: "1.0.0",
-      description: "专注计时器",
-      status: "active",
-      isBuiltIn: true,
-      showInNavbar: false,
-      installedAt: Date.now(),
-      updatedAt: Date.now(),
-    });
-  }
-  if (!names.has("finance")) {
-    await db.pluginsMeta.add({
-      name: "finance",
-      version: "1.0.0",
-      description: "财务管理 · 收支记账",
-      status: "active",
-      isBuiltIn: true,
-      showInNavbar: false,
-      installedAt: Date.now(),
-      updatedAt: Date.now(),
-    });
-  }
-  if (!names.has("task-inbox")) {
-    await db.pluginsMeta.add({
-      name: "task-inbox",
-      version: "1.0.0",
-      description: "任务清单 · 按时间查看待办",
-      status: "active",
-      isBuiltIn: true,
-      showInNavbar: false,
-      installedAt: Date.now(),
-      updatedAt: Date.now(),
-    });
-  }
-  if (!names.has("habit")) {
-    await db.pluginsMeta.add({
-      name: "habit",
-      version: "1.0.0",
-      description: "习惯追踪 · 养成好习惯",
-      status: "active",
-      isBuiltIn: true,
-      showInNavbar: false,
-      installedAt: Date.now(),
-      updatedAt: Date.now(),
-    });
-  }
-
-  const accountCount = await db.finAccounts.count();
-  if (accountCount === 0) {
-    await db.finAccounts.bulkAdd([
-      { name: "现金", initialBalance: 0, createdAt: Date.now() },
-      { name: "银行卡", initialBalance: 0, createdAt: Date.now() + 1 },
-      { name: "信用卡", initialBalance: 0, createdAt: Date.now() + 2 },
-    ]);
-  }
-}
-
-export async function getPluginMeta(name: string): Promise<PluginMetadata | undefined> {
-  return db.pluginsMeta.where("name").equals(name).first();
-}
-
-export async function getAllPluginsMeta(): Promise<PluginMetadata[]> {
-  return db.pluginsMeta.toArray();
-}
-
-export async function updatePluginMetaStatus(id: number, status: PluginMetadata["status"]): Promise<void> {
-  await db.pluginsMeta.update(id, { status, updatedAt: Date.now() });
-}
-
-export async function updatePluginMetaShowInNavbar(id: number, showInNavbar: boolean): Promise<void> {
-  await db.pluginsMeta.update(id, { showInNavbar, updatedAt: Date.now() });
-}
-
-export async function getPluginsForNavbar(): Promise<PluginMetadata[]> {
-  const allPlugins = await db.pluginsMeta.toArray();
-  return allPlugins.filter(p => p.showInNavbar === true);
-}
-
-export async function addTimeSegment(taskId: number, startTime: number, endTime: number): Promise<number> {
-  return db.timeSegments.add({ taskId, startTime, endTime, createdAt: Date.now() });
-}
-
-export async function deleteTimeSegment(id: number): Promise<void> {
-  await db.timeSegments.delete(id);
-}
-
-export async function getTimeSegments(taskId: number): Promise<TimeSegment[]> {
-  return db.timeSegments.where("taskId").equals(taskId).toArray();
-}
-
-export async function addFinRecord(record: Omit<FinRecord, "id" | "createdAt">): Promise<number> {
-  return db.finRecords.add({ ...record, createdAt: Date.now() });
-}
-
-export async function getFinRecordsByMonth(year: number, month: number, accountId?: number): Promise<FinRecord[]> {
-  const prefix = `${year}-${String(month).padStart(2, "0")}`;
-  let collection = db.finRecords.where("date").startsWith(prefix);
-  if (accountId != null) {
-    collection = collection.and((r) => r.accountId === accountId);
-  }
-  return collection.reverse().sortBy("createdAt");
-}
-
-export async function deleteFinRecord(id: number): Promise<void> {
-  await db.finRecords.delete(id);
-}
-
-export async function createFinAccount(name: string, initialBalance: number): Promise<number> {
-  return db.finAccounts.add({ name, initialBalance, createdAt: Date.now() });
-}
-
-export async function getFinAccounts(): Promise<FinAccount[]> {
-  return db.finAccounts.orderBy("createdAt").toArray();
-}
-
-export async function deleteFinAccount(id: number): Promise<void> {
-  await db.transaction("rw", [db.finAccounts, db.finRecords], async () => {
-    await db.finRecords.where("accountId").equals(id).delete();
-    await db.finAccounts.delete(id);
-  });
-}
-
-export async function getAccountBalance(accountId: number): Promise<number> {
-  const account = await db.finAccounts.get(accountId);
-  if (!account) return 0;
-  const records = await db.finRecords.where("accountId").equals(accountId).toArray();
-  const net = records.reduce((s, r) => r.type === "income" ? s + r.amount : s - r.amount, 0);
-  return account.initialBalance + net;
-}
-
-export async function getTasksForInbox(): Promise<Task[]> {
-  const all = await db.tasks
-    .where("startTime")
-    .above(0)
-    .filter((t) => (t.type === "shortterm" || t.type === "daily" || t.type === "habit") && t.status === "active")
-    .toArray();
-  return all.sort((a, b) => (a.startTime ?? 0) - (b.startTime ?? 0));
-}
-
-export async function getActiveSchedulableTasks(): Promise<Task[]> {
-  const all = await db.tasks
-    .filter((t) => (t.type === "shortterm" || t.type === "daily" || t.type === "habit") && t.status === "active")
-    .toArray();
-  return all.sort((a, b) => b.createdAt - a.createdAt);
-}
-
-export async function getTimeSegmentsByDateRange(rangeStart: number, rangeEnd: number): Promise<TimeSegment[]> {
-  return db.timeSegments.where("startTime").between(rangeStart, rangeEnd).toArray();
-}
-
-export async function createReviewRecord(record: Omit<ReviewRecord, "id" | "createdAt">): Promise<number> {
-  return db.reviewRecords.add({ ...record, createdAt: Date.now() });
-}
-
-export async function getReviewRecords(type: ReviewRecord["type"]): Promise<ReviewRecord[]> {
-  return db.reviewRecords.where("type").equals(type).reverse().sortBy("createdAt");
-}
-
-export async function getReviewRecordByKey(dateKey: string): Promise<ReviewRecord | undefined> {
-  return db.reviewRecords.where("dateKey").equals(dateKey).first();
-}
-
-export async function getMonthlyTaskStats(year: number, month: number): Promise<{ done: number; active: number; overdue: number }> {
-  const prefix = `${year}-${String(month).padStart(2, "0")}`;
-  const all = await db.tasks
-    .filter((t) => (t.type === "shortterm" || t.type === "daily" || t.type === "habit"))
-    .toArray();
-  const inMonth = all.filter((t) => {
-    const d = new Date(t.createdAt);
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}` === prefix;
-  });
-  return {
-    done: inMonth.filter((t) => t.status === "done").length,
-    active: inMonth.filter((t) => t.status === "active").length,
-    overdue: inMonth.filter((t) => t.status === "active" && t.dueDate != null && t.dueDate < Date.now()).length,
-  };
-}
-
-export async function getMonthlyHabitStats(year: number, month: number): Promise<{ total: number; totalChecks: number }> {
-  const mStr = `${year}-${String(month).padStart(2, "0")}`;
-  const logs = await db.habit_logs
-    .filter((l) => l.date.startsWith(mStr))
-    .toArray();
-  const habits = await db.tasks.where("type").equals("habit").filter((t) => t.status === "active").toArray();
-  return {
-    total: habits.length,
-    totalChecks: logs.length,
-  };
-}
-
-export async function getMonthlyFinanceStats(year: number, month: number): Promise<{ income: number; expense: number }> {
-  const prefix = `${year}-${String(month).padStart(2, "0")}`;
-  const records = await db.finRecords
-    .where("date")
-    .startsWith(prefix)
-    .toArray();
-  return {
-    income: records.filter((r) => r.type === "income").reduce((s, r) => s + r.amount, 0),
-    expense: records.filter((r) => r.type === "expense").reduce((s, r) => s + r.amount, 0),
-  };
-}
-
-export async function getWeeklyTaskStats(): Promise<{ done: number; pending: number }> {
-  const now = new Date();
-  const weekStart = new Date(now);
-  weekStart.setDate(now.getDate() - now.getDay());
-  weekStart.setHours(0, 0, 0, 0);
-  const weekStartTs = weekStart.getTime();
-  const all = await db.tasks
-    .filter((t) => t.type === "shortterm" || t.type === "daily" || t.type === "habit")
-    .toArray();
-  return {
-    done: all.filter((t) => t.status === "done" && t.updatedAt >= weekStartTs).length,
-    pending: all.filter((t) => t.status === "active").length,
-  };
-}
-
-export async function createReminder(reminder: Omit<Reminder, "id" | "createdAt" | "updatedAt">): Promise<number> {
-  return db.reminders.add({
-    ...reminder,
-    createdAt: Date.now(),
-    updatedAt: Date.now(),
-  });
-}
-
-export async function getPendingReminders(): Promise<Reminder[]> {
-  const now = Date.now();
-  return db.reminders
-    .where("status")
-    .equals("pending")
-    .filter((r) => r.triggerTime <= now)
-    .toArray();
-}
-
-export async function getPendingRemindersByTime(endTime: number): Promise<Reminder[]> {
-  return db.reminders
-    .where("status")
-    .equals("pending")
-    .filter((r) => r.triggerTime <= endTime)
-    .toArray();
-}
-
-export async function getRemindersByTask(taskId: number): Promise<Reminder[]> {
-  return db.reminders.where("taskId").equals(taskId).toArray();
-}
-
-export async function updateReminderStatus(id: number, status: Reminder["status"], snoozeUntil?: number): Promise<void> {
-  await db.reminders.update(id, {
-    status,
-    snoozeUntil,
-    updatedAt: Date.now(),
-  });
-}
-
-export async function deleteReminder(id: number): Promise<void> {
-  await db.reminders.delete(id);
-}
-
-export async function addReminderLog(reminderId: number, action: ReminderLog["action"]): Promise<number> {
-  return db.reminderLogs.add({
-    reminderId,
-    action,
-    timestamp: Date.now(),
-  });
-}
-
-export async function getReminderLogs(reminderId: number): Promise<ReminderLog[]> {
-  return db.reminderLogs.where("reminderId").equals(reminderId).toArray();
-}
-
-export async function scheduleDeadlineReminders(taskId: number, dueDate: number, reminderDays: number): Promise<void> {
-  const task = await db.tasks.get(taskId);
-  if (!task) return;
-
-  const reminders = await getRemindersByTask(taskId);
-  for (const r of reminders) {
-    if (r.type === "deadline") {
-      await deleteReminder(r.id!);
-    }
-  }
-
-  const reminderTimes: number[] = [];
-  if (reminderDays >= 7) {
-    reminderTimes.push(dueDate - 7 * 24 * 60 * 60 * 1000);
-  }
-  if (reminderDays >= 3) {
-    reminderTimes.push(dueDate - 3 * 24 * 60 * 60 * 1000);
-  }
-  if (reminderDays >= 1) {
-    reminderTimes.push(dueDate - 1 * 24 * 60 * 60 * 1000);
-  }
-  reminderTimes.push(dueDate);
-
-  for (const triggerTime of reminderTimes) {
-    if (triggerTime > Date.now()) {
-      await createReminder({
-        taskId,
-        type: "deadline",
-        triggerTime,
-        message: `任务「${task.title}」即将截止`,
-        status: "pending",
-      });
-    }
-  }
-}
-
-export async function scheduleHabitReminder(taskId: number, hour: number = 9): Promise<void> {
-  const task = await db.tasks.get(taskId);
-  if (!task || task.type !== "habit") return;
-
-  const existing = await db.reminders
-    .where("taskId")
-    .equals(taskId)
-    .filter((r) => r.type === "habit")
-    .first();
-
-  if (existing) {
-    await deleteReminder(existing.id!);
-  }
-
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  tomorrow.setHours(hour, 0, 0, 0);
-
-  await createReminder({
-    taskId,
-    type: "habit",
-    triggerTime: tomorrow.getTime(),
-    message: `记得完成习惯「${task.title}」的打卡`,
-    status: "pending",
-  });
 }
 
-// ─── Health Records CRUD ─────────────────────────────────────
+// ─── Health Records CRUD ────────────────────────────────────
 
 export async function addHealthRecord(record: Omit<HealthRecord, "id" | "createdAt">): Promise<number> {
-  return db.healthRecords.add({
-    ...record,
-    createdAt: Date.now(),
-  });
-}
-
-export async function bulkAddHealthRecords(records: Omit<HealthRecord, "id" | "createdAt">[]): Promise<void> {
-  await db.healthRecords.bulkAdd(records.map(r => ({ ...r, createdAt: Date.now() })));
-}
-
-export async function getHealthRecordsByType(metricType: string): Promise<HealthRecord[]> {
-  return db.healthRecords.where("metricType").equals(metricType).reverse().sortBy("timestamp");
+  return db.healthRecords.add({ ...record, createdAt: Date.now() });
 }
 
 export async function getHealthRecordsByDate(date: string): Promise<HealthRecord[]> {
   return db.healthRecords.where("date").equals(date).toArray();
 }
 
-export async function getHealthRecordsByDateRange(startDate: string, endDate: string): Promise<HealthRecord[]> {
-  return db.healthRecords
-    .where("date")
-    .between(startDate, endDate)
-    .toArray();
+export async function getDailyHealthSummary(date: string): Promise<Record<string, number | undefined>> {
+  const records = await getHealthRecordsByDate(date);
+  const summary: Record<string, number | undefined> = {};
+
+  for (const record of records) {
+    if (summary[record.metricType] === undefined) {
+      summary[record.metricType] = record.value;
+    } else if (record.metricType === 'water_intake') {
+      summary[record.metricType] = (summary[record.metricType] || 0) + record.value;
+    } else if (record.metricType === 'steps') {
+      summary[record.metricType] = (summary[record.metricType] || 0) + record.value;
+    }
+  }
+
+  return summary;
 }
 
-export async function getHealthRecordsByTypeAndDate(metricType: string, date: string): Promise<HealthRecord[]> {
-  return db.healthRecords
-    .where("metricType")
-    .equals(metricType)
-    .filter((r) => r.date === date)
-    .toArray();
+export async function calculateHealthScore(metrics: Record<string, number | undefined>): Promise<number> {
+  let score = 0;
+  let weight = 0;
+
+  if (metrics.water_intake !== undefined) {
+    const waterScore = Math.min((metrics.water_intake / 2000) * 25, 25);
+    score += waterScore;
+    weight += 25;
+  }
+
+  if (metrics.sleep_duration !== undefined) {
+    const sleepScore = metrics.sleep_duration >= 7 && metrics.sleep_duration <= 9 ? 25 : Math.max(0, 25 - Math.abs(metrics.sleep_duration - 8) * 5);
+    score += sleepScore;
+    weight += 25;
+  }
+
+  if (metrics.heart_rate !== undefined) {
+    const hrScore = metrics.heart_rate >= 60 && metrics.heart_rate <= 100 ? 20 : Math.max(0, 20 - Math.abs(metrics.heart_rate - 80) * 0.5);
+    score += hrScore;
+    weight += 20;
+  }
+
+  if (metrics.steps !== undefined) {
+    const stepsScore = Math.min((metrics.steps / 10000) * 20, 20);
+    score += stepsScore;
+    weight += 20;
+  }
+
+  if (metrics.mood !== undefined) {
+    const moodScore = (metrics.mood / 10) * 10;
+    score += moodScore;
+    weight += 10;
+  }
+
+  return weight > 0 ? Math.round((score / weight) * 100) : 0;
 }
 
-export async function getHealthRecord(id: number): Promise<HealthRecord | undefined> {
-  return db.healthRecords.get(id);
+export async function getWeeklyHealthSummary(): Promise<Record<string, { avg: number; total: number; count: number }>> {
+  const result: Record<string, { avg: number; total: number; count: number }> = {};
+  const now = new Date();
+
+  for (let i = 0; i < 7; i++) {
+    const date = new Date(now);
+    date.setDate(date.getDate() - i);
+    const dateStr = getLocalDateStr(date);
+    const summary = await getDailyHealthSummary(dateStr);
+
+    for (const [key, value] of Object.entries(summary)) {
+      if (value !== undefined) {
+        if (!result[key]) {
+          result[key] = { avg: 0, total: 0, count: 0 };
+        }
+        result[key].total += value;
+        result[key].count += 1;
+        result[key].avg = result[key].total / result[key].count;
+      }
+    }
+  }
+
+  return result;
 }
 
-export async function updateHealthRecord(id: number, updates: Partial<Omit<HealthRecord, "id" | "createdAt">>): Promise<void> {
-  await db.healthRecords.update(id, updates);
+export async function bulkAddHealthRecords(records: Omit<HealthRecord, "id" | "createdAt">[]): Promise<void> {
+  await db.healthRecords.bulkAdd(records.map(r => ({ ...r, createdAt: Date.now() })));
 }
 
 export async function deleteHealthRecord(id: number): Promise<void> {
@@ -1789,108 +517,1154 @@ export async function getHealthRecordsGroupedByDate(): Promise<Record<string, He
   return grouped;
 }
 
-export async function getTodayHealthRecords(): Promise<HealthRecord[]> {
-  const today = new Date();
-  const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-  return db.healthRecords.where("date").equals(dateStr).toArray();
+// ─── Workout Records CRUD ────────────────────────────────────
+
+export async function addWorkoutRecord(record: Omit<WorkoutRecord, "id" | "createdAt">): Promise<number> {
+  return db.workouts.add({ ...record, createdAt: Date.now() });
 }
 
-export async function getDailyHealthSummary(date: string): Promise<{ [key: string]: number | undefined }> {
-  const records = await getHealthRecordsByDate(date);
-  const summary: Record<string, number> = {};
+export async function getWorkoutsByDate(date: string): Promise<WorkoutRecord[]> {
+  return db.workouts.where("date").equals(date).reverse().sortBy("startTime");
+}
+
+export async function getRecentWorkouts(limit: number = 10): Promise<WorkoutRecord[]> {
+  return db.workouts.orderBy("startTime").reverse().limit(limit).toArray();
+}
+
+export async function deleteWorkoutRecord(id: number): Promise<void> {
+  await db.workouts.delete(id);
+}
+
+// ─── Journal Entries CRUD ───────────────────────────────────
+
+export async function addJournalEntry(entry: Omit<JournalEntry, "id" | "createdAt">): Promise<number> {
+  return db.journalEntries.add({ ...entry, createdAt: Date.now() });
+}
+
+export async function getJournalEntriesByDate(date: string): Promise<JournalEntry[]> {
+  return db.journalEntries.where("date").equals(date).reverse().sortBy("timestamp");
+}
+
+export async function getRecentJournalEntries(limit: number = 30): Promise<JournalEntry[]> {
+  return db.journalEntries.orderBy("timestamp").reverse().limit(limit).toArray();
+}
+
+export async function deleteJournalEntry(id: number): Promise<void> {
+  await db.journalEntries.delete(id);
+}
+
+// ─── Training Plans CRUD ────────────────────────────────────
+
+export async function addTrainingPlan(plan: Omit<TrainingPlan, "id" | "createdAt" | "updatedAt">): Promise<number> {
+  const now = Date.now();
+  return db.trainingPlans.add({ ...plan, createdAt: now, updatedAt: now });
+}
+
+export async function updateTrainingPlan(id: number, updates: Partial<TrainingPlan>): Promise<void> {
+  await db.trainingPlans.update(id, { ...updates, updatedAt: Date.now() });
+}
+
+export async function getAllTrainingPlans(): Promise<TrainingPlan[]> {
+  return db.trainingPlans.orderBy("createdAt").reverse().toArray();
+}
+
+export async function getTrainingPlanById(id: number): Promise<TrainingPlan | undefined> {
+  return db.trainingPlans.get(id);
+}
+
+export async function deleteTrainingPlan(id: number): Promise<void> {
+  await db.transaction("rw", [db.trainingPlans, db.trainingExercises], async () => {
+    await db.trainingExercises.where("planId").equals(id).delete();
+    await db.trainingPlans.delete(id);
+  });
+}
+
+// ─── Training Exercises CRUD ────────────────────────────────
+
+export async function addTrainingExercise(exercise: Omit<TrainingExercise, "id">): Promise<number> {
+  return db.trainingExercises.add(exercise);
+}
+
+export async function getExercisesByPlan(planId: number): Promise<TrainingExercise[]> {
+  return db.trainingExercises.where("planId").equals(planId).sortBy("order");
+}
+
+export async function deleteTrainingExercise(id: number): Promise<void> {
+  await db.trainingExercises.delete(id);
+}
+
+// ─── Daily Metrics CRUD ─────────────────────────────────────
+
+export async function addOrUpdateDailyMetrics(metrics: Omit<DailyMetrics, "id" | "createdAt" | "updatedAt">): Promise<number> {
+  const existing = await db.dailyMetrics.where("date").equals(metrics.date).first();
   
-  for (const record of records) {
-    if (summary[record.metricType] === undefined) {
-      summary[record.metricType] = record.value;
-    } else {
-      summary[record.metricType] = (summary[record.metricType] || 0) + record.value;
-    }
+  if (existing) {
+    await db.dailyMetrics.update(existing.id!, { ...metrics, updatedAt: Date.now() });
+    return existing.id!;
   }
   
-  return summary;
+  const now = Date.now();
+  return db.dailyMetrics.add({ ...metrics, createdAt: now, updatedAt: now });
 }
 
-export async function getWeeklyHealthSummary(): Promise<{ [key: string]: { avg: number; total: number; count: number } }> {
+export async function getDailyMetricsByDate(date: string): Promise<DailyMetrics | undefined> {
+  return db.dailyMetrics.where("date").equals(date).first();
+}
+
+export async function getRecentDailyMetrics(days: number = 7): Promise<DailyMetrics[]> {
+  const results: DailyMetrics[] = [];
   const now = new Date();
-  const weekStart = new Date(now);
-  weekStart.setDate(now.getDate() - now.getDay());
-  weekStart.setHours(0, 0, 0, 0);
   
-  const startDateStr = `${weekStart.getFullYear()}-${String(weekStart.getMonth() + 1).padStart(2, "0")}-${String(weekStart.getDate()).padStart(2, "0")}`;
-  const endDateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-  
-  const records = await getHealthRecordsByDateRange(startDateStr, endDateStr);
-  const summary: Record<string, { values: number[]; total: number }> = {};
-  
-  for (const record of records) {
-    if (!summary[record.metricType]) {
-      summary[record.metricType] = { values: [], total: 0 };
+  for (let i = 0; i < days; i++) {
+    const date = new Date(now);
+    date.setDate(date.getDate() - i);
+    const dateStr = getLocalDateStr(date);
+    const metrics = await getDailyMetricsByDate(dateStr);
+    if (metrics) {
+      results.push(metrics);
     }
-    summary[record.metricType].values.push(record.value);
-    summary[record.metricType].total += record.value;
   }
   
-  const result: Record<string, { avg: number; total: number; count: number }> = {};
-  for (const [metric, data] of Object.entries(summary)) {
-    result[metric] = {
-      avg: data.values.length > 0 ? data.total / data.values.length : 0,
-      total: data.total,
-      count: data.values.length,
-    };
-  }
-  
-  return result;
+  return results;
 }
 
-export async function calculateHealthScore(summary: Record<string, number>): Promise<number> {
-  let score = 0;
-  let totalWeight = 0;
-  
-  const weights: Record<string, number> = {
-    water_intake: 15,
-    sleep_duration: 20,
-    sleep_quality: 15,
-    heart_rate: 15,
-    steps: 15,
-    mood: 20,
+// ─── Exercise Library CRUD ────────────────────────────────────
+
+export async function addExercise(exercise: Omit<Exercise, "id" | "createdAt">): Promise<number> {
+  return db.exercises.add({ ...exercise, createdAt: Date.now() });
+}
+
+export async function getAllExercises(): Promise<Exercise[]> {
+  return db.exercises.toArray();
+}
+
+export async function getExercisesByCategory(category: string): Promise<Exercise[]> {
+  return db.exercises.where("category").equals(category).toArray();
+}
+
+export async function deleteExercise(id: number): Promise<void> {
+  await db.exercises.delete(id);
+}
+
+export async function createTask(task: Omit<Task, "id" | "createdAt" | "updatedAt">): Promise<number> {
+  const now = Date.now();
+  return db.tasks.add({ ...task, createdAt: now, updatedAt: now });
+}
+
+export async function getTask(id: number): Promise<Task | undefined> {
+  return db.tasks.get(id);
+}
+
+export async function updateTask(id: number, updates: Partial<Task>): Promise<void> {
+  await db.tasks.update(id, { ...updates, updatedAt: Date.now() });
+}
+
+export async function deleteTask(id: number): Promise<void> {
+  const task = await db.tasks.get(id);
+  if (task) {
+    await db.tasks.update(id, { status: "archived" });
+    await db.trashStore.add({
+      originalTable: "tasks",
+      originalId: id,
+      data: task as unknown as Record<string, unknown>,
+      deletedAt: Date.now(),
+    });
+  }
+}
+
+export async function restoreTask(id: number): Promise<void> {
+  await db.tasks.update(id, { status: "active" });
+  await db.trashStore.delete(id);
+}
+
+export async function getTimeSegments(taskId: number): Promise<TimeSegment[]> {
+  return db.timeSegments.where("taskId").equals(taskId).toArray();
+}
+
+export async function addTimeSegment(taskId: number, startTime: number, endTime: number): Promise<number> {
+  return db.timeSegments.add({ taskId, startTime, endTime, createdAt: Date.now() });
+}
+
+export async function deleteTimeSegment(id: number): Promise<void> {
+  await db.timeSegments.delete(id);
+}
+
+export async function getTasksByType(type: string): Promise<Task[]> {
+  return db.tasks.where("type").equals(type).toArray();
+}
+
+export async function getTasksForInbox(): Promise<Task[]> {
+  return db.tasks.where("status").equals("active").toArray();
+}
+
+export async function getTasksBySection(sectionId: number): Promise<Task[]> {
+  return db.tasks.where("sectionId").equals(sectionId).toArray();
+}
+
+export async function getTasksByTimeRange(startTime: number, endTime: number): Promise<Task[]> {
+  return db.tasks
+    .where("startTime")
+    .between(startTime, endTime)
+    .toArray();
+}
+
+export async function getAllProjects(): Promise<LegacyProject[]> {
+  return db.projects.toArray();
+}
+
+export async function getTimeSegmentsByDateRange(startTime: number, endTime: number): Promise<TimeSegment[]> {
+  return db.timeSegments
+    .where("startTime")
+    .between(startTime, endTime)
+    .toArray();
+}
+
+export async function createSection(name: string, boardId?: number, sectionData?: Partial<Omit<Section, "id" | "createdAt" | "name" | "boardId">>): Promise<number> {
+  return db.sections.add({ 
+    name, 
+    boardId,
+    createdAt: Date.now(),
+    ...sectionData
+  });
+}
+
+export async function updateSection(id: number, updates: Partial<Section>): Promise<void> {
+  await db.sections.update(id, updates);
+}
+
+export async function getAllProjectsV2(): Promise<ProjectV2[]> {
+  return db.projectV2s.toArray();
+}
+
+export async function getBoardsByProject(projectId: number): Promise<Board[]> {
+  return db.boards.where("projectId").equals(projectId).toArray();
+}
+
+export async function getSectionsByBoard(boardId: number): Promise<Section[]> {
+  return db.sections.where("boardId").equals(boardId).toArray();
+}
+
+export async function getProjectV2(id: number): Promise<ProjectV2 | undefined> {
+  return db.projectV2s.get(id);
+}
+
+export async function getBoard(id: number): Promise<Board | undefined> {
+  return db.boards.get(id);
+}
+
+export async function getSection(id: number): Promise<Section | undefined> {
+  return db.sections.get(id);
+}
+
+export async function getPluginsForNavbar(): Promise<PluginMetadata[]> {
+  return db.pluginsMeta.where("status").equals("active").toArray();
+}
+
+export async function getInboxItems(): Promise<CaptureItem[]> {
+  return db.capture.toArray();
+}
+
+export async function getEventsByTimeRange(startTime: number, endTime: number): Promise<CalendarEvent[]> {
+  return db.events
+    .where("startTime")
+    .between(startTime, endTime)
+    .toArray();
+}
+
+export async function getFocusLogsByTimeRange(startTime: number, endTime: number): Promise<FocusLog[]> {
+  return db.focusLogs
+    .where("startTime")
+    .between(startTime, endTime)
+    .toArray();
+}
+
+export async function createEvent(event: Omit<CalendarEvent, "id" | "createdAt" | "updatedAt">): Promise<number> {
+  return db.events.add({ ...event, createdAt: Date.now(), updatedAt: Date.now() });
+}
+
+export async function checkStorageSpace(): Promise<{ usage: number; limit: number; percentage: number; isCritical: boolean; isWarning: boolean; percentUsed: number }> {
+  return {
+    usage: 0,
+    limit: 100 * 1024 * 1024,
+    percentage: 0,
+    isCritical: false,
+    isWarning: false,
+    percentUsed: 0,
   };
+}
+
+export async function getWeeklyTaskStats(): Promise<{ completed: number; active: number; total: number }> {
+  const completed = await db.tasks.where("status").equals("done").count();
+  const active = await db.tasks.where("status").equals("active").count();
+  const total = await db.tasks.count();
+  return { completed, active, total };
+}
+
+export async function getActiveSchedulableTasks(): Promise<Task[]> {
+  return db.tasks.where("status").equals("active").toArray();
+}
+
+export async function getReviewRecords(): Promise<ReviewRecord[]> {
+  return db.reviewRecords.toArray();
+}
+
+export async function createReviewRecord(record: Omit<ReviewRecord, "id" | "createdAt">): Promise<number> {
+  return db.reviewRecords.add({ ...record, createdAt: Date.now() });
+}
+
+export async function getReviewRecordByKey(key: string): Promise<ReviewRecord | undefined> {
+  return db.reviewRecords.where("reviewKey").equals(key).first();
+}
+
+export async function getMonthlyTaskStats(year?: number, month?: number): Promise<{ completed: number; active: number; new: number }> {
+  let tasks: Task[];
   
-  if (summary.water_intake !== undefined) {
-    const waterScore = Math.min((summary.water_intake / 2000) * 100, 100);
-    score += waterScore * (weights.water_intake / 100);
-    totalWeight += weights.water_intake;
+  if (year && month) {
+    const startOfMonth = new Date(year, month - 1, 1).getTime();
+    const endOfMonth = new Date(year, month, 0, 23, 59, 59, 999).getTime();
+    
+    tasks = await db.tasks
+      .where("createdAt")
+      .between(startOfMonth, endOfMonth)
+      .toArray();
+  } else {
+    tasks = await db.tasks.toArray();
   }
   
-  if (summary.sleep_duration !== undefined) {
-    const sleepScore = summary.sleep_duration >= 7 ? 100 : summary.sleep_duration >= 6 ? 80 : summary.sleep_duration >= 5 ? 60 : 40;
-    score += sleepScore * (weights.sleep_duration / 100);
-    totalWeight += weights.sleep_duration;
+  const completed = tasks.filter(t => t.status === "done").length;
+  const active = tasks.filter(t => t.status === "active").length;
+  
+  return { completed, active, new: tasks.length };
+}
+
+export async function getMonthlyHabitStats(year?: number, month?: number): Promise<{ completed: number; total: number; streak: number }> {
+  let logs: HabitLog[];
+  
+  if (year && month) {
+    const monthStr = `${year}-${String(month).padStart(2, "0")}`;
+    logs = await db.habit_logs
+      .where("date")
+      .startsWith(monthStr)
+      .toArray();
+  } else {
+    logs = await db.habit_logs.toArray();
   }
   
-  if (summary.sleep_quality !== undefined) {
-    score += summary.sleep_quality * (weights.sleep_quality / 100);
-    totalWeight += weights.sleep_quality;
+  const totalHabits = await db.tasks.where("type").equals("habit").count();
+  
+  return { 
+    completed: logs.length, 
+    total: totalHabits, 
+    streak: 0 
+  };
+}
+
+export async function getMonthlyFinanceStats(year?: number, month?: number): Promise<{ income: number; expense: number; balance: number }> {
+  let records: FinRecord[];
+  
+  if (year && month) {
+    const monthStr = `${year}-${String(month).padStart(2, "0")}`;
+    records = await db.finRecords
+      .where("date")
+      .startsWith(monthStr)
+      .toArray();
+  } else {
+    records = await db.finRecords.toArray();
   }
   
-  if (summary.heart_rate !== undefined) {
-    let heartScore = 100;
-    if (summary.heart_rate < 60 || summary.heart_rate > 100) heartScore = 70;
-    if (summary.heart_rate < 50 || summary.heart_rate > 120) heartScore = 40;
-    score += heartScore * (weights.heart_rate / 100);
-    totalWeight += weights.heart_rate;
+  const income = records.filter(r => r.type === "income").reduce((sum, r) => sum + r.amount, 0);
+  const expense = records.filter(r => r.type === "expense").reduce((sum, r) => sum + r.amount, 0);
+  
+  return { income, expense, balance: income - expense };
+}
+
+export async function initBuiltInPlugins(): Promise<void> {
+}
+
+export async function getAllPluginsMeta(): Promise<PluginMetadata[]> {
+  return db.pluginsMeta.toArray();
+}
+
+export async function updatePluginMetaStatus(id: number, status: PluginMetadata["status"]): Promise<void> {
+  await db.pluginsMeta.update(id, { status });
+}
+
+export async function updatePluginMetaShowInNavbar(id: number, showInNavbar: boolean): Promise<void> {
+  await db.pluginsMeta.update(id, { showInNavbar });
+}
+
+export async function createProjectV2(
+  name: string,
+  color?: string
+): Promise<number> {
+  return db.projectV2s.add({ 
+    name, 
+    color,
+    createdAt: Date.now() 
+  });
+}
+
+export async function updateProjectV2(id: number, updates: Partial<ProjectV2>): Promise<void> {
+  await db.projectV2s.update(id, updates);
+}
+
+export async function deleteProjectToTrash(id: number): Promise<void> {
+  await db.projectV2s.delete(id);
+}
+
+export async function createBoard(
+  name: string,
+  projectId?: number
+): Promise<number> {
+  return db.boards.add({ 
+    name, 
+    projectId,
+    createdAt: Date.now() 
+  });
+}
+
+export async function updateBoard(id: number, updates: Partial<Board>): Promise<void> {
+  await db.boards.update(id, updates);
+}
+
+export async function deleteBoardToTrash(id: number): Promise<void> {
+  await db.boards.delete(id);
+}
+
+export async function deleteSectionToTrash(id: number): Promise<void> {
+  await db.sections.delete(id);
+}
+
+export async function exportAllData(): Promise<string> {
+  const tables = [
+    "capture",
+    "events",
+    "focusLogs",
+    "tasks",
+    "habit_logs",
+    "projects",
+    "timeSegments",
+    "trashStore",
+    "projectV2s",
+    "boards",
+    "sections",
+    "pluginsMeta",
+    "agentMemory",
+    "agentChats",
+    "muscleGroups",
+    "subMuscles",
+    "presetExercises",
+    "muscleRecords",
+    "bodyMetricRecords",
+    "sleepRecords",
+    "nutritionRecords",
+    "recoveryRecords",
+    "enduranceRecords",
+  ];
+
+  const data: Record<string, unknown[]> = {};
+  
+  for (const table of tables) {
+    try {
+      data[table] = await (db as any)[table].toArray();
+    } catch (error) {
+      if (typeof window !== "undefined" && window.location.hostname === "localhost") {
+        console.warn(`Failed to export table ${table}:`, error);
+      }
+      data[table] = [];
+    }
+  }
+
+  return JSON.stringify(data, null, 2);
+}
+
+export async function importAllData(data: string): Promise<void> {
+  const parsedData = JSON.parse(data);
+  
+  const tables = [
+    "capture",
+    "events",
+    "focusLogs",
+    "tasks",
+    "habit_logs",
+    "projects",
+    "timeSegments",
+    "trashStore",
+    "projectV2s",
+    "boards",
+    "sections",
+    "pluginsMeta",
+    "agentMemory",
+    "agentChats",
+    "muscleGroups",
+    "subMuscles",
+    "presetExercises",
+    "muscleRecords",
+    "bodyMetricRecords",
+    "sleepRecords",
+    "nutritionRecords",
+    "recoveryRecords",
+    "enduranceRecords",
+  ];
+
+  await db.transaction("rw", tables.map(t => (db as any)[t]), async () => {
+    for (const table of tables) {
+      if (parsedData[table] && Array.isArray(parsedData[table])) {
+        const tableData = parsedData[table];
+        for (const item of tableData) {
+          try {
+            await (db as any)[table].add(item);
+          } catch (error) {
+            if (typeof window !== "undefined" && window.location.hostname === "localhost") {
+              console.warn(`Failed to import item to table ${table}:`, error);
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+export async function getTrashItems(): Promise<TrashItem[]> {
+  return db.trashStore.toArray();
+}
+
+export async function restoreFromTrash(id: number): Promise<void> {
+  const item = await db.trashStore.get(id);
+  if (item) {
+    await db.trashStore.delete(id);
+  }
+}
+
+export async function purgeFromTrash(id: number): Promise<void> {
+  await db.trashStore.delete(id);
+}
+
+export async function autoCleanupTrash(days: number = 30): Promise<void> {
+  const cutoff = Date.now() - (days * 24 * 60 * 60 * 1000);
+  await db.trashStore.where("deletedAt").below(cutoff).delete();
+}
+
+// ==================== 提醒相关函数 ====================
+
+export async function getPendingReminders(): Promise<Reminder[]> {
+  return db.reminders
+    .where("status")
+    .equals("pending")
+    .toArray();
+}
+
+export async function updateReminderStatus(
+  id: number,
+  status: Reminder["status"],
+  snoozeUntil?: number
+): Promise<void> {
+  await db.reminders.update(id, { status, snoozeUntil, updatedAt: Date.now() });
+}
+
+export async function addReminderLog(
+  reminderId: number,
+  action: ReminderLog["action"]
+): Promise<number> {
+  return db.reminderLogs.add({
+    reminderId,
+    action,
+    timestamp: Date.now(),
+  });
+}
+
+// ==================== 财务相关函数 ====================
+
+export async function addFinRecord(
+  record: Omit<FinRecord, "id" | "createdAt">
+): Promise<number> {
+  return db.finRecords.add({ ...record, createdAt: Date.now() });
+}
+
+export async function getFinRecordsByMonth(year: number, month: number, accountId?: number): Promise<FinRecord[]> {
+  const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
+  const endDate = `${year}-${String(month + 1).padStart(2, "0")}-01`;
+  let query = db.finRecords.where("date").between(startDate, endDate, true, false);
+  
+  if (accountId !== undefined) {
+    query = query.filter(record => record.accountId === accountId);
   }
   
-  if (summary.steps !== undefined) {
-    const stepsScore = Math.min((summary.steps / 10000) * 100, 100);
-    score += stepsScore * (weights.steps / 100);
-    totalWeight += weights.steps;
+  return query.toArray();
+}
+
+export async function deleteFinRecord(id: number): Promise<void> {
+  await db.finRecords.delete(id);
+}
+
+export async function getFinAccounts(): Promise<FinAccount[]> {
+  return db.finAccounts.toArray();
+}
+
+export async function createFinAccount(
+  name: string,
+  initialBalance: number
+): Promise<number> {
+  return db.finAccounts.add({ 
+    name, 
+    initialBalance,
+    createdAt: Date.now() 
+  });
+}
+
+export async function deleteFinAccount(id: number): Promise<void> {
+  await db.finAccounts.delete(id);
+}
+
+// ==================== 焦点日志相关函数 ====================
+
+export async function createFocusLog(
+  eventId: number,
+  startTime?: number,
+  duration?: number
+): Promise<number> {
+  const log: Omit<FocusLog, "id" | "createdAt"> = {
+    eventId,
+    startTime: startTime || Date.now(),
+    duration: duration || 0,
+    interruptions: 0,
+    completed: false,
+  };
+  return db.focusLogs.add({ ...log, createdAt: Date.now() });
+}
+
+export async function updateFocusLog(
+  id: number,
+  updates: Partial<FocusLog>
+): Promise<void> {
+  await db.focusLogs.update(id, updates);
+}
+
+export async function getPluginMeta(name: string): Promise<PluginMetadata | undefined> {
+  return db.pluginsMeta.where("name").equals(name).first();
+}
+
+// ==================== 肌肉层级管理 CRUD ====================
+
+// 大肌群 CRUD
+export async function getAllMuscleGroups(): Promise<MuscleGroup[]> {
+  return db.muscleGroups.orderBy("order").toArray();
+}
+
+export async function addMuscleGroup(group: Omit<MuscleGroup, "id" | "createdAt" | "updatedAt">): Promise<number> {
+  const now = Date.now();
+  return db.muscleGroups.add({ ...group, createdAt: now, updatedAt: now });
+}
+
+export async function updateMuscleGroup(id: number, updates: Partial<MuscleGroup>): Promise<void> {
+  await db.muscleGroups.update(id, { ...updates, updatedAt: Date.now() });
+}
+
+export async function deleteMuscleGroup(id: number): Promise<void> {
+  await db.transaction("rw", [db.muscleGroups, db.subMuscles, db.muscleRecords], async () => {
+    // 删除所有相关的小肌肉
+    await db.subMuscles.where("muscleGroupId").equals(id).delete();
+    // 删除所有相关的训练记录
+    const subMuscles = await db.subMuscles.where("muscleGroupId").equals(id).toArray();
+    for (const sub of subMuscles) {
+      await db.muscleRecords.where("subMuscleId").equals(sub.id!).delete();
+    }
+    // 删除大肌群
+    await db.muscleGroups.delete(id);
+  });
+}
+
+// 小肌肉 CRUD
+export async function getSubMusclesByGroup(muscleGroupId: number): Promise<SubMuscle[]> {
+  return db.subMuscles.where("muscleGroupId").equals(muscleGroupId).sortBy("order");
+}
+
+export async function getAllSubMuscles(): Promise<SubMuscle[]> {
+  return db.subMuscles.orderBy("order").toArray();
+}
+
+export async function addSubMuscle(subMuscle: Omit<SubMuscle, "id" | "createdAt" | "updatedAt">): Promise<number> {
+  const now = Date.now();
+  return db.subMuscles.add({ ...subMuscle, createdAt: now, updatedAt: now });
+}
+
+export async function updateSubMuscle(id: number, updates: Partial<SubMuscle>): Promise<void> {
+  await db.subMuscles.update(id, { ...updates, updatedAt: Date.now() });
+}
+
+export async function deleteSubMuscle(id: number): Promise<void> {
+  await db.transaction("rw", [db.subMuscles, db.muscleRecords, db.presetExercises], async () => {
+    // 删除所有相关的训练记录
+    await db.muscleRecords.where("subMuscleId").equals(id).delete();
+    // 删除所有相关的预设动作
+    await db.presetExercises.where("subMuscleId").equals(id).delete();
+    // 删除小肌肉
+    await db.subMuscles.delete(id);
+  });
+}
+
+// 预设动作 CRUD
+export async function getPresetExercisesBySubMuscle(subMuscleId: number): Promise<PresetExercise[]> {
+  return db.presetExercises.where("subMuscleId").equals(subMuscleId).toArray();
+}
+
+export async function getAllPresetExercises(): Promise<PresetExercise[]> {
+  return db.presetExercises.toArray();
+}
+
+export async function addPresetExercise(exercise: Omit<PresetExercise, "id" | "createdAt">): Promise<number> {
+  return db.presetExercises.add({ ...exercise, createdAt: Date.now() });
+}
+
+export async function deletePresetExercise(id: number): Promise<void> {
+  await db.presetExercises.delete(id);
+}
+
+// 训练记录 CRUD
+export async function addMuscleRecord(record: Omit<MuscleRecord, "id" | "createdAt">): Promise<number> {
+  // 检查是否是个人最佳
+  const existingRecords = await db.muscleRecords
+    .where("exerciseName")
+    .equals(record.exerciseName)
+    .toArray();
+  
+  const isPersonalBest = existingRecords.every(r => r.weight < record.weight);
+  
+  return db.muscleRecords.add({ 
+    ...record, 
+    createdAt: Date.now(),
+    isPersonalBest,
+  });
+}
+
+export async function getMuscleRecordsByDate(date: string): Promise<MuscleRecord[]> {
+  return db.muscleRecords.where("date").equals(date).reverse().sortBy("timestamp");
+}
+
+export async function getMuscleRecordsBySubMuscle(subMuscleId: number): Promise<MuscleRecord[]> {
+  return db.muscleRecords.where("subMuscleId").equals(subMuscleId).reverse().sortBy("timestamp");
+}
+
+export async function getMuscleRecordsByExercise(exerciseName: string): Promise<MuscleRecord[]> {
+  return db.muscleRecords.where("exerciseName").equals(exerciseName).reverse().sortBy("timestamp");
+}
+
+export async function getRecentMuscleRecords(limit: number = 30): Promise<MuscleRecord[]> {
+  return db.muscleRecords.orderBy("timestamp").reverse().limit(limit).toArray();
+}
+
+export async function getMuscleRecordsByDateRange(startDate: string, endDate: string): Promise<MuscleRecord[]> {
+  return db.muscleRecords
+    .where("date")
+    .between(startDate, endDate)
+    .reverse()
+    .sortBy("timestamp");
+}
+
+export async function updateMuscleRecord(id: number, updates: Partial<MuscleRecord>): Promise<void> {
+  await db.muscleRecords.update(id, updates);
+}
+
+export async function deleteMuscleRecord(id: number): Promise<void> {
+  await db.muscleRecords.delete(id);
+}
+
+export async function getPersonalBest(exerciseName: string): Promise<MuscleRecord | undefined> {
+  return db.muscleRecords
+    .where("exerciseName")
+    .equals(exerciseName)
+    .filter(r => r.isPersonalBest === true)
+    .first();
+}
+
+// ==================== 身体数据记录 CRUD ====================
+
+export async function addBodyMetricRecord(record: Omit<BodyMetricRecord, "id" | "createdAt">): Promise<number> {
+  // 检查是否是个人最佳
+  const existingRecords = await db.bodyMetricRecords
+    .where("type")
+    .equals(record.type)
+    .toArray();
+  
+  const isPersonalBest = existingRecords.every(r => {
+    if (record.type === 'bloodPressure') {
+      return r.value < record.value;
+    }
+    return r.value < record.value;
+  });
+  
+  return db.bodyMetricRecords.add({ 
+    ...record, 
+    createdAt: Date.now(),
+    isPersonalBest,
+  });
+}
+
+export async function getBodyMetricRecordsByDate(date: string): Promise<BodyMetricRecord[]> {
+  return db.bodyMetricRecords.where("date").equals(date).toArray();
+}
+
+export async function getBodyMetricRecordsByType(type: BodyMetricRecord['type']): Promise<BodyMetricRecord[]> {
+  return db.bodyMetricRecords.where("type").equals(type).reverse().sortBy("timestamp");
+}
+
+export async function getRecentBodyMetricRecords(type: BodyMetricRecord['type'], limit: number = 30): Promise<BodyMetricRecord[]> {
+  return db.bodyMetricRecords
+    .where("type")
+    .equals(type)
+    .reverse()
+    .sortBy("timestamp")
+    .then(records => records.slice(0, limit));
+}
+
+export async function deleteBodyMetricRecord(id: number): Promise<void> {
+  await db.bodyMetricRecords.delete(id);
+}
+
+// ==================== 睡眠记录 CRUD ====================
+
+export async function addSleepRecord(record: Omit<SleepRecord, "id" | "createdAt">): Promise<number> {
+  // 检查是否是最佳睡眠
+  const existingRecords = await db.sleepRecords.toArray();
+  const isPersonalBest = existingRecords.every(r => r.sleepDuration < record.sleepDuration);
+  
+  return db.sleepRecords.add({ 
+    ...record, 
+    createdAt: Date.now(),
+    isPersonalBest,
+  });
+}
+
+export async function getSleepRecordsByDate(date: string): Promise<SleepRecord[]> {
+  return db.sleepRecords.where("date").equals(date).toArray();
+}
+
+export async function getRecentSleepRecords(limit: number = 30): Promise<SleepRecord[]> {
+  return db.sleepRecords.orderBy("timestamp").reverse().limit(limit).toArray();
+}
+
+export async function getSleepRecordsByDateRange(startDate: string, endDate: string): Promise<SleepRecord[]> {
+  return db.sleepRecords
+    .where("date")
+    .between(startDate, endDate)
+    .reverse()
+    .sortBy("timestamp");
+}
+
+export async function updateSleepRecord(id: number, updates: Partial<SleepRecord>): Promise<void> {
+  await db.sleepRecords.update(id, updates);
+}
+
+export async function deleteSleepRecord(id: number): Promise<void> {
+  await db.sleepRecords.delete(id);
+}
+
+// ==================== 营养记录 CRUD ====================
+
+export async function addNutritionRecord(record: Omit<NutritionRecord, "id" | "createdAt">): Promise<number> {
+  return db.nutritionRecords.add({ ...record, createdAt: Date.now() });
+}
+
+export async function getNutritionRecordsByDate(date: string): Promise<NutritionRecord[]> {
+  return db.nutritionRecords.where("date").equals(date).toArray();
+}
+
+export async function getRecentNutritionRecords(limit: number = 30): Promise<NutritionRecord[]> {
+  return db.nutritionRecords.orderBy("timestamp").reverse().limit(limit).toArray();
+}
+
+export async function getNutritionRecordsByDateRange(startDate: string, endDate: string): Promise<NutritionRecord[]> {
+  return db.nutritionRecords
+    .where("date")
+    .between(startDate, endDate)
+    .reverse()
+    .sortBy("timestamp");
+}
+
+export async function updateNutritionRecord(id: number, updates: Partial<NutritionRecord>): Promise<void> {
+  await db.nutritionRecords.update(id, updates);
+}
+
+export async function deleteNutritionRecord(id: number): Promise<void> {
+  await db.nutritionRecords.delete(id);
+}
+
+// ==================== 恢复记录 CRUD ====================
+
+export async function addRecoveryRecord(record: Omit<RecoveryRecord, "id" | "createdAt">): Promise<number> {
+  return db.recoveryRecords.add({ ...record, createdAt: Date.now() });
+}
+
+export async function getRecoveryRecordsByDate(date: string): Promise<RecoveryRecord[]> {
+  return db.recoveryRecords.where("date").equals(date).toArray();
+}
+
+export async function getRecentRecoveryRecords(limit: number = 30): Promise<RecoveryRecord[]> {
+  return db.recoveryRecords.orderBy("timestamp").reverse().limit(limit).toArray();
+}
+
+export async function getRecoveryRecordsByDateRange(startDate: string, endDate: string): Promise<RecoveryRecord[]> {
+  return db.recoveryRecords
+    .where("date")
+    .between(startDate, endDate)
+    .reverse()
+    .sortBy("timestamp");
+}
+
+export async function updateRecoveryRecord(id: number, updates: Partial<RecoveryRecord>): Promise<void> {
+  await db.recoveryRecords.update(id, updates);
+}
+
+export async function deleteRecoveryRecord(id: number): Promise<void> {
+  await db.recoveryRecords.delete(id);
+}
+
+// ==================== 耐力测试记录 CRUD ====================
+
+export async function addEnduranceRecord(record: Omit<EnduranceRecord, "id" | "createdAt">): Promise<number> {
+  // 检查是否是个人最佳
+  const existingRecords = await db.enduranceRecords
+    .where("type")
+    .equals(record.type)
+    .toArray();
+  
+  const isPersonalBest = existingRecords.every(r => r.value < record.value);
+  
+  return db.enduranceRecords.add({ 
+    ...record, 
+    createdAt: Date.now(),
+    isPersonalBest,
+  });
+}
+
+export async function getEnduranceRecordsByDate(date: string): Promise<EnduranceRecord[]> {
+  return db.enduranceRecords.where("date").equals(date).toArray();
+}
+
+export async function getEnduranceRecordsByType(type: EnduranceRecord['type']): Promise<EnduranceRecord[]> {
+  return db.enduranceRecords.where("type").equals(type).reverse().sortBy("timestamp");
+}
+
+export async function getRecentEnduranceRecords(type: EnduranceRecord['type'], limit: number = 30): Promise<EnduranceRecord[]> {
+  return db.enduranceRecords
+    .where("type")
+    .equals(type)
+    .reverse()
+    .sortBy("timestamp")
+    .then(records => records.slice(0, limit));
+}
+
+export async function deleteEnduranceRecord(id: number): Promise<void> {
+  await db.enduranceRecords.delete(id);
+}
+
+// ==================== 数据初始化 ====================
+
+export async function initializeMuscleData(): Promise<void> {
+  const existingGroups = await db.muscleGroups.count();
+  
+  // 如果已经有数据，检查是否有重复并清理
+  if (existingGroups > 0) {
+    // 检查是否有重复的肌肉群名称
+    const groups = await db.muscleGroups.toArray();
+    const seenNames = new Set<string>();
+    const duplicates: number[] = [];
+    
+    for (const group of groups) {
+      if (seenNames.has(group.name)) {
+        duplicates.push(group.id!);
+      } else {
+        seenNames.add(group.name);
+      }
+    }
+    
+    // 删除重复的肌肉群
+    if (duplicates.length > 0) {
+      await db.muscleGroups.bulkDelete(duplicates);
+      console.log(`Cleaned ${duplicates.length} duplicate muscle groups`);
+    }
+    
+    return; // 已初始化
+  }
+
+  const { DEFAULT_MUSCLE_GROUPS, DEFAULT_SUB_MUSCLES, PRESET_EXERCISES } = await import("./types");
+  
+  await db.transaction("rw", [db.muscleGroups, db.subMuscles, db.presetExercises], async () => {
+    // 添加大肌群
+    const muscleGroupMap: Record<string, number> = {};
+    for (const group of DEFAULT_MUSCLE_GROUPS) {
+      const id = await addMuscleGroup(group);
+      muscleGroupMap[group.name] = id;
+    }
+    
+    // 添加小肌肉
+    const subMuscleMap: Record<string, number> = {};
+    for (const [groupName, subMuscles] of Object.entries(DEFAULT_SUB_MUSCLES)) {
+      const groupId = muscleGroupMap[groupName];
+      if (!groupId) continue;
+      
+      for (let i = 0; i < subMuscles.length; i++) {
+        const subMuscleId = await addSubMuscle({
+          muscleGroupId: groupId,
+          name: subMuscles[i],
+          order: i + 1,
+        });
+        subMuscleMap[`${groupName}:${subMuscles[i]}`] = subMuscleId;
+      }
+    }
+    
+    // 添加预设动作
+    for (const exercise of PRESET_EXERCISES) {
+      const subMuscleId = subMuscleMap[`${exercise.muscleGroup}:${exercise.subMuscle}`];
+      if (!subMuscleId) continue;
+      
+      await addPresetExercise({
+        name: exercise.name,
+        subMuscleId,
+        equipment: exercise.equipment,
+        isCustom: false,
+      });
+    }
+  });
+  
+  if (typeof window !== "undefined" && window.location.hostname === "localhost") {
+    console.log("[LifeFlowDB] Muscle data initialized");
+  }
+}
+
+// ==================== 趋势计算 ====================
+
+export async function calculateMuscleTrend(exerciseName: string, days: number = 7): Promise<{
+  direction: 'up' | 'down' | 'stable';
+  changePercent: number;
+  recentRecords: MuscleRecord[];
+}> {
+  const endDate = new Date();
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - days);
+  
+  const startDateStr = startDate.toISOString().split('T')[0];
+  const endDateStr = endDate.toISOString().split('T')[0];
+  
+  const recentRecords = await getMuscleRecordsByDateRange(startDateStr, endDateStr);
+  const filteredRecords = recentRecords.filter(r => r.exerciseName === exerciseName);
+  
+  if (filteredRecords.length < 2) {
+    return { direction: 'stable', changePercent: 0, recentRecords: filteredRecords };
   }
   
-  if (summary.mood !== undefined) {
-    score += summary.mood * (weights.mood / 100);
-    totalWeight += weights.mood;
+  const midpoint = Math.floor(filteredRecords.length / 2);
+  const firstHalf = filteredRecords.slice(0, midpoint);
+  const secondHalf = filteredRecords.slice(midpoint);
+  
+  const firstAvg = firstHalf.reduce((sum, r) => sum + r.weight, 0) / firstHalf.length;
+  const secondAvg = secondHalf.reduce((sum, r) => sum + r.weight, 0) / secondHalf.length;
+  
+  const changePercent = firstAvg > 0 ? ((secondAvg - firstAvg) / firstAvg) * 100 : 0;
+  
+  let direction: 'up' | 'down' | 'stable' = 'stable';
+  if (changePercent > 5) direction = 'up';
+  else if (changePercent < -5) direction = 'down';
+  
+  return { direction, changePercent, recentRecords: filteredRecords };
+}
+
+export async function calculateWeeklyProgress(): Promise<{
+  totalWorkouts: number;
+  muscleGroupsCovered: number;
+  personalBests: number;
+  totalVolume: number;
+}> {
+  const endDate = new Date();
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - 7);
+  
+  const startDateStr = startDate.toISOString().split('T')[0];
+  const endDateStr = endDate.toISOString().split('T')[0];
+  
+  const recentRecords = await getMuscleRecordsByDateRange(startDateStr, endDateStr);
+  
+  const uniqueMuscleGroups = new Set<number>();
+  const personalBests = recentRecords.filter(r => r.isPersonalBest).length;
+  
+  let totalVolume = 0;
+  for (const record of recentRecords) {
+    totalVolume += record.weight * record.sets * record.reps;
   }
   
-  if (totalWeight === 0) return 0;
-  return Math.round((score / totalWeight) * 100);
+  // 获取所有小肌肉，然后获取大肌群
+  const subMuscles = await db.subMuscles.toArray();
+  const subMuscleIds = new Set(recentRecords.map(r => r.subMuscleId));
+  
+  for (const sub of subMuscles) {
+    if (subMuscleIds.has(sub.id!)) {
+      uniqueMuscleGroups.add(sub.muscleGroupId);
+    }
+  }
+  
+  return {
+    totalWorkouts: recentRecords.length,
+    muscleGroupsCovered: uniqueMuscleGroups.size,
+    personalBests,
+    totalVolume,
+  };
+}
+
+// ==================== 每日健康记录 CRUD ====================
+
+export async function addDailyHealthRecord(record: Omit<DailyHealthRecord, "id" | "createdAt" | "updatedAt">): Promise<number> {
+  const now = Date.now();
+  return db.dailyHealthRecords.add({
+    ...record,
+    createdAt: now,
+    updatedAt: now,
+  });
+}
+
+export async function updateDailyHealthRecord(id: number, updates: Partial<DailyHealthRecord>): Promise<void> {
+  await db.dailyHealthRecords.update(id, {
+    ...updates,
+    updatedAt: Date.now(),
+  });
+}
+
+export async function getDailyHealthRecordByDate(date: string): Promise<DailyHealthRecord | undefined> {
+  return db.dailyHealthRecords.where("date").equals(date).first();
+}
+
+export async function getDailyHealthRecordsByDateRange(startDate: string, endDate: string): Promise<DailyHealthRecord[]> {
+  return db.dailyHealthRecords
+    .where("date")
+    .between(startDate, endDate, true, true)
+    .toArray();
+}
+
+export async function getRecentDailyHealthRecords(limit: number = 30): Promise<DailyHealthRecord[]> {
+  const allRecords = await db.dailyHealthRecords.orderBy("date").reverse().limit(limit).toArray();
+  return allRecords;
+}
+
+export async function deleteDailyHealthRecord(id: number): Promise<void> {
+  await db.dailyHealthRecords.delete(id);
+}
+
+// 获取指标的历史数据（用于趋势图表）
+export async function getMetricHistory(
+  metric: 'weight' | 'sleepDuration' | 'sleepScore' | 'restingHeartRate' | 
+          'bloodPressureSystolic' | 'bloodPressureDiastolic' | 'stressLevel' | 
+          'trainingDuration' | 'caloriesBurned',
+  startDate: string,
+  endDate: string
+): Promise<Array<{ date: string; value: number }>> {
+  const records = await db.dailyHealthRecords
+    .where("date")
+    .between(startDate, endDate, true, true)
+    .toArray();
+  
+  return records
+    .map(record => ({
+      date: record.date,
+      value: record[metric] as number
+    }))
+    .filter(item => item.value !== undefined && item.value !== null);
 }

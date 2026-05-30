@@ -518,7 +518,7 @@ function FocusPageInner() {
       payload: { totalSeconds },
     });
 
-    createFocusLog(eventParam ? parseInt(eventParam) : undefined).then((id) => {
+    createFocusLog(parseInt(eventParam!)).then((id) => {
       focusLogIdRef.current = id as number;
     });
   }

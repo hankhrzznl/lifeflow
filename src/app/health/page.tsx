@@ -20,7 +20,7 @@ import {
   addWorkoutRecord, addJournalEntry,
   getRecentDailyMetrics, addOrUpdateDailyMetrics,
   addCustomTrainingPlan,
-  getCustomTrainingPlansByType,
+  getCustomTrainingPlansByType, getAllCustomTrainingPlans,
   deleteCustomTrainingPlan
 } from "@/lib/db";
 import { showToast } from "@/components/ui/Toast";
@@ -1955,6 +1955,17 @@ function JournalPage() {
 
 function WorkoutAnalysisCard({ workout }: { workout: any }) {
   const [showDetails, setShowDetails] = useState(false);
+  const [expandedExercises, setExpandedExercises] = useState<string[]>([]);
+  
+  const isStrengthWithExercises = workout.type === 'strength' && workout.exercises && workout.exercises.length > 0;
+  
+  const toggleExercise = (exerciseId: string) => {
+    if (expandedExercises.includes(exerciseId)) {
+      setExpandedExercises(expandedExercises.filter(id => id !== exerciseId));
+    } else {
+      setExpandedExercises([...expandedExercises, exerciseId]);
+    }
+  };
   
   const heartRateZones = [
     { zone: 1, label: '热身', color: '#8E8E93', percent: 25, time: 15 },
@@ -1989,6 +2000,9 @@ function WorkoutAnalysisCard({ workout }: { workout: any }) {
               <span>⏱️ {workout.duration}分钟</span>
               <span>🔥 {workout.calories}卡</span>
               {workout.heartRateAvg && <span>❤️ {workout.heartRateAvg} BPM</span>}
+              {isStrengthWithExercises && (
+                <span>💪 {workout.exercises.length}个动作</span>
+              )}
             </div>
           </div>
           <ChevronRight className={`w-5 h-5 text-gray-400 transition-transform ${showDetails ? 'rotate-90' : ''}`} />
@@ -2003,70 +2017,138 @@ function WorkoutAnalysisCard({ workout }: { workout: any }) {
             exit={{ height: 0, opacity: 0 }}
             className="space-y-4 overflow-hidden"
           >
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <Heart className="w-4 h-4 text-red-400" />
-                <span className="text-sm font-medium text-white">心率区间</span>
-              </div>
-              <div className="space-y-2">
-                {heartRateZones.map((zone) => (
-                  <div key={zone.zone} className="space-y-1">
-                    <div className="flex justify-between text-xs">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded" style={{ backgroundColor: zone.color }} />
-                        <span className="text-gray-400">Zone {zone.zone} ({zone.label})</span>
+            {isStrengthWithExercises ? (
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <Dumbbell className="w-4 h-4 text-indigo-400" />
+                  <span className="text-sm font-medium text-white">训练动作</span>
+                </div>
+                <div className="space-y-2">
+                  {workout.exercises.map((ex: any, idx: number) => (
+                    <div key={ex.id || idx} className="bg-gray-700/30 rounded-xl overflow-hidden">
+                      <div 
+                        className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-gray-700/50"
+                        onClick={() => toggleExercise(ex.id || idx.toString())}
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="w-6 h-6 bg-indigo-500/30 text-indigo-400 rounded-lg flex items-center justify-center text-xs font-medium">
+                            {idx + 1}
+                          </span>
+                          <div>
+                            <p className="text-white font-medium">{ex.name || '未命名动作'}</p>
+                            <p className="text-xs text-gray-400">
+                              {ex.sets}组 × {ex.reps}次 {ex.weight ? `· ${ex.weight}kg` : ''}
+                            </p>
+                          </div>
+                        </div>
+                        <ChevronRight className={`w-4 h-4 text-gray-400 transition-transform ${expandedExercises.includes(ex.id || idx.toString()) ? 'rotate-90' : ''}`} />
                       </div>
-                      <span className="text-gray-300">{zone.percent}% · {zone.time}分钟</span>
+                      <AnimatePresence>
+                        {expandedExercises.includes(ex.id || idx.toString()) && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            className="px-4 pb-3 border-t border-gray-600 pt-3"
+                          >
+                            <div className="grid grid-cols-2 gap-3 text-sm">
+                              <div className="bg-gray-600/50 rounded-lg p-2">
+                                <p className="text-xs text-gray-400 mb-1">组数</p>
+                                <p className="text-white font-medium">{ex.sets}</p>
+                              </div>
+                              <div className="bg-gray-600/50 rounded-lg p-2">
+                                <p className="text-xs text-gray-400 mb-1">次数</p>
+                                <p className="text-white font-medium">{ex.reps}</p>
+                              </div>
+                              <div className="bg-gray-600/50 rounded-lg p-2">
+                                <p className="text-xs text-gray-400 mb-1">重量</p>
+                                <p className="text-white font-medium">{ex.weight ? `${ex.weight}kg` : '-'}</p>
+                              </div>
+                              <div className="bg-gray-600/50 rounded-lg p-2">
+                                <p className="text-xs text-gray-400 mb-1">休息</p>
+                                <p className="text-white font-medium">{ex.restTime}秒</p>
+                              </div>
+                            </div>
+                            {ex.description && (
+                              <div className="mt-2 text-xs text-gray-400">
+                                {ex.description}
+                              </div>
+                            )}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </div>
-                    <div className="h-1.5 bg-gray-700 rounded-full overflow-hidden">
-                      <div
-                        className="h-full rounded-full"
-                        style={{ 
-                          width: `${zone.percent}%`,
-                          backgroundColor: zone.color 
-                        }}
-                      />
-                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <>
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <Heart className="w-4 h-4 text-red-400" />
+                    <span className="text-sm font-medium text-white">心率区间</span>
                   </div>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <Dumbbell className="w-4 h-4 text-indigo-400" />
-                <span className="text-sm font-medium text-white">肌肉负荷 (Muscle Load)</span>
-              </div>
-              <div className="grid grid-cols-3 gap-2">
-                {muscleGroups.map((group) => (
-                  <div key={group.name} className="text-center p-2 bg-gray-700/30 rounded-lg">
-                    <p className="text-xs text-gray-400 mb-1">{group.name}</p>
-                    <div className="relative h-12 flex items-end justify-center">
-                      <div
-                        className="w-8 rounded-t transition-all"
-                        style={{
-                          height: `${group.load}%`,
-                          backgroundColor: group.color,
-                          opacity: 0.6,
-                        }}
-                      />
-                    </div>
-                    <p className="text-sm font-medium text-white mt-1">{group.load}</p>
+                  <div className="space-y-2">
+                    {heartRateZones.map((zone) => (
+                      <div key={zone.zone} className="space-y-1">
+                        <div className="flex justify-between text-xs">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded" style={{ backgroundColor: zone.color }} />
+                            <span className="text-gray-400">Zone {zone.zone} ({zone.label})</span>
+                          </div>
+                          <span className="text-gray-300">{zone.percent}% · {zone.time}分钟</span>
+                        </div>
+                        <div className="h-1.5 bg-gray-700 rounded-full overflow-hidden">
+                          <div
+                            className="h-full rounded-full"
+                            style={{ 
+                              width: `${zone.percent}%`,
+                              backgroundColor: zone.color 
+                            }}
+                          />
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </div>
+                </div>
 
-            <div className="grid grid-cols-2 gap-3 pt-2 border-t border-gray-700">
-              <div>
-                <p className="text-xs text-gray-400 mb-1">努力值 (Effort)</p>
-                <p className="text-lg font-bold text-orange-400">78%</p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-400 mb-1">有氧/无氧</p>
-                <p className="text-lg font-bold text-blue-400">72/28%</p>
-              </div>
-            </div>
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <Dumbbell className="w-4 h-4 text-indigo-400" />
+                    <span className="text-sm font-medium text-white">肌肉负荷 (Muscle Load)</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    {muscleGroups.map((group) => (
+                      <div key={group.name} className="text-center p-2 bg-gray-700/30 rounded-lg">
+                        <p className="text-xs text-gray-400 mb-1">{group.name}</p>
+                        <div className="relative h-12 flex items-end justify-center">
+                          <div
+                            className="w-8 rounded-t transition-all"
+                            style={{
+                              height: `${group.load}%`,
+                              backgroundColor: group.color,
+                              opacity: 0.6,
+                            }}
+                          />
+                        </div>
+                        <p className="text-sm font-medium text-white mt-1">{group.load}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 pt-2 border-t border-gray-700">
+                  <div>
+                    <p className="text-xs text-gray-400 mb-1">努力值 (Effort)</p>
+                    <p className="text-lg font-bold text-orange-400">78%</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-400 mb-1">有氧/无氧</p>
+                    <p className="text-lg font-bold text-blue-400">72/28%</p>
+                  </div>
+                </div>
+              </>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
@@ -2086,23 +2168,87 @@ function WorkoutPage() {
   const [pace, setPace] = useState("");
   const [elevationGain, setElevationGain] = useState("");
   const [incline, setIncline] = useState("");
+  
   const [exerciseName, setExerciseName] = useState("");
   const [weight, setWeight] = useState("");
   const [reps, setReps] = useState("");
   const [sets, setSets] = useState("");
-
+  
+  const [customPlans, setCustomPlans] = useState<CustomTrainingPlan[]>([]);
+  const [selectedPlan, setSelectedPlan] = useState<CustomTrainingPlan | null>(null);
+  const [selectedTrainingDay, setSelectedTrainingDay] = useState<PlanTrainingDay | null>(null);
+  const [workoutExercises, setWorkoutExercises] = useState<PlanExercise[]>([]);
+  
+  const [expandedDays, setExpandedDays] = useState<string[]>([]);
+  
   useEffect(() => {
     loadWorkouts();
+    loadCustomPlans();
   }, []);
-
+  
+  const loadCustomPlans = async () => {
+    const plans = await getAllCustomTrainingPlans();
+    setCustomPlans(plans.filter(p => p.trainingDays && p.trainingDays.length > 0));
+  };
+  
   const loadWorkouts = async () => {
     const data = await getRecentWorkouts(20);
     setWorkouts(data);
   };
-
+  
+  const handleSelectPlan = (planId: number) => {
+    const plan = customPlans.find(p => p.id === planId);
+    if (plan) {
+      setSelectedPlan(plan);
+      setSelectedTrainingDay(null);
+      setWorkoutExercises([]);
+    }
+  };
+  
+  const handleSelectTrainingDay = (day: PlanTrainingDay) => {
+    setSelectedTrainingDay(day);
+    setDuration(day.duration.toString());
+    const exercises = day.exercises.map(ex => ({ ...ex, id: Date.now().toString() + Math.random() }));
+    setWorkoutExercises(exercises);
+    setExpandedDays([day.id]);
+  };
+  
+  const updateWorkoutExercise = (exerciseId: string, updates: Partial<PlanExercise>) => {
+    setWorkoutExercises(workoutExercises.map(ex => 
+      ex.id === exerciseId ? { ...ex, ...updates } : ex
+    ));
+  };
+  
+  const addWorkoutExercise = () => {
+    setWorkoutExercises([...workoutExercises, {
+      id: Date.now().toString(),
+      name: '',
+      sets: 4,
+      reps: 12,
+      restTime: 60
+    }]);
+  };
+  
+  const removeWorkoutExercise = (exerciseId: string) => {
+    setWorkoutExercises(workoutExercises.filter(ex => ex.id !== exerciseId));
+  };
+  
+  const toggleDay = (dayId: string) => {
+    if (expandedDays.includes(dayId)) {
+      setExpandedDays(expandedDays.filter(id => id !== dayId));
+    } else {
+      setExpandedDays([...expandedDays, dayId]);
+    }
+  };
+  
   const handleAddWorkout = async () => {
     if (!selectedType || !duration) {
       showToast({ message: "请填写完整信息", type: "error", duration: 2000 });
+      return;
+    }
+    
+    if (selectedType === 'strength' && workoutExercises.length === 0) {
+      showToast({ message: "请添加训练动作", type: "error", duration: 2000 });
       return;
     }
 
@@ -2131,10 +2277,16 @@ function WorkoutPage() {
     }
 
     if (selectedType === 'strength') {
-      if (exerciseName) record.exerciseName = exerciseName;
-      if (weight) record.weight = parseFloat(weight);
-      if (reps) record.reps = parseInt(reps);
-      if (sets) record.sets = parseInt(sets);
+      if (workoutExercises.length > 0) {
+        record.planId = selectedPlan?.id;
+        record.planDayId = selectedTrainingDay?.id;
+        record.exercises = workoutExercises;
+      } else {
+        if (exerciseName) record.exerciseName = exerciseName;
+        if (weight) record.weight = parseFloat(weight);
+        if (reps) record.reps = parseInt(reps);
+        if (sets) record.sets = parseInt(sets);
+      }
     }
 
     await addWorkoutRecord(record);
@@ -2153,7 +2305,27 @@ function WorkoutPage() {
     setWeight("");
     setReps("");
     setSets("");
+    setSelectedPlan(null);
+    setSelectedTrainingDay(null);
+    setWorkoutExercises([]);
     loadWorkouts();
+  };
+  
+  const resetStrengthForm = () => {
+    setSelectedPlan(null);
+    setSelectedTrainingDay(null);
+    setWorkoutExercises([]);
+    setExerciseName("");
+    setWeight("");
+    setReps("");
+    setSets("");
+  };
+  
+  const handleSelectType = (typeKey: string) => {
+    if (typeKey !== 'strength') {
+      resetStrengthForm();
+    }
+    setSelectedType(typeKey);
   };
 
   const isRunningType = (type: string | null) => type === 'running_outdoor' || type === 'running_indoor';
@@ -2214,7 +2386,7 @@ function WorkoutPage() {
                   {WORKOUT_TYPES.map((type) => (
                     <button
                       key={type.key}
-                      onClick={() => setSelectedType(type.key)}
+                      onClick={() => handleSelectType(type.key)}
                       className={`p-3 rounded-xl text-center ${
                         selectedType === type.key
                           ? 'bg-indigo-500 text-white'
@@ -2317,49 +2489,209 @@ function WorkoutPage() {
 
               {isStrengthType(selectedType) && (
                 <div className="space-y-4 mb-4">
-                  <div>
-                    <label className="text-sm text-gray-400 mb-2 block">动作名称</label>
-                    <input
-                      type="text"
-                      value={exerciseName}
-                      onChange={(e) => setExerciseName(e.target.value)}
-                      placeholder="深蹲"
-                      className="w-full px-4 py-2 bg-gray-800 rounded-xl text-white border border-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                  </div>
-                  <div className="grid grid-cols-3 gap-4">
+                  {customPlans.length > 0 && (
                     <div>
-                      <label className="text-sm text-gray-400 mb-2 block">重量（kg）</label>
-                      <input
-                        type="number"
-                        step="0.5"
-                        value={weight}
-                        onChange={(e) => setWeight(e.target.value)}
-                        placeholder="40"
+                      <label className="text-sm text-gray-400 mb-2 block">选择训练计划（可选）</label>
+                      <select
+                        value={selectedPlan?.id || ''}
+                        onChange={(e) => handleSelectPlan(parseInt(e.target.value))}
                         className="w-full px-4 py-2 bg-gray-800 rounded-xl text-white border border-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                      />
+                      >
+                        <option value="">不关联计划</option>
+                        {customPlans.map(plan => (
+                          <option key={plan.id} value={plan.id}>{plan.name}</option>
+                        ))}
+                      </select>
                     </div>
+                  )}
+                  
+                  {selectedPlan && selectedPlan.trainingDays && selectedPlan.trainingDays.length > 0 && (
                     <div>
-                      <label className="text-sm text-gray-400 mb-2 block">次数</label>
-                      <input
-                        type="number"
-                        value={reps}
-                        onChange={(e) => setReps(e.target.value)}
-                        placeholder="12"
-                        className="w-full px-4 py-2 bg-gray-800 rounded-xl text-white border border-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                      />
+                      <label className="text-sm text-gray-400 mb-2 block">选择模板天</label>
+                      <div className="space-y-2">
+                        {selectedPlan.trainingDays.map(day => (
+                          <div key={day.id} className="bg-gray-800 rounded-xl overflow-hidden">
+                            <div 
+                              className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-gray-700"
+                              onClick={() => handleSelectTrainingDay(day)}
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                                  selectedTrainingDay?.id === day.id 
+                                    ? 'border-indigo-500 bg-indigo-500' 
+                                    : 'border-gray-600'
+                                }`}>
+                                  {selectedTrainingDay?.id === day.id && (
+                                    <div className="w-2 h-2 bg-white rounded-full" />
+                                  )}
+                                </div>
+                                <div>
+                                  <p className="text-white font-medium">{day.name}</p>
+                                  <p className="text-xs text-gray-400">{day.duration}分钟 · {day.exercises.length}个动作</p>
+                                </div>
+                              </div>
+                              <ChevronRight className={`w-4 h-4 text-gray-400 transition-transform ${expandedDays.includes(day.id) ? 'rotate-90' : ''}`} />
+                            </div>
+                            <AnimatePresence>
+                              {expandedDays.includes(day.id) && day.exercises.length > 0 && (
+                                <motion.div
+                                  initial={{ height: 0, opacity: 0 }}
+                                  animate={{ height: 'auto', opacity: 1 }}
+                                  exit={{ height: 0, opacity: 0 }}
+                                  className="overflow-hidden"
+                                >
+                                  <div className="px-4 pb-3 space-y-2 border-t border-gray-700 pt-3">
+                                    {day.exercises.map((ex, idx) => (
+                                      <div key={ex.id} className="text-sm text-gray-300 flex items-center justify-between bg-gray-700/50 rounded-lg px-3 py-2">
+                                        <span>{idx + 1}. {ex.name}</span>
+                                        <span className="text-gray-400">{ex.sets}组 × {ex.reps}次 · {ex.weight || '-'}kg</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                    <div>
-                      <label className="text-sm text-gray-400 mb-2 block">组数</label>
-                      <input
-                        type="number"
-                        value={sets}
-                        onChange={(e) => setSets(e.target.value)}
-                        placeholder="4"
-                        className="w-full px-4 py-2 bg-gray-800 rounded-xl text-white border border-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                      />
+                  )}
+                  
+                  {selectedTrainingDay && (
+                    <div className="border-t border-gray-700 pt-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-sm font-medium text-white">训练动作</span>
+                        <button
+                          onClick={addWorkoutExercise}
+                          className="flex items-center gap-1 px-3 py-1.5 text-xs bg-indigo-500/20 text-indigo-400 rounded-lg"
+                        >
+                          <Plus className="w-3 h-3" />
+                          添加动作
+                        </button>
+                      </div>
+                      
+                      {workoutExercises.length === 0 ? (
+                        <div className="text-center py-4 text-gray-500 text-sm">
+                          暂无动作，点击上方添加
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {workoutExercises.map((ex, idx) => (
+                            <div key={ex.id} className="bg-gray-800 rounded-xl p-3 space-y-2">
+                              <div className="flex items-center justify-between">
+                                <input
+                                  type="text"
+                                  value={ex.name}
+                                  onChange={(e) => updateWorkoutExercise(ex.id, { name: e.target.value })}
+                                  placeholder={`动作${idx + 1}`}
+                                  className="flex-1 px-3 py-1.5 bg-gray-700 text-white border border-gray-600 rounded-lg text-sm"
+                                />
+                                <button
+                                  onClick={() => removeWorkoutExercise(ex.id)}
+                                  className="ml-2 p-1.5 text-gray-400 hover:text-red-400 hover:bg-gray-700 rounded-lg"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                              
+                              <div className="grid grid-cols-4 gap-2">
+                                <div>
+                                  <label className="block text-xs text-gray-400 mb-1">组数</label>
+                                  <input
+                                    type="number"
+                                    min={1}
+                                    value={ex.sets}
+                                    onChange={(e) => updateWorkoutExercise(ex.id, { sets: parseInt(e.target.value) || 4 })}
+                                    className="w-full px-2 py-1.5 bg-gray-700 text-white border border-gray-600 rounded-lg text-sm"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-xs text-gray-400 mb-1">次数</label>
+                                  <input
+                                    type="number"
+                                    min={1}
+                                    value={ex.reps}
+                                    onChange={(e) => updateWorkoutExercise(ex.id, { reps: parseInt(e.target.value) || 12 })}
+                                    className="w-full px-2 py-1.5 bg-gray-700 text-white border border-gray-600 rounded-lg text-sm"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-xs text-gray-400 mb-1">重量(kg)</label>
+                                  <input
+                                    type="number"
+                                    step="0.5"
+                                    min={0}
+                                    value={ex.weight || ''}
+                                    onChange={(e) => updateWorkoutExercise(ex.id, { weight: parseFloat(e.target.value) || undefined })}
+                                    placeholder="-"
+                                    className="w-full px-2 py-1.5 bg-gray-700 text-white border border-gray-600 rounded-lg text-sm"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-xs text-gray-400 mb-1">休息(秒)</label>
+                                  <input
+                                    type="number"
+                                    min={15}
+                                    value={ex.restTime}
+                                    onChange={(e) => updateWorkoutExercise(ex.id, { restTime: parseInt(e.target.value) || 60 })}
+                                    className="w-full px-2 py-1.5 bg-gray-700 text-white border border-gray-600 rounded-lg text-sm"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  </div>
+                  )}
+                  
+                  {!selectedTrainingDay && workoutExercises.length === 0 && (
+                    <div className="space-y-4">
+                      <div>
+                        <label className="text-sm text-gray-400 mb-2 block">快速添加动作</label>
+                        <input
+                          type="text"
+                          value={exerciseName}
+                          onChange={(e) => setExerciseName(e.target.value)}
+                          placeholder="动作名称"
+                          className="w-full px-4 py-2 bg-gray-800 rounded-xl text-white border border-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        />
+                      </div>
+                      <div className="grid grid-cols-3 gap-4">
+                        <div>
+                          <label className="text-sm text-gray-400 mb-2 block">重量（kg）</label>
+                          <input
+                            type="number"
+                            step="0.5"
+                            value={weight}
+                            onChange={(e) => setWeight(e.target.value)}
+                            placeholder="40"
+                            className="w-full px-4 py-2 bg-gray-800 rounded-xl text-white border border-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-sm text-gray-400 mb-2 block">次数</label>
+                          <input
+                            type="number"
+                            value={reps}
+                            onChange={(e) => setReps(e.target.value)}
+                            placeholder="12"
+                            className="w-full px-4 py-2 bg-gray-800 rounded-xl text-white border border-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-sm text-gray-400 mb-2 block">组数</label>
+                          <input
+                            type="number"
+                            value={sets}
+                            onChange={(e) => setSets(e.target.value)}
+                            placeholder="4"
+                            className="w-full px-4 py-2 bg-gray-800 rounded-xl text-white border border-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 

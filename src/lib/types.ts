@@ -398,6 +398,11 @@ export interface WorkoutRecord {
   sets?: number;
   exerciseName?: string;
   
+  // 力量训练动作列表（新版）
+  planId?: number;
+  planDayId?: string;
+  exercises?: PlanExercise[];
+  
   // 室内爬坡专属字段
   incline?: number;
 }

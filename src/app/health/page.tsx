@@ -7,8 +7,9 @@ import {
   Home, BookOpen, TrendingUp, Trophy, Zap, Clock,
   Plus, ChevronRight, Calendar, Target, Coffee, Moon,
   Wine, Monitor, Plane, Briefcase, Play, Pause, Settings,
-  Bike, Timer, Download,
-  AlertTriangle, CheckCircle, TrendingDown, ChevronLeft, Star, ArrowLeft
+  Bike, Timer, Download, Award,
+  AlertTriangle, CheckCircle, TrendingDown, ChevronLeft, Star, ArrowLeft,
+  Trash2, X
 } from "lucide-react";
 import { 
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
@@ -17,10 +18,13 @@ import {
   getDailyHealthSummary, calculateHealthScore, 
   getRecentWorkouts, getRecentJournalEntries,
   addWorkoutRecord, addJournalEntry,
-  getRecentDailyMetrics, addOrUpdateDailyMetrics
+  getRecentDailyMetrics, addOrUpdateDailyMetrics,
+  addCustomTrainingPlan,
+  getCustomTrainingPlansByType,
+  deleteCustomTrainingPlan
 } from "@/lib/db";
 import { showToast } from "@/components/ui/Toast";
-import { WORKOUT_TYPES, JOURNAL_TAGS, TRAINING_CATEGORIES, TRAINING_MODES, DailyHealthRecord } from "@/lib/types";
+import { WORKOUT_TYPES, JOURNAL_TAGS, TRAINING_CATEGORIES, TRAINING_MODES, DailyHealthRecord, CustomTrainingPlan, PlanTrainingDay, PlanExercise } from "@/lib/types";
 import MusclePage from "./components/MusclePage";
 import {
   getDailyHealthRecordByDate,
@@ -2516,8 +2520,452 @@ function TrainingModeCard({ mode }: { mode: typeof TRAINING_MODES_CONFIG[0] }) {
   );
 }
 
+function CreateTrainingPlanModal({
+  isOpen, onClose, type, onSave
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  type: 'muscle_building' | 'fat_loss' | 'cardio';
+  onSave: () => void;
+}) {
+  const [name, setName] = useState('');
+  const [goal, setGoal] = useState('');
+  const [weeklyFrequency, setWeeklyFrequency] = useState(3);
+  const [sessionDuration, setSessionDuration] = useState(60);
+  const [focusAreas, setFocusAreas] = useState<string[]>([]);
+  const [cycleWeeks, setCycleWeeks] = useState(8);
+  const [hasDeloadWeek, setHasDeloadWeek] = useState(false);
+  const [deloadWeekFrequency, setDeloadWeekFrequency] = useState(6);
+  const [trainingDays, setTrainingDays] = useState<PlanTrainingDay[]>([]);
+  const [notes, setNotes] = useState('');
+  const [activeTab, setActiveTab] = useState<'basic' | 'days'>('basic');
+
+  const focusAreaOptions = {
+    muscle_building: ['胸部', '背部', '肩部', '手臂', '腿部', '核心'],
+    fat_loss: ['HIIT', '有氧', '力量', '代谢', '循环'],
+    cardio: ['耐力', '速度', '爬坡', '户外跑', '间歇']
+  };
+
+  const toggleFocusArea = (area: string) => {
+    if (focusAreas.includes(area)) {
+      setFocusAreas(focusAreas.filter(a => a !== area));
+    } else {
+      setFocusAreas([...focusAreas, area]);
+    }
+  };
+
+  const addTrainingDay = () => {
+    const newDay: PlanTrainingDay = {
+      id: Date.now().toString(),
+      name: `训练日${trainingDays.length + 1}`,
+      duration: sessionDuration,
+      exercises: []
+    };
+    setTrainingDays([...trainingDays, newDay]);
+  };
+
+  const updateTrainingDay = (id: string, updates: Partial<PlanTrainingDay>) => {
+    setTrainingDays(trainingDays.map(day => 
+      day.id === id ? { ...day, ...updates } : day
+    ));
+  };
+
+  const deleteTrainingDay = (id: string) => {
+    setTrainingDays(trainingDays.filter(day => day.id !== id));
+  };
+
+  const addExercise = (dayId: string) => {
+    const newExercise: PlanExercise = {
+      id: Date.now().toString(),
+      name: '',
+      sets: 4,
+      reps: 12,
+      restTime: 60
+    };
+    setTrainingDays(trainingDays.map(day => 
+      day.id === dayId ? { ...day, exercises: [...day.exercises, newExercise] } : day
+    ));
+  };
+
+  const updateExercise = (dayId: string, exerciseId: string, updates: Partial<PlanExercise>) => {
+    setTrainingDays(trainingDays.map(day => 
+      day.id === dayId 
+        ? { ...day, exercises: day.exercises.map(ex => ex.id === exerciseId ? { ...ex, ...updates } : ex) }
+        : day
+    ));
+  };
+
+  const deleteExercise = (dayId: string, exerciseId: string) => {
+    setTrainingDays(trainingDays.map(day => 
+      day.id === dayId 
+        ? { ...day, exercises: day.exercises.filter(ex => ex.id !== exerciseId) }
+        : day
+    ));
+  };
+
+  const handleSave = async () => {
+    if (!name.trim()) {
+      showToast({ message: '请输入计划名称', type: 'error', duration: 2000 });
+      return;
+    }
+    try {
+      await addCustomTrainingPlan({
+        name,
+        type,
+        goal,
+        weeklyFrequency,
+        sessionDuration,
+        focusAreas,
+        cycleWeeks,
+        hasDeloadWeek,
+        deloadWeekFrequency,
+        trainingDays,
+        notes
+      });
+      showToast({ message: '计划创建成功！', type: 'success', duration: 2000 });
+      onSave();
+      onClose();
+      setName('');
+      setGoal('');
+      setTrainingDays([]);
+      setActiveTab('basic');
+    } catch (e) {
+      showToast({ message: '创建失败', type: 'error', duration: 2000 });
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="bg-gray-800 rounded-2xl max-h-[90vh] w-full max-w-lg overflow-hidden border border-gray-700"
+      >
+        <div className="flex justify-between items-center mb-6 p-6 pb-0">
+          <h2 className="text-xl font-bold text-white">创建训练计划</h2>
+          <button onClick={onClose} className="p-2 hover:bg-gray-700 rounded-lg">
+            <ChevronRight className="w-6 h-6 text-gray-400 rotate-90" />
+          </button>
+        </div>
+
+        <div className="flex border-b border-gray-700">
+          <button
+            onClick={() => setActiveTab('basic')}
+            className={`flex-1 py-3 text-sm font-medium ${activeTab === 'basic' ? 'text-indigo-400 border-b-2 border-indigo-400' : 'text-gray-400'}`}
+          >
+            基本信息
+          </button>
+          <button
+            onClick={() => setActiveTab('days')}
+            className={`flex-1 py-3 text-sm font-medium ${activeTab === 'days' ? 'text-indigo-400 border-b-2 border-indigo-400' : 'text-gray-400'}`}
+          >
+            模板天 {trainingDays.length > 0 && `(${trainingDays.length})`}
+          </button>
+        </div>
+
+        <div className="p-6 overflow-y-auto max-h-[calc(90vh-180px)]">
+          {activeTab === 'basic' && (
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">计划名称</label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full px-4 py-2 bg-gray-700 text-white border border-gray-600 rounded-lg"
+                  placeholder="输入计划名称"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">训练目标</label>
+                <textarea
+                  value={goal}
+                  onChange={(e) => setGoal(e.target.value)}
+                  className="w-full px-4 py-2 bg-gray-700 text-white border border-gray-600 rounded-lg"
+                  placeholder="描述你的训练目标"
+                  rows={3}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">每周训练次数</label>
+                  <input
+                    type="number"
+                    min={1} max={7}
+                    value={weeklyFrequency}
+                    onChange={(e) => setWeeklyFrequency(parseInt(e.target.value) || 3)}
+                    className="w-full px-4 py-2 bg-gray-700 text-white border border-gray-600 rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">单次训练时长（分钟）</label>
+                  <input
+                    type="number"
+                    min={10} max={180}
+                    value={sessionDuration}
+                    onChange={(e) => setSessionDuration(parseInt(e.target.value) || 60)}
+                    className="w-full px-4 py-2 bg-gray-700 text-white border border-gray-600 rounded-lg"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">训练周期（周）</label>
+                <input
+                  type="number"
+                  min={1}
+                  value={cycleWeeks}
+                  onChange={(e) => setCycleWeeks(parseInt(e.target.value) || 8)}
+                  className="w-full px-4 py-2 bg-gray-700 text-white border border-gray-600 rounded-lg"
+                />
+              </div>
+
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="deloadWeek"
+                  checked={hasDeloadWeek}
+                  onChange={(e) => setHasDeloadWeek(e.target.checked)}
+                  className="w-4 h-4"
+                />
+                <label htmlFor="deloadWeek" className="text-gray-300">安排减载周</label>
+              </div>
+
+              {hasDeloadWeek && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">减载周安排频率（每几周一次）</label>
+                  <input
+                    type="number"
+                    min={2} max={12}
+                    value={deloadWeekFrequency}
+                    onChange={(e) => setDeloadWeekFrequency(parseInt(e.target.value) || 6)}
+                    className="w-full px-4 py-2 bg-gray-700 text-white border border-gray-600 rounded-lg"
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">重点关注</label>
+                <div className="flex flex-wrap gap-2">
+                  {focusAreaOptions[type].map(area => (
+                    <button
+                      key={area}
+                      onClick={() => toggleFocusArea(area)}
+                      className={`px-3 py-1 rounded-full text-sm ${
+                        focusAreas.includes(area)
+                          ? 'bg-indigo-500 text-white'
+                          : 'bg-gray-700 text-gray-300'
+                      }`}
+                    >
+                      {area}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">备注</label>
+                <textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  className="w-full px-4 py-2 bg-gray-700 text-white border border-gray-600 rounded-lg"
+                  placeholder="添加其他备注"
+                  rows={3}
+                />
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'days' && (
+            <div className="space-y-4">
+              {trainingDays.length === 0 ? (
+                <div className="text-center py-8 text-gray-400">
+                  <p>还没有添加模板天</p>
+                  <p className="text-sm mt-1">点击下方按钮添加训练日</p>
+                </div>
+              ) : (
+                trainingDays.map((day, dayIndex) => (
+                  <Card key={day.id} className="border border-gray-700">
+                    <div className="flex items-center justify-between mb-3">
+                      <input
+                        type="text"
+                        value={day.name}
+                        onChange={(e) => updateTrainingDay(day.id, { name: e.target.value })}
+                        className="flex-1 px-3 py-1 bg-gray-700 text-white border border-gray-600 rounded-lg text-sm font-medium"
+                        placeholder={`训练日${dayIndex + 1}`}
+                      />
+                      <button
+                        onClick={() => deleteTrainingDay(day.id)}
+                        className="ml-2 p-1.5 text-gray-400 hover:text-red-400 hover:bg-gray-700 rounded-lg"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 mb-3">
+                      <div>
+                        <label className="block text-xs text-gray-400 mb-1">训练时长（分钟）</label>
+                        <input
+                          type="number"
+                          min={10} max={180}
+                          value={day.duration}
+                          onChange={(e) => updateTrainingDay(day.id, { duration: parseInt(e.target.value) || 60 })}
+                          className="w-full px-3 py-1.5 bg-gray-700 text-white border border-gray-600 rounded-lg text-sm"
+                        />
+                      </div>
+                    </div>
+
+                    <textarea
+                      value={day.description || ''}
+                      onChange={(e) => updateTrainingDay(day.id, { description: e.target.value })}
+                      className="w-full px-3 py-2 bg-gray-700 text-white border border-gray-600 rounded-lg text-sm mb-3"
+                      placeholder="训练方法描述（可选）"
+                      rows={2}
+                    />
+
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-300">训练动作</span>
+                        <button
+                          onClick={() => addExercise(day.id)}
+                          className="flex items-center gap-1 px-2 py-1 text-xs bg-indigo-500/20 text-indigo-400 rounded-lg"
+                        >
+                          <Plus className="w-3 h-3" />
+                          添加动作
+                        </button>
+                      </div>
+
+                      {day.exercises.length === 0 ? (
+                        <p className="text-xs text-gray-500 text-center py-2">暂无动作，点击添加</p>
+                      ) : (
+                        day.exercises.map((exercise) => (
+                          <div key={exercise.id} className="bg-gray-700/50 rounded-lg p-3 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <input
+                                type="text"
+                                value={exercise.name}
+                                onChange={(e) => updateExercise(day.id, exercise.id, { name: e.target.value })}
+                                className="flex-1 px-2 py-1 bg-gray-600 text-white border border-gray-500 rounded text-sm"
+                                placeholder="动作名称"
+                              />
+                              <button
+                                onClick={() => deleteExercise(day.id, exercise.id)}
+                                className="ml-2 p-1 text-gray-400 hover:text-red-400"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </div>
+
+                            <div className="grid grid-cols-4 gap-2">
+                              <div>
+                                <label className="block text-xs text-gray-400">组数</label>
+                                <input
+                                  type="number"
+                                  min={1} max={20}
+                                  value={exercise.sets}
+                                  onChange={(e) => updateExercise(day.id, exercise.id, { sets: parseInt(e.target.value) || 4 })}
+                                  className="w-full px-2 py-1 bg-gray-600 text-white border border-gray-500 rounded text-xs"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs text-gray-400">次数</label>
+                                <input
+                                  type="number"
+                                  min={1} max={50}
+                                  value={exercise.reps}
+                                  onChange={(e) => updateExercise(day.id, exercise.id, { reps: parseInt(e.target.value) || 12 })}
+                                  className="w-full px-2 py-1 bg-gray-600 text-white border border-gray-500 rounded text-xs"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs text-gray-400">休息（秒）</label>
+                                <input
+                                  type="number"
+                                  min={15} max={300}
+                                  value={exercise.restTime}
+                                  onChange={(e) => updateExercise(day.id, exercise.id, { restTime: parseInt(e.target.value) || 60 })}
+                                  className="w-full px-2 py-1 bg-gray-600 text-white border border-gray-500 rounded text-xs"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs text-gray-400">重量（kg）</label>
+                                <input
+                                  type="number"
+                                  min={0} step={0.5}
+                                  value={exercise.weight || ''}
+                                  onChange={(e) => updateExercise(day.id, exercise.id, { weight: parseFloat(e.target.value) || undefined })}
+                                  className="w-full px-2 py-1 bg-gray-600 text-white border border-gray-500 rounded text-xs"
+                                  placeholder="-"
+                                />
+                              </div>
+                            </div>
+
+                            <textarea
+                              value={exercise.description || ''}
+                              onChange={(e) => updateExercise(day.id, exercise.id, { description: e.target.value })}
+                              className="w-full px-2 py-1 bg-gray-600 text-white border border-gray-500 rounded text-xs"
+                              placeholder="动作描述（可选）"
+                              rows={1}
+                            />
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </Card>
+                ))
+              )}
+
+              <motion.button
+                whileTap={{ scale: 0.98 }}
+                onClick={addTrainingDay}
+                className="w-full py-3 border-2 border-dashed border-gray-600 text-gray-400 rounded-xl flex items-center justify-center gap-2 hover:border-indigo-500 hover:text-indigo-400 transition-colors"
+              >
+                <Plus className="w-5 h-5" />
+                添加训练日
+              </motion.button>
+            </div>
+          )}
+        </div>
+
+        <div className="flex gap-3 p-6 pt-0">
+          <button onClick={onClose} className="flex-1 py-2.5 bg-gray-700 text-white rounded-lg font-medium">
+            取消
+          </button>
+          <button onClick={handleSave} className="flex-1 py-2.5 bg-indigo-500 text-white rounded-lg font-medium">
+            保存计划
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
 function MuscleBuildingPage() {
   const [selectedProgram, setSelectedProgram] = useState<number | null>(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [customPlans, setCustomPlans] = useState<CustomTrainingPlan[]>([]);
+  const [expandedDays, setExpandedDays] = useState<string[]>([]);
+  
+  const loadCustomPlans = async () => {
+    const plans = await getCustomTrainingPlansByType('muscle_building');
+    setCustomPlans(plans);
+  };
+  
+  useEffect(() => {
+    loadCustomPlans();
+  }, []);
+  
+  const toggleDay = (dayId: string) => {
+    if (expandedDays.includes(dayId)) {
+      setExpandedDays(expandedDays.filter(id => id !== dayId));
+    } else {
+      setExpandedDays([...expandedDays, dayId]);
+    }
+  };
   
   const programs = [
     {
@@ -2588,6 +3036,126 @@ function MuscleBuildingPage() {
         </div>
       </Card>
 
+      <Card>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-white">我的训练计划</h3>
+          <motion.button
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setShowCreateModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-xl text-sm font-medium"
+          >
+            <Plus className="w-4 h-4" />
+            创建计划
+          </motion.button>
+        </div>
+        
+        {customPlans.length > 0 ? (
+          <div className="space-y-3">
+            {customPlans.map(plan => (
+              <Card key={plan.id} className="p-4 border border-green-700/30">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-white">{plan.name}</h4>
+                    <p className="text-xs text-gray-400 mt-1">
+                      每周 {plan.weeklyFrequency} 次 · 每次 {plan.sessionDuration} 分钟 · 周期 {plan.cycleWeeks} 周
+                    </p>
+                    {plan.goal && (
+                      <p className="text-sm text-gray-300 mt-2">{plan.goal}</p>
+                    )}
+                    {plan.focusAreas.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {plan.focusAreas.map(area => (
+                          <span key={area} className="px-2 py-0.5 bg-green-900/30 text-green-300 text-xs rounded-full">
+                            {area}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    
+                    {plan.trainingDays && plan.trainingDays.length > 0 && (
+                      <div className="mt-4 border-t border-gray-700 pt-4">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Calendar className="w-4 h-4 text-green-400" />
+                          <span className="text-sm font-medium text-gray-300">训练日 ({plan.trainingDays.length})</span>
+                        </div>
+                        <div className="space-y-2">
+                          {plan.trainingDays.map(day => (
+                            <div key={day.id} className="bg-gray-700/50 rounded-lg overflow-hidden">
+                              <div 
+                                className="flex items-center justify-between px-3 py-2 cursor-pointer hover:bg-gray-700"
+                                onClick={() => toggleDay(day.id)}
+                              >
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm font-medium text-white">{day.name}</span>
+                                  <span className="text-xs text-gray-400">{day.duration}分钟</span>
+                                </div>
+                                <ChevronRight className={`w-4 h-4 text-gray-400 transition-transform ${expandedDays.includes(day.id) ? 'rotate-90' : ''}`} />
+                              </div>
+                              <AnimatePresence>
+                                {expandedDays.includes(day.id) && (
+                                  <motion.div
+                                    initial={{ height: 0, opacity: 0 }}
+                                    animate={{ height: 'auto', opacity: 1 }}
+                                    exit={{ height: 0, opacity: 0 }}
+                                    className="overflow-hidden"
+                                  >
+                                    {day.description && (
+                                      <div className="px-3 py-2 text-xs text-gray-400 border-b border-gray-600">
+                                        {day.description}
+                                      </div>
+                                    )}
+                                    {day.exercises.length > 0 ? (
+                                      <div className="p-3 space-y-2">
+                                        {day.exercises.map((ex, idx) => (
+                                          <div key={ex.id} className="flex items-center justify-between bg-gray-600/50 rounded-lg px-3 py-2">
+                                            <div className="flex items-center gap-3">
+                                              <span className="text-xs text-gray-500 w-4">{idx + 1}.</span>
+                                              <span className="text-sm text-white">{ex.name || '未命名动作'}</span>
+                                            </div>
+                                            <div className="flex items-center gap-3 text-xs text-gray-400">
+                                              <span>{ex.sets}组 × {ex.reps}次</span>
+                                              <span>休息{ex.restTime}秒</span>
+                                              {ex.weight && <span>{ex.weight}kg</span>}
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    ) : (
+                                      <div className="px-3 py-3 text-xs text-gray-500 text-center">
+                                        暂无训练动作
+                                      </div>
+                                    )}
+                                  </motion.div>
+                                )}
+                              </AnimatePresence>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    onClick={async () => {
+                      await deleteCustomTrainingPlan(plan.id!);
+                      await loadCustomPlans();
+                      showToast({ message: '计划已删除', type: 'success', duration: 2000 });
+                    }}
+                    className="p-1 hover:bg-gray-700 rounded"
+                  >
+                    <AlertTriangle className="w-4 h-4 text-gray-400" />
+                  </button>
+                </div>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8 text-gray-400">
+            <p>还没有创建任何计划</p>
+            <p className="text-sm mt-1">点击上方按钮创建第一个训练计划</p>
+          </div>
+        )}
+      </Card>
+
       <div>
         <h2 className="text-lg font-semibold text-white mb-3">推荐计划</h2>
         <div className="space-y-3">
@@ -2633,14 +3201,43 @@ function MuscleBuildingPage() {
                       exit={{ height: 0, opacity: 0 }}
                       className="mt-4 pt-4 border-t border-gray-700 overflow-hidden"
                     >
-                      <div className="mb-4">
-                        <h4 className="text-sm font-medium text-white mb-2">训练重点：</h4>
-                        <div className="flex flex-wrap gap-2">
-                          {program.focus.map((item, idx) => (
-                            <span key={idx} className="px-3 py-1 bg-gray-700/50 rounded-full text-xs text-gray-300">
-                              {item}
-                            </span>
-                          ))}
+                      <div className="mb-6">
+                        <h4 className="text-sm font-medium text-white mb-3">计划详情：</h4>
+                        <div className="space-y-3 text-gray-300 text-sm">
+                          <p><strong>训练频率：</strong>{program.sessions}</p>
+                          <p><strong>周期长度：</strong>{program.duration}</p>
+                          <p><strong>适用人群：</strong>{program.level}训练者</p>
+                          <p className="mt-2">{program.description}</p>
+                          <div className="mt-3">
+                            <p className="font-medium mb-1">训练重点：</p>
+                            <div className="flex flex-wrap gap-2">
+                              {program.focus.map((item, idx) => (
+                                <span key={idx} className="px-3 py-1 bg-gray-700/50 rounded-full text-xs text-gray-300">
+                                  {item}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                          {program.id === 1 && (
+                            <div className="mt-4 p-3 bg-gray-700/30 rounded-lg">
+                              <p className="text-xs"><strong>建议安排：</strong>周一/周三/周五训练，每次45-60分钟，包含复合动作为主</p>
+                            </div>
+                          )}
+                          {program.id === 2 && (
+                            <div className="mt-4 p-3 bg-gray-700/30 rounded-lg">
+                              <p className="text-xs"><strong>建议安排：</strong>周一胸三头/周二背二头/周四肩/周五手臂，注重动作质量</p>
+                            </div>
+                          )}
+                          {program.id === 3 && (
+                            <div className="mt-4 p-3 bg-gray-700/30 rounded-lg">
+                              <p className="text-xs"><strong>建议安排：</strong>周一腿/周四腿，以深蹲、硬拉为主，注重核心稳定</p>
+                            </div>
+                          )}
+                          {program.id === 4 && (
+                            <div className="mt-4 p-3 bg-gray-700/30 rounded-lg">
+                              <p className="text-xs"><strong>建议安排：</strong>胸/背/肩/臂/腿五天分化，每个肌群专项训练</p>
+                            </div>
+                          )}
                         </div>
                       </div>
                       <motion.button
@@ -2649,10 +3246,10 @@ function MuscleBuildingPage() {
                         style={{ backgroundColor: program.color }}
                         onClick={(e) => {
                           e.stopPropagation();
-                          showToast({ message: `${program.title}已开始！`, type: "success", duration: 2000 });
+                          setShowCreateModal(true);
                         }}
                       >
-                        开始训练
+                        基于此计划创建自定义计划
                       </motion.button>
                     </motion.div>
                   )}
@@ -2681,14 +3278,36 @@ function MuscleBuildingPage() {
             <span className="text-emerald-400 mt-1">•</span>
             <span>渐进超负荷：每周适当增加重量或次数</span>
           </li>
+          <li className="flex items-start gap-2">
+            <span className="text-emerald-400 mt-1">•</span>
+            <span>减载周安排：每4-6周安排一次减载周，训练量降至平时的50-70%</span>
+          </li>
         </ul>
       </Card>
+
+      <CreateTrainingPlanModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        type="muscle_building"
+        onSave={loadCustomPlans}
+      />
     </div>
   );
 }
 
 function FatLossPage() {
   const [selectedProgram, setSelectedProgram] = useState<number | null>(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [customPlans, setCustomPlans] = useState<CustomTrainingPlan[]>([]);
+  
+  const loadCustomPlans = async () => {
+    const plans = await getCustomTrainingPlansByType('fat_loss');
+    setCustomPlans(plans);
+  };
+  
+  useEffect(() => {
+    loadCustomPlans();
+  }, []);
   
   const programs = [
     {
@@ -2759,6 +3378,64 @@ function FatLossPage() {
         </div>
       </Card>
 
+      <Card>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-white">我的训练计划</h3>
+          <motion.button
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setShowCreateModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-xl text-sm font-medium"
+          >
+            <Plus className="w-4 h-4" />
+            创建计划
+          </motion.button>
+        </div>
+        
+        {customPlans.length > 0 ? (
+          <div className="space-y-3">
+            {customPlans.map(plan => (
+              <Card key={plan.id} className="p-4 border border-orange-700/30">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h4 className="font-semibold text-white">{plan.name}</h4>
+                    <p className="text-xs text-gray-400 mt-1">
+                      每周 {plan.weeklyFrequency} 次 · 每次 {plan.sessionDuration} 分钟
+                    </p>
+                    {plan.goal && (
+                      <p className="text-sm text-gray-300 mt-2">{plan.goal}</p>
+                    )}
+                    {plan.focusAreas.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {plan.focusAreas.map(area => (
+                          <span key={area} className="px-2 py-0.5 bg-orange-900/30 text-orange-300 text-xs rounded-full">
+                            {area}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    onClick={async () => {
+                      await deleteCustomTrainingPlan(plan.id!);
+                      await loadCustomPlans();
+                      showToast({ message: '计划已删除', type: 'success', duration: 2000 });
+                    }}
+                    className="p-1 hover:bg-gray-700 rounded"
+                  >
+                    <AlertTriangle className="w-4 h-4 text-gray-400" />
+                  </button>
+                </div>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8 text-gray-400">
+            <p>还没有创建任何计划</p>
+            <p className="text-sm mt-1">点击上方按钮创建第一个训练计划</p>
+          </div>
+        )}
+      </Card>
+
       <div>
         <h2 className="text-lg font-semibold text-white mb-3">减脂方案</h2>
         <div className="space-y-3">
@@ -2804,14 +3481,43 @@ function FatLossPage() {
                       exit={{ height: 0, opacity: 0 }}
                       className="mt-4 pt-4 border-t border-gray-700 overflow-hidden"
                     >
-                      <div className="mb-4">
-                        <h4 className="text-sm font-medium text-white mb-2">训练特点：</h4>
-                        <div className="flex flex-wrap gap-2">
-                          {program.focus.map((item, idx) => (
-                            <span key={idx} className="px-3 py-1 bg-gray-700/50 rounded-full text-xs text-gray-300">
-                              {item}
-                            </span>
-                          ))}
+                      <div className="mb-6">
+                        <h4 className="text-sm font-medium text-white mb-3">计划详情：</h4>
+                        <div className="space-y-3 text-gray-300 text-sm">
+                          <p><strong>训练时长：</strong>{program.duration}</p>
+                          <p><strong>预期消耗：</strong>{program.calories}卡路里</p>
+                          <p><strong>适用人群：</strong>{program.level}训练者</p>
+                          <p className="mt-2">{program.description}</p>
+                          <div className="mt-3">
+                            <p className="font-medium mb-1">训练特点：</p>
+                            <div className="flex flex-wrap gap-2">
+                              {program.focus.map((item, idx) => (
+                                <span key={idx} className="px-3 py-1 bg-gray-700/50 rounded-full text-xs text-gray-300">
+                                  {item}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                          {program.id === 1 && (
+                            <div className="mt-4 p-3 bg-gray-700/30 rounded-lg">
+                              <p className="text-xs"><strong>建议安排：</strong>每个动作20秒，休息10秒，8-10个动作为一组</p>
+                            </div>
+                          )}
+                          {program.id === 2 && (
+                            <div className="mt-4 p-3 bg-gray-700/30 rounded-lg">
+                              <p className="text-xs"><strong>建议安排：</strong>早晨起床后，低强度有氧，保持65-70%最大心率</p>
+                            </div>
+                          )}
+                          {program.id === 3 && (
+                            <div className="mt-4 p-3 bg-gray-700/30 rounded-lg">
+                              <p className="text-xs"><strong>建议安排：</strong>力量动作+有氧动作循环，每个动作15-20次，中间少量休息</p>
+                            </div>
+                          )}
+                          {program.id === 4 && (
+                            <div className="mt-4 p-3 bg-gray-700/30 rounded-lg">
+                              <p className="text-xs"><strong>建议安排：</strong>从低强度到高强度逐步递增，每个阶段保持3-5分钟</p>
+                            </div>
+                          )}
                         </div>
                       </div>
                       <motion.button
@@ -2820,10 +3526,10 @@ function FatLossPage() {
                         style={{ backgroundColor: program.color }}
                         onClick={(e) => {
                           e.stopPropagation();
-                          showToast({ message: `${program.title}已开始！`, type: "success", duration: 2000 });
+                          setShowCreateModal(true);
                         }}
                       >
-                        开始训练
+                        基于此计划创建自定义计划
                       </motion.button>
                     </motion.div>
                   )}
@@ -2854,12 +3560,30 @@ function FatLossPage() {
           </li>
         </ul>
       </Card>
+
+      <CreateTrainingPlanModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        type="fat_loss"
+        onSave={loadCustomPlans}
+      />
     </div>
   );
 }
 
 function CardioPage() {
   const [selectedProgram, setSelectedProgram] = useState<number | null>(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [customPlans, setCustomPlans] = useState<CustomTrainingPlan[]>([]);
+  
+  const loadCustomPlans = async () => {
+    const plans = await getCustomTrainingPlansByType('cardio');
+    setCustomPlans(plans);
+  };
+  
+  useEffect(() => {
+    loadCustomPlans();
+  }, []);
   
   const programs = [
     {
@@ -2930,6 +3654,64 @@ function CardioPage() {
         </div>
       </Card>
 
+      <Card>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-white">我的训练计划</h3>
+          <motion.button
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setShowCreateModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-xl text-sm font-medium"
+          >
+            <Plus className="w-4 h-4" />
+            创建计划
+          </motion.button>
+        </div>
+        
+        {customPlans.length > 0 ? (
+          <div className="space-y-3">
+            {customPlans.map(plan => (
+              <Card key={plan.id} className="p-4 border border-blue-700/30">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h4 className="font-semibold text-white">{plan.name}</h4>
+                    <p className="text-xs text-gray-400 mt-1">
+                      每周 {plan.weeklyFrequency} 次 · 每次 {plan.sessionDuration} 分钟
+                    </p>
+                    {plan.goal && (
+                      <p className="text-sm text-gray-300 mt-2">{plan.goal}</p>
+                    )}
+                    {plan.focusAreas.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {plan.focusAreas.map(area => (
+                          <span key={area} className="px-2 py-0.5 bg-blue-900/30 text-blue-300 text-xs rounded-full">
+                            {area}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    onClick={async () => {
+                      await deleteCustomTrainingPlan(plan.id!);
+                      await loadCustomPlans();
+                      showToast({ message: '计划已删除', type: 'success', duration: 2000 });
+                    }}
+                    className="p-1 hover:bg-gray-700 rounded"
+                  >
+                    <AlertTriangle className="w-4 h-4 text-gray-400" />
+                  </button>
+                </div>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8 text-gray-400">
+            <p>还没有创建任何计划</p>
+            <p className="text-sm mt-1">点击上方按钮创建第一个训练计划</p>
+          </div>
+        )}
+      </Card>
+
       <div>
         <h2 className="text-lg font-semibold text-white mb-3">跑步方案</h2>
         <div className="space-y-3">
@@ -2975,14 +3757,43 @@ function CardioPage() {
                       exit={{ height: 0, opacity: 0 }}
                       className="mt-4 pt-4 border-t border-gray-700 overflow-hidden"
                     >
-                      <div className="mb-4">
-                        <h4 className="text-sm font-medium text-white mb-2">训练效果：</h4>
-                        <div className="flex flex-wrap gap-2">
-                          {program.focus.map((item, idx) => (
-                            <span key={idx} className="px-3 py-1 bg-gray-700/50 rounded-full text-xs text-gray-300">
-                              {item}
-                            </span>
-                          ))}
+                      <div className="mb-6">
+                        <h4 className="text-sm font-medium text-white mb-3">计划详情：</h4>
+                        <div className="space-y-3 text-gray-300 text-sm">
+                          <p><strong>训练时长：</strong>{program.duration}</p>
+                          <p><strong>建议距离：</strong>{program.distance}</p>
+                          <p><strong>适用人群：</strong>{program.level}训练者</p>
+                          <p className="mt-2">{program.description}</p>
+                          <div className="mt-3">
+                            <p className="font-medium mb-1">训练效果：</p>
+                            <div className="flex flex-wrap gap-2">
+                              {program.focus.map((item, idx) => (
+                                <span key={idx} className="px-3 py-1 bg-gray-700/50 rounded-full text-xs text-gray-300">
+                                  {item}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                          {program.id === 1 && (
+                            <div className="mt-4 p-3 bg-gray-700/30 rounded-lg">
+                              <p className="text-xs"><strong>建议安排：</strong>从20-30分钟轻松跑开始，逐步增加时长和距离</p>
+                            </div>
+                          )}
+                          {program.id === 2 && (
+                            <div className="mt-4 p-3 bg-gray-700/30 rounded-lg">
+                              <p className="text-xs"><strong>建议安排：</strong>1分钟冲刺 + 2分钟快走，重复8-10组</p>
+                            </div>
+                          )}
+                          {program.id === 3 && (
+                            <div className="mt-4 p-3 bg-gray-700/30 rounded-lg">
+                              <p className="text-xs"><strong>建议安排：</strong>比日常配速快10-15秒，保持稳定节奏</p>
+                            </div>
+                          )}
+                          {program.id === 4 && (
+                            <div className="mt-4 p-3 bg-gray-700/30 rounded-lg">
+                              <p className="text-xs"><strong>建议安排：</strong>可以分成两段，中间休息5-10分钟，不要追求速度</p>
+                            </div>
+                          )}
                         </div>
                       </div>
                       <motion.button
@@ -2991,10 +3802,10 @@ function CardioPage() {
                         style={{ backgroundColor: program.color }}
                         onClick={(e) => {
                           e.stopPropagation();
-                          showToast({ message: `${program.title}已开始！`, type: "success", duration: 2000 });
+                          setShowCreateModal(true);
                         }}
                       >
-                        开始训练
+                        基于此计划创建自定义计划
                       </motion.button>
                     </motion.div>
                   )}
@@ -3025,6 +3836,13 @@ function CardioPage() {
           </li>
         </ul>
       </Card>
+
+      <CreateTrainingPlanModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        type="cardio"
+        onSave={loadCustomPlans}
+      />
     </div>
   );
 }

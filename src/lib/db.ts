@@ -37,6 +37,7 @@ import type {
   RecoveryRecord,
   EnduranceRecord,
   DailyHealthRecord,
+  CustomTrainingPlan,
 } from "./types";
 
 export class LifeFlowDB extends Dexie {
@@ -77,6 +78,7 @@ export class LifeFlowDB extends Dexie {
   recoveryRecords!: Table<RecoveryRecord, number>;
   enduranceRecords!: Table<EnduranceRecord, number>;
   dailyHealthRecords!: Table<DailyHealthRecord, number>;
+  customTrainingPlans!: Table<CustomTrainingPlan, number>;
 
   constructor() {
     super("LifeFlowDB");
@@ -255,6 +257,14 @@ export class LifeFlowDB extends Dexie {
     }).upgrade(async (tx) => {
       if (typeof window !== "undefined" && window.location.hostname === "localhost") {
         console.log("[LifeFlowDB v16] Added dailyHealthRecords table");
+      }
+    });
+
+    this.version(17).stores({
+      customTrainingPlans: "++id, name, type, createdAt",
+    }).upgrade(async () => {
+      if (typeof window !== "undefined" && window.location.hostname === "localhost") {
+        console.log("[LifeFlowDB v17] Added customTrainingPlans table");
       }
     });
   }
@@ -626,6 +636,34 @@ export async function getRecentDailyMetrics(days: number = 7): Promise<DailyMetr
   }
   
   return results;
+}
+
+// ==================== 自定义训练计划 CRUD ====================
+
+export async function addCustomTrainingPlan(plan: Omit<CustomTrainingPlan, "id" | "createdAt" | "updatedAt">): Promise<number> {
+  const now = Date.now();
+  return db.customTrainingPlans.add({ ...plan, createdAt: now, updatedAt: now });
+}
+
+export async function updateCustomTrainingPlan(id: number, updates: Partial<CustomTrainingPlan>): Promise<void> {
+  await db.customTrainingPlans.update(id, { ...updates, updatedAt: Date.now() });
+}
+
+export async function getAllCustomTrainingPlans(): Promise<CustomTrainingPlan[]> {
+  return db.customTrainingPlans.orderBy("createdAt").reverse().toArray();
+}
+
+export async function getCustomTrainingPlansByType(type: 'muscle_building' | 'fat_loss' | 'cardio'): Promise<CustomTrainingPlan[]> {
+  const plans = await db.customTrainingPlans.where("type").equals(type).toArray();
+  return plans.sort((a, b) => b.createdAt - a.createdAt);
+}
+
+export async function getCustomTrainingPlanById(id: number): Promise<CustomTrainingPlan | undefined> {
+  return db.customTrainingPlans.get(id);
+}
+
+export async function deleteCustomTrainingPlan(id: number): Promise<void> {
+  await db.customTrainingPlans.delete(id);
 }
 
 // ─── Exercise Library CRUD ────────────────────────────────────

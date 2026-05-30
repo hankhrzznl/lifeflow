@@ -464,6 +464,41 @@ export interface DailyMetrics {
   updatedAt: number;
 }
 
+export interface PlanExercise {
+  id: string;
+  name: string;
+  sets: number;
+  reps: number;
+  restTime: number;
+  weight?: number;
+  description?: string;
+}
+
+export interface PlanTrainingDay {
+  id: string;
+  name: string;
+  description?: string;
+  duration: number;
+  exercises: PlanExercise[];
+}
+
+export interface CustomTrainingPlan {
+  id?: number;
+  name: string;
+  type: 'muscle_building' | 'fat_loss' | 'cardio';
+  goal: string;
+  weeklyFrequency: number;
+  sessionDuration: number;
+  focusAreas: string[];
+  cycleWeeks: number;
+  hasDeloadWeek: boolean;
+  deloadWeekFrequency?: number;
+  trainingDays: PlanTrainingDay[];
+  notes?: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
 export const WORKOUT_TYPES = [
   { key: 'running_outdoor', label: '户外跑步', icon: '🏃', category: '跑步' },
   { key: 'running_indoor', label: '室内跑步', icon: '🏃', category: '跑步' },

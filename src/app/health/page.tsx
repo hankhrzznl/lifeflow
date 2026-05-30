@@ -1957,7 +1957,9 @@ function WorkoutAnalysisCard({ workout }: { workout: any }) {
   const [showDetails, setShowDetails] = useState(false);
   const [expandedExercises, setExpandedExercises] = useState<string[]>([]);
   
-  const isStrengthWithExercises = workout.type === 'strength' && workout.exercises && workout.exercises.length > 0;
+  const hasExercises = workout.exercises && workout.exercises.length > 0;
+  const hasOldExercise = workout.exerciseName;
+  const isStrengthWithDetails = workout.type === 'strength' && (hasExercises || hasOldExercise);
   
   const toggleExercise = (exerciseId: string) => {
     if (expandedExercises.includes(exerciseId)) {
@@ -1999,9 +2001,9 @@ function WorkoutAnalysisCard({ workout }: { workout: any }) {
             <div className="flex gap-4 text-sm text-gray-400">
               <span>⏱️ {workout.duration}分钟</span>
               <span>🔥 {workout.calories}卡</span>
-              {workout.heartRateAvg && <span>❤️ {workout.heartRateAvg} BPM</span>}
-              {isStrengthWithExercises && (
-                <span>💪 {workout.exercises.length}个动作</span>
+              {workout.heartRateAvg && !isStrengthWithDetails && <span>❤️ {workout.heartRateAvg} BPM</span>}
+              {isStrengthWithDetails && (
+                <span>💪 {hasExercises ? workout.exercises.length : '1'}个动作</span>
               )}
             </div>
           </div>
@@ -2017,68 +2019,78 @@ function WorkoutAnalysisCard({ workout }: { workout: any }) {
             exit={{ height: 0, opacity: 0 }}
             className="space-y-4 overflow-hidden"
           >
-            {isStrengthWithExercises ? (
+            {isStrengthWithDetails ? (
               <div>
                 <div className="flex items-center gap-2 mb-3">
                   <Dumbbell className="w-4 h-4 text-indigo-400" />
                   <span className="text-sm font-medium text-white">训练动作</span>
                 </div>
                 <div className="space-y-2">
-                  {workout.exercises.map((ex: any, idx: number) => (
-                    <div key={ex.id || idx} className="bg-gray-700/30 rounded-xl overflow-hidden">
-                      <div 
-                        className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-gray-700/50"
-                        onClick={() => toggleExercise(ex.id || idx.toString())}
-                      >
-                        <div className="flex items-center gap-3">
-                          <span className="w-6 h-6 bg-indigo-500/30 text-indigo-400 rounded-lg flex items-center justify-center text-xs font-medium">
-                            {idx + 1}
-                          </span>
-                          <div>
-                            <p className="text-white font-medium">{ex.name || '未命名动作'}</p>
-                            <p className="text-xs text-gray-400">
-                              {ex.sets}组 × {ex.reps}次 {ex.weight ? `· ${ex.weight}kg` : ''}
-                            </p>
-                          </div>
-                        </div>
-                        <ChevronRight className={`w-4 h-4 text-gray-400 transition-transform ${expandedExercises.includes(ex.id || idx.toString()) ? 'rotate-90' : ''}`} />
-                      </div>
-                      <AnimatePresence>
-                        {expandedExercises.includes(ex.id || idx.toString()) && (
-                          <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: 'auto', opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            className="px-4 pb-3 border-t border-gray-600 pt-3"
-                          >
-                            <div className="grid grid-cols-2 gap-3 text-sm">
-                              <div className="bg-gray-600/50 rounded-lg p-2">
-                                <p className="text-xs text-gray-400 mb-1">组数</p>
-                                <p className="text-white font-medium">{ex.sets}</p>
-                              </div>
-                              <div className="bg-gray-600/50 rounded-lg p-2">
-                                <p className="text-xs text-gray-400 mb-1">次数</p>
-                                <p className="text-white font-medium">{ex.reps}</p>
-                              </div>
-                              <div className="bg-gray-600/50 rounded-lg p-2">
-                                <p className="text-xs text-gray-400 mb-1">重量</p>
-                                <p className="text-white font-medium">{ex.weight ? `${ex.weight}kg` : '-'}</p>
-                              </div>
-                              <div className="bg-gray-600/50 rounded-lg p-2">
-                                <p className="text-xs text-gray-400 mb-1">休息</p>
-                                <p className="text-white font-medium">{ex.restTime}秒</p>
-                              </div>
-                            </div>
-                            {ex.description && (
-                              <div className="mt-2 text-xs text-gray-400">
-                                {ex.description}
-                              </div>
-                            )}
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
+                  {hasOldExercise && !hasExercises ? (
+                    <div className="bg-gray-700/30 rounded-xl p-4">
+                      <p className="text-white font-medium">{workout.exerciseName}</p>
+                      <p className="text-xs text-gray-400 mt-1">
+                        {workout.sets || 4}组 × {workout.reps || 12}次
+                        {workout.weight ? ` · ${workout.weight}kg` : ''}
+                      </p>
                     </div>
-                  ))}
+                  ) : (
+                    workout.exercises.map((ex: any, idx: number) => (
+                      <div key={ex.id || idx} className="bg-gray-700/30 rounded-xl overflow-hidden">
+                        <div 
+                          className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-gray-700/50"
+                          onClick={() => toggleExercise(ex.id || idx.toString())}
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="w-6 h-6 bg-indigo-500/30 text-indigo-400 rounded-lg flex items-center justify-center text-xs font-medium">
+                              {idx + 1}
+                            </span>
+                            <div>
+                              <p className="text-white font-medium">{ex.name || '未命名动作'}</p>
+                              <p className="text-xs text-gray-400">
+                                {ex.sets}组 × {ex.reps}次 {ex.weight ? `· ${ex.weight}kg` : ''}
+                              </p>
+                            </div>
+                          </div>
+                          <ChevronRight className={`w-4 h-4 text-gray-400 transition-transform ${expandedExercises.includes(ex.id || idx.toString()) ? 'rotate-90' : ''}`} />
+                        </div>
+                        <AnimatePresence>
+                          {expandedExercises.includes(ex.id || idx.toString()) && (
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: 'auto', opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              className="px-4 pb-3 border-t border-gray-600 pt-3"
+                            >
+                              <div className="grid grid-cols-2 gap-3 text-sm">
+                                <div className="bg-gray-600/50 rounded-lg p-2">
+                                  <p className="text-xs text-gray-400 mb-1">组数</p>
+                                  <p className="text-white font-medium">{ex.sets}</p>
+                                </div>
+                                <div className="bg-gray-600/50 rounded-lg p-2">
+                                  <p className="text-xs text-gray-400 mb-1">次数</p>
+                                  <p className="text-white font-medium">{ex.reps}</p>
+                                </div>
+                                <div className="bg-gray-600/50 rounded-lg p-2">
+                                  <p className="text-xs text-gray-400 mb-1">重量</p>
+                                  <p className="text-white font-medium">{ex.weight ? `${ex.weight}kg` : '-'}</p>
+                                </div>
+                                <div className="bg-gray-600/50 rounded-lg p-2">
+                                  <p className="text-xs text-gray-400 mb-1">休息</p>
+                                  <p className="text-white font-medium">{ex.restTime}秒</p>
+                                </div>
+                              </div>
+                              {ex.description && (
+                                <div className="mt-2 text-xs text-gray-400">
+                                  {ex.description}
+                                </div>
+                              )}
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
             ) : (
@@ -2247,8 +2259,8 @@ function WorkoutPage() {
       return;
     }
     
-    if (selectedType === 'strength' && workoutExercises.length === 0) {
-      showToast({ message: "请添加训练动作", type: "error", duration: 2000 });
+    if (selectedType === 'strength' && workoutExercises.length === 0 && !exerciseName) {
+      showToast({ message: "请添加训练动作或选择模板天", type: "error", duration: 2000 });
       return;
     }
 

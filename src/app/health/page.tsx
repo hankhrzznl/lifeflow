@@ -778,55 +778,60 @@ function TodayPage() {
   ];
 
   return (
-    <div className="space-y-4">
-      {/* 日历 */}
-      <CalendarWidget
-        currentMonth={currentMonth}
-        onMonthChange={setCurrentMonth}
-        datesWithRecords={datesWithRecords}
-        selectedDate={selectedDate}
-        onSelectDate={handleSelectDate}
-      />
-
-      {/* 日期标题 */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold text-white">
-            {formatDate(selectedDate)}健康记录
-          </h2>
-          <p className="text-sm text-gray-400 mt-1">
-            {selectedRecord ? '点击指标查看详情' : '暂无记录，点击添加'}
-          </p>
-        </div>
-        <motion.button
-          whileTap={{ scale: 0.95 }}
-          onClick={() => setShowAddModal(true)}
-          className="px-4 py-2 bg-indigo-500 text-white rounded-xl font-medium flex items-center gap-2"
-        >
-          <Plus className="w-5 h-5" />
-          {selectedRecord ? '编辑' : '添加记录'}
-        </motion.button>
+    <div className="flex gap-4">
+      {/* 日历 - 左侧 */}
+      <div className="w-1/3 flex-shrink-0">
+        <CalendarWidget
+          currentMonth={currentMonth}
+          onMonthChange={setCurrentMonth}
+          datesWithRecords={datesWithRecords}
+          selectedDate={selectedDate}
+          onSelectDate={handleSelectDate}
+        />
       </div>
 
-      {/* 指标卡片 */}
-      <div className="grid grid-cols-2 gap-3">
-        {metrics.map((metric) => (
-          <div
-            key={metric.label}
-            onClick={() => metric.metric && setSelectedMetric({ metric: metric.metric, label: metric.label })}
-            className={metric.metric ? 'cursor-pointer hover:scale-[1.02] transition-transform' : 'cursor-default'}
-          >
-            <HealthMetricCard
-              icon={getMetricIcon(metric.label)}
-              label={metric.label}
-              value={metric.value ?? '-'}
-              unit={metric.unit}
-            />
+      {/* 健康记录 - 右侧 */}
+      <div className="flex-1 space-y-4">
+        {/* 日期标题 */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-bold text-white">
+              {formatDate(selectedDate)}健康记录
+            </h2>
+            <p className="text-sm text-gray-400 mt-1">
+              {selectedRecord ? '点击指标查看详情' : '暂无记录，点击添加'}
+            </p>
           </div>
-        ))}
-      </div>
+          <motion.button
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setShowAddModal(true)}
+            className="px-4 py-2 bg-indigo-500 text-white rounded-xl font-medium flex items-center gap-2"
+          >
+            <Plus className="w-5 h-5" />
+            {selectedRecord ? '编辑' : '添加记录'}
+          </motion.button>
+        </div>
 
-      {/* 提示信息 */}
+        {/* 指标卡片 */}
+        <div className="grid grid-cols-2 gap-3">
+          {metrics.map((metric) => (
+            <div
+              key={metric.label}
+              onClick={() => metric.metric && setSelectedMetric({ metric: metric.metric, label: metric.label })}
+              className={metric.metric ? 'cursor-pointer hover:scale-[1.02] transition-transform' : 'cursor-default'}
+            >
+              <HealthMetricCard
+                icon={getMetricIcon(metric.label)}
+                label={metric.label}
+                value={metric.value ?? '-'}
+                unit={metric.unit}
+              />
+            </div>
+          ))}
+        </div>
+        </div>
+
+        {/* 提示信息 */}
       {selectedRecord && (
         <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4">
           <p className="text-blue-300 text-sm">

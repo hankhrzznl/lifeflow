@@ -2,8 +2,11 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { Layers, Settings, BarChart3, Trash2, Puzzle, Heart, Inbox, Calendar, List, Target, ChevronDown, X } from 'lucide-react';
+import { getPluginsForNavbar } from '@/lib/db';
+import { getPluginConfig } from '@/lib/plugin-config';
+import type { PluginMetadata } from '@/lib/types';
 
 const planItems = [
   { label: '捕捉', href: '/capture', icon: Inbox },
@@ -23,6 +26,26 @@ const moreNav = [
 export default function DesktopSidebarV2() {
   const pathname = usePathname();
   const [showPlanMenu, setShowPlanMenu] = useState(false);
+  const [pinnedPlugins, setPinnedPlugins] = useState<PluginMetadata[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const loadPinnedPlugins = useCallback(async () => {
+    try {
+      const plugins = await getPluginsForNavbar();
+      const activePlugins = plugins.filter(p => p.status === 'active');
+      setPinnedPlugins(activePlugins);
+    } catch (err) {
+      console.error('Failed to load pinned plugins:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadPinnedPlugins();
+    const interval = setInterval(loadPinnedPlugins, 3000);
+    return () => clearInterval(interval);
+  }, [loadPinnedPlugins]);
 
   const isActive = useCallback((href: string) => {
     return pathname.startsWith(href);
@@ -65,6 +88,30 @@ export default function DesktopSidebarV2() {
           </Link>
 
           <div className="mx-4 my-3 border-t border-gray-200 dark:border-gray-800" />
+
+          {pinnedPlugins.length > 0 && (
+            <>
+              {pinnedPlugins.map((plugin) => {
+                const config = getPluginConfig(plugin.name);
+                if (!config) return null;
+                return (
+                  <Link
+                    key={plugin.id}
+                    href={config.path}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors ${
+                      isActive(config.path)
+                        ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-medium'
+                        : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
+                    }`}
+                  >
+                    <config.icon className={`w-5 h-5 ${isActive(config.path) ? 'fill-current text-blue-500' : 'text-gray-400'} stroke-[1.5]`} />
+                    <span className="text-sm">{config.label}</span>
+                  </Link>
+                );
+              })}
+              <div className="mx-4 my-3 border-t border-gray-200 dark:border-gray-800" />
+            </>
+          )}
 
           {moreNav.map((item) => (
             <Link

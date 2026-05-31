@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -8,6 +8,9 @@ import {
   Layers, Menu, X, Inbox, Calendar, List, Target,
   Settings, BarChart3, Trash2, Puzzle, ChevronRight, Bell, Heart,
 } from "lucide-react";
+import { getPluginsForNavbar } from "@/lib/db";
+import { getPluginConfig } from "@/lib/plugin-config";
+import type { PluginMetadata } from "@/lib/types";
 
 const planItems = [
   { label: "捕捉", href: "/capture", icon: Inbox },
@@ -28,6 +31,26 @@ const moreItems = [
 
 export default function BottomTabBar() {
   const pathname = usePathname();
+  const [pinnedPlugins, setPinnedPlugins] = useState<PluginMetadata[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const loadPinnedPlugins = useCallback(async () => {
+    try {
+      const plugins = await getPluginsForNavbar();
+      const activePlugins = plugins.filter(p => p.status === "active");
+      setPinnedPlugins(activePlugins);
+    } catch (err) {
+      console.error("Failed to load pinned plugins:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadPinnedPlugins();
+    const interval = setInterval(loadPinnedPlugins, 3000);
+    return () => clearInterval(interval);
+  }, [loadPinnedPlugins]);
   const [openPanel, setOpenPanel] = useState<"plan" | "more" | null>(null);
 
   const isActive = useCallback((path: string) => pathname.startsWith(path), [pathname]);
@@ -45,11 +68,23 @@ export default function BottomTabBar() {
     },
     {
       id: "more", label: "更多", icon: Menu, path: null,
-      active: pathname.startsWith("/settings") || pathname.startsWith("/review") || pathname.startsWith("/trash") || pathname.startsWith("/reminders"),
+      active: pathname.startsWith("/settings") || pathname.startsWith("/review") || pathname.startsWith("/trash") || pathname.startsWith("/reminders") || pathname.startsWith("/plugins"),
     },
   ];
 
-  const tabs = [...baseTabs];
+  const pluginTabs = pinnedPlugins.map(plugin => {
+    const config = getPluginConfig(plugin.name);
+    if (!config) return null;
+    return {
+      id: `plugin-${plugin.name}`,
+      label: config.label,
+      icon: config.icon,
+      path: config.path,
+      active: isActive(config.path),
+    };
+  }).filter(Boolean);
+
+  const tabs = [...baseTabs, ...pluginTabs];
 
   return (
     <>

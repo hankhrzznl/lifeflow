@@ -2,12 +2,15 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useCallback } from 'react';
-import { Layers, Settings, BarChart3, Trash2, Puzzle, Heart } from 'lucide-react';
+import { useCallback, useState } from 'react';
+import { Layers, Settings, BarChart3, Trash2, Puzzle, Heart, Inbox, Calendar, List, Target, ChevronDown, X } from 'lucide-react';
 
-const coreNav = [
-  { label: '规划', href: '/planner', icon: Layers },
-  { label: '健康', href: '/health', icon: Heart },
+const planItems = [
+  { label: '捕捉', href: '/capture', icon: Inbox },
+  { label: '今日', href: '/today', icon: Calendar },
+  { label: '安排', href: '/pending', icon: List },
+  { label: '项目', href: '/projects', icon: Layers },
+  { label: '目标', href: '/goals', icon: Target },
 ];
 
 const moreNav = [
@@ -19,61 +22,100 @@ const moreNav = [
 
 export default function DesktopSidebarV2() {
   const pathname = usePathname();
+  const [showPlanMenu, setShowPlanMenu] = useState(false);
 
   const isActive = useCallback((href: string) => {
-    if (href === '/planner') return pathname.startsWith('/planner');
     return pathname.startsWith(href);
   }, [pathname]);
 
   return (
-    <aside className="hidden lg:flex flex-col w-64 bg-white dark:bg-gray-950 border-r border-gray-200 dark:border-gray-800 h-full fixed left-0 top-0 bottom-0">
-      <div className="flex items-center gap-3 px-6 h-16 border-b border-gray-100 dark:border-gray-800">
-        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center">
-          <span className="text-white font-bold text-lg">L</span>
+    <>
+      <aside className="hidden lg:flex flex-col w-64 bg-white dark:bg-gray-950 border-r border-gray-200 dark:border-gray-800 h-full fixed left-0 top-0 bottom-0">
+        <div className="flex items-center gap-3 px-6 h-16 border-b border-gray-100 dark:border-gray-800">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center">
+            <span className="text-white font-bold text-lg">L</span>
+          </div>
+          <span className="font-semibold text-lg text-gray-900 dark:text-gray-100">LifeFlow</span>
         </div>
-        <span className="font-semibold text-lg text-gray-900 dark:text-gray-100">LifeFlow</span>
-      </div>
 
-      <nav className="flex-1 px-4 py-4 space-y-1">
-        {coreNav.map((item) => {
-          const active = isActive(item.href);
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors ${
-                active
-                  ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-medium'
-                  : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
-              }`}
-            >
-              <item.icon className={`w-5 h-5 ${active ? 'fill-current text-blue-500' : 'text-gray-400'} stroke-[1.5]`} />
-              <span className="text-sm">{item.label}</span>
-            </Link>
-          );
-        })}
-
-        <div className="mx-4 my-3 border-t border-gray-200 dark:border-gray-800" />
-
-        {moreNav.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors ${
-              isActive(item.href)
+        <nav className="flex-1 px-4 py-4 space-y-1">
+          <button
+            onClick={() => setShowPlanMenu(true)}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors ${
+              isActive('/capture') || isActive('/today') || isActive('/pending') || isActive('/projects') || isActive('/goals')
                 ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-medium'
                 : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
             }`}
           >
-            <item.icon className="w-5 h-5 text-gray-400" strokeWidth={1.5} />
-            <span className="text-sm">{item.label}</span>
-          </Link>
-        ))}
-      </nav>
+            <Layers className={`w-5 h-5 ${isActive('/capture') || isActive('/today') || isActive('/pending') || isActive('/projects') || isActive('/goals') ? 'fill-current text-blue-500' : 'text-gray-400'} stroke-[1.5]`} />
+            <span className="text-sm flex-1 text-left">规划</span>
+            <ChevronDown className="w-4 h-4" />
+          </button>
 
-      <div className="px-4 py-4 border-t border-gray-100 dark:border-gray-800">
-        <p className="text-xs text-gray-400 text-center">LifeFlow Core v2.2</p>
-      </div>
-    </aside>
+          <Link
+            href="/health"
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors ${
+              isActive('/health')
+                ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-medium'
+                : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
+            }`}
+          >
+            <Heart className={`w-5 h-5 ${isActive('/health') ? 'fill-current text-blue-500' : 'text-gray-400'} stroke-[1.5]`} />
+            <span className="text-sm">健康</span>
+          </Link>
+
+          <div className="mx-4 my-3 border-t border-gray-200 dark:border-gray-800" />
+
+          {moreNav.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors ${
+                isActive(item.href)
+                  ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-medium'
+                  : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
+              }`}
+            >
+              <item.icon className="w-5 h-5 text-gray-400" strokeWidth={1.5} />
+              <span className="text-sm">{item.label}</span>
+            </Link>
+          ))}
+        </nav>
+
+        <div className="px-4 py-4 border-t border-gray-100 dark:border-gray-800">
+          <p className="text-xs text-gray-400 text-center">LifeFlow Core v2.2</p>
+        </div>
+      </aside>
+
+      {showPlanMenu && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setShowPlanMenu(false)} />
+          <div className="fixed left-64 top-16 z-50 w-56 bg-white dark:bg-gray-900 rounded-xl shadow-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800">
+              <span className="font-medium text-gray-900 dark:text-gray-100">规划</span>
+              <button
+                onClick={() => setShowPlanMenu(false)}
+                className="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+              >
+                <X className="w-4 h-4 text-gray-400" />
+              </button>
+            </div>
+            <div className="py-2">
+              {planItems.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setShowPlanMenu(false)}
+                  className="flex items-center gap-3 px-4 py-2.5 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                >
+                  <item.icon className="w-5 h-5 text-gray-400" />
+                  <span className="text-sm">{item.label}</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+    </>
   );
 }

@@ -276,6 +276,14 @@ export class LifeFlowDB extends Dexie {
         console.log("[LifeFlowDB v18] Added finRecords and finAccounts tables");
       }
     });
+
+    this.version(19).stores({
+      dailyHealthRecords: "++id, date, timestamp, weight, sleepDuration, sleepTime, sleepScore, restingHeartRate, bloodOxygen, hrv, vo2Max, sunlightTime, stressLevel, bodyAge, trainingDuration, caloriesBurned, trainingFeeling, createdAt",
+    }).upgrade(async () => {
+      if (typeof window !== "undefined" && window.location.hostname === "localhost") {
+        console.log("[LifeFlowDB v19] Added new health metrics fields");
+      }
+    });
   }
 }
 

@@ -9,7 +9,7 @@ import {
   Wine, Monitor, Plane, Briefcase, Play, Pause, Settings,
   Bike, Timer, Download, Award,
   AlertTriangle, CheckCircle, TrendingDown, ChevronLeft, Star, ArrowLeft,
-  Trash2, X
+  Trash2, X, User, Droplets, Sun
 } from "lucide-react";
 import { 
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
@@ -741,11 +741,15 @@ function TodayPage() {
   const getMetricIcon = (label: string) => {
     switch (label) {
       case '体重': return <Battery className="w-5 h-5 text-green-400" />;
+      case '身体年龄': return <User className="w-5 h-5 text-pink-400" />;
       case '睡眠时长': return <Moon className="w-5 h-5 text-blue-400" />;
       case '入睡时间': return <Clock className="w-5 h-5 text-purple-400" />;
       case '睡眠评分': return <Star className="w-5 h-5 text-yellow-400" />;
-      case '心率': return <Heart className="w-5 h-5 text-red-400" />;
-      case '血压': return <Activity className="w-5 h-5 text-pink-400" />;
+      case '血氧': return <Droplets className="w-5 h-5 text-cyan-400" />;
+      case '心率RHR': return <Heart className="w-5 h-5 text-red-400" />;
+      case 'HRV': return <Activity className="w-5 h-5 text-orange-400" />;
+      case '日照时间': return <Sun className="w-5 h-5 text-yellow-400" />;
+      case '最大摄氧量': return <Zap className="w-5 h-5 text-purple-400" />;
       case '压力': return <Brain className="w-5 h-5 text-purple-400" />;
       case '训练时长': return <Dumbbell className="w-5 h-5 text-indigo-400" />;
       case '卡路里': return <Flame className="w-5 h-5 text-orange-400" />;
@@ -761,13 +765,15 @@ function TodayPage() {
 
   const metrics = [
     { label: '体重', value: selectedRecord?.weight, unit: 'kg', metric: 'weight' as const },
+    { label: '身体年龄', value: selectedRecord?.bodyAge !== undefined ? selectedRecord.bodyAge : '-', unit: '岁', metric: 'bodyAge' as const },
     { label: '睡眠时长', value: selectedRecord?.sleepDuration, unit: '小时', metric: 'sleepDuration' as const },
     { label: '入睡时间', value: selectedRecord?.sleepTime || '-', unit: '', metric: null },
     { label: '睡眠评分', value: selectedRecord?.sleepScore !== undefined ? selectedRecord.sleepScore : '-', unit: '分', metric: 'sleepScore' as const },
-    { label: '心率', value: selectedRecord?.restingHeartRate !== undefined ? selectedRecord.restingHeartRate : '-', unit: 'bpm', metric: 'restingHeartRate' as const },
-    { label: '血压', value: selectedRecord?.bloodPressureSystolic && selectedRecord?.bloodPressureDiastolic 
-      ? `${selectedRecord.bloodPressureSystolic}/${selectedRecord.bloodPressureDiastolic}` 
-      : '-', unit: 'mmHg', metric: null },
+    { label: '血氧', value: selectedRecord?.bloodOxygen !== undefined ? selectedRecord.bloodOxygen : '-', unit: '%', metric: 'bloodOxygen' as const },
+    { label: '心率RHR', value: selectedRecord?.restingHeartRate !== undefined ? selectedRecord.restingHeartRate : '-', unit: 'bpm', metric: 'restingHeartRate' as const },
+    { label: 'HRV', value: selectedRecord?.hrv !== undefined ? selectedRecord.hrv : '-', unit: 'ms', metric: 'hrv' as const },
+    { label: '日照时间', value: selectedRecord?.sunlightTime !== undefined ? selectedRecord.sunlightTime : '-', unit: '分钟', metric: 'sunlightTime' as const },
+    { label: '最大摄氧量', value: selectedRecord?.vo2Max !== undefined ? selectedRecord.vo2Max : '-', unit: 'ml/kg/min', metric: 'vo2Max' as const },
     { label: '压力', value: selectedRecord?.stressLevel !== undefined ? selectedRecord.stressLevel : '-', unit: '', metric: 'stressLevel' as const },
     { label: '训练时长', value: selectedRecord?.trainingDuration !== undefined ? selectedRecord.trainingDuration : 0, unit: '分钟', metric: 'trainingDuration' as const },
     { label: '卡路里', value: selectedRecord?.caloriesBurned !== undefined ? selectedRecord.caloriesBurned : 0, unit: 'kcal', metric: 'caloriesBurned' as const },
@@ -885,12 +891,15 @@ function AddHealthRecordModal({
 }) {
   const [formData, setFormData] = useState({
     weight: existingRecord?.weight?.toString() || '',
+    bodyAge: existingRecord?.bodyAge?.toString() || '',
     sleepDuration: existingRecord?.sleepDuration?.toString() || '',
     sleepTime: existingRecord?.sleepTime || '',
     sleepScore: existingRecord?.sleepScore?.toString() || '',
+    bloodOxygen: existingRecord?.bloodOxygen?.toString() || '',
     restingHeartRate: existingRecord?.restingHeartRate?.toString() || '',
-    bloodPressureSystolic: existingRecord?.bloodPressureSystolic?.toString() || '',
-    bloodPressureDiastolic: existingRecord?.bloodPressureDiastolic?.toString() || '',
+    hrv: existingRecord?.hrv?.toString() || '',
+    sunlightTime: existingRecord?.sunlightTime?.toString() || '',
+    vo2Max: existingRecord?.vo2Max?.toString() || '',
     stressLevel: existingRecord?.stressLevel?.toString() || '',
     didWorkout: existingRecord?.trainingDuration ? 'yes' : 'no',
     trainingDuration: existingRecord?.trainingDuration?.toString() || '',
@@ -906,12 +915,15 @@ function AddHealthRecordModal({
     const record: Partial<DailyHealthRecord> = {};
     
     if (formData.weight) record.weight = parseFloat(formData.weight);
+    if (formData.bodyAge) record.bodyAge = parseInt(formData.bodyAge);
     if (formData.sleepDuration) record.sleepDuration = parseFloat(formData.sleepDuration);
     if (formData.sleepTime) record.sleepTime = formData.sleepTime;
     if (formData.sleepScore) record.sleepScore = parseInt(formData.sleepScore);
+    if (formData.bloodOxygen) record.bloodOxygen = parseInt(formData.bloodOxygen);
     if (formData.restingHeartRate) record.restingHeartRate = parseInt(formData.restingHeartRate);
-    if (formData.bloodPressureSystolic) record.bloodPressureSystolic = parseInt(formData.bloodPressureSystolic);
-    if (formData.bloodPressureDiastolic) record.bloodPressureDiastolic = parseInt(formData.bloodPressureDiastolic);
+    if (formData.hrv) record.hrv = parseInt(formData.hrv);
+    if (formData.sunlightTime) record.sunlightTime = parseInt(formData.sunlightTime);
+    if (formData.vo2Max) record.vo2Max = parseFloat(formData.vo2Max);
     if (formData.stressLevel) record.stressLevel = parseInt(formData.stressLevel);
     
     // 如果选择了健身，保存训练数据
@@ -1010,9 +1022,32 @@ function AddHealthRecordModal({
             </div>
           </div>
 
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm text-gray-400 mb-2 block">身体年龄 (岁)</label>
+              <input
+                type="number"
+                value={formData.bodyAge}
+                onChange={(e) => handleChange('bodyAge', e.target.value)}
+                placeholder="35"
+                className="w-full px-4 py-2 bg-gray-800 rounded-xl text-white border border-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+            <div>
+              <label className="text-sm text-gray-400 mb-2 block">血氧 (%)</label>
+              <input
+                type="number"
+                value={formData.bloodOxygen}
+                onChange={(e) => handleChange('bloodOxygen', e.target.value)}
+                placeholder="98"
+                className="w-full px-4 py-2 bg-gray-800 rounded-xl text-white border border-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+          </div>
+
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="text-sm text-gray-400 mb-2 block">心率 (bpm)</label>
+              <label className="text-sm text-gray-400 mb-2 block">心率RHR (bpm)</label>
               <input
                 type="number"
                 value={formData.restingHeartRate}
@@ -1022,22 +1057,35 @@ function AddHealthRecordModal({
               />
             </div>
             <div>
-              <label className="text-sm text-gray-400 mb-2 block">血压高压</label>
+              <label className="text-sm text-gray-400 mb-2 block">HRV (ms)</label>
               <input
                 type="number"
-                value={formData.bloodPressureSystolic}
-                onChange={(e) => handleChange('bloodPressureSystolic', e.target.value)}
-                placeholder="120"
+                value={formData.hrv}
+                onChange={(e) => handleChange('hrv', e.target.value)}
+                placeholder="45"
                 className="w-full px-4 py-2 bg-gray-800 rounded-xl text-white border border-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
             <div>
-              <label className="text-sm text-gray-400 mb-2 block">血压低压</label>
+              <label className="text-sm text-gray-400 mb-2 block">日照时间 (分钟)</label>
               <input
                 type="number"
-                value={formData.bloodPressureDiastolic}
-                onChange={(e) => handleChange('bloodPressureDiastolic', e.target.value)}
-                placeholder="80"
+                value={formData.sunlightTime}
+                onChange={(e) => handleChange('sunlightTime', e.target.value)}
+                placeholder="30"
+                className="w-full px-4 py-2 bg-gray-800 rounded-xl text-white border border-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm text-gray-400 mb-2 block">最大摄氧量</label>
+              <input
+                type="number"
+                value={formData.vo2Max}
+                onChange={(e) => handleChange('vo2Max', e.target.value)}
+                placeholder="45"
                 className="w-full px-4 py-2 bg-gray-800 rounded-xl text-white border border-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>

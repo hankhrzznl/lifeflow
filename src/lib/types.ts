@@ -658,12 +658,21 @@ export interface DailyHealthRecord {
   sleepScore?: number;                        // 睡眠评分 (0-100)
   
   // 心血管
-  restingHeartRate?: number;                 // 静息心率 (bpm)
+  restingHeartRate?: number;                 // 静息心率 RHR (bpm)
+  bloodOxygen?: number;                    // 血氧 SpO2 (%)
+  hrv?: number;                             // 心率变异性 HRV (ms)
+  vo2Max?: number;                          // 最大摄氧量 (ml/kg/min)
   bloodPressureSystolic?: number;            // 血压高压 (mmHg)
   bloodPressureDiastolic?: number;            // 血压低压 (mmHg)
   
+  // 日照
+  sunlightTime?: number;                    // 日照下时间 (分钟)
+  
   // 压力
   stressLevel?: number;                       // 压力水平 (0-100)
+  
+  // 身体年龄
+  bodyAge?: number;                          // 身体年龄 (岁)
   
   // 运动
   trainingDuration?: number;                 // 训练时长 (分钟)

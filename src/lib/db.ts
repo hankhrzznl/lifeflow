@@ -270,9 +270,10 @@ export class LifeFlowDB extends Dexie {
 
     this.version(18).stores({
       finRecords: "++id, type, amount, category, date, accountId, createdAt",
+      finAccounts: "++id, name, initialBalance, createdAt",
     }).upgrade(async () => {
       if (typeof window !== "undefined" && window.location.hostname === "localhost") {
-        console.log("[LifeFlowDB v18] Added finRecords table");
+        console.log("[LifeFlowDB v18] Added finRecords and finAccounts tables");
       }
     });
   }

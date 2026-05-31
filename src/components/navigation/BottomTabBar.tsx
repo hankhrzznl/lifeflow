@@ -37,8 +37,8 @@ export default function BottomTabBar() {
   const loadPinnedPlugins = useCallback(async () => {
     try {
       const plugins = await getPluginsForNavbar();
-      const activePlugins = plugins.filter(p => p.status === "active");
-      setPinnedPlugins(activePlugins);
+      const pinnedPlugins = plugins.filter(p => p.showInNavbar === true);
+      setPinnedPlugins(pinnedPlugins);
     } catch (err) {
       console.error("Failed to load pinned plugins:", err);
     } finally {

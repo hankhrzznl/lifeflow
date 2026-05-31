@@ -1,22 +1,13 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Inbox, Calendar, Layers, Menu, X,
-  FolderKanban, Target, Settings, BarChart3, Trash2, Puzzle, ChevronRight, ListTodo, Bell, Heart,
+  Layers, Menu, X,
+  Settings, BarChart3, Trash2, Puzzle, ChevronRight, Bell, Heart,
 } from "lucide-react";
-import { getPluginsForNavbar } from "@/lib/db";
-import { getPluginConfig } from "@/lib/plugin-config";
-import type { PluginMetadata } from "@/lib/types";
-
-const planItems = [
-  { label: "安排事项", href: "/pending", icon: ListTodo, desc: "待安排与已安排的事务" },
-  { label: "项目", href: "/projects", icon: FolderKanban, desc: "管理项目与大模块" },
-  { label: "目标", href: "/goals", icon: Target, desc: "短期事件与日常琐事" },
-];
 
 const moreItems = [
   { label: "健康", href: "/health", icon: Heart },
@@ -29,69 +20,28 @@ const moreItems = [
 
 export default function BottomTabBar() {
   const pathname = usePathname();
-  const [openPanel, setOpenPanel] = useState<"plan" | "more" | null>(null);
-  const [pinnedPlugins, setPinnedPlugins] = useState<PluginMetadata[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [openPanel, setOpenPanel] = useState<"more" | null>(null);
 
   const isActive = useCallback((path: string) => pathname.startsWith(path), [pathname]);
-
-  const loadPinnedPlugins = useCallback(async () => {
-    try {
-      const plugins = await getPluginsForNavbar();
-      const activePlugins = plugins.filter(p => p.status === "active");
-      setPinnedPlugins(activePlugins);
-    } catch (err) {
-      console.error("Failed to load pinned plugins:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadPinnedPlugins();
-    // Refresh when navigation changes (in case user added/removed plugins)
-    const interval = setInterval(loadPinnedPlugins, 3000);
-    return () => clearInterval(interval);
-  }, [loadPinnedPlugins]);
 
   const closePanel = () => setOpenPanel(null);
 
   const baseTabs = [
     {
-      id: "capture", label: "捕捉", icon: Inbox, path: "/capture",
-      active: isActive("/capture"),
+      id: "planner", label: "规划", icon: Layers, path: "/planner",
+      active: pathname.startsWith("/planner"),
     },
     {
-      id: "today", label: "今日", icon: Calendar, path: "/today",
-      active: pathname === "/today" || pathname === "/planner" || pathname === "/focus",
-    },
-    {
-      id: "plan", label: "规划", icon: Layers, path: null,
-      active: pathname.startsWith("/projects") || pathname.startsWith("/goals") || pathname.startsWith("/pending"),
+      id: "health", label: "健康", icon: Heart, path: "/health",
+      active: isActive("/health"),
     },
     {
       id: "more", label: "更多", icon: Menu, path: null,
-      active: pathname.startsWith("/settings") || pathname.startsWith("/review") || pathname.startsWith("/trash") || pathname.startsWith("/plugins") || pathname.startsWith("/reminders") || pathname.startsWith("/health"),
+      active: pathname.startsWith("/settings") || pathname.startsWith("/review") || pathname.startsWith("/trash") || pathname.startsWith("/reminders"),
     },
   ];
 
-  const pluginTabs = pinnedPlugins.map(plugin => {
-    const config = getPluginConfig(plugin.name);
-    if (!config) return null;
-    return {
-      id: `plugin-${plugin.name}`,
-      label: config.label,
-      icon: config.icon,
-      path: config.path,
-      active: isActive(config.path),
-      isPlugin: true,
-    };
-  }).filter(Boolean);
-
-  const tabs = [
-    ...baseTabs,
-    ...pluginTabs,
-  ];
+  const tabs = [...baseTabs];
 
   return (
     <>
@@ -122,7 +72,7 @@ export default function BottomTabBar() {
             return (
               <button
                 key={tab.id}
-                onClick={() => setOpenPanel(tab.id as "plan" | "more")}
+                onClick={() => setOpenPanel("more")}
                 className={`flex flex-col items-center justify-center gap-0.5 min-w-[44px] min-h-[44px] transition-colors duration-150 ease-out ${
                   active ? "text-blue-500" : "text-gray-400"
                 }`}
@@ -156,7 +106,7 @@ export default function BottomTabBar() {
           >
             <div className="flex items-center justify-between px-4 pt-4 pb-2">
               <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">
-                {openPanel === "plan" ? "规划" : "更多"}
+                更多
               </h2>
               <button
                 onClick={closePanel}
@@ -167,7 +117,7 @@ export default function BottomTabBar() {
             </div>
 
             <div className="px-2 pb-2">
-              {(openPanel === "plan" ? planItems : moreItems).map((item) => (
+              {moreItems.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
@@ -175,13 +125,8 @@ export default function BottomTabBar() {
                   className="flex items-center gap-3 h-14 px-4 rounded-xl text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors active:scale-[0.98]"
                 >
                   <item.icon className="w-5 h-5 text-gray-500 dark:text-gray-400" strokeWidth={1.5} />
-                  <div className="flex-1 min-w-0">
-                    <span className="text-sm">{item.label}</span>
-                    {"desc" in item && (
-                      <p className="text-xs text-gray-400 dark:text-gray-500 truncate">{(item as typeof planItems[number]).desc}</p>
-                    )}
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-gray-300 dark:text-gray-600" />
+                  <span className="text-sm">{item.label}</span>
+                  <ChevronRight className="w-4 h-4 text-gray-300 dark:text-gray-600 ml-auto" />
                 </Link>
               ))}
             </div>

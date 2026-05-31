@@ -1,8 +1,8 @@
  "use client";
 
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Calendar, Clock, Plus, X, GripVertical, AlertTriangle, ArrowRight, ChevronRight, List, Layers } from "lucide-react";
+import { Calendar, Clock, Plus, X, GripVertical, AlertTriangle, ArrowRight, ChevronRight, List, Layers, Inbox, Target } from "lucide-react";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import { showToast } from "@/components/ui/Toast";
 import {
@@ -42,6 +42,22 @@ import {
   getTagColor,
   getTodayRange,
 } from "@/lib/planner-utils";
+
+const CapturePage = lazy(() => import("@/app/capture/page").then(mod => ({ default: mod.default })));
+const TodayPage = lazy(() => import("@/app/today/page").then(mod => ({ default: mod.default })));
+const PendingPage = lazy(() => import("@/app/pending/page").then(mod => ({ default: mod.default })));
+const ProjectsPage = lazy(() => import("@/app/projects/page").then(mod => ({ default: mod.default })));
+const GoalsPage = lazy(() => import("@/app/goals/page").then(mod => ({ default: mod.default })));
+
+type PlannerTab = "capture" | "today" | "pending" | "projects" | "goals";
+
+const PLANNER_TABS: { key: PlannerTab; label: string; icon: typeof Inbox }[] = [
+  { key: "capture", label: "捕捉", icon: Inbox },
+  { key: "today", label: "今日", icon: Calendar },
+  { key: "pending", label: "安排", icon: List },
+  { key: "projects", label: "项目", icon: Layers },
+  { key: "goals", label: "目标", icon: Target },
+];
 
 const POLL_INTERVAL = 30000;
 const MIN_DURATION_MINUTES = 15;
@@ -577,6 +593,7 @@ function MobileOverview({
 }
 
 export default function PlannerPage() {
+  const [activeTab, setActiveTab] = useState<PlannerTab>("capture");
   const [events, setEvents] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentTimePos, setCurrentTimePos] = useState(getCurrentTimePosition());
@@ -1217,62 +1234,45 @@ export default function PlannerPage() {
 
   return (
     <>
-      <div className="hidden md:flex flex-col h-full max-h-screen">
-        <header className="flex-shrink-0 flex items-center justify-between px-4 py-3 border-b border-[var(--card-border)] bg-[var(--card-bg)]">
-          <div className="flex items-center gap-2">
-            <Calendar className="w-5 h-5 text-primary-500" />
-            <h1 className="text-lg font-semibold text-[var(--foreground)]">
-              每日规划
-            </h1>
+      <div className="flex flex-col h-full max-h-screen">
+        <Suspense fallback={
+          <div className="flex-1 flex items-center justify-center">
+            <div className="w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
           </div>
-          <motion.button
-            whileTap={{ scale: 0.95 }}
-            onClick={openAddModal}
-            className="flex items-center gap-1.5 bg-primary-500 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-primary-600 transition-colors shadow-sm"
-          >
-            <Plus className="w-4 h-4" />
-            添加事件
-          </motion.button>
-        </header>
-
-        <DndContext
-          sensors={sensors}
-          onDragStart={handleDragStart}
-          onDragMove={handleDragMove}
-          onDragEnd={handleDragEnd}
-          modifiers={[restrictToVerticalAxis]}
-        >
-          <div className="flex-1 overflow-y-auto overscroll-contain" ref={scrollRef}>
-            {timelineGrid}
-          </div>
-
-          <DragOverlay dropAnimation={null}>
-            {activeDragEvent ? (
-              <DraggableOverlay event={activeDragEvent} dayStart={dayStart} />
-            ) : null}
-          </DragOverlay>
-        </DndContext>
+        }>
+          {activeTab === "capture" && <CapturePage />}
+          {activeTab === "today" && <TodayPage />}
+          {activeTab === "pending" && <PendingPage />}
+          {activeTab === "projects" && <ProjectsPage />}
+          {activeTab === "goals" && <GoalsPage />}
+        </Suspense>
       </div>
 
-      <div className="md:hidden flex flex-col h-full max-h-screen">
-        <MobileHeader
-          eventsCount={events.length}
-          onAdd={openAddModal}
-        />
-        <div className="flex-1 relative bg-[var(--background)] overflow-hidden">
-          <MobileOverview
-            events={events}
-            loading={loading}
-            currentTimePos={currentTimePos}
-            onEventClick={openEditModal}
-          />
+      <nav className="fixed bottom-0 left-0 right-0 z-40 h-16 bg-white/90 dark:bg-gray-950/90 backdrop-blur-xl border-t border-gray-200 dark:border-gray-800 pb-[max(8px,env(safe-area-inset-bottom))]">
+        <div className="flex items-center justify-around h-full">
+          {PLANNER_TABS.map((tab) => {
+            const active = activeTab === tab.key;
+            return (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={`flex flex-col items-center justify-center gap-0.5 min-w-[44px] min-h-[44px] transition-colors duration-150 ease-out ${
+                  active ? "text-blue-500" : "text-gray-400"
+                }`}
+              >
+                <tab.icon
+                  className={`w-6 h-6 ${
+                    active ? "fill-current stroke-[2.5]" : "stroke-[1.5]"
+                  }`}
+                />
+                <span className="text-[11px] font-medium">{tab.label}</span>
+              </button>
+            );
+          })}
         </div>
-        <BottomSheet snapPoints={[25, 50, 85]} defaultSnap={1} open={true}>
-          <div className="h-full overflow-y-auto overscroll-contain">
-            {mobileTimelineGrid}
-          </div>
-        </BottomSheet>
-      </div>
+      </nav>
+
+      <div className="h-16" />
 
     <AnimatePresence>
         {showModal && (

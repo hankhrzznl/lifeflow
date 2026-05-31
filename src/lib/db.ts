@@ -267,6 +267,14 @@ export class LifeFlowDB extends Dexie {
         console.log("[LifeFlowDB v17] Added customTrainingPlans table");
       }
     });
+
+    this.version(18).stores({
+      finRecords: "++id, type, amount, category, date, accountId, createdAt",
+    }).upgrade(async () => {
+      if (typeof window !== "undefined" && window.location.hostname === "localhost") {
+        console.log("[LifeFlowDB v18] Added finRecords table");
+      }
+    });
   }
 }
 

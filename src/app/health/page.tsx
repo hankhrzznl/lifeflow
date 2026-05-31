@@ -344,8 +344,8 @@ function MetricDetailModal({
   onClose
 }: {
   metric: 'weight' | 'sleepDuration' | 'sleepScore' | 'restingHeartRate' | 
-          'bloodPressureSystolic' | 'bloodPressureDiastolic' | 'stressLevel' | 
-          'trainingDuration' | 'caloriesBurned';
+          'bloodOxygen' | 'hrv' | 'vo2Max' | 'sunlightTime' | 'bodyAge' |
+          'stressLevel' | 'trainingDuration' | 'caloriesBurned';
   metricLabel: string;
   isOpen: boolean;
   onClose: () => void;
@@ -680,8 +680,8 @@ function TodayPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [selectedMetric, setSelectedMetric] = useState<{
     metric: 'weight' | 'sleepDuration' | 'sleepScore' | 'restingHeartRate' | 
-            'bloodPressureSystolic' | 'bloodPressureDiastolic' | 'stressLevel' | 
-            'trainingDuration' | 'caloriesBurned';
+            'bloodOxygen' | 'hrv' | 'vo2Max' | 'sunlightTime' | 'bodyAge' |
+            'stressLevel' | 'trainingDuration' | 'caloriesBurned';
     label: string;
   } | null>(null);
 
@@ -1448,7 +1448,7 @@ function ATLCTLChart() {
 function TrendsPage() {
   const [timeRange, setTimeRange] = useState<"week" | "month" | "quarter">("month");
   const [chartData, setChartData] = useState<any[]>([]);
-  const [selectedMetric, setSelectedMetric] = useState<"weight" | "sleepScore" | "stressLevel" | "restingHeartRate">("weight");
+  const [selectedMetric, setSelectedMetric] = useState<"weight" | "sleepScore" | "stressLevel" | "restingHeartRate" | "bloodOxygen" | "hrv" | "vo2Max" | "sunlightTime" | "bodyAge">("weight");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -1474,8 +1474,6 @@ function TrendsPage() {
 
       // 获取指标历史数据
       const historyData = await getMetricHistory(
-        selectedMetric === "stressLevel" ? "stressLevel" :
-        selectedMetric === "restingHeartRate" ? "restingHeartRate" :
         selectedMetric,
         startStr,
         endStr
@@ -1510,9 +1508,39 @@ function TrendsPage() {
     },
     restingHeartRate: { 
       color: '#EC4899', 
-      label: '心率', 
+      label: '心率RHR', 
       unit: 'bpm',
       icon: <Heart className="w-4 h-4" />
+    },
+    bloodOxygen: {
+      color: '#06B6D4',
+      label: '血氧',
+      unit: '%',
+      icon: <Droplets className="w-4 h-4" />
+    },
+    hrv: {
+      color: '#F59E0B',
+      label: 'HRV',
+      unit: 'ms',
+      icon: <Activity className="w-4 h-4" />
+    },
+    vo2Max: {
+      color: '#8B5CF6',
+      label: '最大摄氧量',
+      unit: 'ml/kg/min',
+      icon: <Zap className="w-4 h-4" />
+    },
+    sunlightTime: {
+      color: '#EAB308',
+      label: '日照时间',
+      unit: '分钟',
+      icon: <Sun className="w-4 h-4" />
+    },
+    bodyAge: {
+      color: '#F43F5E',
+      label: '身体年龄',
+      unit: '岁',
+      icon: <User className="w-4 h-4" />
     },
   };
 

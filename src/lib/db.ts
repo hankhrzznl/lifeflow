@@ -1706,8 +1706,8 @@ export async function deleteDailyHealthRecord(id: number): Promise<void> {
 // 获取指标的历史数据（用于趋势图表）
 export async function getMetricHistory(
   metric: 'weight' | 'sleepDuration' | 'sleepScore' | 'restingHeartRate' | 
-          'bloodPressureSystolic' | 'bloodPressureDiastolic' | 'stressLevel' | 
-          'trainingDuration' | 'caloriesBurned',
+          'bloodOxygen' | 'hrv' | 'vo2Max' | 'sunlightTime' | 'bodyAge' |
+          'stressLevel' | 'trainingDuration' | 'caloriesBurned',
   startDate: string,
   endDate: string
 ): Promise<Array<{ date: string; value: number }>> {

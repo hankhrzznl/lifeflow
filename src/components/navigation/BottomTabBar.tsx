@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Layers, Menu, X, Inbox, Calendar, List, Target,
+  Home, Layers, Menu, X, Inbox, Calendar, List, Target,
   Settings, BarChart3, Trash2, Puzzle, ChevronRight, Bell, Heart,
 } from "lucide-react";
 import { getPluginsForNavbar } from "@/lib/db";
@@ -58,6 +58,10 @@ export default function BottomTabBar() {
   const closePanel = () => setOpenPanel(null);
 
   const baseTabs = [
+    {
+      id: "home", label: "主页", icon: Home, path: "/",
+      active: pathname === "/",
+    },
     {
       id: "plan", label: "规划", icon: Layers, path: null,
       active: pathname.startsWith("/capture") || pathname.startsWith("/today") || pathname.startsWith("/pending") || pathname.startsWith("/projects") || pathname.startsWith("/goals"),

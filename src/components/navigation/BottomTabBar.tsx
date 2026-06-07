@@ -5,19 +5,12 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Home, Layers, Menu, X, Calendar, List, Target,
+  Home, Layers, Menu, X,
   Settings, BarChart3, Trash2, Puzzle, ChevronRight, Bell, Heart,
 } from "lucide-react";
 import { getPluginsForNavbar } from "@/lib/db";
 import { getPluginConfig } from "@/lib/plugin-config";
 import type { PluginMetadata } from "@/lib/types";
-
-const planItems = [
-  { label: "今日", href: "/today", icon: Calendar },
-  { label: "安排", href: "/pending", icon: List },
-  { label: "项目", href: "/projects", icon: Layers },
-  { label: "目标", href: "/goals", icon: Target },
-];
 
 const moreItems = [
   { label: "健康", href: "/health", icon: Heart },
@@ -50,7 +43,7 @@ export default function BottomTabBar() {
     const interval = setInterval(loadPinnedPlugins, 3000);
     return () => clearInterval(interval);
   }, [loadPinnedPlugins]);
-  const [openPanel, setOpenPanel] = useState<"plan" | "more" | null>(null);
+  const [openPanel, setOpenPanel] = useState<"more" | null>(null);
 
   const isActive = useCallback((path: string) => pathname.startsWith(path), [pathname]);
 
@@ -62,8 +55,8 @@ export default function BottomTabBar() {
       active: pathname === "/",
     },
     {
-      id: "plan", label: "规划", icon: Layers, path: null,
-      active: pathname.startsWith("/capture") || pathname.startsWith("/today") || pathname.startsWith("/pending") || pathname.startsWith("/projects") || pathname.startsWith("/goals"),
+      id: "plan", label: "规划", icon: Layers, path: "/planner",
+      active: isActive("/planner"),
     },
     {
       id: "health", label: "健康", icon: Heart, path: "/health",
@@ -96,24 +89,6 @@ export default function BottomTabBar() {
           {tabs.map((tab) => {
             if (!tab) return null;
             const active = tab.active;
-            if (tab.id === "plan") {
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setOpenPanel("plan")}
-                  className={`flex flex-col items-center justify-center gap-0.5 min-w-[44px] min-h-[44px] transition-colors duration-150 ease-out ${
-                    active ? "text-blue-500" : "text-gray-400"
-                  }`}
-                >
-                  <tab.icon
-                    className={`w-6 h-6 ${
-                      active ? "fill-current stroke-[2.5]" : "stroke-[1.5]"
-                    }`}
-                  />
-                  <span className="text-[11px] font-medium">{tab.label}</span>
-                </button>
-              );
-            }
             if (tab.id === "more") {
               return (
                 <button
@@ -162,42 +137,6 @@ export default function BottomTabBar() {
         />
       )}
       <AnimatePresence>
-        {openPanel === "plan" && (
-          <motion.div
-            initial={{ y: "100%" }}
-            animate={{ y: 0 }}
-            exit={{ y: "100%" }}
-            transition={{ type: "spring", stiffness: 400, damping: 40 }}
-            className="fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-gray-900 rounded-t-2xl pb-[max(24px,env(safe-area-inset-bottom))]"
-          >
-            <div className="flex items-center justify-between px-4 pt-4 pb-2">
-              <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">
-                规划
-              </h2>
-              <button
-                onClick={closePanel}
-                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
-              >
-                <X className="w-5 h-5 text-gray-400" />
-              </button>
-            </div>
-
-            <div className="px-2 pb-2">
-              {planItems.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={closePanel}
-                  className="flex items-center gap-3 h-14 px-4 rounded-xl text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors active:scale-[0.98]"
-                >
-                  <item.icon className="w-5 h-5 text-gray-500 dark:text-gray-400" strokeWidth={1.5} />
-                  <span className="text-sm">{item.label}</span>
-                  <ChevronRight className="w-4 h-4 text-gray-300 dark:text-gray-600 ml-auto" />
-                </Link>
-              ))}
-            </div>
-          </motion.div>
-        )}
         {openPanel === "more" && (
           <motion.div
             initial={{ y: "100%" }}

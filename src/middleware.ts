@@ -7,7 +7,6 @@ export function middleware(request: NextRequest) {
   const redirects: Record<string, { destination: string; permanent: boolean }> = {
     '/planner': { destination: '/today', permanent: true },
     '/focus': { destination: '/today', permanent: true },
-    '/': { destination: '/today', permanent: false },
     '/goals/long-term': { destination: '/goals?tab=long-term', permanent: true },
     '/goals/short-term': { destination: '/goals?tab=short-term', permanent: true },
     '/goals/daily-trivial': { destination: '/goals?tab=daily-trivial', permanent: true },

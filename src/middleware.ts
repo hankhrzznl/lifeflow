@@ -5,7 +5,6 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   const redirects: Record<string, { destination: string; permanent: boolean }> = {
-    '/planner': { destination: '/today', permanent: true },
     '/focus': { destination: '/today', permanent: true },
     '/goals/long-term': { destination: '/goals?tab=long-term', permanent: true },
     '/goals/short-term': { destination: '/goals?tab=short-term', permanent: true },
@@ -24,5 +23,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/', '/planner', '/focus', '/goals/long-term', '/goals/short-term', '/goals/daily-trivial', '/goals/habits'],
+  matcher: ['/', '/focus', '/goals/long-term', '/goals/short-term', '/goals/daily-trivial', '/goals/habits'],
 };

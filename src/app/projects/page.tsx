@@ -301,14 +301,7 @@ export default function ProjectsPage() {
   );
 
   return (
-    <div className="flex flex-col h-full max-w-2xl mx-auto px-4 pt-6 pb-24">
-      <div className="flex items-center justify-between mb-5">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">项目</h1>
-        <button onClick={() => setShowNewProject(true)} className="w-9 h-9 flex items-center justify-center rounded-xl bg-blue-500 text-white hover:bg-blue-600 transition-colors" aria-label="新建项目">
-          <Plus className="w-5 h-5" />
-        </button>
-      </div>
-
+    <div className="flex flex-col h-full max-w-2xl mx-auto px-4 pb-24">
       {/* New project form */}
       <AnimatePresence>
         {showNewProject && (
@@ -328,6 +321,17 @@ export default function ProjectsPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* 新建项目入口 */}
+      {!showNewProject && projects.length > 0 && (
+        <button
+          onClick={() => setShowNewProject(true)}
+          className="w-full mb-3 flex items-center justify-center gap-1.5 py-3 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700 text-sm text-gray-500 hover:border-gray-300 hover:text-gray-600 transition-colors"
+        >
+          <Plus className="w-4 h-4" />
+          新建项目
+        </button>
+      )}
 
       {/* Project tree */}
       <div className="flex-1 overflow-y-auto space-y-2">

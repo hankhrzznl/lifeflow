@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo, useRef, Suspense } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   CalendarDays,
@@ -331,15 +331,9 @@ function DailyCard({
 }
 
 function GoalsContent() {
-  const searchParams = useSearchParams();
   const router = useRouter();
 
-  const tabParam = searchParams.get("tab");
-  const fromCapture = searchParams.get("fromCapture") === "1";
-  const currentView: "short-term" | "daily-trivial" =
-    tabParam === "short-term" || tabParam === "daily-trivial"
-      ? tabParam
-      : "short-term";
+  const [currentView, setCurrentView] = useState<"short-term" | "daily-trivial">("short-term");
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -368,15 +362,6 @@ function GoalsContent() {
     };
   }, []);
 
-  const fromCaptureHandled = useRef(false);
-  useEffect(() => {
-    if (fromCapture && !fromCaptureHandled.current) {
-      fromCaptureHandled.current = true;
-      showToast("已从捕捉箱导入", "success");
-      setShowAddForm(true);
-    }
-  }, [fromCapture, showToast]);
-
   const allShorttermDone =
     shorttermTasks.length > 0 &&
     shorttermTasks.every((t) => t.status === "done");
@@ -399,10 +384,10 @@ function GoalsContent() {
       const newIdx = TABS.findIndex((t) => t.key === view);
       tabDirection.current = newIdx > oldIdx ? 1 : -1;
       setTabAnimDir(newIdx > oldIdx ? 1 : -1);
-      router.push(`/goals?tab=${view}`, { scroll: false });
+      setCurrentView(view);
       setShowAddForm(false);
     },
-    [currentView, router]
+    [currentView]
   );
 
   const loadShortterm = useCallback(async () => {
@@ -785,31 +770,34 @@ function GoalsContent() {
   };
 
   return (
-    <div className="flex flex-col h-full max-h-screen max-w-4xl mx-auto">
-      <div className="flex-shrink-0 sticky top-0 z-30 bg-white/95 dark:bg-gray-900/95 backdrop-blur">
-        <div className="flex items-center justify-between px-4 pt-3 pb-2">
-          <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100">目标</h1>
-        </div>
+    <div className="flex flex-col h-full max-w-4xl mx-auto">
 
-        <div className="flex border-b border-gray-200 dark:border-gray-800">
-          {TABS.map(({ key, label, icon: Icon }) => {
-            const active = currentView === key;
-            return (
-              <button
-                key={key}
-                onClick={() => handleTabClick(key)}
-                className={`flex-1 flex items-center justify-center gap-1.5 h-12 text-sm font-medium transition-colors relative ${
-                  active
-                    ? "text-indigo-600 border-b-2 border-indigo-600"
-                    : "text-gray-500 border-b-2 border-transparent hover:text-gray-700 dark:hover:text-gray-300"
-                }`}
-              >
-                <Icon className="w-4 h-4" />
-                <span className="hidden sm:inline">{label}</span>
-              </button>
-            );
-          })}
-        </div>
+      {/* 子 Tab 栏 — 滑动指示器风格 */}
+      <div className="relative grid grid-cols-2 gap-1 bg-gray-100 rounded-xl p-1 mb-4 mx-4">
+        <motion.div
+          layoutId="goals-subtab-indicator"
+          className="absolute top-1 bottom-1 rounded-lg bg-white shadow-sm z-0"
+          style={{ width: `calc((100% - 8px) / 2)` }}
+          animate={{
+            left: `calc(${currentView === "short-term" ? 0 : 50}% + 4px)`,
+          }}
+          transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+        />
+        {TABS.map(({ key, label, icon: Icon }) => {
+          const active = currentView === key;
+          return (
+            <button
+              key={key}
+              onClick={() => handleTabClick(key)}
+              className={`relative z-10 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-sm font-medium transition-colors duration-200 ${
+                active ? "text-gray-900 font-semibold" : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              <Icon className="w-4 h-4" strokeWidth={2} />
+              <span>{label}</span>
+            </button>
+          );
+        })}
       </div>
 
       <div className="flex-1 overflow-y-auto">

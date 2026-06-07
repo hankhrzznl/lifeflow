@@ -3,11 +3,10 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ArrowLeft, Clock, ListTodo, ChevronRight,
+  Clock, ListTodo, ChevronRight,
   Calendar, Minus, Plus, Check, CheckCircle,
   Target, FolderKanban, Layers, GripVertical,
 } from "lucide-react";
-import Link from "next/link";
 import {
   initBuiltInPlugins, getActiveSchedulableTasks, getTimeSegments,
   updateTask, getAllProjectsV2, getBoardsByProject, getSectionsByBoard,
@@ -258,26 +257,48 @@ export default function PendingPage() {
   }
 
   return (
-    <div className="flex flex-col h-full max-w-2xl mx-auto px-4 pt-6 pb-24">
-      <div className="flex items-center gap-3 mb-4">
-        <Link href="/projects" className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
-          <ArrowLeft className="w-5 h-5 text-gray-500" />
-        </Link>
-        <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">安排事项</h1>
-      </div>
+    <div className="flex flex-col h-full max-w-2xl mx-auto px-4 pb-24">
 
-      <div className="flex border-b border-gray-200 dark:border-gray-800 mb-4">
-        <button onClick={() => { setTab("pending"); setExpandedTaskId(null); }}
-          className={`flex-1 py-2.5 text-sm font-medium border-b-2 transition-colors ${tab === "pending" ? "text-orange-600 border-orange-600" : "text-gray-500 border-transparent hover:text-gray-700"}`}>
-          待安排 ({pendingTasks.length})
+      {/* 子 Tab 栏 — 滑动指示器风格 */}
+      <div className="relative grid grid-cols-3 gap-1 bg-gray-100 rounded-xl p-1 mb-4">
+        <motion.div
+          layoutId="pending-subtab-indicator"
+          className="absolute top-1 bottom-1 rounded-lg bg-white shadow-sm z-0"
+          style={{ width: `calc((100% - 8px) / 3)` }}
+          animate={{
+            left: `calc(${{ pending: 0, process: 33.333, scheduled: 66.666 }[tab]}% + 4px)`,
+          }}
+          transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+        />
+        <button
+          onClick={() => { setTab("pending"); setExpandedTaskId(null); }}
+          className={`relative z-10 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-sm font-medium transition-colors duration-200 ${
+            tab === "pending" ? "text-gray-900 font-semibold" : "text-gray-500 hover:text-gray-700"
+          }`}
+        >
+          待安排
+          <span className={`text-xs px-1.5 py-0.5 rounded-full min-w-[20px] text-center ${tab === "pending" ? "bg-blue-100 text-blue-700" : "bg-gray-200 text-gray-600"}`}>
+            {pendingTasks.length}
+          </span>
         </button>
-        <button onClick={() => { setTab("process"); if (!expandedTaskId && pendingTasks.length > 0) selectTask(pendingTasks[0]); }}
-          className={`flex-1 py-2.5 text-sm font-medium border-b-2 transition-colors ${tab === "process" ? "text-indigo-600 border-indigo-600" : "text-gray-500 border-transparent hover:text-gray-700"}`}>
+        <button
+          onClick={() => { setTab("process"); if (!expandedTaskId && pendingTasks.length > 0) selectTask(pendingTasks[0]); }}
+          className={`relative z-10 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-sm font-medium transition-colors duration-200 ${
+            tab === "process" ? "text-gray-900 font-semibold" : "text-gray-500 hover:text-gray-700"
+          }`}
+        >
           处理中
         </button>
-        <button onClick={() => { setTab("scheduled"); setExpandedTaskId(null); }}
-          className={`flex-1 py-2.5 text-sm font-medium border-b-2 transition-colors ${tab === "scheduled" ? "text-emerald-600 border-emerald-600" : "text-gray-500 border-transparent hover:text-gray-700"}`}>
-          已安排 ({scheduledTasks.length})
+        <button
+          onClick={() => { setTab("scheduled"); setExpandedTaskId(null); }}
+          className={`relative z-10 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-sm font-medium transition-colors duration-200 ${
+            tab === "scheduled" ? "text-gray-900 font-semibold" : "text-gray-500 hover:text-gray-700"
+          }`}
+        >
+          已安排
+          <span className={`text-xs px-1.5 py-0.5 rounded-full min-w-[20px] text-center ${tab === "scheduled" ? "bg-blue-100 text-blue-700" : "bg-gray-200 text-gray-600"}`}>
+            {scheduledTasks.length}
+          </span>
         </button>
       </div>
 

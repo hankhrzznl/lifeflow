@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Home, Layers, Menu, X, Inbox, Calendar, List, Target,
+  Home, Layers, Menu, X, Calendar, List, Target,
   Settings, BarChart3, Trash2, Puzzle, ChevronRight, Bell, Heart,
 } from "lucide-react";
 import { getPluginsForNavbar } from "@/lib/db";
@@ -13,7 +13,6 @@ import { getPluginConfig } from "@/lib/plugin-config";
 import type { PluginMetadata } from "@/lib/types";
 
 const planItems = [
-  { label: "捕捉", href: "/capture", icon: Inbox },
   { label: "今日", href: "/today", icon: Calendar },
   { label: "安排", href: "/pending", icon: List },
   { label: "项目", href: "/projects", icon: Layers },

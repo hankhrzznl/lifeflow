@@ -12,7 +12,7 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string; strokeW
   Target, Sprout, Repeat,
 };
 
-export default function HealthHubPage() {
+export default function LearningHubPage() {
   const router = useRouter();
   const [submodules, setSubmodules] = useState<Submodule[]>([]);
   const [loading, setLoading] = useState(true);
@@ -20,7 +20,7 @@ export default function HealthHubPage() {
   useEffect(() => {
     const load = async () => {
       await initializeSubmodules();
-      const list = await getSubmodulesByParent("health");
+      const list = await getSubmodulesByParent("learning");
       setSubmodules(list);
       setLoading(false);
     };
@@ -45,13 +45,13 @@ export default function HealthHubPage() {
           >
             ← 返回主页
           </button>
-          <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-slate-900">健康</h1>
-          <p className="text-slate-400 mt-1">睡眠 · 体态 · 运动</p>
+          <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-slate-900">学习</h1>
+          <p className="text-slate-400 mt-1">毕业 · 考公</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
           {submodules.map((s, index) => {
-            const Icon = ICON_MAP[s.icon] || Moon;
+            const Icon = ICON_MAP[s.icon] || GraduationCap;
             return (
               <motion.button
                 key={s.id}

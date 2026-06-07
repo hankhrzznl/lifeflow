@@ -2,13 +2,15 @@
 
 import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Key, Download, Upload, Trash2, Eye, EyeOff, AlertTriangle } from "lucide-react";
+import { Key, Download, Upload, Trash2, Eye, EyeOff, AlertTriangle, LayoutGrid } from "lucide-react";
 import { exportAllData, importAllData } from "@/lib/db";
+import { useRouter } from "next/navigation";
 import { showToast } from "@/components/ui/Toast";
 
 const API_KEY_STORAGE_KEY = "lifeflow_api_key";
 
 export default function SettingsPage() {
+  const router = useRouter();
   const [apiKey, setApiKey] = useState(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem(API_KEY_STORAGE_KEY) || "";
@@ -185,6 +187,28 @@ export default function SettingsPage() {
               </motion.button>
             )}
           </div>
+        </div>
+
+        <div className="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-100 dark:border-gray-800">
+          <div className="flex items-start gap-3 mb-4">
+            <div className="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center flex-shrink-0">
+              <LayoutGrid className="w-5 h-5 text-purple-500" />
+            </div>
+            <div>
+              <h3 className="text-base font-semibold text-gray-900 dark:text-white">模块管理</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                管理主页子模块，增删查改学习、健康、成长下的功能卡片
+              </p>
+            </div>
+          </div>
+
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onClick={() => router.push("/settings/modules")}
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-purple-500 text-white text-sm font-medium hover:bg-purple-600 transition-colors"
+          >
+            进入管理
+          </motion.button>
         </div>
 
         <div className="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-100 dark:border-gray-800">

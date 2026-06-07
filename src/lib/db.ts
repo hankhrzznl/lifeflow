@@ -38,6 +38,7 @@ import type {
   EnduranceRecord,
   DailyHealthRecord,
   CustomTrainingPlan,
+  Submodule,
 } from "./types";
 
 export class LifeFlowDB extends Dexie {
@@ -79,6 +80,7 @@ export class LifeFlowDB extends Dexie {
   enduranceRecords!: Table<EnduranceRecord, number>;
   dailyHealthRecords!: Table<DailyHealthRecord, number>;
   customTrainingPlans!: Table<CustomTrainingPlan, number>;
+  submodules!: Table<Submodule, number>;
 
   constructor() {
     super("LifeFlowDB");
@@ -282,6 +284,22 @@ export class LifeFlowDB extends Dexie {
     }).upgrade(async () => {
       if (typeof window !== "undefined" && window.location.hostname === "localhost") {
         console.log("[LifeFlowDB v19] Added new health metrics fields");
+      }
+    });
+
+    this.version(20).stores({
+      submodules: "++id, parentKey, enabled, order, createdAt",
+    }).upgrade(async (tx) => {
+      const count = await tx.table("submodules").count();
+      if (count === 0) {
+        const { PRESET_SUBMODULES } = await import("./types");
+        const now = Date.now();
+        await tx.table("submodules").bulkAdd(
+          PRESET_SUBMODULES.map((s) => ({ ...s, createdAt: now, updatedAt: now }))
+        );
+      }
+      if (typeof window !== "undefined" && window.location.hostname === "localhost") {
+        console.log("[LifeFlowDB v20] Added submodules table with presets");
       }
     });
   }
@@ -1015,6 +1033,7 @@ export async function exportAllData(): Promise<string> {
     "nutritionRecords",
     "recoveryRecords",
     "enduranceRecords",
+    "submodules",
   ];
 
   const data: Record<string, unknown[]> = {};
@@ -1060,6 +1079,7 @@ export async function importAllData(data: string): Promise<void> {
     "nutritionRecords",
     "recoveryRecords",
     "enduranceRecords",
+    "submodules",
   ];
 
   await db.transaction("rw", tables.map(t => (db as any)[t]), async () => {
@@ -1722,4 +1742,49 @@ export async function getMetricHistory(
       value: record[metric] as number
     }))
     .filter(item => item.value !== undefined && item.value !== null);
+}
+
+// ==================== 子模块 CRUD ====================
+
+export async function initializeSubmodules(): Promise<void> {
+  const count = await db.submodules.count();
+  if (count > 0) return;
+
+  const { PRESET_SUBMODULES } = await import("./types");
+  const now = Date.now();
+  await db.submodules.bulkAdd(
+    PRESET_SUBMODULES.map((s) => ({ ...s, createdAt: now, updatedAt: now }))
+  );
+}
+
+export async function getSubmodulesByParent(parentKey: string): Promise<Submodule[]> {
+  return db.submodules
+    .where("parentKey")
+    .equals(parentKey)
+    .filter((s) => s.enabled === true)
+    .sortBy("order");
+}
+
+export async function getAllSubmodules(): Promise<Submodule[]> {
+  return db.submodules.orderBy("order").toArray();
+}
+
+export async function addSubmodule(s: Omit<Submodule, "id" | "createdAt" | "updatedAt">): Promise<number> {
+  const now = Date.now();
+  return db.submodules.add({ ...s, createdAt: now, updatedAt: now });
+}
+
+export async function updateSubmodule(id: number, updates: Partial<Submodule>): Promise<void> {
+  await db.submodules.update(id, { ...updates, updatedAt: Date.now() });
+}
+
+export async function deleteSubmodule(id: number): Promise<void> {
+  await db.submodules.delete(id);
+}
+
+export async function toggleSubmodule(id: number): Promise<void> {
+  const s = await db.submodules.get(id);
+  if (s) {
+    await db.submodules.update(id, { enabled: !s.enabled, updatedAt: Date.now() });
+  }
 }

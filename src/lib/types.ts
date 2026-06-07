@@ -836,3 +836,62 @@ export const RPE_LABELS: Record<number, string> = {
 
 // 休息时间预设
 export const REST_TIME_PRESETS = [30, 60, 90, 120, 180];
+
+// ==================== 子模块管理系统 ====================
+
+export type ParentModuleKey = 'learning' | 'health' | 'growth';
+
+export interface Submodule {
+  id?: number;
+  parentKey: ParentModuleKey;
+  name: string;
+  description: string;
+  icon: string;
+  from: string;
+  via: string;
+  to: string;
+  href: string;
+  enabled: boolean;
+  order: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export const PRESET_SUBMODULES: Omit<Submodule, 'id' | 'createdAt' | 'updatedAt'>[] = [
+  // 学习
+  { parentKey: 'learning', name: '毕业', description: '毕业设计 · 论文进度', icon: 'GraduationCap', from: 'from-indigo-400', via: 'via-violet-400', to: 'to-purple-500', href: '/graduation', enabled: true, order: 1 },
+  { parentKey: 'learning', name: '考公', description: '行测 · 申论 · 面试', icon: 'BookOpen', from: 'from-blue-400', via: 'via-indigo-400', to: 'to-violet-500', href: '/exam', enabled: true, order: 2 },
+  // 健康
+  { parentKey: 'health', name: '睡眠', description: '睡眠记录 · 分析与优化', icon: 'Moon', from: 'from-emerald-400', via: 'via-teal-400', to: 'to-cyan-500', href: '/sleep', enabled: true, order: 1 },
+  { parentKey: 'health', name: '体态', description: '体态评估 · 矫正训练', icon: 'Sparkles', from: 'from-teal-400', via: 'via-green-400', to: 'to-emerald-500', href: '/posture', enabled: true, order: 2 },
+  { parentKey: 'health', name: '运动', description: '训练计划 · 动作记录', icon: 'Dumbbell', from: 'from-cyan-400', via: 'via-sky-400', to: 'to-blue-500', href: '/exercise', enabled: true, order: 3 },
+  // 成长
+  { parentKey: 'growth', name: '规划', description: '目标设定 · 项目分解', icon: 'Target', from: 'from-rose-400', via: 'via-pink-400', to: 'to-fuchsia-500', href: '/planning', enabled: true, order: 1 },
+  { parentKey: 'growth', name: '成长', description: '个人成长 · 技能提升', icon: 'Sprout', from: 'from-pink-400', via: 'via-rose-400', to: 'to-orange-400', href: '/goals', enabled: true, order: 2 },
+  { parentKey: 'growth', name: '习惯', description: '习惯打卡 · 坚持追踪', icon: 'Repeat', from: 'from-fuchsia-400', via: 'via-purple-400', to: 'to-violet-500', href: '/habits', enabled: true, order: 3 },
+];
+
+export const PARENT_MODULE_LABELS: Record<ParentModuleKey, string> = {
+  learning: '学习',
+  health: '健康',
+  growth: '成长',
+};
+
+export const AVAILABLE_ICONS = [
+  'GraduationCap', 'BookOpen', 'Moon', 'Sparkles', 'Dumbbell',
+  'Target', 'Sprout', 'Repeat', 'Heart', 'Brain', 'Zap',
+  'Timer', 'BarChart3', 'Settings', 'Calendar', 'List', 'Layers',
+  'Inbox', 'Bell', 'Star', 'Trophy', 'TrendingUp', 'Music',
+  'Coffee', 'PenTool', 'Camera', 'Map', 'Globe', 'Cloud',
+] as const;
+
+export const ICON_GRADIENTS: { label: string; from: string; via: string; to: string }[] = [
+  { label: '蓝紫', from: 'from-indigo-400', via: 'via-violet-400', to: 'to-purple-500' },
+  { label: '青蓝', from: 'from-sky-400', via: 'via-cyan-400', to: 'to-blue-500' },
+  { label: '翠绿', from: 'from-emerald-400', via: 'via-teal-400', to: 'to-cyan-500' },
+  { label: '粉紫', from: 'from-rose-400', via: 'via-pink-400', to: 'to-fuchsia-500' },
+  { label: '橙红', from: 'from-orange-400', via: 'via-red-400', to: 'to-rose-500' },
+  { label: '黄橙', from: 'from-yellow-400', via: 'via-amber-400', to: 'to-orange-500' },
+  { label: '绿松', from: 'from-teal-400', via: 'via-green-400', to: 'to-emerald-500' },
+  { label: '紫粉', from: 'from-violet-400', via: 'via-purple-400', to: 'to-pink-500' },
+];

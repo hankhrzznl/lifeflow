@@ -109,6 +109,7 @@ export interface Task {
   focusSessions?: number[];
   tags?: string[];
   priority?: 'urgent-important' | 'not-urgent-important' | 'urgent-not-important' | 'not-urgent-not-important';
+  isFocus?: boolean;
   createdAt: number;
   updatedAt: number;
   order?: number;

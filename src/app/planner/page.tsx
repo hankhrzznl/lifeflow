@@ -43,15 +43,13 @@ import {
   getTodayRange,
 } from "@/lib/planner-utils";
 
-const TodayPage = lazy(() => import("@/app/today/page").then(mod => ({ default: mod.default })));
 const PendingPage = lazy(() => import("@/app/pending/page").then(mod => ({ default: mod.default })));
 const ProjectsPage = lazy(() => import("@/app/projects/page").then(mod => ({ default: mod.default })));
 const GoalsPage = lazy(() => import("@/app/goals/page").then(mod => ({ default: mod.default })));
 
-type PlannerTab = "today" | "pending" | "goals" | "projects";
+type PlannerTab = "pending" | "goals" | "projects";
 
-const PLANNER_TABS: { key: PlannerTab; label: string; icon: typeof Calendar }[] = [
-  { key: "today", label: "今日", icon: Calendar },
+const PLANNER_TABS: { key: PlannerTab; label: string; icon: typeof List }[] = [
   { key: "pending", label: "安排", icon: List },
   { key: "goals", label: "目标", icon: Target },
   { key: "projects", label: "项目", icon: Layers },
@@ -591,7 +589,7 @@ function MobileOverview({
 }
 
 export default function PlannerPage() {
-  const [activeTab, setActiveTab] = useState<PlannerTab>("today");
+  const [activeTab, setActiveTab] = useState<PlannerTab>("pending");
   const [events, setEvents] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentTimePos, setCurrentTimePos] = useState(getCurrentTimePosition());
@@ -1270,7 +1268,6 @@ export default function PlannerPage() {
             <div className="w-8 h-8 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
           </div>
         }>
-          {activeTab === "today" && <TodayPage />}
           {activeTab === "pending" && <PendingPage />}
           {activeTab === "goals" && <GoalsPage />}
           {activeTab === "projects" && <ProjectsPage />}

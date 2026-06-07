@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Home, Layers, Menu, X,
+  Home, Layers, Menu, X, LayoutGrid,
   Settings, BarChart3, Trash2, Puzzle, ChevronRight, Bell, Heart,
 } from "lucide-react";
 import { getPluginsForNavbar } from "@/lib/db";
@@ -16,7 +16,6 @@ const moreItems = [
   { label: "健康", href: "/health", icon: Heart },
   { label: "提醒", href: "/reminders", icon: Bell },
   { label: "设置", href: "/settings", icon: Settings },
-  { label: "回顾", href: "/review", icon: BarChart3 },
   { label: "回收站", href: "/trash", icon: Trash2 },
   { label: "插件", href: "/plugins", icon: Puzzle },
 ];
@@ -59,8 +58,16 @@ export default function BottomTabBar() {
       active: isActive("/planner"),
     },
     {
+      id: "review", label: "回顾", icon: BarChart3, path: "/review",
+      active: isActive("/review"),
+    },
+    {
+      id: "overview", label: "总览", icon: LayoutGrid, path: "/overview",
+      active: isActive("/overview"),
+    },
+    {
       id: "more", label: "更多", icon: Menu, path: null,
-      active: pathname.startsWith("/settings") || pathname.startsWith("/review") || pathname.startsWith("/trash") || pathname.startsWith("/reminders") || pathname.startsWith("/plugins"),
+      active: pathname.startsWith("/settings") || pathname.startsWith("/trash") || pathname.startsWith("/reminders") || pathname.startsWith("/plugins"),
     },
   ];
 

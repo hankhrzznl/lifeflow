@@ -1241,7 +1241,7 @@ export default function PlannerPage() {
         </div>
 
         {/* Tab 栏 */}
-        <div className="flex gap-1 mb-6 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
+        <div className="sticky top-0 z-40 flex gap-1 mb-6 bg-gray-50/95 dark:bg-gray-950/95 backdrop-blur p-1 rounded-xl">
           {PLANNER_TABS.map((tab) => {
             const active = activeTab === tab.key;
             return (

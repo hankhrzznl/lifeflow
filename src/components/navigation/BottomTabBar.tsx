@@ -59,10 +59,6 @@ export default function BottomTabBar() {
       active: isActive("/planner"),
     },
     {
-      id: "health", label: "健康", icon: Heart, path: "/health",
-      active: isActive("/health"),
-    },
-    {
       id: "more", label: "更多", icon: Menu, path: null,
       active: pathname.startsWith("/settings") || pathname.startsWith("/review") || pathname.startsWith("/trash") || pathname.startsWith("/reminders") || pathname.startsWith("/plugins"),
     },

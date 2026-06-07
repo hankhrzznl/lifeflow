@@ -1231,34 +1231,40 @@ export default function PlannerPage() {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      <div className="mx-auto max-w-5xl px-5 pt-6 pb-24 md:px-8 md:pt-10">
-        <div className="mb-6">
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white">规划</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            管理今日任务、安排待办、追踪目标与项目
-          </p>
-        </div>
+    <div className="h-screen bg-gray-50 dark:bg-gray-950 flex flex-col">
+      {/* 头部固定区 */}
+      <div className="flex-shrink-0 border-b border-gray-200 dark:border-gray-800">
+        <div className="mx-auto max-w-5xl px-5 pt-6 md:px-8 md:pt-10">
+          <div className="mb-4">
+            <h1 className="text-xl font-bold text-gray-900 dark:text-white">规划</h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              管理今日任务、安排待办、追踪目标与项目
+            </p>
+          </div>
 
-        {/* Tab 栏 */}
-        <div className="sticky top-0 z-40 flex gap-1 mb-6 bg-gray-50/95 dark:bg-gray-950/95 backdrop-blur p-1 rounded-xl">
-          {PLANNER_TABS.map((tab) => {
-            const active = activeTab === tab.key;
-            return (
-              <button
-                key={tab.key}
-                onClick={() => setActiveTab(tab.key)}
-                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  active ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm" : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
-                }`}
-              >
-                <tab.icon className="w-4 h-4" strokeWidth={1.5} />
-                {tab.label}
-              </button>
-            );
-          })}
+          {/* Tab 栏 */}
+          <div className="flex gap-1 mb-4 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
+            {PLANNER_TABS.map((tab) => {
+              const active = activeTab === tab.key;
+              return (
+                <button
+                  key={tab.key}
+                  onClick={() => setActiveTab(tab.key)}
+                  className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    active ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm" : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                  }`}
+                >
+                  <tab.icon className="w-4 h-4" strokeWidth={1.5} />
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
+      </div>
 
+      {/* 内容滚动区 */}
+      <div className="flex-1 overflow-y-auto mx-auto max-w-5xl w-full px-5 pb-24 md:px-8">
         <Suspense fallback={
           <div className="flex items-center justify-center py-20">
             <div className="w-8 h-8 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />

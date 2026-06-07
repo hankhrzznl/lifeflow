@@ -25,9 +25,9 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string; strokeW
 };
 
 const PARENT_COLORS: Record<ParentModuleKey, string> = {
-  learning: "text-indigo-500 bg-indigo-50 dark:bg-indigo-900/20",
-  health: "text-emerald-500 bg-emerald-50 dark:bg-emerald-900/20",
-  growth: "text-rose-500 bg-rose-50 dark:bg-rose-900/20",
+  learning: "text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700",
+  health: "text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700",
+  growth: "text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700",
 };
 
 interface EditModalData {
@@ -257,8 +257,8 @@ export default function SettingsPage() {
         {/* === API Key === */}
         <div className="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-100 dark:border-gray-800">
           <div className="flex items-start gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center flex-shrink-0">
-              <Key className="w-5 h-5 text-amber-500" />
+            <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center flex-shrink-0">
+              <Key className="w-5 h-5 text-gray-700 dark:text-gray-300" />
             </div>
             <div>
               <h3 className="text-base font-semibold text-gray-900 dark:text-white">API Key</h3>
@@ -273,7 +273,7 @@ export default function SettingsPage() {
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
               placeholder="sk-..."
-              className="w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 pr-10 focus:outline-none focus:ring-2 focus:ring-amber-500/30"
+              className="w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 pr-10 focus:outline-none focus:ring-2 focus:ring-gray-900/20"
             />
             <button
               onClick={() => setShowApiKey(!showApiKey)}
@@ -285,7 +285,7 @@ export default function SettingsPage() {
           </div>
           <div className="flex gap-2">
             <motion.button whileTap={{ scale: 0.97 }} onClick={handleSaveApiKey}
-              className="flex-1 py-2.5 rounded-xl bg-amber-500 text-white text-sm font-medium hover:bg-amber-600 transition-colors">
+              className="flex-1 py-2.5 rounded-xl bg-gray-900 text-white text-sm font-medium hover:bg-gray-800 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100 transition-colors">
               保存
             </motion.button>
             {apiKey && (
@@ -301,8 +301,8 @@ export default function SettingsPage() {
         <div className="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-100 dark:border-gray-800">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center flex-shrink-0">
-                <LayoutGrid className="w-5 h-5 text-purple-500" />
+              <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center flex-shrink-0">
+                <LayoutGrid className="w-5 h-5 text-gray-700 dark:text-gray-300" />
               </div>
               <div>
                 <h3 className="text-base font-semibold text-gray-900 dark:text-white">模块管理</h3>
@@ -312,7 +312,7 @@ export default function SettingsPage() {
               </div>
             </div>
             <motion.button whileTap={{ scale: 0.95 }} onClick={openCreate}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-purple-500 text-white text-sm font-medium hover:bg-purple-600 transition-colors flex-shrink-0">
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gray-900 text-white text-sm font-medium hover:bg-gray-800 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100 transition-colors flex-shrink-0">
               <Plus className="w-4 h-4" />
               添加
             </motion.button>
@@ -349,7 +349,7 @@ export default function SettingsPage() {
                           </div>
                           <div className="flex items-center gap-0.5">
                             <button onClick={() => handleToggle(mod.id!)}
-                              className={`relative w-9 h-5 rounded-full transition-colors ${mod.enabled ? "bg-purple-500" : "bg-gray-300 dark:bg-gray-600"}`}>
+                              className={`relative w-9 h-5 rounded-full transition-colors ${mod.enabled ? "bg-gray-900 dark:bg-white" : "bg-gray-300 dark:bg-gray-600"}`}>
                               <motion.div className="absolute top-0.5 w-4 h-4 rounded-full bg-white shadow"
                                 animate={{ left: mod.enabled ? 16 : 1 }}
                                 transition={{ type: "spring", stiffness: 500, damping: 30 }} />
@@ -379,8 +379,8 @@ export default function SettingsPage() {
         {/* === 数据导出 === */}
         <div className="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-100 dark:border-gray-800">
           <div className="flex items-start gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center flex-shrink-0">
-              <Download className="w-5 h-5 text-emerald-500" />
+            <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center flex-shrink-0">
+              <Download className="w-5 h-5 text-gray-700 dark:text-gray-300" />
             </div>
             <div>
               <h3 className="text-base font-semibold text-gray-900 dark:text-white">数据导出</h3>
@@ -390,7 +390,7 @@ export default function SettingsPage() {
             </div>
           </div>
           <motion.button whileTap={{ scale: 0.97 }} onClick={handleExport} disabled={isExporting}
-            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-emerald-500 text-white text-sm font-medium hover:bg-emerald-600 transition-colors disabled:opacity-50">
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-gray-900 text-white text-sm font-medium hover:bg-gray-800 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100 transition-colors disabled:opacity-50">
             <Download className="w-4 h-4" />
             {isExporting ? "导出中..." : "导出全部数据"}
           </motion.button>
@@ -399,8 +399,8 @@ export default function SettingsPage() {
         {/* === 数据导入 === */}
         <div className="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-100 dark:border-gray-800">
           <div className="flex items-start gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
-              <Upload className="w-5 h-5 text-blue-500" />
+            <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center flex-shrink-0">
+              <Upload className="w-5 h-5 text-gray-700 dark:text-gray-300" />
             </div>
             <div>
               <h3 className="text-base font-semibold text-gray-900 dark:text-white">数据导入</h3>
@@ -411,7 +411,7 @@ export default function SettingsPage() {
           </div>
           <input ref={fileInputRef} type="file" accept=".json" onChange={handleFileSelect} className="hidden" />
           <motion.button whileTap={{ scale: 0.97 }} onClick={() => fileInputRef.current?.click()}
-            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-blue-500 text-white text-sm font-medium hover:bg-blue-600 transition-colors">
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-gray-900 text-white text-sm font-medium hover:bg-gray-800 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100 transition-colors">
             <Upload className="w-4 h-4" />
             选择备份文件并导入
           </motion.button>
@@ -440,8 +440,8 @@ export default function SettingsPage() {
         {/* === 版本信息 === */}
         <div className="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-100 dark:border-gray-800">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-indigo-500/20">
-              <span className="text-white text-lg font-bold">L</span>
+            <div className="w-12 h-12 rounded-2xl bg-gray-900 dark:bg-white flex items-center justify-center flex-shrink-0 shadow-lg shadow-gray-900/10">
+              <span className="text-white dark:text-gray-900 text-lg font-bold">L</span>
             </div>
             <div>
               <h3 className="text-base font-semibold text-gray-900 dark:text-white">LifeFlow v2.2</h3>
@@ -475,13 +475,13 @@ export default function SettingsPage() {
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">名称</label>
                   <input value={formData.name} onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))}
                     placeholder="例如：毕业"
-                    className="w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500/30" />
+                    className="w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900/20" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">描述</label>
                   <input value={formData.description} onChange={(e) => setFormData((p) => ({ ...p, description: e.target.value }))}
                     placeholder="简短的描述文字"
-                    className="w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500/30" />
+                    className="w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900/20" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">所属分类</label>
@@ -503,7 +503,7 @@ export default function SettingsPage() {
                       return (
                         <button key={name} onClick={() => setFormData((p) => ({ ...p, icon: name }))}
                           className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
-                            formData.icon === name ? "bg-purple-100 dark:bg-purple-900/30 text-purple-600 ring-2 ring-purple-400" : "bg-gray-50 dark:bg-gray-800 text-gray-400 hover:text-gray-600"}`}>
+                            formData.icon === name ? "bg-gray-100 dark:bg-gray-800 text-gray-700 ring-2 ring-gray-400" : "bg-gray-50 dark:bg-gray-800 text-gray-400 hover:text-gray-600"}`}>
                           <Icon className="w-5 h-5" strokeWidth={1.5} />
                         </button>
                       );
@@ -516,7 +516,7 @@ export default function SettingsPage() {
                     {ICON_GRADIENTS.map((g, i) => (
                       <button key={i} onClick={() => applyGradient(i)}
                         className={`w-10 h-10 rounded-2xl bg-gradient-to-br ${g.from} ${g.via} ${g.to} transition-transform ${
-                          selectedGradient === i ? "scale-110 ring-2 ring-offset-2 ring-purple-400" : ""}`} />
+                          selectedGradient === i ? "scale-110 ring-2 ring-offset-2 ring-gray-900 dark:ring-white" : ""}`} />
                     ))}
                   </div>
                 </div>
@@ -524,7 +524,7 @@ export default function SettingsPage() {
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">跳转路径</label>
                   <input value={formData.href} onChange={(e) => setFormData((p) => ({ ...p, href: e.target.value }))}
                     placeholder="/example"
-                    className="w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500/30" />
+                    className="w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900/20" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">预览</label>
@@ -543,7 +543,7 @@ export default function SettingsPage() {
                 <button onClick={() => setShowModal(false)}
                   className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">取消</button>
                 <motion.button whileTap={{ scale: 0.97 }} onClick={handleSave}
-                  className="flex-1 py-2.5 rounded-xl bg-purple-500 text-white text-sm font-medium hover:bg-purple-600 transition-colors">
+                  className="flex-1 py-2.5 rounded-xl bg-gray-900 text-white text-sm font-medium hover:bg-gray-800 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100 transition-colors">
                   {formData.id ? "保存" : "添加"}
                 </motion.button>
               </div>
@@ -591,8 +591,8 @@ export default function SettingsPage() {
               onClick={(e) => e.stopPropagation()}
               className="bg-white dark:bg-gray-900 rounded-3xl p-6 max-w-sm w-full shadow-xl">
               <div className="flex flex-col items-center text-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                  <Upload className="w-6 h-6 text-blue-500" />
+                <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                  <Upload className="w-6 h-6 text-gray-700 dark:text-gray-300" />
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white">确认导入数据</h3>
@@ -604,7 +604,7 @@ export default function SettingsPage() {
                   <button onClick={() => { setShowImportConfirm(false); setImportFile(null); }}
                     className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">取消</button>
                   <motion.button whileTap={{ scale: 0.97 }} onClick={handleImport} disabled={isImporting}
-                    className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium bg-blue-500 text-white hover:bg-blue-600 transition-colors disabled:opacity-50">
+                    className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium bg-gray-900 text-white hover:bg-gray-800 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100 transition-colors disabled:opacity-50">
                     {isImporting ? "导入中..." : "确认导入"}
                   </motion.button>
                 </div>

@@ -41,16 +41,22 @@ export default function TodayTimeline() {
     setLoading(true);
     setError(null);
     try {
+      // 检查 IndexedDB 是否可用
+      if (typeof indexedDB === "undefined") {
+        throw new Error("浏览器不支持 IndexedDB");
+      }
       const { start, end } = getTodayRange();
+      console.log("[TodayTimeline] Loading tasks for range:", new Date(start), new Date(end));
       const all = await db.tasks
         .where("startTime")
         .between(start, end)
         .toArray();
+      console.log("[TodayTimeline] Loaded tasks:", all.length);
       const active = all.filter((t) => t.status !== "archived");
       setTasks(active);
     } catch (err) {
       console.error("TodayTimeline loadTasks error:", err);
-      setError("加载时间线失败，请刷新页面重试");
+      setError(err instanceof Error ? err.message : "加载时间线失败，请刷新页面重试");
     } finally {
       setLoading(false);
     }

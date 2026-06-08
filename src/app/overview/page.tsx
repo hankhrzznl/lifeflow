@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, Component, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   GraduationCap,
@@ -21,7 +22,15 @@ import {
 import { db } from "@/lib/db";
 import type { Task } from "@/lib/types";
 
-import TodayTimeline from "@/components/TodayTimeline";
+const TodayTimeline = dynamic(() => import("@/components/TodayTimeline"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex flex-col items-center justify-center py-12">
+      <div className="w-6 h-6 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+      <span className="text-sm text-gray-400 mt-2">加载中...</span>
+    </div>
+  ),
+});
 
 // ==================== 工具函数 ====================
 
@@ -401,6 +410,44 @@ function FocusPicker({
   );
 }
 
+// ==================== 时间线错误边界 ====================
+
+class TimelineErrorBoundary extends Component<
+  { children: ReactNode },
+  { hasError: boolean; errorMsg: string }
+> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false, errorMsg: "" };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, errorMsg: error.message || "未知错误" };
+  }
+
+  componentDidCatch(error: Error) {
+    console.error("[TimelineErrorBoundary]", error);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="rounded-2xl bg-white border border-red-200 p-6 text-center">
+          <p className="text-sm text-red-500 mb-1">时间线加载异常</p>
+          <p className="text-xs text-gray-400">{this.state.errorMsg}</p>
+          <button
+            onClick={() => this.setState({ hasError: false, errorMsg: "" })}
+            className="mt-3 text-xs text-blue-500 underline"
+          >
+            点击重试
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 // ==================== 主页面 ====================
 
 export default function OverviewPage() {
@@ -461,7 +508,9 @@ export default function OverviewPage() {
 
         {/* 今日时间线 */}
         <div className="mb-8">
-          <TodayTimeline />
+          <TimelineErrorBoundary>
+            <TodayTimeline />
+          </TimelineErrorBoundary>
         </div>
 
         {/* 中心入口 */}

@@ -74,24 +74,26 @@ function CenterCard({
     <motion.button
       whileTap={{ scale: 0.97 }}
       onClick={() => router.push(center.href)}
-      className={`group relative overflow-hidden rounded-2xl bg-gradient-to-br ${center.from} ${center.via} ${center.to} p-3.5 text-left text-white shadow-lg shadow-slate-200/60 flex items-center gap-3`}
+      className={`group relative overflow-hidden rounded-2xl bg-gradient-to-br ${center.from} ${center.via} ${center.to} p-4 text-left text-white shadow-lg shadow-slate-200/60 flex flex-col h-full`}
     >
       {/* 微弱右上光晕 */}
       <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-bl from-white/10 to-transparent rounded-bl-full pointer-events-none" />
 
-      {/* 图标 */}
-      <div className="relative z-10 w-9 h-9 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center flex-shrink-0">
-        <center.icon className="w-4 h-4 text-white" strokeWidth={1.6} />
-      </div>
+      <div className="relative z-10 flex flex-col flex-1">
+        {/* 图标 */}
+        <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center mb-3">
+          <center.icon className="w-5 h-5 text-white" strokeWidth={1.6} />
+        </div>
 
-      {/* 标题 + 副标题 */}
-      <div className="relative z-10 min-w-0 flex-1">
-        <h3 className="text-sm font-bold leading-tight truncate">{center.title}</h3>
-        <p className="text-white/65 text-[10px] leading-tight mt-0.5 truncate">{center.subtitle}</p>
-      </div>
+        {/* 标题 + 副标题 */}
+        <div className="flex-1">
+          <h3 className="text-sm font-bold leading-tight">{center.title}</h3>
+          <p className="text-white/65 text-[10px] leading-tight mt-1">{center.subtitle}</p>
+        </div>
 
-      {/* 箭头 */}
-      <ArrowRight className="relative z-10 w-3.5 h-3.5 text-white/50 flex-shrink-0 group-hover:translate-x-0.5 transition-transform" />
+        {/* 箭头 */}
+        <ArrowRight className="w-4 h-4 text-white/50 group-hover:translate-x-0.5 transition-transform self-end" />
+      </div>
     </motion.button>
   );
 }
@@ -461,7 +463,7 @@ export default function OverviewPage() {
             中心入口
           </h2>
           {/* 桌面端：30% + 5%间隙 + 30% + 5%间隙 + 30% = 100% */}
-          <div className="hidden md:flex gap-[5%]">
+          <div className="hidden md:flex gap-[5%] items-stretch">
             {CENTERS.map((center, i) => (
               <motion.div
                 key={center.id}

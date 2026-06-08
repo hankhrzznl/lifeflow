@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback, Component, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   GraduationCap,
@@ -22,15 +21,7 @@ import {
 import { db } from "@/lib/db";
 import type { Task } from "@/lib/types";
 
-const TodayTimeline = dynamic(() => import("@/components/TodayTimeline"), {
-  ssr: false,
-  loading: () => (
-    <div className="flex flex-col items-center justify-center py-12">
-      <div className="w-6 h-6 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
-      <span className="text-sm text-gray-400 mt-2">加载中...</span>
-    </div>
-  ),
-});
+import TodayTimeline from "@/components/TodayTimeline";
 
 // ==================== 工具函数 ====================
 
@@ -454,6 +445,11 @@ export default function OverviewPage() {
   const [focus, setFocus] = useState<Task | null>(null);
   const [loadingFocus, setLoadingFocus] = useState(true);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const loadFocus = useCallback(async () => {
     try {
@@ -509,7 +505,14 @@ export default function OverviewPage() {
         {/* 今日时间线 */}
         <div className="mb-8">
           <TimelineErrorBoundary>
-            <TodayTimeline />
+            {mounted ? (
+              <TodayTimeline />
+            ) : (
+              <div className="flex flex-col items-center justify-center py-12">
+                <div className="w-6 h-6 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+                <span className="text-sm text-gray-400 mt-2">加载中...</span>
+              </div>
+            )}
           </TimelineErrorBoundary>
         </div>
 

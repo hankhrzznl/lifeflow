@@ -18,8 +18,8 @@ import {
   ListChecks,
   Focus,
 } from "lucide-react";
-import { db, getSubmodulesByParent, initializeSubmodules } from "@/lib/db";
-import type { Task, Submodule } from "@/lib/types";
+import { db } from "@/lib/db";
+import type { Task } from "@/lib/types";
 
 // ==================== 工具函数 ====================
 
@@ -65,59 +65,33 @@ const CENTERS = [
 
 function CenterCard({
   center,
-  submodules,
-  loading,
 }: {
   center: (typeof CENTERS)[0];
-  submodules: Submodule[];
-  loading: boolean;
 }) {
   const router = useRouter();
 
   return (
     <motion.button
-      whileTap={{ scale: 0.98 }}
+      whileTap={{ scale: 0.97 }}
       onClick={() => router.push(center.href)}
-      className={`group relative overflow-hidden rounded-2xl bg-gradient-to-br ${center.from} ${center.via} ${center.to} p-4 md:p-5 text-left text-white shadow-lg shadow-slate-200/60 flex flex-col`}
+      className={`group relative overflow-hidden rounded-2xl bg-gradient-to-br ${center.from} ${center.via} ${center.to} p-3.5 text-left text-white shadow-lg shadow-slate-200/60 flex items-center gap-3`}
     >
-      {/* 右上角装饰光晕 */}
-      <div className="absolute -top-12 -right-12 w-44 h-44 rounded-full bg-white/15 blur-2xl pointer-events-none" />
-      <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-white/20 to-transparent rounded-bl-full pointer-events-none" />
+      {/* 微弱右上光晕 */}
+      <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-bl from-white/10 to-transparent rounded-bl-full pointer-events-none" />
 
-      <div className="relative z-10 flex flex-col flex-1">
-        {/* 图标 */}
-        <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-white/25 backdrop-blur-sm flex items-center justify-center mb-3">
-          <center.icon className="w-4 h-4 md:w-5 md:h-5 text-white" strokeWidth={1.6} />
-        </div>
-
-        <h3 className="text-base md:text-lg font-bold mb-1">{center.title}</h3>
-        <p className="text-white/80 text-xs md:text-sm mb-3">{center.subtitle}</p>
-
-        {/* 子模块标签 */}
-        {!loading && submodules.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mb-3">
-            {submodules.slice(0, 3).map((sm) => (
-              <span
-                key={sm.id}
-                className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-white/20 backdrop-blur-sm text-white"
-              >
-                {sm.name}
-              </span>
-            ))}
-            {submodules.length > 3 && (
-              <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-white/20 backdrop-blur-sm text-white/80">
-                +{submodules.length - 3}
-              </span>
-            )}
-          </div>
-        )}
-
-        {/* 进入 */}
-        <div className="mt-auto flex items-center gap-1.5 text-sm font-medium text-white/90 group-hover:translate-x-1 transition-transform">
-          <span>进入</span>
-          <ArrowRight className="w-4 h-4" strokeWidth={2} />
-        </div>
+      {/* 图标 */}
+      <div className="relative z-10 w-9 h-9 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center flex-shrink-0">
+        <center.icon className="w-4 h-4 text-white" strokeWidth={1.6} />
       </div>
+
+      {/* 标题 + 副标题 */}
+      <div className="relative z-10 min-w-0 flex-1">
+        <h3 className="text-sm font-bold leading-tight truncate">{center.title}</h3>
+        <p className="text-white/65 text-[10px] leading-tight mt-0.5 truncate">{center.subtitle}</p>
+      </div>
+
+      {/* 箭头 */}
+      <ArrowRight className="relative z-10 w-3.5 h-3.5 text-white/50 flex-shrink-0 group-hover:translate-x-0.5 transition-transform" />
     </motion.button>
   );
 }
@@ -430,12 +404,6 @@ export default function OverviewPage() {
   const [loadingFocus, setLoadingFocus] = useState(true);
   const [pickerOpen, setPickerOpen] = useState(false);
 
-  // 子模块数据
-  const [learningSubs, setLearningSubs] = useState<Submodule[]>([]);
-  const [healthSubs, setHealthSubs] = useState<Submodule[]>([]);
-  const [growthSubs, setGrowthSubs] = useState<Submodule[]>([]);
-  const [subsLoading, setSubsLoading] = useState(true);
-
   const loadFocus = useCallback(async () => {
     try {
       const all = await db.tasks.toArray();
@@ -448,28 +416,9 @@ export default function OverviewPage() {
     }
   }, []);
 
-  const loadSubs = useCallback(async () => {
-    try {
-      await initializeSubmodules();
-      const [l, h, g] = await Promise.all([
-        getSubmodulesByParent("learning"),
-        getSubmodulesByParent("health"),
-        getSubmodulesByParent("growth"),
-      ]);
-      setLearningSubs(l);
-      setHealthSubs(h);
-      setGrowthSubs(g);
-    } catch (err) {
-      console.error("Failed to load submodules:", err);
-    } finally {
-      setSubsLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
     loadFocus();
-    loadSubs();
-  }, [loadFocus, loadSubs]);
+  }, [loadFocus]);
 
   const handleClearFocus = async () => {
     if (focus?.id) {
@@ -480,12 +429,6 @@ export default function OverviewPage() {
 
   const handleSelectFocus = (task: Task) => {
     setFocus(task);
-  };
-
-  const subMap: Record<string, Submodule[]> = {
-    learning: learningSubs,
-    health: healthSubs,
-    growth: growthSubs,
   };
 
   return (
@@ -517,20 +460,29 @@ export default function OverviewPage() {
           <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">
             中心入口
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-2">
+          {/* 桌面端：30% + 5%间隙 + 30% + 5%间隙 + 30% = 100% */}
+          <div className="hidden md:flex gap-[5%]">
             {CENTERS.map((center, i) => (
               <motion.div
                 key={center.id}
+                className="w-[30%]"
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.06, duration: 0.35 }}
               >
                 <CenterCard
                   center={center}
-                  submodules={subMap[center.id]}
-                  loading={subsLoading}
                 />
               </motion.div>
+            ))}
+          </div>
+          {/* 移动端：纵向堆叠 */}
+          <div className="flex flex-col gap-3 md:hidden">
+            {CENTERS.map((center) => (
+              <CenterCard
+                key={center.id}
+                center={center}
+              />
             ))}
           </div>
         </div>

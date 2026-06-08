@@ -33,11 +33,13 @@ function getTagColor(tag: string): string {
 export default function TodayTimeline() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [completedIds, setCompletedIds] = useState<Set<number>>(new Set());
   const [expandedId, setExpandedId] = useState<number | null>(null);
 
   const loadTasks = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       const { start, end } = getTodayRange();
       const all = await db.tasks
@@ -46,6 +48,9 @@ export default function TodayTimeline() {
         .toArray();
       const active = all.filter((t) => t.status !== "archived");
       setTasks(active);
+    } catch (err) {
+      console.error("TodayTimeline loadTasks error:", err);
+      setError("加载时间线失败，请刷新页面重试");
     } finally {
       setLoading(false);
     }
@@ -101,6 +106,23 @@ export default function TodayTimeline() {
       <div className="flex flex-col items-center justify-center py-12">
         <div className="w-6 h-6 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
         <span className="text-sm text-gray-400 mt-2">加载中...</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 bg-white rounded-2xl border border-red-100">
+        <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center mb-2">
+          <Clock className="w-5 h-5 text-red-400" />
+        </div>
+        <span className="text-sm text-red-500">{error}</span>
+        <button
+          onClick={() => loadTasks()}
+          className="mt-3 text-xs text-blue-500 hover:text-blue-600 underline"
+        >
+          点击重试
+        </button>
       </div>
     );
   }

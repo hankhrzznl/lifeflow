@@ -442,7 +442,7 @@ export default function OverviewPage() {
         <div className="mb-6">
           <h1 className="text-xl font-bold text-gray-900">总览</h1>
           <p className="text-sm text-gray-500 mt-1">
-            聚焦当前目标，快速进入各中心
+            聚焦目标 · 今日时间线 · 快速进入各中心
           </p>
         </div>
 
@@ -457,6 +457,11 @@ export default function OverviewPage() {
           ) : (
             <EmptyFocusCard onSetFocus={() => setPickerOpen(true)} />
           )}
+        </div>
+
+        {/* 今日时间线 */}
+        <div className="mb-8">
+          <TodayTimeline />
         </div>
 
         {/* 中心入口 */}
@@ -488,11 +493,6 @@ export default function OverviewPage() {
               />
             ))}
           </div>
-        </div>
-
-        {/* 今日时间线 */}
-        <div className="mt-6">
-          <TodayTimeline />
         </div>
       </div>
 

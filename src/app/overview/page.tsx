@@ -74,7 +74,7 @@ function CenterCard({
     <motion.button
       whileTap={{ scale: 0.97 }}
       onClick={() => router.push(center.href)}
-      className={`group relative overflow-hidden rounded-2xl bg-gradient-to-br ${center.from} ${center.via} ${center.to} p-4 text-left text-white shadow-lg shadow-slate-200/60 flex flex-col w-[420px] h-[300px]`}
+      className={`group relative overflow-hidden rounded-2xl bg-gradient-to-br ${center.from} ${center.via} ${center.to} p-4 text-left text-white shadow-lg shadow-slate-200/60 flex flex-col w-[400px] h-[220px]`}
     >
       {/* 微弱右上光晕 */}
       <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-bl from-white/10 to-transparent rounded-bl-full pointer-events-none" />

@@ -78,7 +78,7 @@ function CenterCard({
     <motion.button
       whileTap={{ scale: 0.98 }}
       onClick={() => router.push(center.href)}
-      className={`group relative overflow-hidden rounded-2xl bg-gradient-to-br ${center.from} ${center.via} ${center.to} p-5 md:p-6 text-left text-white shadow-lg shadow-slate-200/60 flex flex-col`}
+      className={`group relative overflow-hidden rounded-2xl bg-gradient-to-br ${center.from} ${center.via} ${center.to} p-4 md:p-5 text-left text-white shadow-lg shadow-slate-200/60 flex flex-col`}
     >
       {/* 右上角装饰光晕 */}
       <div className="absolute -top-12 -right-12 w-44 h-44 rounded-full bg-white/15 blur-2xl pointer-events-none" />
@@ -86,27 +86,27 @@ function CenterCard({
 
       <div className="relative z-10 flex flex-col flex-1">
         {/* 图标 */}
-        <div className="w-10 h-10 md:w-11 md:h-11 rounded-xl bg-white/25 backdrop-blur-sm flex items-center justify-center mb-4">
-          <center.icon className="w-5 h-5 text-white" strokeWidth={1.6} />
+        <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-white/25 backdrop-blur-sm flex items-center justify-center mb-3">
+          <center.icon className="w-4 h-4 md:w-5 md:h-5 text-white" strokeWidth={1.6} />
         </div>
 
-        <h3 className="text-lg md:text-xl font-bold mb-1">{center.title}</h3>
-        <p className="text-white/80 text-sm mb-3">{center.subtitle}</p>
+        <h3 className="text-base md:text-lg font-bold mb-1">{center.title}</h3>
+        <p className="text-white/80 text-xs md:text-sm mb-3">{center.subtitle}</p>
 
         {/* 子模块标签 */}
         {!loading && submodules.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mb-3">
-            {submodules.slice(0, 4).map((sm) => (
+            {submodules.slice(0, 3).map((sm) => (
               <span
                 key={sm.id}
-                className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-white/20 backdrop-blur-sm text-white"
+                className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-white/20 backdrop-blur-sm text-white"
               >
                 {sm.name}
               </span>
             ))}
-            {submodules.length > 4 && (
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-white/20 backdrop-blur-sm text-white/80">
-                +{submodules.length - 4}
+            {submodules.length > 3 && (
+              <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-white/20 backdrop-blur-sm text-white/80">
+                +{submodules.length - 3}
               </span>
             )}
           </div>
@@ -517,7 +517,7 @@ export default function OverviewPage() {
           <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">
             中心入口
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-2">
             {CENTERS.map((center, i) => (
               <motion.div
                 key={center.id}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, Component, type ReactNode } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -20,8 +20,6 @@ import {
 } from "lucide-react";
 import { db } from "@/lib/db";
 import type { Task } from "@/lib/types";
-
-import TodayTimeline from "@/components/TodayTimeline";
 
 // ==================== 工具函数 ====================
 
@@ -401,55 +399,12 @@ function FocusPicker({
   );
 }
 
-// ==================== 时间线错误边界 ====================
-
-class TimelineErrorBoundary extends Component<
-  { children: ReactNode },
-  { hasError: boolean; errorMsg: string }
-> {
-  constructor(props: { children: ReactNode }) {
-    super(props);
-    this.state = { hasError: false, errorMsg: "" };
-  }
-
-  static getDerivedStateFromError(error: Error) {
-    return { hasError: true, errorMsg: error.message || "未知错误" };
-  }
-
-  componentDidCatch(error: Error) {
-    console.error("[TimelineErrorBoundary]", error);
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div className="rounded-2xl bg-white border border-red-200 p-6 text-center">
-          <p className="text-sm text-red-500 mb-1">时间线加载异常</p>
-          <p className="text-xs text-gray-400">{this.state.errorMsg}</p>
-          <button
-            onClick={() => this.setState({ hasError: false, errorMsg: "" })}
-            className="mt-3 text-xs text-blue-500 underline"
-          >
-            点击重试
-          </button>
-        </div>
-      );
-    }
-    return this.props.children;
-  }
-}
-
 // ==================== 主页面 ====================
 
 export default function OverviewPage() {
   const [focus, setFocus] = useState<Task | null>(null);
   const [loadingFocus, setLoadingFocus] = useState(true);
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   const loadFocus = useCallback(async () => {
     try {
@@ -485,7 +440,7 @@ export default function OverviewPage() {
         <div className="mb-6">
           <h1 className="text-xl font-bold text-gray-900">总览</h1>
           <p className="text-sm text-gray-500 mt-1">
-            聚焦目标 · 今日时间线 · 快速进入各中心
+            聚焦当前目标，快速进入各中心
           </p>
         </div>
 
@@ -500,20 +455,6 @@ export default function OverviewPage() {
           ) : (
             <EmptyFocusCard onSetFocus={() => setPickerOpen(true)} />
           )}
-        </div>
-
-        {/* 今日时间线 */}
-        <div className="mb-8">
-          <TimelineErrorBoundary>
-            {mounted ? (
-              <TodayTimeline />
-            ) : (
-              <div className="flex flex-col items-center justify-center py-12">
-                <div className="w-6 h-6 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
-                <span className="text-sm text-gray-400 mt-2">加载中...</span>
-              </div>
-            )}
-          </TimelineErrorBoundary>
         </div>
 
         {/* 中心入口 */}

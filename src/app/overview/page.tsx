@@ -74,7 +74,7 @@ function CenterCard({
     <motion.button
       whileTap={{ scale: 0.97 }}
       onClick={() => router.push(center.href)}
-      className={`group relative overflow-hidden rounded-2xl bg-gradient-to-br ${center.from} ${center.via} ${center.to} p-4 text-left text-white shadow-lg shadow-slate-200/60 flex flex-col w-[400px] h-[220px]`}
+      className={`group relative overflow-hidden rounded-2xl bg-gradient-to-br ${center.from} ${center.via} ${center.to} p-4 text-left text-white shadow-lg shadow-slate-200/60 flex flex-col h-full`}
     >
       {/* 微弱右上光晕 */}
       <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-bl from-white/10 to-transparent rounded-bl-full pointer-events-none" />
@@ -463,10 +463,11 @@ export default function OverviewPage() {
             中心入口
           </h2>
           {/* 桌面端 */}
-          <div className="hidden md:flex gap-4">
+          <div className="hidden md:flex gap-[5%] items-stretch">
             {CENTERS.map((center, i) => (
               <motion.div
                 key={center.id}
+                className="w-[30%]"
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.06, duration: 0.35 }}

@@ -5,6 +5,6 @@ import { useRouter } from "next/navigation";
 
 export default function HealthHubPage() {
   const router = useRouter();
-  useEffect(() => { router.replace("/overview"); }, [router]);
+  useEffect(() => { router.replace("/"); }, [router]);
   return null;
 }

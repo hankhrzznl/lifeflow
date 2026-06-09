@@ -6,14 +6,13 @@ import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Home, Layers, Menu, X,
-  Settings, BarChart3, Trash2, Puzzle, ChevronRight, Bell, Heart,
+  Settings, BarChart3, Trash2, Puzzle, ChevronRight, Bell,
 } from "lucide-react";
 import { getPluginsForNavbar } from "@/lib/db";
 import { getPluginConfig } from "@/lib/plugin-config";
 import type { PluginMetadata } from "@/lib/types";
 
 const moreItems = [
-  { label: "健康", href: "/health", icon: Heart },
   { label: "提醒", href: "/reminders", icon: Bell },
   { label: "设置", href: "/settings", icon: Settings },
   { label: "回收站", href: "/trash", icon: Trash2 },

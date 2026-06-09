@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Home, Layers, Menu, X, LayoutGrid,
+  Home, Layers, Menu, X,
   Settings, BarChart3, Trash2, Puzzle, ChevronRight, Bell, Heart,
 } from "lucide-react";
 import { getPluginsForNavbar } from "@/lib/db";
@@ -114,10 +114,6 @@ export default function BottomTabBar() {
     {
       id: "review", label: "回顾", icon: BarChart3, path: "/review",
       active: isActive("/review"),
-    },
-    {
-      id: "overview", label: "总览", icon: LayoutGrid, path: "/overview",
-      active: isActive("/overview"),
     },
     {
       id: "more", label: "更多", icon: Menu, path: null,

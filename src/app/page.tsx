@@ -1,17 +1,17 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  LayoutGrid, Zap, Timer, BarChart3, Settings,
-  ArrowRight, FolderKanban, ChevronRight,
+  LayoutGrid, ArrowRight, FolderKanban, ChevronRight,
   CheckCircle, Circle, ListChecks,
 } from "lucide-react";
 import { db } from "@/lib/db";
 import type { Task, ProjectV2, Submodule } from "@/lib/types";
 import { getProjectsWithSubmodules, getSubmodulesByProject, getTasksBySubmodule } from "@/lib/db";
 import { showToast } from "@/components/ui/Toast";
+import OverviewHeader from "@/components/layout/OverviewHeader";
+import QuickCaptureBar from "@/components/layout/QuickCaptureBar";
 
 // ==================== 工具 ====================
 
@@ -29,13 +29,6 @@ const PROJECT_GRADIENTS = [
 function getProjectGradient(index: number): string {
   return PROJECT_GRADIENTS[index % PROJECT_GRADIENTS.length];
 }
-
-const quickActions = [
-  { id: "capture", label: "捕捉", icon: Zap, href: "/capture" },
-  { id: "focus", label: "专注", icon: Timer, href: "/focus" },
-  { id: "review", label: "回顾", icon: BarChart3, href: "/review" },
-  { id: "settings", label: "设置", icon: Settings, href: "/settings" },
-];
 
 // ==================== 项目卡片 ====================
 
@@ -313,8 +306,6 @@ function TaskListView({
 // ==================== 主页面 ====================
 
 export default function HomePage() {
-  const router = useRouter();
-
   const [projects, setProjects] = useState<ProjectV2[]>([]);
   const [projectSubmodules, setProjectSubmodules] = useState<Record<number, Submodule[]>>({});
   const [loading, setLoading] = useState(true);
@@ -344,31 +335,10 @@ export default function HomePage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white text-slate-900">
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-gray-950 dark:to-gray-900 text-slate-900 dark:text-white">
       <div className="mx-auto max-w-5xl px-5 pt-8 pb-24 md:px-8 md:pt-10">
-        {/* Header */}
-        <div className="flex items-start justify-between gap-4 mb-10 md:mb-12">
-          <div>
-            <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-slate-900">
-              LifeFlow
-            </h1>
-          </div>
-
-          {/* 右上 4 个小按钮 */}
-          <div className="flex items-center gap-2 md:gap-3">
-            {quickActions.map((action) => (
-              <motion.button
-                key={action.id}
-                whileTap={{ scale: 0.92 }}
-                onClick={() => router.push(action.href)}
-                className="w-10 h-10 md:w-11 md:h-11 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-center text-slate-600 hover:text-slate-900 hover:border-slate-300 transition-colors"
-                aria-label={action.label}
-              >
-                <action.icon className="w-5 h-5" strokeWidth={1.6} />
-              </motion.button>
-            ))}
-          </div>
-        </div>
+        {/* 顶部日期栏 + 图标组 */}
+        <OverviewHeader />
 
         {/* 内容区 */}
         {loading ? (
@@ -434,10 +404,15 @@ export default function HomePage() {
 
         {/* 底部提示 */}
         {!selectedProject && !loading && projects.length > 0 && (
-          <p className="mt-10 text-center text-sm text-slate-400">
+          <p className="mt-8 text-center text-sm text-slate-400 dark:text-gray-500">
             选择一个项目，开始管理你的生活
           </p>
         )}
+
+        {/* 快速捕捉栏 */}
+        <div className="mt-6">
+          <QuickCaptureBar />
+        </div>
       </div>
     </div>
   );

@@ -3,32 +3,51 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  BarChart3, CheckCheck, ListTodo, Flame, Wallet,
-  TrendingUp, Inbox, ClipboardList, Target,
   ArrowLeft, Moon, Dumbbell, Sparkles,
   GraduationCap, BookOpen, Sprout, Repeat,
-  LayoutGrid, Clock,
+  Target, TrendingUp, TrendingDown, Minus,
+  CheckCheck, ListTodo, Flame, Wallet,
+  BarChart3,
 } from "lucide-react";
 import {
-  initBuiltInPlugins,
-  getMonthlyTaskStats, getMonthlyHabitStats, getMonthlyFinanceStats,
-  getWeeklyTaskStats, getActiveSchedulableTasks,
-  createReviewRecord, getReviewRecordByKey,
   getAllSubmodules, initializeSubmodules,
+  getWeeklyTaskStats, getActiveSchedulableTasks, getMonthlyTaskStats, getMonthlyHabitStats, getMonthlyFinanceStats,
+  initBuiltInPlugins,
+  createReviewRecord, getReviewRecordByKey,
 } from "@/lib/db";
 import { showToast } from "@/components/ui/Toast";
-import type { ReviewRecord, Task, Submodule } from "@/lib/types";
+import type { Submodule, ReviewRecord, Task } from "@/lib/types";
 import { db } from "@/lib/db";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer,
+  Tooltip, ResponsiveContainer, Legend,
 } from "recharts";
 
 // ==================== 类型 ====================
 
-type ReviewTab = "daily" | "weekly" | "monthly";
-type TimeRange = 7 | 30 | 90;
-type ViewMode = "grid" | "all";
+type TimeGranularity = "day" | "week" | "month" | "quarter";
+type CompareMode = "time" | "goal";
+type ChartDataPoint = Record<string, number | string>;
+
+interface SubmoduleMetrics {
+  line1Key: string;
+  line1Label: string;
+  line1Color: string;
+  line2Key: string;
+  line2Label: string;
+  line2Color: string;
+  goal1?: number;
+  goal2?: number;
+}
+
+interface CompareRow {
+  label: string;
+  thisPeriod: number;
+  lastPeriod: number;
+  change: number;
+  unit: string;
+  isBetterUp: boolean;
+}
 
 // ==================== 工具函数 ====================
 
@@ -37,89 +56,690 @@ function getTodayStr(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-function getWeekKey(d: Date): string {
-  const start = new Date(d);
-  start.setDate(d.getDate() - d.getDay());
-  return `${start.getFullYear()}-W${String(Math.ceil((start.getDate() - 1 + start.getDay()) / 7) + 1).padStart(2, "0")}`;
-}
-
-function getMonthKey(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-}
-
 function formatDate(ts: number): string {
   const d = new Date(ts);
   return `${d.getMonth() + 1}/${d.getDate()}`;
 }
 
-function getIconComponent(iconName: string) {
-  const map: Record<string, React.ComponentType<any>> = {
-    GraduationCap, BookOpen, Moon, Sparkles, Dumbbell,
-    Target, Sprout, Repeat, LayoutGrid,
-  };
-  return map[iconName] || LayoutGrid;
+function formatDateFull(ts: number): string {
+  const d = new Date(ts);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-// ==================== 子模块图标网格 ====================
+function getDaysInRange(start: number, end: number): string[] {
+  const days: string[] = [];
+  const cur = new Date(start);
+  while (cur.getTime() <= end) {
+    days.push(formatDateFull(cur.getTime()));
+    cur.setDate(cur.getDate() + 1);
+  }
+  return days;
+}
 
-function SubmoduleGrid({
-  submodules,
-  onTapAll,
-  onTapSubmodule,
-}: {
-  submodules: Submodule[];
-  onTapAll: () => void;
-  onTapSubmodule: (sub: Submodule) => void;
-}) {
+// ==================== 子模块指标配置 ====================
+
+function getSubmoduleMetrics(submodule: Submodule): SubmoduleMetrics {
+  switch (submodule.name) {
+    case "睡眠":
+      return {
+        line1Key: "duration", line1Label: "睡眠时长(h)", line1Color: "#8b5cf6",
+        line2Key: "quality", line2Label: "睡眠质量", line2Color: "#f59e0b",
+        goal1: 8, goal2: 8,
+      };
+    case "体态":
+      return {
+        line1Key: "weight", line1Label: "体重(kg)", line1Color: "#10b981",
+        line2Key: "bodyFat", line2Label: "体脂率(%)", line2Color: "#ef4444",
+        goal1: undefined, goal2: undefined,
+      };
+    case "运动":
+      return {
+        line1Key: "count", line1Label: "运动次数", line1Color: "#3b82f6",
+        line2Key: "duration", line2Label: "运动时长(min)", line2Color: "#f59e0b",
+        goal1: undefined, goal2: undefined,
+      };
+    case "考公":
+      return {
+        line1Key: "studyMin", line1Label: "学习时长(h)", line1Color: "#6366f1",
+        line2Key: "tasksDone", line2Label: "完成任务", line2Color: "#f97316",
+        goal1: 4, goal2: undefined,
+      };
+    case "毕业":
+      return {
+        line1Key: "tasksDone", line1Label: "论文任务", line1Color: "#8b5cf6",
+        line2Key: "focusMin", line2Label: "专注时长(h)", line2Color: "#10b981",
+        goal1: undefined, goal2: undefined,
+      };
+    case "习惯":
+      return {
+        line1Key: "checkins", line1Label: "打卡次数", line1Color: "#ec4899",
+        line2Key: "completionRate", line2Label: "完成率(%)", line2Color: "#14b8a6",
+        goal1: undefined, goal2: 100,
+      };
+    case "规划":
+      return {
+        line1Key: "activeProjects", line1Label: "活跃项目", line1Color: "#f43f5e",
+        line2Key: "tasksDone", line2Label: "完成任务", line2Color: "#6366f1",
+        goal1: undefined, goal2: undefined,
+      };
+    case "成长":
+      return {
+        line1Key: "journalCount", line1Label: "日记篇数", line1Color: "#a855f7",
+        line2Key: "mood", line2Label: "心情指数", line2Color: "#eab308",
+        goal1: undefined, goal2: 7,
+      };
+    default:
+      return {
+        line1Key: "v1", line1Label: "指标1", line1Color: "#6366f1",
+        line2Key: "v2", line2Label: "指标2", line2Color: "#f97316",
+      };
+  }
+}
+
+// ==================== 数据加载函数 ====================
+
+async function loadSleepData(granularity: TimeGranularity): Promise<{ chart: ChartDataPoint[]; compare: CompareRow[] }> {
+  const now = Date.now();
+  const days = granularity === "day" ? 30 : granularity === "week" ? 90 : granularity === "month" ? 365 : 730;
+  const start = now - days * 24 * 60 * 60 * 1000;
+
+  const records = await db.sleepRecords
+    .where("timestamp")
+    .between(start, now)
+    .toArray();
+
+  const dailyMap: Record<string, { durations: number[]; qualities: number[] }> = {};
+  for (const r of records) {
+    const d = formatDateFull(r.timestamp || 0);
+    if (!dailyMap[d]) dailyMap[d] = { durations: [], qualities: [] };
+    dailyMap[d].durations.push(r.sleepDuration ? Math.round(r.sleepDuration / 60) : 0);
+    dailyMap[d].qualities.push(r.sleepQuality || 0);
+  }
+
+  const chart = aggregateChartData(dailyMap, granularity, now, days,
+    (v) => v.durations.length > 0 ? v.durations.reduce((a, b) => a + b, 0) / v.durations.length : 0,
+    (v) => v.qualities.length > 0 ? v.qualities.reduce((a, b) => a + b, 0) / v.qualities.length : 0,
+  );
+
+  const compare = buildCompareRows(dailyMap, granularity, now, days,
+    (v) => v.durations.length > 0 ? v.durations.reduce((a, b) => a + b, 0) / v.durations.length : 0,
+    (v) => v.qualities.length > 0 ? v.qualities.reduce((a, b) => a + b, 0) / v.qualities.length : 0,
+    [
+      { label: "平均睡眠时长", unit: "小时", isBetterUp: false },
+      { label: "平均睡眠质量", unit: "分", isBetterUp: true },
+    ],
+  );
+
+  return { chart, compare };
+}
+
+async function loadBodyMetricData(granularity: TimeGranularity): Promise<{ chart: ChartDataPoint[]; compare: CompareRow[] }> {
+  const now = Date.now();
+  const days = granularity === "day" ? 30 : granularity === "week" ? 90 : granularity === "month" ? 365 : 730;
+  const start = now - days * 24 * 60 * 60 * 1000;
+
+  const weightRecords = await db.bodyMetricRecords
+    .where("timestamp")
+    .between(start, now)
+    .filter((r) => r.type === "weight")
+    .toArray();
+
+  const fatRecords = await db.bodyMetricRecords
+    .where("timestamp")
+    .between(start, now)
+    .filter((r) => r.type === "bodyFat")
+    .toArray();
+
+  const dailyMap: Record<string, { weights: number[]; fats: number[] }> = {};
+  for (const r of weightRecords) {
+    const d = formatDateFull(r.timestamp || 0);
+    if (!dailyMap[d]) dailyMap[d] = { weights: [], fats: [] };
+    dailyMap[d].weights.push(r.value);
+  }
+  for (const r of fatRecords) {
+    const d = formatDateFull(r.timestamp || 0);
+    if (!dailyMap[d]) dailyMap[d] = { weights: [], fats: [] };
+    dailyMap[d].fats.push(r.secondaryValue || r.value);
+  }
+
+  const chart = aggregateChartData(dailyMap, granularity, now, days,
+    (v) => v.weights.length > 0 ? v.weights.reduce((a, b) => a + b, 0) / v.weights.length : 0,
+    (v) => v.fats.length > 0 ? v.fats.reduce((a, b) => a + b, 0) / v.fats.length : 0,
+  );
+
+  const compare = buildCompareRows(dailyMap, granularity, now, days,
+    (v) => v.weights.length > 0 ? v.weights.reduce((a, b) => a + b, 0) / v.weights.length : 0,
+    (v) => v.fats.length > 0 ? v.fats.reduce((a, b) => a + b, 0) / v.fats.length : 0,
+    [
+      { label: "平均体重", unit: "kg", isBetterUp: false },
+      { label: "平均体脂率", unit: "%", isBetterUp: false },
+    ],
+  );
+
+  return { chart, compare };
+}
+
+async function loadWorkoutData(granularity: TimeGranularity): Promise<{ chart: ChartDataPoint[]; compare: CompareRow[] }> {
+  const now = Date.now();
+  const days = granularity === "day" ? 30 : granularity === "week" ? 90 : granularity === "month" ? 365 : 730;
+  const start = now - days * 24 * 60 * 60 * 1000;
+
+  const records = await db.workouts
+    .where("startTime")
+    .between(start, now)
+    .toArray();
+
+  const dailyMap: Record<string, { counts: number[]; durations: number[] }> = {};
+  for (const r of records) {
+    const d = formatDateFull(r.startTime || 0);
+    if (!dailyMap[d]) dailyMap[d] = { counts: [], durations: [] };
+    dailyMap[d].counts.push(1);
+    dailyMap[d].durations.push(r.duration || 0);
+  }
+
+  const chart = aggregateChartData(dailyMap, granularity, now, days,
+    (v) => v.counts.reduce((a, b) => a + b, 0),
+    (v) => Math.round(v.durations.reduce((a, b) => a + b, 0) / 60),
+  );
+
+  const compare = buildCompareRows(dailyMap, granularity, now, days,
+    (v) => v.counts.reduce((a, b) => a + b, 0),
+    (v) => Math.round(v.durations.reduce((a, b) => a + b, 0) / 60),
+    [
+      { label: "运动次数", unit: "次", isBetterUp: true },
+      { label: "运动总时长", unit: "分钟", isBetterUp: true },
+    ],
+  );
+
+  return { chart, compare };
+}
+
+async function loadKaogongData(granularity: TimeGranularity): Promise<{ chart: ChartDataPoint[]; compare: CompareRow[] }> {
+  const now = Date.now();
+  const days = granularity === "day" ? 30 : granularity === "week" ? 90 : granularity === "month" ? 365 : 730;
+  const start = now - days * 24 * 60 * 60 * 1000;
+
+  const tasks = await db.tasks
+    .filter((t) => !!(t.tags && t.tags.includes("考公")))
+    .toArray();
+
+  const focusLogs = await db.focusLogs
+    .where("startTime")
+    .between(start, now)
+    .toArray();
+
+  // 找出考公相关任务的 ID
+  const kaogongTaskIds = new Set(tasks.map((t) => t.id).filter(Boolean) as number[]);
+  const relevantFocusLogs = focusLogs.filter((f) => kaogongTaskIds.has(f.eventId));
+
+  const dailyMap: Record<string, { studyMin: number[]; tasksDone: number[] }> = {};
+
+  for (const f of relevantFocusLogs) {
+    const d = formatDateFull(f.startTime || 0);
+    if (!dailyMap[d]) dailyMap[d] = { studyMin: [], tasksDone: [] };
+    dailyMap[d].studyMin.push(Math.round((f.duration || 0) / 60));
+  }
+
+  for (const t of tasks) {
+    if (t.status === "done") {
+      const d = formatDateFull(t.updatedAt || 0);
+      if (!dailyMap[d]) dailyMap[d] = { studyMin: [], tasksDone: [] };
+      dailyMap[d].tasksDone.push(1);
+    }
+  }
+
+  const chart = aggregateChartData(dailyMap, granularity, now, days,
+    (v) => v.studyMin.reduce((a, b) => a + b, 0) / 60,
+    (v) => v.tasksDone.reduce((a, b) => a + b, 0),
+  );
+
+  const compare = buildCompareRows(dailyMap, granularity, now, days,
+    (v) => v.studyMin.reduce((a, b) => a + b, 0) / 60,
+    (v) => v.tasksDone.reduce((a, b) => a + b, 0),
+    [
+      { label: "学习时长", unit: "小时", isBetterUp: true },
+      { label: "完成任务", unit: "个", isBetterUp: true },
+    ],
+  );
+
+  return { chart, compare };
+}
+
+async function loadGraduationData(granularity: TimeGranularity): Promise<{ chart: ChartDataPoint[]; compare: CompareRow[] }> {
+  const now = Date.now();
+  const days = granularity === "day" ? 30 : granularity === "week" ? 90 : granularity === "month" ? 365 : 730;
+  const start = now - days * 24 * 60 * 60 * 1000;
+
+  const tasks = await db.tasks
+    .filter((t) => !!(t.tags && t.tags.includes("毕业")))
+    .toArray();
+
+  const focusLogs = await db.focusLogs
+    .where("startTime")
+    .between(start, now)
+    .toArray();
+
+  const graduationTaskIds = new Set(tasks.map((t) => t.id).filter(Boolean) as number[]);
+  const relevantFocusLogs = focusLogs.filter((f) => graduationTaskIds.has(f.eventId));
+
+  const dailyMap: Record<string, { tasksDone: number[]; focusMin: number[] }> = {};
+
+  for (const f of relevantFocusLogs) {
+    const d = formatDateFull(f.startTime || 0);
+    if (!dailyMap[d]) dailyMap[d] = { tasksDone: [], focusMin: [] };
+    dailyMap[d].focusMin.push(Math.round((f.duration || 0) / 60));
+  }
+
+  for (const t of tasks) {
+    if (t.status === "done") {
+      const d = formatDateFull(t.updatedAt || 0);
+      if (!dailyMap[d]) dailyMap[d] = { tasksDone: [], focusMin: [] };
+      dailyMap[d].tasksDone.push(1);
+    }
+  }
+
+  const chart = aggregateChartData(dailyMap, granularity, now, days,
+    (v) => v.tasksDone.reduce((a, b) => a + b, 0),
+    (v) => v.focusMin.reduce((a, b) => a + b, 0) / 60,
+  );
+
+  const compare = buildCompareRows(dailyMap, granularity, now, days,
+    (v) => v.tasksDone.reduce((a, b) => a + b, 0),
+    (v) => v.focusMin.reduce((a, b) => a + b, 0) / 60,
+    [
+      { label: "论文任务", unit: "个", isBetterUp: true },
+      { label: "专注时长", unit: "小时", isBetterUp: true },
+    ],
+  );
+
+  return { chart, compare };
+}
+
+async function loadHabitData(granularity: TimeGranularity): Promise<{ chart: ChartDataPoint[]; compare: CompareRow[] }> {
+  const now = new Date();
+  const days = granularity === "day" ? 30 : granularity === "week" ? 90 : granularity === "month" ? 365 : 730;
+  const start = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+
+  const logs = await db.habit_logs.toArray();
+  const allHabits = await db.tasks.where("type").equals("habit").count();
+
+  const dailyMap: Record<string, { checkins: number[] }> = {};
+
+  for (const log of logs) {
+    const d = log.date;
+    if (!dailyMap[d]) dailyMap[d] = { checkins: [] };
+    dailyMap[d].checkins.push(log.count || 1);
+  }
+
+  const chart = aggregateChartData(dailyMap, granularity, now.getTime(), days,
+    (v) => v.checkins.reduce((a, b) => a + b, 0),
+    (v) => allHabits > 0 ? Math.round((v.checkins.reduce((a, b) => a + b, 0) / allHabits) * 100) : 0,
+  );
+
+  const compare = buildCompareRows(dailyMap, granularity, now.getTime(), days,
+    (v) => v.checkins.reduce((a, b) => a + b, 0),
+    (v) => allHabits > 0 ? Math.round((v.checkins.reduce((a, b) => a + b, 0) / allHabits) * 100) : 0,
+    [
+      { label: "打卡次数", unit: "次", isBetterUp: true },
+      { label: "完成率", unit: "%", isBetterUp: true },
+    ],
+  );
+
+  return { chart, compare };
+}
+
+async function loadPlanningData(granularity: TimeGranularity): Promise<{ chart: ChartDataPoint[]; compare: CompareRow[] }> {
+  const now = Date.now();
+  const days = granularity === "day" ? 30 : granularity === "week" ? 90 : granularity === "month" ? 365 : 730;
+  const start = now - days * 24 * 60 * 60 * 1000;
+
+  const projects = await db.projectV2s.toArray();
+  const tasks = await db.tasks.toArray();
+
+  const dailyMap: Record<string, { activeProjects: number[]; tasksDone: number[] }> = {};
+
+  for (const t of tasks) {
+    if (t.status === "done" && t.updatedAt) {
+      const d = formatDateFull(t.updatedAt);
+      if (!dailyMap[d]) dailyMap[d] = { activeProjects: [], tasksDone: [] };
+      dailyMap[d].tasksDone.push(1);
+    }
+  }
+
+  const chart = aggregateChartData(dailyMap, granularity, now, days,
+    () => projects.length,
+    (v) => v.tasksDone.reduce((a, b) => a + b, 0),
+  );
+
+  const compare = buildCompareRows(dailyMap, granularity, now, days,
+    () => projects.length,
+    (v) => v.tasksDone.reduce((a, b) => a + b, 0),
+    [
+      { label: "活跃项目", unit: "个", isBetterUp: true },
+      { label: "完成任务", unit: "个", isBetterUp: true },
+    ],
+  );
+
+  return { chart, compare };
+}
+
+async function loadGrowthData(granularity: TimeGranularity): Promise<{ chart: ChartDataPoint[]; compare: CompareRow[] }> {
+  const now = Date.now();
+  const days = granularity === "day" ? 30 : granularity === "week" ? 90 : granularity === "month" ? 365 : 730;
+  const start = now - days * 24 * 60 * 60 * 1000;
+
+  const journalEntries = await db.journalEntries
+    .where("timestamp")
+    .between(start, now)
+    .toArray();
+
+  const healthRecords = await db.healthRecords
+    .where("timestamp")
+    .between(start, now)
+    .filter((r) => r.metricType === "mood")
+    .toArray();
+
+  const dailyMap: Record<string, { journalCount: number[]; moods: number[] }> = {};
+
+  for (const j of journalEntries) {
+    const d = formatDateFull(j.timestamp || 0);
+    if (!dailyMap[d]) dailyMap[d] = { journalCount: [], moods: [] };
+    dailyMap[d].journalCount.push(1);
+  }
+
+  for (const h of healthRecords) {
+    const d = h.date;
+    if (!dailyMap[d]) dailyMap[d] = { journalCount: [], moods: [] };
+    dailyMap[d].moods.push(h.value);
+  }
+
+  const chart = aggregateChartData(dailyMap, granularity, now, days,
+    (v) => v.journalCount.reduce((a, b) => a + b, 0),
+    (v) => v.moods.length > 0 ? v.moods.reduce((a, b) => a + b, 0) / v.moods.length : 0,
+  );
+
+  const compare = buildCompareRows(dailyMap, granularity, now, days,
+    (v) => v.journalCount.reduce((a, b) => a + b, 0),
+    (v) => v.moods.length > 0 ? v.moods.reduce((a, b) => a + b, 0) / v.moods.length : 0,
+    [
+      { label: "日记篇数", unit: "篇", isBetterUp: true },
+      { label: "平均心情", unit: "分", isBetterUp: true },
+    ],
+  );
+
+  return { chart, compare };
+}
+
+// ==================== 数据聚合工具 ====================
+
+function aggregateChartData<T>(
+  dailyMap: Record<string, T>,
+  granularity: TimeGranularity,
+  now: number,
+  totalDays: number,
+  extractV1: (v: T) => number,
+  extractV2: (v: T) => number,
+): ChartDataPoint[] {
+  if (granularity === "day") {
+    const days = getDaysInRange(now - totalDays * 24 * 60 * 60 * 1000, now);
+    return days.map((d) => {
+      const v = dailyMap[d];
+      return {
+        date: d.slice(5),
+        v1: v ? Math.round(extractV1(v) * 10) / 10 : 0,
+        v2: v ? Math.round(extractV2(v) * 10) / 10 : 0,
+      };
+    }).slice(-30);
+  }
+
+  if (granularity === "week") {
+    const weeks: Record<string, T[]> = {};
+    for (const [date, val] of Object.entries(dailyMap)) {
+      const d = new Date(date);
+      const weekStart = new Date(d);
+      weekStart.setDate(d.getDate() - d.getDay());
+      const key = formatDateFull(weekStart.getTime());
+      if (!weeks[key]) weeks[key] = [];
+      weeks[key].push(val);
+    }
+    return Object.entries(weeks)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .slice(-12)
+      .map(([key, vals]) => ({
+        date: key.slice(5),
+        v1: Math.round((vals.reduce((s: number, v: T) => s + extractV1(v), 0) / vals.length) * 10) / 10,
+        v2: Math.round((vals.reduce((s: number, v: T) => s + extractV2(v), 0) / vals.length) * 10) / 10,
+      }));
+  }
+
+  if (granularity === "month") {
+    const months: Record<string, T[]> = {};
+    for (const [date, val] of Object.entries(dailyMap)) {
+      const key = date.slice(0, 7);
+      if (!months[key]) months[key] = [];
+      months[key].push(val);
+    }
+    return Object.entries(months)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .slice(-12)
+      .map(([key, vals]) => ({
+        date: key,
+        v1: Math.round((vals.reduce((s: number, v: T) => s + extractV1(v), 0) / vals.length) * 10) / 10,
+        v2: Math.round((vals.reduce((s: number, v: T) => s + extractV2(v), 0) / vals.length) * 10) / 10,
+      }));
+  }
+
+  // quarter
+  const quarters: Record<string, T[]> = {};
+  for (const [date, val] of Object.entries(dailyMap)) {
+    const d = new Date(date);
+    const q = Math.floor(d.getMonth() / 3) + 1;
+    const key = `${d.getFullYear()}-Q${q}`;
+    if (!quarters[key]) quarters[key] = [];
+    quarters[key].push(val);
+  }
+  return Object.entries(quarters)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .slice(-8)
+    .map(([key, vals]) => ({
+      date: key,
+      v1: Math.round((vals.reduce((s: number, v: T) => s + extractV1(v), 0) / vals.length) * 10) / 10,
+      v2: Math.round((vals.reduce((s: number, v: T) => s + extractV2(v), 0) / vals.length) * 10) / 10,
+    }));
+}
+
+function buildCompareRows<T>(
+  dailyMap: Record<string, T>,
+  _granularity: TimeGranularity,
+  now: number,
+  totalDays: number,
+  extractV1: (v: T) => number,
+  extractV2: (v: T) => number,
+  rowDefs: { label: string; unit: string; isBetterUp: boolean }[],
+): CompareRow[] {
+  const halfDays = Math.floor(totalDays / 2);
+  const mid = now - halfDays * 24 * 60 * 60 * 1000;
+
+  const thisPeriod: string[] = [];
+  const lastPeriod: string[] = [];
+  for (const date of Object.keys(dailyMap)) {
+    const ts = new Date(date).getTime();
+    if (ts >= mid) thisPeriod.push(date);
+    else lastPeriod.push(date);
+  }
+
+  const thisVals1 = thisPeriod.map((d) => extractV1(dailyMap[d]));
+  const lastVals1 = lastPeriod.map((d) => extractV1(dailyMap[d]));
+  const thisVals2 = thisPeriod.map((d) => extractV2(dailyMap[d]));
+  const lastVals2 = lastPeriod.map((d) => extractV2(dailyMap[d]));
+
+  const avg = (arr: number[]) => arr.length > 0 ? arr.reduce((a: number, b: number) => a + b, 0) / arr.length : 0;
+
+  const this1 = Math.round(avg(thisVals1) * 10) / 10;
+  const last1 = Math.round(avg(lastVals1) * 10) / 10;
+  const this2 = Math.round(avg(thisVals2) * 10) / 10;
+  const last2 = Math.round(avg(lastVals2) * 10) / 10;
+
+  const change1 = last1 > 0 ? Math.round(((this1 - last1) / last1) * 100) : 0;
+  const change2 = last2 > 0 ? Math.round(((this2 - last2) / last2) * 100) : 0;
+
+  return [
+    {
+      label: rowDefs[0].label,
+      thisPeriod: this1,
+      lastPeriod: last1,
+      change: change1,
+      unit: rowDefs[0].unit,
+      isBetterUp: rowDefs[0].isBetterUp,
+    },
+    {
+      label: rowDefs[1].label,
+      thisPeriod: this2,
+      lastPeriod: last2,
+      change: change2,
+      unit: rowDefs[1].unit,
+      isBetterUp: rowDefs[1].isBetterUp,
+    },
+  ];
+}
+
+// ==================== 数据加载调度 ====================
+
+async function loadSubmoduleData(
+  submodule: Submodule,
+  granularity: TimeGranularity,
+): Promise<{ chart: ChartDataPoint[]; compare: CompareRow[] } | null> {
+  try {
+    switch (submodule.name) {
+      case "睡眠": return loadSleepData(granularity);
+      case "体态": return loadBodyMetricData(granularity);
+      case "运动": return loadWorkoutData(granularity);
+      case "考公": return loadKaogongData(granularity);
+      case "毕业": return loadGraduationData(granularity);
+      case "习惯": return loadHabitData(granularity);
+      case "规划": return loadPlanningData(granularity);
+      case "成长": return loadGrowthData(granularity);
+      default: return null;
+    }
+  } catch (err) {
+    console.error(`Failed to load data for ${submodule.name}:`, err);
+    return null;
+  }
+}
+
+// ==================== 子组件 ====================
+
+function ChangeBadge({ change, isBetterUp }: { change: number; isBetterUp: boolean }) {
+  const isPositive = change > 0;
+  const isBetter = isBetterUp ? isPositive : !isPositive;
+  const color = change === 0 ? "text-gray-400" : isBetter ? "text-emerald-500" : "text-red-500";
+  const Icon = change > 0 ? TrendingUp : change < 0 ? TrendingDown : Minus;
+
   return (
-    <div className="flex flex-col h-full max-w-2xl mx-auto px-4 pt-6 pb-24">
-      <h1 className="text-xl font-bold text-gray-900 mb-1">回顾</h1>
-      <p className="text-sm text-gray-500 mb-6">选择模块查看回顾与趋势</p>
+    <span className={`inline-flex items-center gap-0.5 text-xs font-medium ${color}`}>
+      <Icon className="w-3 h-3" />
+      {change > 0 ? "+" : ""}{change}%
+    </span>
+  );
+}
 
-      <div className="grid grid-cols-3 gap-4">
-        {/* 全部入口 */}
-        <motion.button
-          whileTap={{ scale: 0.95 }}
-          onClick={onTapAll}
-          className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-white border border-gray-100 shadow-sm hover:shadow-md transition-shadow"
-        >
-          <div className="w-14 h-14 rounded-full bg-gradient-to-br from-indigo-400 via-violet-400 to-purple-500 flex items-center justify-center">
-            <LayoutGrid className="w-6 h-6 text-white" strokeWidth={1.5} />
+function CompareTable({
+  rows,
+  compareMode,
+  metrics,
+}: {
+  rows: CompareRow[];
+  compareMode: CompareMode;
+  metrics: SubmoduleMetrics;
+}) {
+  if (compareMode === "goal") {
+    return (
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+        <h3 className="text-sm font-semibold text-gray-700 mb-3">目标对比</h3>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-gray-500">{metrics.line1Label}</span>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-bold text-gray-900">{rows[0]?.thisPeriod ?? "-"}</span>
+              {metrics.goal1 !== undefined && (
+                <>
+                  <span className="text-xs text-gray-400">/</span>
+                  <span className="text-xs text-gray-400">目标 {metrics.goal1}</span>
+                  <span className={`text-xs font-medium ${(rows[0]?.thisPeriod ?? 0) >= metrics.goal1 ? "text-emerald-500" : "text-amber-500"}`}>
+                    {metrics.goal1 > 0 ? Math.round(((rows[0]?.thisPeriod ?? 0) / metrics.goal1) * 100) : 0}%
+                  </span>
+                </>
+              )}
+            </div>
           </div>
-          <span className="text-xs font-medium text-gray-700">全部</span>
-        </motion.button>
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-gray-500">{metrics.line2Label}</span>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-bold text-gray-900">{rows[1]?.thisPeriod ?? "-"}</span>
+              {metrics.goal2 !== undefined && (
+                <>
+                  <span className="text-xs text-gray-400">/</span>
+                  <span className="text-xs text-gray-400">目标 {metrics.goal2}</span>
+                  <span className={`text-xs font-medium ${(rows[1]?.thisPeriod ?? 0) >= metrics.goal2 ? "text-emerald-500" : "text-amber-500"}`}>
+                    {metrics.goal2 > 0 ? Math.round(((rows[1]?.thisPeriod ?? 0) / metrics.goal2) * 100) : 0}%
+                  </span>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+        {metrics.goal1 === undefined && metrics.goal2 === undefined && (
+          <p className="text-xs text-gray-400 mt-2">暂未设置目标值</p>
+        )}
+      </div>
+    );
+  }
 
-        {/* 子模块 */}
-        {submodules.map((sub, i) => {
-          const IconComp = getIconComponent(sub.icon);
-          return (
-            <motion.button
-              key={sub.id}
-              whileTap={{ scale: 0.95 }}
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.04, duration: 0.3 }}
-              onClick={() => onTapSubmodule(sub)}
-              className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-white border border-gray-100 shadow-sm hover:shadow-md transition-shadow"
-            >
-              <div className={`w-14 h-14 rounded-full bg-gradient-to-br ${sub.from} ${sub.via} ${sub.to} flex items-center justify-center`}>
-                <IconComp className="w-6 h-6 text-white" strokeWidth={1.5} />
-              </div>
-              <span className="text-xs font-medium text-gray-700">{sub.name}</span>
-            </motion.button>
-          );
-        })}
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+      <h3 className="text-sm font-semibold text-gray-700 mb-3">本周 vs 上周</h3>
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="text-gray-400">
+              <th className="text-left font-normal pb-2">指标</th>
+              <th className="text-right font-normal pb-2">本周</th>
+              <th className="text-right font-normal pb-2">上周</th>
+              <th className="text-right font-normal pb-2">变化</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, i) => (
+              <tr key={i} className="border-t border-gray-50">
+                <td className="py-2.5 text-gray-600">{row.label}</td>
+                <td className="py-2.5 text-right font-medium text-gray-900">{row.thisPeriod}{row.unit}</td>
+                <td className="py-2.5 text-right text-gray-500">{row.lastPeriod}{row.unit}</td>
+                <td className="py-2.5 text-right">
+                  <ChangeBadge change={row.change} isBetterUp={row.isBetterUp} />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
 }
 
-// ==================== 全部回顾视图（重写） ====================
+function EmptyChart() {
+  return (
+    <div className="flex flex-col items-center justify-center py-16 text-gray-400">
+      <BarChart3 className="w-10 h-10 mb-3 text-gray-300" strokeWidth={1.5} />
+      <p className="text-sm font-medium">暂无数据</p>
+      <p className="text-xs mt-1">该模块暂无历史数据，开始记录后将自动生成趋势图</p>
+    </div>
+  );
+}
 
-function AllReviewView({ onBack }: { onBack: () => void }) {
-  const [tab, setTab] = useState<ReviewTab>("daily");
+// ==================== 全部视图（聚合摘要） ====================
+
+function AllSummaryView() {
   const [loading, setLoading] = useState(true);
-
   const [taskStats, setTaskStats] = useState({ completed: 0, active: 0, new: 0 });
   const [habitStats, setHabitStats] = useState({ completed: 0, total: 0, streak: 0 });
   const [financeStats, setFinanceStats] = useState({ income: 0, expense: 0, balance: 0 });
@@ -128,7 +748,6 @@ function AllReviewView({ onBack }: { onBack: () => void }) {
   const [pendingTasks, setPendingTasks] = useState<Task[]>([]);
   const [summary, setSummary] = useState("");
   const [savedRecord, setSavedRecord] = useState<ReviewRecord | null>(null);
-  const [prevMonthRecord, setPrevMonthRecord] = useState<ReviewRecord | null>(null);
   const [saving, setSaving] = useState(false);
 
   const now = new Date();
@@ -139,7 +758,6 @@ function AllReviewView({ onBack }: { onBack: () => void }) {
     setLoading(true);
     try {
       await initBuiltInPlugins();
-
       const [monthTasks, monthHabits, monthFinance, weekTasks, pending] =
         await Promise.all([
           getMonthlyTaskStats(currentYear, currentMonth),
@@ -148,7 +766,6 @@ function AllReviewView({ onBack }: { onBack: () => void }) {
           getWeeklyTaskStats(),
           getActiveSchedulableTasks(),
         ]);
-
       setTaskStats(monthTasks);
       setHabitStats(monthHabits);
       setFinanceStats(monthFinance);
@@ -162,29 +779,23 @@ function AllReviewView({ onBack }: { onBack: () => void }) {
         setSavedRecord(existingDaily);
         setSummary(existingDaily.summary || "");
       }
-
-      if (tab === "monthly") {
-        const prevKey = `${currentMonth === 1 ? currentYear - 1 : currentYear}-${String(currentMonth === 1 ? 12 : currentMonth - 1).padStart(2, "0")}`;
-        const prev = await getReviewRecordByKey(prevKey);
-        setPrevMonthRecord(prev || null);
-      }
     } catch { /* ignore */ }
     finally { setLoading(false); }
-  }, [currentYear, currentMonth, tab]);
+  }, [currentYear, currentMonth]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  const handleSaveRecord = async () => {
+  const handleSave = async () => {
     setSaving(true);
     try {
-      const key = tab === "daily" ? getTodayStr() : tab === "weekly" ? getWeekKey(now) : getMonthKey(now);
+      const key = getTodayStr();
       await createReviewRecord({
-        type: tab === "weekly" ? "weekly" : tab === "monthly" ? "monthly" : "daily",
+        type: "daily",
         dateKey: key,
         summary: summary || undefined,
         stats: {
-          tasksDone: tab === "daily" ? weeklyDone : taskStats.completed,
-          tasksPending: tab === "daily" ? weeklyPending : taskStats.active,
+          tasksDone: weeklyDone,
+          tasksPending: weeklyPending,
           tasksOverdue: 0,
           habitStreaks: habitStats.completed,
           focusMinutes: 0,
@@ -202,207 +813,59 @@ function AllReviewView({ onBack }: { onBack: () => void }) {
     }
   };
 
-  const tabLabels: { key: ReviewTab; label: string }[] = [
-    { key: "daily", label: "日回顾" },
-    { key: "weekly", label: "周回顾" },
-    { key: "monthly", label: "月复盘" },
-  ];
-
-  return (
-    <div className="flex flex-col h-full max-w-2xl mx-auto px-4 pt-6 pb-24">
-      {/* 头部 + 返回 */}
-      <div className="flex items-center gap-3 mb-5">
-        <button onClick={onBack} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors">
-          <ArrowLeft className="w-5 h-5 text-gray-500" />
-        </button>
-        <div>
-          <h1 className="text-xl font-bold text-gray-900">全部回顾</h1>
-          <p className="text-xs text-gray-500">日 · 周 · 月 综合复盘</p>
-        </div>
-      </div>
-
-      {/* Tab 切换 */}
-      <div className="flex bg-gray-100 rounded-xl p-1 mb-5">
-        {tabLabels.map(({ key, label }) => (
-          <button
-            key={key}
-            onClick={() => { setTab(key); setSummary(""); setSavedRecord(null); }}
-            className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${
-              tab === key
-                ? "bg-white text-gray-900 shadow-sm"
-                : "text-gray-500 hover:text-gray-700"
-            }`}
-          >
-            {label}
-          </button>
+  if (loading) {
+    return (
+      <div className="space-y-3">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="skeleton h-24 rounded-2xl" />
         ))}
       </div>
+    );
+  }
 
-      {loading ? (
-        <div className="space-y-3">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="skeleton h-24 rounded-2xl" />
-          ))}
-        </div>
-      ) : (
-        <div className="flex-1 overflow-y-auto space-y-4">
-          {/* 日回顾 */}
-          {tab === "daily" && (
-            <>
-              <div className="grid grid-cols-2 gap-3">
-                <StatCard icon={<CheckCheck className="w-4 h-4" />} iconColor="text-emerald-500" label="本周完成" value={weeklyDone} />
-                <StatCard icon={<ListTodo className="w-4 h-4" />} iconColor="text-amber-500" label="待办" value={weeklyPending} />
-                <StatCard icon={<Flame className="w-4 h-4" />} iconColor="text-orange-500" label="习惯打卡" value={habitStats.completed} />
-                <StatCard icon={<Wallet className="w-4 h-4" />} iconColor="text-blue-500" label="今日支出" value={financeStats.expense.toFixed(0)} valueColor="text-red-500" />
-              </div>
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-3">
+        <StatCard icon={<CheckCheck className="w-4 h-4" />} iconColor="text-emerald-500" label="本周完成" value={weeklyDone} />
+        <StatCard icon={<ListTodo className="w-4 h-4" />} iconColor="text-amber-500" label="待办" value={weeklyPending} />
+        <StatCard icon={<Flame className="w-4 h-4" />} iconColor="text-orange-500" label="习惯打卡" value={habitStats.completed} />
+        <StatCard icon={<Wallet className="w-4 h-4" />} iconColor="text-blue-500" label="今日支出" value={financeStats.expense.toFixed(0)} valueColor="text-red-500" />
+      </div>
 
-              {pendingTasks.length > 0 && (
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Target className="w-4 h-4 text-indigo-500" />
-                    <h3 className="text-sm font-semibold text-gray-700">明天待办预览</h3>
-                  </div>
-                  <div className="space-y-1">
-                    {pendingTasks.slice(0, 5).map((t) => (
-                      <div key={t.id} className="text-xs text-gray-500 truncate pl-1 border-l-2 border-gray-200"> {t.title}</div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <ReflectionBox
-                summary={summary}
-                onChange={setSummary}
-                onSave={handleSaveRecord}
-                saving={saving}
-                label="今日反思"
-                placeholder="今天完成了什么？有什么需要改进？"
-                savedRecord={savedRecord}
-              />
-            </>
-          )}
-
-          {/* 周回顾 */}
-          {tab === "weekly" && (
-            <>
-              <StepCard
-                icon={<Inbox className="w-4 h-4" />}
-                iconBg="bg-amber-100"
-                iconColor="text-amber-600"
-                title="Step 1 · 收件箱清理"
-                subtitle={`本周待安排任务：${taskStats.active} 个`}
-                action={{ label: "前往安排事项", href: "/pending" }}
-              />
-
-              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <CheckCheck className="w-4 h-4 text-emerald-500" />
-                  <h3 className="text-sm font-semibold text-gray-700">Step 2 · 本周概览</h3>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <MiniStat label="完成任务" value={weeklyDone} />
-                  <MiniStat label="待办任务" value={weeklyPending} />
-                  <MiniStat label="习惯打卡" value={habitStats.completed} />
-                  <MiniStat
-                    label="本月收支"
-                    value={(financeStats.income - financeStats.expense).toFixed(0)}
-                    valueColor={financeStats.income - financeStats.expense >= 0 ? "text-emerald-500" : "text-red-500"}
-                  />
-                </div>
-              </div>
-
-              <StepCard
-                icon={<ClipboardList className="w-4 h-4" />}
-                iconBg="bg-indigo-100"
-                iconColor="text-indigo-600"
-                title="Step 3 · 下周计划"
-                subtitle={pendingTasks.length > 0 ? undefined : "暂无待安排任务"}
-                action={{ label: "前往安排下周任务", href: "/pending" }}
-              >
-                {pendingTasks.length > 0 && (
-                  <div className="space-y-1 mb-3">
-                    {pendingTasks.slice(0, 8).map((t) => (
-                      <div key={t.id} className="text-xs text-gray-500 truncate pl-1 border-l-2 border-gray-200"> {t.title}</div>
-                    ))}
-                  </div>
-                )}
-              </StepCard>
-
-              <ReflectionBox
-                summary={summary}
-                onChange={setSummary}
-                onSave={handleSaveRecord}
-                saving={saving}
-                label="周反思笔记"
-                placeholder="这周完成了什么？有哪些收获和改进？"
-                savedRecord={savedRecord}
-              />
-            </>
-          )}
-
-          {/* 月复盘 */}
-          {tab === "monthly" && (
-            <>
-              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <TrendingUp className="w-4 h-4 text-indigo-500" />
-                  <h3 className="text-sm font-semibold text-gray-700">{currentYear}年{currentMonth}月 复盘</h3>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3 mb-4">
-                  <div className="p-3 bg-gray-50 rounded-xl">
-                    <p className="text-xs text-gray-400">完成任务</p>
-                    <p className="text-lg font-bold text-gray-900">{taskStats.completed}</p>
-                    {prevMonthRecord && prevMonthRecord.stats.tasksDone > 0 && (
-                      <p className={`text-[10px] mt-0.5 ${taskStats.completed > prevMonthRecord.stats.tasksDone ? "text-emerald-500" : "text-red-500"}`}>
-                        {taskStats.completed > prevMonthRecord.stats.tasksDone ? "↑" : "↓"} 上月 {prevMonthRecord.stats.tasksDone}
-                      </p>
-                    )}
-                  </div>
-                  <div className="p-3 bg-gray-50 rounded-xl">
-                    <p className="text-xs text-gray-400">新增任务</p>
-                    <p className={`text-lg font-bold ${taskStats.new > 0 ? "text-blue-500" : "text-gray-900"}`}>{taskStats.new}</p>
-                  </div>
-                  <div className="p-3 bg-gray-50 rounded-xl">
-                    <p className="text-xs text-gray-400">习惯打卡</p>
-                    <p className="text-lg font-bold text-gray-900">{habitStats.completed}</p>
-                  </div>
-                  <div className="p-3 bg-gray-50 rounded-xl">
-                    <p className="text-xs text-gray-400">习惯数量</p>
-                    <p className="text-lg font-bold text-gray-900">{habitStats.total}</p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3 mb-4">
-                  <div className="p-3 bg-emerald-50 rounded-xl">
-                    <p className="text-xs text-emerald-600">收入</p>
-                    <p className="text-lg font-bold text-emerald-600">{financeStats.income.toFixed(0)}</p>
-                  </div>
-                  <div className="p-3 bg-red-50 rounded-xl">
-                    <p className="text-xs text-red-500">支出</p>
-                    <p className="text-lg font-bold text-red-500">{financeStats.expense.toFixed(0)}</p>
-                  </div>
-                </div>
-              </div>
-
-              <ReflectionBox
-                summary={summary}
-                onChange={setSummary}
-                onSave={handleSaveRecord}
-                saving={saving}
-                label="月度反思"
-                placeholder="这个月完成了什么？收入支出如何？有哪些收获和改进？"
-                savedRecord={savedRecord}
-              />
-            </>
-          )}
+      {pendingTasks.length > 0 && (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Target className="w-4 h-4 text-indigo-500" />
+            <h3 className="text-sm font-semibold text-gray-700">待办预览</h3>
+          </div>
+          <div className="space-y-1">
+            {pendingTasks.slice(0, 5).map((t) => (
+              <div key={t.id} className="text-xs text-gray-500 truncate pl-1 border-l-2 border-gray-200">{t.title}</div>
+            ))}
+          </div>
         </div>
       )}
+
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+        <p className="text-sm font-semibold text-gray-700 mb-2">今日反思</p>
+        <textarea
+          value={summary}
+          onChange={(e) => setSummary(e.target.value)}
+          placeholder="今天完成了什么？有什么需要改进？"
+          rows={4}
+          className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+        />
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="mt-2 w-full py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50"
+        >
+          {saving ? "保存中..." : savedRecord ? "更新回顾" : "保存回顾"}
+        </button>
+      </div>
     </div>
   );
 }
-
-// ==================== 子组件 ====================
 
 function StatCard({
   icon, iconColor, label, value, valueColor,
@@ -424,425 +887,30 @@ function StatCard({
   );
 }
 
-function MiniStat({
-  label, value, valueColor,
-}: {
-  label: string;
-  value: string | number;
-  valueColor?: string;
-}) {
-  return (
-    <div className="p-3 bg-gray-50 rounded-xl">
-      <p className="text-xs text-gray-400">{label}</p>
-      <p className={`text-lg font-bold ${valueColor || "text-gray-900"}`}>{value}</p>
-    </div>
-  );
-}
-
-function StepCard({
-  icon, iconBg, iconColor, title, subtitle, action, children,
-}: {
-  icon: React.ReactNode;
-  iconBg: string;
-  iconColor: string;
-  title: string;
-  subtitle?: string;
-  action: { label: string; href: string };
-  children?: React.ReactNode;
-}) {
-  return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-      <div className="flex items-center gap-2 mb-2">
-        <div className={`w-8 h-8 rounded-lg ${iconBg} flex items-center justify-center`}>
-          <span className={iconColor}>{icon}</span>
-        </div>
-        <h3 className="text-sm font-semibold text-gray-700">{title}</h3>
-      </div>
-      {subtitle && <p className="text-xs text-gray-500 mb-3">{subtitle}</p>}
-      {children}
-      <a
-        href={action.href}
-        className="inline-block text-xs font-medium text-indigo-600 hover:text-indigo-700 mt-1"
-      >
-        {action.label} →
-      </a>
-    </div>
-  );
-}
-
-function ReflectionBox({
-  summary, onChange, onSave, saving, label, placeholder, savedRecord,
-}: {
-  summary: string;
-  onChange: (v: string) => void;
-  onSave: () => void;
-  saving: boolean;
-  label: string;
-  placeholder: string;
-  savedRecord: ReviewRecord | null;
-}) {
-  return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-      <p className="text-sm font-semibold text-gray-700 mb-2">{label}</p>
-      <textarea
-        value={summary}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        rows={4}
-        className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-      />
-      <button
-        onClick={onSave}
-        disabled={saving}
-        className="mt-2 w-full py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50"
-      >
-        {saving ? "保存中..." : savedRecord ? "更新回顾" : "保存回顾"}
-      </button>
-      {savedRecord && (
-        <p className="text-[10px] text-gray-400 mt-1 text-center">
-          上次保存: {new Date(savedRecord.createdAt || 0).toLocaleString("zh-CN")}
-        </p>
-      )}
-    </div>
-  );
-}
-
-// ==================== 子模块详情视图 ====================
-
-function SubmoduleDetailView({
-  submodule,
-  onBack,
-}: {
-  submodule: Submodule;
-  onBack: () => void;
-}) {
-  switch (submodule.name) {
-    case "睡眠":
-      return <SleepChartView submodule={submodule} onBack={onBack} />;
-    case "体态":
-      return <BodyMetricChartView submodule={submodule} onBack={onBack} />;
-    case "运动":
-      return <WorkoutChartView submodule={submodule} onBack={onBack} />;
-    default:
-      return <PlaceholderView submodule={submodule} onBack={onBack} />;
-  }
-}
-
-// ==================== 睡眠图表视图 ====================
-
-function SleepChartView({ submodule, onBack }: { submodule: Submodule; onBack: () => void }) {
-  const [range, setRange] = useState<TimeRange>(30);
-  const [metric, setMetric] = useState<"duration" | "sleepTime">("duration");
-  const [chartData, setChartData] = useState<{ date: string; 时长: number; 入睡: string }[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const loadSleepData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const now = Date.now();
-      const start = now - range * 24 * 60 * 60 * 1000;
-      const records = await db.sleepRecords
-        .where("timestamp")
-        .between(start, now)
-        .toArray();
-
-      records.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
-
-      const data = records.map((r) => {
-        const hours = r.sleepTime
-          ? new Date(r.sleepTime).getHours() + ":" + String(new Date(r.sleepTime).getMinutes()).padStart(2, "0")
-          : "-";
-        return {
-          date: formatDate(r.timestamp || 0),
-          时长: r.sleepDuration ? Math.round(r.sleepDuration / 60) : 0,
-          入睡: hours,
-        };
-      });
-      setChartData(data);
-    } catch (err) {
-      console.error("Failed to load sleep data:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, [range]);
-
-  useEffect(() => { loadSleepData(); }, [loadSleepData]);
-
-  return (
-    <ChartViewShell submodule={submodule} onBack={onBack} range={range} onChangeRange={setRange} loading={loading}>
-      {/* 指标切换 */}
-      <div className="flex gap-1 bg-gray-100 rounded-lg p-1 mb-4">
-        <button
-          onClick={() => setMetric("duration")}
-          className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${
-            metric === "duration" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500"
-          }`}
-        >
-          睡眠时长
-        </button>
-        <button
-          onClick={() => setMetric("sleepTime")}
-          className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${
-            metric === "sleepTime" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500"
-          }`}
-        >
-          入睡时间
-        </button>
-      </div>
-
-      {chartData.length === 0 ? (
-        <div className="text-center py-16 text-sm text-gray-400">暂无睡眠数据</div>
-      ) : metric === "duration" ? (
-        <div className="bg-white rounded-xl p-4">
-          <ResponsiveContainer width="100%" height={260}>
-            <LineChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="date" tick={{ fontSize: 11, fill: "#9ca3af" }} tickLine={false} />
-              <YAxis tick={{ fontSize: 11, fill: "#9ca3af" }} tickLine={false} unit="h" />
-              <Tooltip
-                contentStyle={{ borderRadius: 12, border: "1px solid #e5e7eb", fontSize: 13 }}
-                formatter={(v) => [`${v} 小时`, "睡眠时长"]}
-              />
-              <Line type="monotone" dataKey="时长" stroke="#8b5cf6" strokeWidth={2} dot={{ fill: "#8b5cf6", r: 3 }} />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      ) : (
-        <div className="text-center py-12 text-sm text-gray-500">
-          <Clock className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-          <p>入睡时间趋势</p>
-          <div className="mt-3 space-y-1.5">
-            {chartData.map((d, i) => (
-              <div key={i} className="flex justify-between text-xs bg-gray-50 rounded-lg px-3 py-1.5 max-w-xs mx-auto">
-                <span className="text-gray-500">{d.date}</span>
-                <span className="text-gray-700 font-mono">{d.入睡}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </ChartViewShell>
-  );
-}
-
-// ==================== 体态图表视图 ====================
-
-function BodyMetricChartView({ submodule, onBack }: { submodule: Submodule; onBack: () => void }) {
-  const [range, setRange] = useState<TimeRange>(30);
-  const [chartData, setChartData] = useState<{ date: string; 体重: number }[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const now = Date.now();
-      const start = now - range * 24 * 60 * 60 * 1000;
-      const records = await db.bodyMetricRecords
-        .where("timestamp")
-        .between(start, now)
-        .filter((r) => r.type === "weight")
-        .toArray();
-
-      records.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
-      const data = records.map((r) => ({
-        date: formatDate(r.timestamp || 0),
-        体重: r.value,
-      }));
-      setChartData(data);
-    } catch (err) {
-      console.error("Failed to load body metric data:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, [range]);
-
-  useEffect(() => { loadData(); }, [loadData]);
-
-  return (
-    <ChartViewShell submodule={submodule} onBack={onBack} range={range} onChangeRange={setRange} loading={loading}>
-      {chartData.length === 0 ? (
-        <div className="text-center py-16 text-sm text-gray-400">暂无体态数据</div>
-      ) : (
-        <div className="bg-white rounded-xl p-4">
-          <p className="text-xs text-gray-500 mb-3">体重变化趋势 (kg)</p>
-          <ResponsiveContainer width="100%" height={260}>
-            <LineChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="date" tick={{ fontSize: 11, fill: "#9ca3af" }} tickLine={false} />
-              <YAxis tick={{ fontSize: 11, fill: "#9ca3af" }} tickLine={false} domain={["auto", "auto"]} />
-              <Tooltip
-                contentStyle={{ borderRadius: 12, border: "1px solid #e5e7eb", fontSize: 13 }}
-                formatter={(v) => [`${v} kg`, "体重"]}
-              />
-              <Line type="monotone" dataKey="体重" stroke="#10b981" strokeWidth={2} dot={{ fill: "#10b981", r: 3 }} />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      )}
-    </ChartViewShell>
-  );
-}
-
-// ==================== 运动图表视图 ====================
-
-function WorkoutChartView({ submodule, onBack }: { submodule: Submodule; onBack: () => void }) {
-  const [range, setRange] = useState<TimeRange>(30);
-  const [chartData, setChartData] = useState<{ date: string; 次数: number; 时长: number }[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const now = Date.now();
-      const start = now - range * 24 * 60 * 60 * 1000;
-      const records = await db.workouts
-        .where("startTime")
-        .between(start, now)
-        .toArray();
-
-      // 按日期聚合
-      const grouped: Record<string, { count: number; totalDuration: number }> = {};
-      for (const r of records) {
-        const dateKey = formatDate(r.startTime || 0);
-        if (!grouped[dateKey]) grouped[dateKey] = { count: 0, totalDuration: 0 };
-        grouped[dateKey].count += 1;
-        grouped[dateKey].totalDuration += r.duration || 0;
-      }
-
-      const dates = Object.keys(grouped).sort();
-      const data = dates.map((d) => ({
-        date: d,
-        次数: grouped[d].count,
-        时长: Math.round(grouped[d].totalDuration / 60),
-      }));
-      setChartData(data);
-    } catch (err) {
-      console.error("Failed to load workout data:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, [range]);
-
-  useEffect(() => { loadData(); }, [loadData]);
-
-  return (
-    <ChartViewShell submodule={submodule} onBack={onBack} range={range} onChangeRange={setRange} loading={loading}>
-      {chartData.length === 0 ? (
-        <div className="text-center py-16 text-sm text-gray-400">暂无运动数据</div>
-      ) : (
-        <div className="bg-white rounded-xl p-4">
-          <p className="text-xs text-gray-500 mb-3">运动次数 & 总时长趋势</p>
-          <ResponsiveContainer width="100%" height={260}>
-            <LineChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="date" tick={{ fontSize: 11, fill: "#9ca3af" }} tickLine={false} />
-              <YAxis yAxisId="left" tick={{ fontSize: 11, fill: "#9ca3af" }} tickLine={false} />
-              <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11, fill: "#9ca3af" }} tickLine={false} unit="min" />
-              <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e5e7eb", fontSize: 13 }} />
-              <Line yAxisId="left" type="monotone" dataKey="次数" stroke="#3b82f6" strokeWidth={2} dot={{ fill: "#3b82f6", r: 3 }} />
-              <Line yAxisId="right" type="monotone" dataKey="时长" stroke="#f59e0b" strokeWidth={2} dot={{ fill: "#f59e0b", r: 3 }} />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      )}
-    </ChartViewShell>
-  );
-}
-
-// ==================== 占位视图 ====================
-
-function PlaceholderView({ submodule, onBack }: { submodule: Submodule; onBack: () => void }) {
-  const IconComp = getIconComponent(submodule.icon);
-  return (
-    <div className="flex flex-col h-full max-w-2xl mx-auto px-4 pt-6 pb-24">
-      <div className="flex items-center gap-3 mb-6">
-        <button onClick={onBack} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors">
-          <ArrowLeft className="w-5 h-5 text-gray-500" />
-        </button>
-        <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${submodule.from} ${submodule.via} ${submodule.to} flex items-center justify-center`}>
-          <IconComp className="w-4 h-4 text-white" strokeWidth={1.5} />
-        </div>
-        <h1 className="text-lg font-bold text-gray-900">{submodule.name}</h1>
-      </div>
-
-      <div className="flex-1 flex flex-col items-center justify-center text-center">
-        <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-4">
-          <BarChart3 className="w-7 h-7 text-gray-300" strokeWidth={1.5} />
-        </div>
-        <p className="text-sm font-medium text-gray-500 mb-1">暂无趋势数据</p>
-        <p className="text-xs text-gray-400">该模块的趋势图表尚未配置，敬请期待</p>
-      </div>
-    </div>
-  );
-}
-
-// ==================== 图表视图外壳 ====================
-
-function ChartViewShell({
-  submodule, onBack, range, onChangeRange, loading, children,
-}: {
-  submodule: Submodule;
-  onBack: () => void;
-  range: TimeRange;
-  onChangeRange: (r: TimeRange) => void;
-  loading: boolean;
-  children: React.ReactNode;
-}) {
-  const IconComp = getIconComponent(submodule.icon);
-  const rangeOptions: { key: TimeRange; label: string }[] = [
-    { key: 7, label: "7天" },
-    { key: 30, label: "30天" },
-    { key: 90, label: "90天" },
-  ];
-
-  return (
-    <div className="flex flex-col h-full max-w-2xl mx-auto px-4 pt-6 pb-24">
-      {/* 头部 */}
-      <div className="flex items-center gap-3 mb-1">
-        <button onClick={onBack} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors">
-          <ArrowLeft className="w-5 h-5 text-gray-500" />
-        </button>
-        <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${submodule.from} ${submodule.via} ${submodule.to} flex items-center justify-center`}>
-          <IconComp className="w-4 h-4 text-white" strokeWidth={1.5} />
-        </div>
-        <h1 className="text-lg font-bold text-gray-900">{submodule.name}</h1>
-      </div>
-      <p className="text-xs text-gray-500 mb-4 ml-11">{submodule.description}</p>
-
-      {/* 时间范围切换 */}
-      <div className="flex gap-1 bg-gray-100 rounded-lg p-1 mb-4 ml-11 w-fit">
-        {rangeOptions.map(({ key, label }) => (
-          <button
-            key={key}
-            onClick={() => onChangeRange(key)}
-            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
-              range === key ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"
-            }`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-
-      {loading ? (
-        <div className="flex items-center justify-center py-16">
-          <div className="w-5 h-5 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
-        </div>
-      ) : (
-        children
-      )}
-    </div>
-  );
-}
-
 // ==================== 主页面 ====================
 
 export default function ReviewPage() {
-  const [view, setView] = useState<ViewMode>("grid");
-  const [activeSubmodule, setActiveSubmodule] = useState<Submodule | null>(null);
   const [submodules, setSubmodules] = useState<Submodule[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // 当前选中的子模块（null = 全部）
+  const [selectedName, setSelectedName] = useState<string | null>(null);
+
+  // 粒度和对比模式
+  const [granularity, setGranularity] = useState<TimeGranularity>("day");
+  const [compareMode, setCompareMode] = useState<CompareMode>("time");
+
+  // 图表数据
+  const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
+  const [compareRows, setCompareRows] = useState<CompareRow[]>([]);
+  const [dataLoading, setDataLoading] = useState(false);
+  const [noData, setNoData] = useState(false);
+
+  // 当前选中的子模块对象
+  const selectedSubmodule = submodules.find((s) => s.name === selectedName) ?? null;
+  const metrics = selectedSubmodule ? getSubmoduleMetrics(selectedSubmodule) : null;
+
+  // 初始化
   useEffect(() => {
     const load = async () => {
       try {
@@ -858,68 +926,202 @@ export default function ReviewPage() {
     load();
   }, []);
 
+  // 加载数据
+  useEffect(() => {
+    if (!selectedSubmodule) {
+      setChartData([]);
+      setCompareRows([]);
+      setNoData(false);
+      return;
+    }
+
+    let cancelled = false;
+    setDataLoading(true);
+    setNoData(false);
+
+    loadSubmoduleData(selectedSubmodule, granularity).then((result) => {
+      if (cancelled) return;
+      if (result && result.chart.length > 0) {
+        setChartData(result.chart);
+        setCompareRows(result.compare);
+      } else {
+        setChartData([]);
+        setCompareRows([]);
+        setNoData(true);
+      }
+      setDataLoading(false);
+    });
+
+    return () => { cancelled = true; };
+  }, [selectedSubmodule, granularity]);
+
+  // 骨架屏
   if (loading) {
     return (
       <div className="flex flex-col h-full max-w-2xl mx-auto px-4 pt-6 pb-24">
         <div className="skeleton h-8 w-20 mb-2" />
-        <div className="skeleton h-4 w-40 mb-6" />
-        <div className="grid grid-cols-3 gap-4">
-          {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => (
-            <div key={i} className="skeleton h-24 rounded-2xl" />
-          ))}
-        </div>
+        <div className="skeleton h-4 w-40 mb-4" />
+        <div className="skeleton h-9 w-full rounded-xl mb-4" />
+        <div className="skeleton h-9 w-48 rounded-xl mb-4" />
+        <div className="skeleton h-64 rounded-2xl mb-4" />
+        <div className="skeleton h-40 rounded-2xl" />
       </div>
     );
   }
 
+  const tabOptions: { key: TimeGranularity; label: string }[] = [
+    { key: "day", label: "日" },
+    { key: "week", label: "周" },
+    { key: "month", label: "月" },
+    { key: "quarter", label: "季" },
+  ];
+
   return (
-    <AnimatePresence mode="wait">
-      {view === "grid" ? (
-        <motion.div
-          key="grid"
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -20 }}
-          transition={{ duration: 0.2 }}
+    <div className="flex flex-col h-full max-w-2xl mx-auto px-4 pt-6 pb-24">
+      {/* 标题 */}
+      <h1 className="text-xl font-bold text-gray-900 mb-1">回顾</h1>
+      <p className="text-sm text-gray-500 mb-5">查看历史数据，对比分析，调整计划</p>
+
+      {/* 子模块文字选项行 */}
+      <div className="flex gap-2 overflow-x-auto pb-2 mb-4 scrollbar-hide">
+        <button
+          onClick={() => setSelectedName(null)}
+          className={`shrink-0 px-4 py-2 text-sm font-medium rounded-xl transition-all ${
+            selectedName === null
+              ? "bg-orange-500 text-white shadow-sm"
+              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+          }`}
         >
-          <SubmoduleGrid
-            submodules={submodules}
-            onTapAll={() => setView("all")}
-            onTapSubmodule={(sub) => {
-              setActiveSubmodule(sub);
-              setView("all"); // 切换为非 grid
-            }}
-          />
-        </motion.div>
-      ) : activeSubmodule ? (
-        <motion.div
-          key={activeSubmodule.id}
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: 20 }}
-          transition={{ duration: 0.2 }}
-        >
-          <SubmoduleDetailView
-            submodule={activeSubmodule}
-            onBack={() => {
-              setActiveSubmodule(null);
-              setView("grid");
-            }}
-          />
-        </motion.div>
+          全部
+        </button>
+        {submodules.map((sub) => (
+          <button
+            key={sub.id}
+            onClick={() => setSelectedName(sub.name)}
+            className={`shrink-0 px-4 py-2 text-sm font-medium rounded-xl transition-all ${
+              selectedName === sub.name
+                ? "bg-orange-500 text-white shadow-sm"
+                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+            }`}
+          >
+            {sub.name}
+          </button>
+        ))}
+      </div>
+
+      {/* 全部视图 */}
+      {selectedName === null ? (
+        <AllSummaryView />
       ) : (
-        <motion.div
-          key="all"
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: 20 }}
-          transition={{ duration: 0.2 }}
-        >
-          <AllReviewView
-            onBack={() => setView("grid")}
-          />
-        </motion.div>
+        <>
+          {/* 时间范围 Tab + 对比模式切换 */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
+              {tabOptions.map(({ key, label }) => (
+                <button
+                  key={key}
+                  onClick={() => setGranularity(key)}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
+                    granularity === key
+                      ? "bg-white text-gray-900 shadow-sm"
+                      : "text-gray-500 hover:text-gray-700"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
+              <button
+                onClick={() => setCompareMode("time")}
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
+                  compareMode === "time"
+                    ? "bg-white text-gray-900 shadow-sm"
+                    : "text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                时间对比
+              </button>
+              <button
+                onClick={() => setCompareMode("goal")}
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
+                  compareMode === "goal"
+                    ? "bg-white text-gray-900 shadow-sm"
+                    : "text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                目标对比
+              </button>
+            </div>
+          </div>
+
+          {/* 图表区 */}
+          {dataLoading ? (
+            <div className="flex items-center justify-center py-16">
+              <div className="w-5 h-5 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+            </div>
+          ) : noData ? (
+            <EmptyChart />
+          ) : (
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={`${selectedSubmodule?.name}-${granularity}`}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-4"
+              >
+                <p className="text-xs text-gray-500 mb-3">
+                  {metrics?.line1Label} & {metrics?.line2Label} 趋势
+                </p>
+                <ResponsiveContainer width="100%" height={260}>
+                  <LineChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis dataKey="date" tick={{ fontSize: 11, fill: "#9ca3af" }} tickLine={false} />
+                    <YAxis tick={{ fontSize: 11, fill: "#9ca3af" }} tickLine={false} />
+                    <Tooltip
+                      contentStyle={{ borderRadius: 12, border: "1px solid #e5e7eb", fontSize: 13 }}
+                      formatter={(value, name) => [value, name] as [number, string]}
+                    />
+                    <Legend
+                      wrapperStyle={{ fontSize: 11 }}
+                    />
+                    {metrics && (
+                      <>
+                        <Line
+                          type="monotone"
+                          dataKey="v1"
+                          name={metrics.line1Label}
+                          stroke={metrics.line1Color}
+                          strokeWidth={2}
+                          dot={{ fill: metrics.line1Color, r: 2 }}
+                          activeDot={{ r: 4 }}
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="v2"
+                          name={metrics.line2Label}
+                          stroke={metrics.line2Color}
+                          strokeWidth={2}
+                          dot={{ fill: metrics.line2Color, r: 2 }}
+                          activeDot={{ r: 4 }}
+                        />
+                      </>
+                    )}
+                  </LineChart>
+                </ResponsiveContainer>
+              </motion.div>
+            </AnimatePresence>
+          )}
+
+          {/* 对比表 */}
+          {!dataLoading && !noData && metrics && (
+            <CompareTable rows={compareRows} compareMode={compareMode} metrics={metrics} />
+          )}
+        </>
       )}
-    </AnimatePresence>
+    </div>
   );
 }

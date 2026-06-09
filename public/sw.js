@@ -1,4 +1,4 @@
-const CACHE_VERSION = "lifeflow-v3";
+const CACHE_VERSION = "lifeflow-v4";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const PAGES_CACHE = `${CACHE_VERSION}-pages`;
 const ASSET_EXTENSIONS = ["js", "css", "woff2", "woff", "ico", "png", "svg", "jpg"];

@@ -302,6 +302,75 @@ export class LifeFlowDB extends Dexie {
         console.log("[LifeFlowDB v20] Added submodules table with presets");
       }
     });
+
+    this.version(21).stores({
+      submodules: "++id, projectId, enabled, order, createdAt",
+      tasks: "++id, type, status, parentTaskId, startTime, projectId, submoduleId, createdAt, [type+status], *tags, dueDate",
+    }).upgrade(async (tx) => {
+      // Migrate old Submodule records: parentKey → projectId mapping
+      const oldSubmodules = await tx.table("submodules").toArray();
+      const oldProjects = await tx.table("projectV2s").toArray();
+
+      // Map old parentKey to default project names
+      const parentKeyToName: Record<string, string> = {
+        learning: "学习",
+        health: "健康",
+        growth: "成长",
+      };
+
+      // Create default projects if they don't exist
+      const projectNameToId: Record<string, number> = {};
+      for (const proj of oldProjects) {
+        projectNameToId[proj.name] = proj.id!;
+      }
+
+      let nextId = oldProjects.length > 0
+        ? Math.max(...oldProjects.map((p) => p.id!)) + 1
+        : 1;
+
+      for (const [, name] of Object.entries(parentKeyToName)) {
+        if (!(name in projectNameToId)) {
+          projectNameToId[name] = nextId;
+          await tx.table("projectV2s").add({
+            id: nextId,
+            name,
+            color: "#6366F1",
+            createdAt: Date.now(),
+          });
+          nextId++;
+        }
+      }
+
+      // Update each old submodule
+      for (const sm of oldSubmodules) {
+        const oldParentKey = (sm as any).parentKey as string | undefined;
+        if (oldParentKey && parentKeyToName[oldParentKey]) {
+          const projectId = projectNameToId[parentKeyToName[oldParentKey]];
+          // Remove old fields and set projectId
+          const cleaned: any = {
+            id: sm.id,
+            projectId,
+            name: sm.name,
+            description: sm.description || "",
+            enabled: sm.enabled ?? true,
+            order: sm.order ?? 99,
+            createdAt: sm.createdAt || Date.now(),
+            updatedAt: sm.updatedAt || Date.now(),
+          };
+          await tx.table("submodules").put(cleaned);
+        } else if (!sm.projectId) {
+          // No parentKey and no projectId — assign to first project
+          const firstProjId = Object.values(projectNameToId)[0] || 1;
+          await tx.table("submodules").update(sm.id!, {
+            projectId: firstProjId,
+          } as any);
+        }
+      }
+
+      if (typeof window !== "undefined" && window.location.hostname === "localhost") {
+        console.log("[LifeFlowDB v21] Migrated submodules from parentKey to projectId");
+      }
+    });
   }
 }
 
@@ -1750,17 +1819,13 @@ export async function initializeSubmodules(): Promise<void> {
   const count = await db.submodules.count();
   if (count > 0) return;
 
-  const { PRESET_SUBMODULES } = await import("./types");
-  const now = Date.now();
-  await db.submodules.bulkAdd(
-    PRESET_SUBMODULES.map((s) => ({ ...s, createdAt: now, updatedAt: now }))
-  );
+  // v21+: Submodules are created through the settings page, no presets needed
 }
 
-export async function getSubmodulesByParent(parentKey: string): Promise<Submodule[]> {
+export async function getSubmodulesByProject(projectId: number): Promise<Submodule[]> {
   return db.submodules
-    .where("parentKey")
-    .equals(parentKey)
+    .where("projectId")
+    .equals(projectId)
     .filter((s) => s.enabled === true)
     .sortBy("order");
 }
@@ -1787,4 +1852,16 @@ export async function toggleSubmodule(id: number): Promise<void> {
   if (s) {
     await db.submodules.update(id, { enabled: !s.enabled, updatedAt: Date.now() });
   }
+}
+
+export async function getTasksBySubmodule(submoduleId: number): Promise<Task[]> {
+  return db.tasks
+    .where("submoduleId")
+    .equals(submoduleId)
+    .filter((t) => t.status !== "archived")
+    .toArray();
+}
+
+export async function getProjectsWithSubmodules(): Promise<ProjectV2[]> {
+  return db.projectV2s.orderBy("createdAt").toArray();
 }

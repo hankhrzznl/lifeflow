@@ -4,55 +4,31 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Key, Download, Upload, Trash2, Eye, EyeOff, AlertTriangle,
-  LayoutGrid, GraduationCap, BookOpen, Moon, Sparkles, Dumbbell,
-  Target, Sprout, Repeat, Plus, Pencil, X,
+  LayoutGrid, Plus, Pencil, X,
 } from "lucide-react";
 import { exportAllData, importAllData } from "@/lib/db";
 import {
   getAllSubmodules, addSubmodule, updateSubmodule, deleteSubmodule,
-  toggleSubmodule, initializeSubmodules,
+  toggleSubmodule, initializeSubmodules, getProjectsWithSubmodules,
 } from "@/lib/db";
-import type { Submodule, ParentModuleKey } from "@/lib/types";
-import { PARENT_MODULE_LABELS, AVAILABLE_ICONS, ICON_GRADIENTS } from "@/lib/types";
+import type { Submodule, ProjectV2 } from "@/lib/types";
 import { showToast } from "@/components/ui/Toast";
 
 const API_KEY_STORAGE_KEY = "lifeflow_api_key";
 
-// ---------- 模块管理常量 ----------
-const ICON_MAP: Record<string, React.ComponentType<{ className?: string; strokeWidth?: number }>> = {
-  GraduationCap, BookOpen, Moon, Sparkles, Dumbbell,
-  Target, Sprout, Repeat, LayoutGrid,
-};
-
-const PARENT_COLORS: Record<ParentModuleKey, string> = {
-  learning: "text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700",
-  health: "text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700",
-  growth: "text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700",
-};
-
 interface EditModalData {
   id?: number;
-  parentKey: ParentModuleKey;
+  projectId: number;
   name: string;
   description: string;
-  icon: string;
-  from: string;
-  via: string;
-  to: string;
-  href: string;
   enabled: boolean;
   order: number;
 }
 
 const EMPTY_FORM: EditModalData = {
-  parentKey: "learning",
+  projectId: 0,
   name: "",
   description: "",
-  icon: "Target",
-  from: "from-indigo-400",
-  via: "via-violet-400",
-  to: "to-purple-500",
-  href: "",
   enabled: true,
   order: 99,
 };
@@ -77,50 +53,48 @@ export default function SettingsPage() {
 
   // ---- 模块管理 ----
   const [modules, setModules] = useState<Submodule[]>([]);
+  const [projects, setProjects] = useState<ProjectV2[]>([]);
   const [modulesLoading, setModulesLoading] = useState(true);
+  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [showDeleteConfirm2, setShowDeleteConfirm2] = useState<number | null>(null);
   const [formData, setFormData] = useState<EditModalData>(EMPTY_FORM);
-  const [selectedGradient, setSelectedGradient] = useState(0);
 
   const loadModules = useCallback(async () => {
     await initializeSubmodules();
+    const projList = await getProjectsWithSubmodules();
+    setProjects(projList);
+    if (projList.length > 0 && selectedProjectId === null) {
+      setSelectedProjectId(projList[0].id!);
+    }
     const list = await getAllSubmodules();
     setModules(list);
     setModulesLoading(false);
-  }, []);
+  }, [selectedProjectId]);
 
   useEffect(() => { loadModules(); }, [loadModules]);
 
+  const filteredModules = modules.filter((m) => m.projectId === selectedProjectId);
+
   const openCreate = () => {
-    setFormData(EMPTY_FORM);
-    setSelectedGradient(0);
+    setFormData({ ...EMPTY_FORM, projectId: selectedProjectId ?? projects[0]?.id ?? 0 });
     setShowModal(true);
   };
 
   const openEdit = (s: Submodule) => {
     setFormData({
       id: s.id,
-      parentKey: s.parentKey,
+      projectId: s.projectId,
       name: s.name,
       description: s.description,
-      icon: s.icon,
-      from: s.from,
-      via: s.via,
-      to: s.to,
-      href: s.href,
       enabled: s.enabled,
       order: s.order,
     });
-    const idx = ICON_GRADIENTS.findIndex(
-      (g) => g.from === s.from && g.via === s.via && g.to === s.to
-    );
-    setSelectedGradient(idx >= 0 ? idx : 0);
     setShowModal(true);
   };
 
   const handleSave = async () => {
-    if (!formData.name.trim() || !formData.href.trim()) return;
+    if (!formData.name.trim()) return;
     if (formData.id) {
       await updateSubmodule(formData.id, formData);
     } else {
@@ -140,18 +114,6 @@ export default function SettingsPage() {
     await toggleSubmodule(id);
     await loadModules();
   };
-
-  const applyGradient = (idx: number) => {
-    const g = ICON_GRADIENTS[idx];
-    setFormData((prev) => ({ ...prev, from: g.from, via: g.via, to: g.to }));
-    setSelectedGradient(idx);
-  };
-
-  const grouped = modules.reduce((acc, m) => {
-    if (!acc[m.parentKey]) acc[m.parentKey] = [];
-    acc[m.parentKey].push(m);
-    return acc;
-  }, {} as Record<string, Submodule[]>);
 
   // ---- API Key handlers ----
   function handleSaveApiKey() {
@@ -307,16 +269,36 @@ export default function SettingsPage() {
               <div>
                 <h3 className="text-base font-semibold text-gray-900 dark:text-white">模块管理</h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-                  管理主页下各分类的子模块卡片
+                  管理每个项目下的子模块
                 </p>
               </div>
             </div>
             <motion.button whileTap={{ scale: 0.95 }} onClick={openCreate}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gray-900 text-white text-sm font-medium hover:bg-gray-800 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100 transition-colors flex-shrink-0">
+              disabled={!selectedProjectId}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gray-900 text-white text-sm font-medium hover:bg-gray-800 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100 transition-colors flex-shrink-0 disabled:opacity-50">
               <Plus className="w-4 h-4" />
               添加
             </motion.button>
           </div>
+
+          {/* 项目选择 */}
+          {projects.length > 0 && (
+            <div className="flex gap-2 overflow-x-auto pb-2 mb-3 scrollbar-hide">
+              {projects.map((proj) => (
+                <button
+                  key={proj.id}
+                  onClick={() => setSelectedProjectId(proj.id!)}
+                  className={`shrink-0 px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${
+                    selectedProjectId === proj.id
+                      ? "bg-gray-900 text-white dark:bg-white dark:text-gray-900"
+                      : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+                  }`}
+                >
+                  {proj.name}
+                </button>
+              ))}
+            </div>
+          )}
 
           {modulesLoading ? (
             <div className="space-y-2">
@@ -324,54 +306,44 @@ export default function SettingsPage() {
                 <div key={i} className="skeleton h-16 rounded-2xl" />
               ))}
             </div>
+          ) : projects.length === 0 ? (
+            <p className="text-center text-sm text-gray-400 py-4">
+              暂无项目，请先在规划页创建项目
+            </p>
+          ) : filteredModules.length === 0 ? (
+            <p className="text-center text-sm text-gray-400 py-4">
+              该项目下暂无子模块，点击"添加"创建
+            </p>
           ) : (
-            <div className="space-y-4">
-              {Object.entries(grouped).map(([key, items]) => (
-                <div key={key}>
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className={`px-2 py-0.5 rounded-md text-[11px] font-semibold ${PARENT_COLORS[key as ParentModuleKey]}`}>
-                      {PARENT_MODULE_LABELS[key as ParentModuleKey]}
-                    </span>
-                    <span className="text-[11px] text-gray-400">{items.length} 个</span>
+            <div className="space-y-1.5">
+              {filteredModules.map((mod) => (
+                <div key={mod.id}
+                  className={`bg-gray-50 dark:bg-gray-800/50 rounded-xl p-3 flex items-center gap-3 transition-opacity ${mod.enabled ? "" : "opacity-40"}`}>
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-gray-400 to-gray-500 flex items-center justify-center flex-shrink-0">
+                    <LayoutGrid className="w-5 h-5 text-white" strokeWidth={1.6} />
                   </div>
-                  <div className="space-y-1.5">
-                    {items.map((mod) => {
-                      const Icon = ICON_MAP[mod.icon] || LayoutGrid;
-                      return (
-                        <div key={mod.id}
-                          className={`bg-gray-50 dark:bg-gray-800/50 rounded-xl p-3 flex items-center gap-3 transition-opacity ${mod.enabled ? "" : "opacity-40"}`}>
-                          <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${mod.from} ${mod.via} ${mod.to} flex items-center justify-center flex-shrink-0`}>
-                            <Icon className="w-5 h-5 text-white" strokeWidth={1.6} />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h4 className="text-sm font-medium text-gray-900 dark:text-white">{mod.name}</h4>
-                            <p className="text-xs text-gray-400 truncate">{mod.description}</p>
-                          </div>
-                          <div className="flex items-center gap-0.5">
-                            <button onClick={() => handleToggle(mod.id!)}
-                              className={`relative w-9 h-5 rounded-full transition-colors ${mod.enabled ? "bg-gray-900 dark:bg-white" : "bg-gray-300 dark:bg-gray-600"}`}>
-                              <motion.div className="absolute top-0.5 w-4 h-4 rounded-full bg-white shadow"
-                                animate={{ left: mod.enabled ? 16 : 1 }}
-                                transition={{ type: "spring", stiffness: 500, damping: 30 }} />
-                            </button>
-                            <button onClick={() => openEdit(mod)}
-                              className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
-                              <Pencil className="w-3.5 h-3.5 text-gray-400" />
-                            </button>
-                            <button onClick={() => setShowDeleteConfirm2(mod.id!)}
-                              className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-100 dark:hover:bg-red-900/20 transition-colors">
-                              <Trash2 className="w-3.5 h-3.5 text-red-400" />
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-sm font-medium text-gray-900 dark:text-white">{mod.name}</h4>
+                    <p className="text-xs text-gray-400 truncate">{mod.description || "无描述"}</p>
+                  </div>
+                  <div className="flex items-center gap-0.5">
+                    <button onClick={() => handleToggle(mod.id!)}
+                      className={`relative w-9 h-5 rounded-full transition-colors ${mod.enabled ? "bg-gray-900 dark:bg-white" : "bg-gray-300 dark:bg-gray-600"}`}>
+                      <motion.div className="absolute top-0.5 w-4 h-4 rounded-full bg-white shadow"
+                        animate={{ left: mod.enabled ? 16 : 1 }}
+                        transition={{ type: "spring", stiffness: 500, damping: 30 }} />
+                    </button>
+                    <button onClick={() => openEdit(mod)}
+                      className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+                      <Pencil className="w-3.5 h-3.5 text-gray-400" />
+                    </button>
+                    <button onClick={() => setShowDeleteConfirm2(mod.id!)}
+                      className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-100 dark:hover:bg-red-900/20 transition-colors">
+                      <Trash2 className="w-3.5 h-3.5 text-red-400" />
+                    </button>
                   </div>
                 </div>
               ))}
-              <p className="text-center text-xs text-gray-400 pt-1">
-                添加自定义子模块，自由构建你的管理系统
-              </p>
             </div>
           )}
         </div>
@@ -472,9 +444,21 @@ export default function SettingsPage() {
               </div>
               <div className="space-y-4">
                 <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">所属项目</label>
+                  <select
+                    value={formData.projectId}
+                    onChange={(e) => setFormData((p) => ({ ...p, projectId: Number(e.target.value) }))}
+                    className="w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-gray-900/20"
+                  >
+                    {projects.map((p) => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">名称</label>
                   <input value={formData.name} onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))}
-                    placeholder="例如：毕业"
+                    placeholder="例如：行测刷题"
                     className="w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900/20" />
                 </div>
                 <div>
@@ -482,61 +466,6 @@ export default function SettingsPage() {
                   <input value={formData.description} onChange={(e) => setFormData((p) => ({ ...p, description: e.target.value }))}
                     placeholder="简短的描述文字"
                     className="w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900/20" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">所属分类</label>
-                  <div className="flex gap-2">
-                    {(Object.keys(PARENT_MODULE_LABELS) as ParentModuleKey[]).map((key) => (
-                      <button key={key} onClick={() => setFormData((p) => ({ ...p, parentKey: key }))}
-                        className={`flex-1 py-2 px-3 rounded-xl text-sm font-medium transition-colors ${
-                          formData.parentKey === key ? `${PARENT_COLORS[key]} border-2 border-current` : "bg-gray-50 dark:bg-gray-800 text-gray-500 border-2 border-transparent"}`}>
-                        {PARENT_MODULE_LABELS[key]}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">图标</label>
-                  <div className="flex flex-wrap gap-2 max-h-28 overflow-y-auto">
-                    {AVAILABLE_ICONS.map((name) => {
-                      const Icon = ICON_MAP[name] || LayoutGrid;
-                      return (
-                        <button key={name} onClick={() => setFormData((p) => ({ ...p, icon: name }))}
-                          className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
-                            formData.icon === name ? "bg-gray-100 dark:bg-gray-800 text-gray-700 ring-2 ring-gray-400" : "bg-gray-50 dark:bg-gray-800 text-gray-400 hover:text-gray-600"}`}>
-                          <Icon className="w-5 h-5" strokeWidth={1.5} />
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">卡片颜色</label>
-                  <div className="flex flex-wrap gap-2">
-                    {ICON_GRADIENTS.map((g, i) => (
-                      <button key={i} onClick={() => applyGradient(i)}
-                        className={`w-10 h-10 rounded-2xl bg-gradient-to-br ${g.from} ${g.via} ${g.to} transition-transform ${
-                          selectedGradient === i ? "scale-110 ring-2 ring-offset-2 ring-gray-900 dark:ring-white" : ""}`} />
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">跳转路径</label>
-                  <input value={formData.href} onChange={(e) => setFormData((p) => ({ ...p, href: e.target.value }))}
-                    placeholder="/example"
-                    className="w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900/20" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">预览</label>
-                  <div className={`rounded-2xl bg-gradient-to-br ${formData.from} ${formData.via} ${formData.to} p-4 text-white`}>
-                    <div className="flex items-center gap-3">
-                      {(() => { const Icon = ICON_MAP[formData.icon] || LayoutGrid; return <Icon className="w-6 h-6" strokeWidth={1.5} />; })()}
-                      <div>
-                        <p className="font-bold text-sm">{formData.name || "未命名"}</p>
-                        <p className="text-xs text-white/70">{formData.description || "无描述"}</p>
-                      </div>
-                    </div>
-                  </div>
                 </div>
               </div>
               <div className="flex gap-3 mt-6">

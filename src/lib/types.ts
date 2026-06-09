@@ -98,6 +98,7 @@ export interface Task {
   projectId?: string;
   sectionId?: number;
   boardId?: number;
+  submoduleId?: number;
   dueDate?: number;
   requiredSegments?: number;
   segmentReminderDays?: number;
@@ -844,33 +845,19 @@ export type ParentModuleKey = 'learning' | 'health' | 'growth';
 
 export interface Submodule {
   id?: number;
-  parentKey: ParentModuleKey;
+  projectId: number;
   name: string;
   description: string;
-  icon: string;
-  from: string;
-  via: string;
-  to: string;
-  href: string;
   enabled: boolean;
   order: number;
   createdAt: number;
   updatedAt: number;
 }
 
-export const PRESET_SUBMODULES: Omit<Submodule, 'id' | 'createdAt' | 'updatedAt'>[] = [
-  // 学习
-  { parentKey: 'learning', name: '毕业', description: '毕业设计 · 论文进度', icon: 'GraduationCap', from: 'from-indigo-400', via: 'via-violet-400', to: 'to-purple-500', href: '/graduation', enabled: true, order: 1 },
-  { parentKey: 'learning', name: '考公', description: '行测 · 申论 · 面试', icon: 'BookOpen', from: 'from-blue-400', via: 'via-indigo-400', to: 'to-violet-500', href: '/exam', enabled: true, order: 2 },
-  // 健康
-  { parentKey: 'health', name: '睡眠', description: '睡眠记录 · 分析与优化', icon: 'Moon', from: 'from-emerald-400', via: 'via-teal-400', to: 'to-cyan-500', href: '/sleep', enabled: true, order: 1 },
-  { parentKey: 'health', name: '体态', description: '体态评估 · 矫正训练', icon: 'Sparkles', from: 'from-teal-400', via: 'via-green-400', to: 'to-emerald-500', href: '/posture', enabled: true, order: 2 },
-  { parentKey: 'health', name: '运动', description: '训练计划 · 动作记录', icon: 'Dumbbell', from: 'from-cyan-400', via: 'via-sky-400', to: 'to-blue-500', href: '/exercise', enabled: true, order: 3 },
-  // 成长
-  { parentKey: 'growth', name: '规划', description: '目标设定 · 项目分解', icon: 'Target', from: 'from-rose-400', via: 'via-pink-400', to: 'to-fuchsia-500', href: '/planning', enabled: true, order: 1 },
-  { parentKey: 'growth', name: '成长', description: '个人成长 · 技能提升', icon: 'Sprout', from: 'from-pink-400', via: 'via-rose-400', to: 'to-orange-400', href: '/goals', enabled: true, order: 2 },
-  { parentKey: 'growth', name: '习惯', description: '习惯打卡 · 坚持追踪', icon: 'Repeat', from: 'from-fuchsia-400', via: 'via-purple-400', to: 'to-violet-500', href: '/habits', enabled: true, order: 3 },
-];
+/**
+ * @deprecated Use Submodule interface directly instead.
+ */
+export const PRESET_SUBMODULES: Omit<Submodule, 'id' | 'createdAt' | 'updatedAt' | 'projectId'>[] = [];
 
 export const PARENT_MODULE_LABELS: Record<ParentModuleKey, string> = {
   learning: '学习',
@@ -878,6 +865,7 @@ export const PARENT_MODULE_LABELS: Record<ParentModuleKey, string> = {
   growth: '成长',
 };
 
+/** @deprecated Icons are now inherited from ProjectV2 */
 export const AVAILABLE_ICONS = [
   'GraduationCap', 'BookOpen', 'Moon', 'Sparkles', 'Dumbbell',
   'Target', 'Sprout', 'Repeat', 'Heart', 'Brain', 'Zap',
@@ -886,6 +874,7 @@ export const AVAILABLE_ICONS = [
   'Coffee', 'PenTool', 'Camera', 'Map', 'Globe', 'Cloud',
 ] as const;
 
+/** @deprecated Gradients are now inherited from ProjectV2 */
 export const ICON_GRADIENTS: { label: string; from: string; via: string; to: string }[] = [
   { label: '蓝紫', from: 'from-indigo-400', via: 'via-violet-400', to: 'to-purple-500' },
   { label: '青蓝', from: 'from-sky-400', via: 'via-cyan-400', to: 'to-blue-500' },

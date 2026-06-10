@@ -90,7 +90,11 @@ function useDarkMode() {
 export default function OverviewHeader() {
   const router = useRouter();
   const { isDark, toggle } = useDarkMode();
-  const [today] = useState(new Date());
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => { setMounted(true); }, []);
+
+  const today = new Date();
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -119,10 +123,10 @@ export default function OverviewHeader() {
     >
       {/* 左侧日期 */}
       <div className="flex flex-col gap-0.5">
-        <h1 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 dark:text-white">
+        <h1 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 dark:text-white" suppressHydrationWarning>
           {formatDate(today)}
         </h1>
-        <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+        <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400" suppressHydrationWarning>
           {formatDateFull(today)}
         </p>
       </div>

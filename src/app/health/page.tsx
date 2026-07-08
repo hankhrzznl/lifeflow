@@ -1,10 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import MusclePage from "./components/MusclePage";
 
-export default function HealthHubPage() {
-  const router = useRouter();
-  useEffect(() => { router.replace("/"); }, [router]);
-  return null;
+export default function HealthPage() {
+  return <MusclePage />;
 }

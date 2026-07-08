@@ -115,6 +115,7 @@ function ProjectExpandView({
   onBack: () => void;
 }) {
   const gradient = getProjectGradient(projectIndex);
+  const projectId = project.id!;
   const [boardsData, setBoardsData] = useState<BoardData[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedSections, setExpandedSections] = useState<Set<number>>(new Set());
@@ -123,7 +124,8 @@ function ProjectExpandView({
     const load = async () => {
       setLoading(true);
       try {
-        const boards = await getBoardsByProject(project.id!);
+        const boards = await getBoardsByProject(projectId);
+        console.log("[ProjectExpandView] projectId:", projectId, "boards:", boards.length);
         const data: BoardData[] = [];
 
         for (const board of boards) {
@@ -151,7 +153,7 @@ function ProjectExpandView({
       }
     };
     load();
-  }, [project.id]);
+  }, [projectId]);
 
   const handleToggleTask = useCallback(async (task: Task) => {
     if (!task.id) return;

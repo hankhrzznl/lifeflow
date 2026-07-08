@@ -13,7 +13,7 @@ import { getPluginConfig } from "@/lib/plugin-config";
 import type { PluginMetadata } from "@/lib/types";
 
 const moreItems = [
-  { label: "健康", href: "/health", icon: Heart },
+  { label: "运动", href: "/health", icon: Heart },
   { label: "提醒", href: "/reminders", icon: Bell },
   { label: "设置", href: "/settings", icon: Settings },
   { label: "回收站", href: "/trash", icon: Trash2 },

@@ -122,6 +122,7 @@ function ProjectExpandView({
   const [expandedSections, setExpandedSections] = useState<Set<number>>(new Set());
 
   useEffect(() => {
+    console.log("[ProjectExpandView useEffect] boards:", boards.length);
     const load = async () => {
       if (boards.length === 0) {
         setBoardsData([]);
@@ -499,6 +500,10 @@ export default function HomePage() {
             ))}
           </div>
         ) : selectedProject ? (
+          (() => {
+            const bds = projectBoards[selectedProject.id!] || [];
+            console.log("[HomePage render] selectedProject.id:", selectedProject.id, "boards:", bds.length, "projectBoards keys:", Object.keys(projectBoards));
+            return (
           <motion.div
             key={`expand-${selectedProject.id}`}
             initial={{ opacity: 0, x: 20 }}
@@ -509,10 +514,12 @@ export default function HomePage() {
             <ProjectExpandView
               project={selectedProject}
               projectIndex={selectedIndex}
-              boards={projectBoards[selectedProject.id!] || []}
+              boards={bds}
               onBack={() => setSelectedProject(null)}
             />
           </motion.div>
+            );
+          })()
         ) : projects.length === 0 ? (
           <div className="text-center py-16">
             <FolderKanban className="w-10 h-10 text-gray-300 mx-auto mb-3" strokeWidth={1.5} />

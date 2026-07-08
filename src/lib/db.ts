@@ -38,7 +38,6 @@ import type {
   EnduranceRecord,
   DailyHealthRecord,
   CustomTrainingPlan,
-  Submodule,
   ScheduleTemplate,
   ScheduleEvent,
   DaySchedule,
@@ -83,7 +82,6 @@ export class LifeFlowDB extends Dexie {
   enduranceRecords!: Table<EnduranceRecord, number>;
   dailyHealthRecords!: Table<DailyHealthRecord, number>;
   customTrainingPlans!: Table<CustomTrainingPlan, number>;
-  submodules!: Table<Submodule, number>;
   scheduleTemplates!: Table<ScheduleTemplate, number>;
   scheduleEvents!: Table<ScheduleEvent, number>;
   daySchedules!: Table<DaySchedule, number>;
@@ -295,23 +293,16 @@ export class LifeFlowDB extends Dexie {
 
     this.version(20).stores({
       submodules: "++id, parentKey, enabled, order, createdAt",
-    }).upgrade(async (tx) => {
-      const count = await tx.table("submodules").count();
-      if (count === 0) {
-        const { PRESET_SUBMODULES } = await import("./types");
-        const now = Date.now();
-        await tx.table("submodules").bulkAdd(
-          PRESET_SUBMODULES.map((s) => ({ ...s, createdAt: now, updatedAt: now }))
-        );
-      }
+    }).upgrade(async () => {
+      // v23+: submodules table deprecated, presets removed
       if (typeof window !== "undefined" && window.location.hostname === "localhost") {
-        console.log("[LifeFlowDB v20] Added submodules table with presets");
+        console.log("[LifeFlowDB v20] Added submodules table (deprecated in v23)");
       }
     });
 
     this.version(21).stores({
       submodules: "++id, projectId, enabled, order, createdAt",
-      tasks: "++id, type, status, parentTaskId, startTime, projectId, submoduleId, createdAt, [type+status], *tags, dueDate",
+      tasks: "++id, type, status, parentTaskId, startTime, projectId, createdAt, [type+status], *tags, dueDate",
     }).upgrade(async (tx) => {
       // Migrate old Submodule records: parentKey → projectId mapping
       const oldSubmodules = await tx.table("submodules").toArray();
@@ -385,6 +376,18 @@ export class LifeFlowDB extends Dexie {
     }).upgrade(async () => {
       if (typeof window !== "undefined" && window.location.hostname === "localhost") {
         console.log("[LifeFlowDB v22] Added schedule template system");
+      }
+    });
+
+    // v23: Remove deprecated submodules table
+    this.version(23).stores({
+      submodules: null,
+    }).upgrade(async (tx) => {
+      try {
+        await tx.table("submodules").clear();
+      } catch { /* table may not exist */ }
+      if (typeof window !== "undefined" && window.location.hostname === "localhost") {
+        console.log("[LifeFlowDB v23] Removed deprecated submodules table");
       }
     });
   }
@@ -1118,11 +1121,10 @@ export async function exportAllData(): Promise<string> {
     "nutritionRecords",
     "recoveryRecords",
     "enduranceRecords",
-    "submodules",
   ];
 
   const data: Record<string, unknown[]> = {};
-  
+
   for (const table of tables) {
     try {
       data[table] = await (db as any)[table].toArray();
@@ -1164,7 +1166,6 @@ export async function importAllData(data: string): Promise<void> {
     "nutritionRecords",
     "recoveryRecords",
     "enduranceRecords",
-    "submodules",
   ];
 
   await db.transaction("rw", tables.map(t => (db as any)[t]), async () => {
@@ -1827,59 +1828,6 @@ export async function getMetricHistory(
       value: record[metric] as number
     }))
     .filter(item => item.value !== undefined && item.value !== null);
-}
-
-// ==================== 子模块 CRUD ====================
-
-export async function initializeSubmodules(): Promise<void> {
-  const count = await db.submodules.count();
-  if (count > 0) return;
-
-  // v21+: Submodules are created through the settings page, no presets needed
-}
-
-export async function getSubmodulesByProject(projectId: number): Promise<Submodule[]> {
-  return db.submodules
-    .where("projectId")
-    .equals(projectId)
-    .filter((s) => s.enabled === true)
-    .sortBy("order");
-}
-
-export async function getAllSubmodules(): Promise<Submodule[]> {
-  return db.submodules.orderBy("order").toArray();
-}
-
-export async function addSubmodule(s: Omit<Submodule, "id" | "createdAt" | "updatedAt">): Promise<number> {
-  const now = Date.now();
-  return db.submodules.add({ ...s, createdAt: now, updatedAt: now });
-}
-
-export async function updateSubmodule(id: number, updates: Partial<Submodule>): Promise<void> {
-  await db.submodules.update(id, { ...updates, updatedAt: Date.now() });
-}
-
-export async function deleteSubmodule(id: number): Promise<void> {
-  await db.submodules.delete(id);
-}
-
-export async function toggleSubmodule(id: number): Promise<void> {
-  const s = await db.submodules.get(id);
-  if (s) {
-    await db.submodules.update(id, { enabled: !s.enabled, updatedAt: Date.now() });
-  }
-}
-
-export async function getTasksBySubmodule(submoduleId: number): Promise<Task[]> {
-  return db.tasks
-    .where("submoduleId")
-    .equals(submoduleId)
-    .filter((t) => t.status !== "archived")
-    .toArray();
-}
-
-export async function getProjectsWithSubmodules(): Promise<ProjectV2[]> {
-  return db.projectV2s.orderBy("createdAt").toArray();
 }
 
 // ==================== 日程模板 CRUD ====================

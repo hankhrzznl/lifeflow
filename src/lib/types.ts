@@ -98,7 +98,6 @@ export interface Task {
   projectId?: string;
   sectionId?: number;
   boardId?: number;
-  submoduleId?: number;
   dueDate?: number;
   requiredSegments?: number;
   segmentReminderDays?: number;
@@ -839,31 +838,8 @@ export const RPE_LABELS: Record<number, string> = {
 // 休息时间预设
 export const REST_TIME_PRESETS = [30, 60, 90, 120, 180];
 
-// ==================== 子模块管理系统 ====================
-
-export type ParentModuleKey = 'learning' | 'health' | 'growth';
-
-export interface Submodule {
-  id?: number;
-  projectId: number;
-  name: string;
-  description: string;
-  enabled: boolean;
-  order: number;
-  createdAt: number;
-  updatedAt: number;
-}
-
-/**
- * @deprecated Use Submodule interface directly instead.
- */
-export const PRESET_SUBMODULES: Omit<Submodule, 'id' | 'createdAt' | 'updatedAt' | 'projectId'>[] = [];
-
-export const PARENT_MODULE_LABELS: Record<ParentModuleKey, string> = {
-  learning: '学习',
-  health: '健康',
-  growth: '成长',
-};
+/** @deprecated Submodule system removed in v2.3 — kept for old DB migration compat */
+export const PRESET_SUBMODULES: Record<string, unknown>[] = [];
 
 /** @deprecated Icons are now inherited from ProjectV2 */
 export const AVAILABLE_ICONS = [

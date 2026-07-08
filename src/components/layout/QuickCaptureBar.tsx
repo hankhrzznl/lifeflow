@@ -4,8 +4,8 @@ import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Zap, Send, ChevronDown } from "lucide-react";
 import { db } from "@/lib/db";
-import { getAllSubmodules } from "@/lib/db";
-import type { Submodule } from "@/lib/types";
+import { getAllProjectsV2 } from "@/lib/db";
+import type { ProjectV2 } from "@/lib/types";
 import { showToast } from "@/components/ui/Toast";
 
 // ==================== 主组件 ====================
@@ -20,12 +20,12 @@ export default function QuickCaptureBar({
   const [inputValue, setInputValue] = useState("");
   const [isFocused, setIsFocused] = useState(false);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [tags, setTags] = useState<Submodule[]>([]);
+  const [tags, setTags] = useState<ProjectV2[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // 加载 Submodule 作为标签数据
+  // 加载项目作为标签数据
   useEffect(() => {
-    getAllSubmodules().then((list) => setTags(list.filter((s) => s.enabled)));
+    getAllProjectsV2().then((list) => setTags(list));
   }, []);
 
   // 发送

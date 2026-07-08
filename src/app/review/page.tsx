@@ -10,13 +10,12 @@ import {
   BarChart3,
 } from "lucide-react";
 import {
-  getAllSubmodules, initializeSubmodules,
   getWeeklyTaskStats, getActiveSchedulableTasks, getMonthlyTaskStats, getMonthlyHabitStats, getMonthlyFinanceStats,
-  initBuiltInPlugins,
+  initBuiltInPlugins, getAllProjectsV2,
   createReviewRecord, getReviewRecordByKey,
 } from "@/lib/db";
 import { showToast } from "@/components/ui/Toast";
-import type { Submodule, ReviewRecord, Task } from "@/lib/types";
+import type { ProjectV2, ReviewRecord, Task } from "@/lib/types";
 import { db } from "@/lib/db";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid,
@@ -29,7 +28,7 @@ type TimeGranularity = "day" | "week" | "month" | "quarter";
 type CompareMode = "time" | "goal";
 type ChartDataPoint = Record<string, number | string>;
 
-interface SubmoduleMetrics {
+interface ProjectMetrics {
   line1Key: string;
   line1Label: string;
   line1Color: string;
@@ -78,8 +77,8 @@ function getDaysInRange(start: number, end: number): string[] {
 
 // ==================== 子模块指标配置 ====================
 
-function getSubmoduleMetrics(submodule: Submodule): SubmoduleMetrics {
-  switch (submodule.name) {
+function getProjectMetrics(project: ProjectV2): ProjectMetrics {
+  switch (project.name) {
     case "睡眠":
       return {
         line1Key: "duration", line1Label: "睡眠时长(h)", line1Color: "#8b5cf6",
@@ -605,12 +604,12 @@ function buildCompareRows<T>(
 
 // ==================== 数据加载调度 ====================
 
-async function loadSubmoduleData(
-  submodule: Submodule,
+async function loadProjectData(
+  project: ProjectV2,
   granularity: TimeGranularity,
 ): Promise<{ chart: ChartDataPoint[]; compare: CompareRow[] } | null> {
   try {
-    switch (submodule.name) {
+    switch (project.name) {
       case "睡眠": return loadSleepData(granularity);
       case "体态": return loadBodyMetricData(granularity);
       case "运动": return loadWorkoutData(granularity);
@@ -622,7 +621,7 @@ async function loadSubmoduleData(
       default: return null;
     }
   } catch (err) {
-    console.error(`Failed to load data for ${submodule.name}:`, err);
+    console.error(`Failed to load data for ${project.name}:`, err);
     return null;
   }
 }
@@ -650,7 +649,7 @@ function CompareTable({
 }: {
   rows: CompareRow[];
   compareMode: CompareMode;
-  metrics: SubmoduleMetrics;
+  metrics: ProjectMetrics;
 }) {
   if (compareMode === "goal") {
     return (
@@ -890,10 +889,10 @@ function StatCard({
 // ==================== 主页面 ====================
 
 export default function ReviewPage() {
-  const [submodules, setSubmodules] = useState<Submodule[]>([]);
+  const [projects, setProjects] = useState<ProjectV2[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // 当前选中的子模块（null = 全部）
+  // 当前选中的项目（null = 全部）
   const [selectedName, setSelectedName] = useState<string | null>(null);
 
   // 粒度和对比模式
@@ -906,19 +905,18 @@ export default function ReviewPage() {
   const [dataLoading, setDataLoading] = useState(false);
   const [noData, setNoData] = useState(false);
 
-  // 当前选中的子模块对象
-  const selectedSubmodule = submodules.find((s) => s.name === selectedName) ?? null;
-  const metrics = selectedSubmodule ? getSubmoduleMetrics(selectedSubmodule) : null;
+  // 当前选中的项目对象
+  const selectedProject = projects.find((p) => p.name === selectedName) ?? null;
+  const metrics = selectedProject ? getProjectMetrics(selectedProject) : null;
 
   // 初始化
   useEffect(() => {
     const load = async () => {
       try {
-        await initializeSubmodules();
-        const all = await getAllSubmodules();
-        setSubmodules(all.filter((s) => s.enabled));
+        const all = await getAllProjectsV2();
+        setProjects(all);
       } catch (err) {
-        console.error("Failed to load submodules:", err);
+        console.error("Failed to load projects:", err);
       } finally {
         setLoading(false);
       }
@@ -928,7 +926,7 @@ export default function ReviewPage() {
 
   // 加载数据
   useEffect(() => {
-    if (!selectedSubmodule) {
+    if (!selectedProject) {
       setChartData([]);
       setCompareRows([]);
       setNoData(false);
@@ -939,7 +937,7 @@ export default function ReviewPage() {
     setDataLoading(true);
     setNoData(false);
 
-    loadSubmoduleData(selectedSubmodule, granularity).then((result) => {
+    loadProjectData(selectedProject, granularity).then((result) => {
       if (cancelled) return;
       if (result && result.chart.length > 0) {
         setChartData(result.chart);
@@ -953,7 +951,7 @@ export default function ReviewPage() {
     });
 
     return () => { cancelled = true; };
-  }, [selectedSubmodule, granularity]);
+  }, [selectedProject, granularity]);
 
   // 骨架屏
   if (loading) {
@@ -982,7 +980,7 @@ export default function ReviewPage() {
       <h1 className="text-xl font-bold text-gray-900 mb-1">回顾</h1>
       <p className="text-sm text-gray-500 mb-5">查看历史数据，对比分析，调整计划</p>
 
-      {/* 子模块文字选项行 */}
+      {/* 项目文字选项行 */}
       <div className="flex gap-2 overflow-x-auto pb-2 mb-4 scrollbar-hide">
         <button
           onClick={() => setSelectedName(null)}
@@ -994,17 +992,17 @@ export default function ReviewPage() {
         >
           全部
         </button>
-        {submodules.map((sub) => (
+        {projects.map((p) => (
           <button
-            key={sub.id}
-            onClick={() => setSelectedName(sub.name)}
+            key={p.id}
+            onClick={() => setSelectedName(p.name)}
             className={`shrink-0 px-4 py-2 text-sm font-medium rounded-xl transition-all ${
-              selectedName === sub.name
+              selectedName === p.name
                 ? "bg-orange-500 text-white shadow-sm"
                 : "bg-gray-100 text-gray-700 hover:bg-gray-200"
             }`}
           >
-            {sub.name}
+            {p.name}
           </button>
         ))}
       </div>
@@ -1066,7 +1064,7 @@ export default function ReviewPage() {
           ) : (
             <AnimatePresence mode="wait">
               <motion.div
-                key={`${selectedSubmodule?.name}-${granularity}`}
+                key={`${selectedProject?.name}-${granularity}`}
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}

@@ -1992,3 +1992,39 @@ export async function generateDaySchedule(date: string): Promise<DaySchedule | n
 
   return (await db.daySchedules.get(id)) ?? null;
 }
+
+const DEFAULT_TEMPLATE_EVENTS = [
+  { title: "睡觉", startTime: "23:30", endTime: "07:00", note: "", order: 0 },
+  { title: "睡觉", startTime: "12:30", endTime: "13:00", note: "", order: 1 },
+  { title: "早饭", startTime: "07:30", endTime: "07:50", note: "", order: 2 },
+  { title: "午饭", startTime: "11:40", endTime: "12:10", note: "", order: 3 },
+  { title: "晚饭", startTime: "17:30", endTime: "18:00", note: "", order: 4 },
+];
+
+export async function ensureDefaultTemplate(): Promise<ScheduleTemplate | null> {
+  const templates = await db.scheduleTemplates.toArray();
+  if (templates.length > 0) return templates[0];
+
+  const now = Date.now();
+  const tId = await db.scheduleTemplates.add({
+    name: "暑假计划",
+    dateRanges: [{ from: "2025-01-01", to: "2099-12-31" }],
+    createdAt: now,
+    updatedAt: now,
+  });
+
+  for (const ev of DEFAULT_TEMPLATE_EVENTS) {
+    await db.scheduleEvents.add({
+      templateId: tId,
+      ...ev,
+      createdAt: now,
+      updatedAt: now,
+    });
+  }
+
+  return (await db.scheduleTemplates.get(tId)) ?? null;
+}
+
+export async function getAllDaySchedules(): Promise<DaySchedule[]> {
+  return db.daySchedules.orderBy("date").reverse().toArray();
+}

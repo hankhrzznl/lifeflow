@@ -920,6 +920,8 @@ export interface DayScheduleEvent {
   endTime: string;
   note?: string;
   completed: boolean;
+  actualStartTime?: string; // "HH:mm" 校准后实际开始时间
+  actualEndTime?: string;   // "HH:mm" 校准后实际结束时间
 }
 
 export interface DaySchedule {

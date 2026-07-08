@@ -885,3 +885,48 @@ export const ICON_GRADIENTS: { label: string; from: string; via: string; to: str
   { label: '绿松', from: 'from-teal-400', via: 'via-green-400', to: 'to-emerald-500' },
   { label: '紫粉', from: 'from-violet-400', via: 'via-purple-400', to: 'to-pink-500' },
 ];
+
+// ==================== 日程模板系统 ====================
+
+export interface DateRange {
+  from: string; // "YYYY-MM-DD"
+  to: string;   // "YYYY-MM-DD"
+}
+
+export interface ScheduleTemplate {
+  id?: number;
+  name: string;
+  dateRanges: DateRange[];
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface ScheduleEvent {
+  id?: number;
+  templateId: number;
+  title: string;
+  startTime: string; // "HH:mm"
+  endTime: string;   // "HH:mm"
+  note?: string;
+  order: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface DayScheduleEvent {
+  eventId: number;     // ref to ScheduleEvent.id
+  title: string;
+  startTime: string;
+  endTime: string;
+  note?: string;
+  completed: boolean;
+}
+
+export interface DaySchedule {
+  id?: number;
+  date: string; // "YYYY-MM-DD"
+  templateId: number;
+  events: DayScheduleEvent[];
+  createdAt: number;
+  updatedAt: number;
+}

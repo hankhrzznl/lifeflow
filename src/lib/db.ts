@@ -39,6 +39,9 @@ import type {
   DailyHealthRecord,
   CustomTrainingPlan,
   Submodule,
+  ScheduleTemplate,
+  ScheduleEvent,
+  DaySchedule,
 } from "./types";
 
 export class LifeFlowDB extends Dexie {
@@ -81,6 +84,9 @@ export class LifeFlowDB extends Dexie {
   dailyHealthRecords!: Table<DailyHealthRecord, number>;
   customTrainingPlans!: Table<CustomTrainingPlan, number>;
   submodules!: Table<Submodule, number>;
+  scheduleTemplates!: Table<ScheduleTemplate, number>;
+  scheduleEvents!: Table<ScheduleEvent, number>;
+  daySchedules!: Table<DaySchedule, number>;
 
   constructor() {
     super("LifeFlowDB");
@@ -369,6 +375,16 @@ export class LifeFlowDB extends Dexie {
 
       if (typeof window !== "undefined" && window.location.hostname === "localhost") {
         console.log("[LifeFlowDB v21] Migrated submodules from parentKey to projectId");
+      }
+    });
+
+    this.version(22).stores({
+      scheduleTemplates: "++id, createdAt",
+      scheduleEvents: "++id, templateId, order, createdAt",
+      daySchedules: "++id, date, templateId, createdAt",
+    }).upgrade(async () => {
+      if (typeof window !== "undefined" && window.location.hostname === "localhost") {
+        console.log("[LifeFlowDB v22] Added schedule template system");
       }
     });
   }
@@ -1864,4 +1880,115 @@ export async function getTasksBySubmodule(submoduleId: number): Promise<Task[]> 
 
 export async function getProjectsWithSubmodules(): Promise<ProjectV2[]> {
   return db.projectV2s.orderBy("createdAt").toArray();
+}
+
+// ==================== 日程模板 CRUD ====================
+
+// 模板
+export async function getAllTemplates(): Promise<ScheduleTemplate[]> {
+  return db.scheduleTemplates.orderBy("createdAt").toArray();
+}
+
+export async function createTemplate(t: Omit<ScheduleTemplate, "id" | "createdAt" | "updatedAt">): Promise<number> {
+  const now = Date.now();
+  return db.scheduleTemplates.add({ ...t, createdAt: now, updatedAt: now });
+}
+
+export async function updateTemplate(id: number, updates: Partial<ScheduleTemplate>): Promise<void> {
+  await db.scheduleTemplates.update(id, { ...updates, updatedAt: Date.now() });
+}
+
+export async function deleteTemplate(id: number): Promise<void> {
+  await db.transaction("rw", [db.scheduleTemplates, db.scheduleEvents, db.daySchedules], async () => {
+    await db.scheduleEvents.where("templateId").equals(id).delete();
+    await db.daySchedules.where("templateId").equals(id).delete();
+    await db.scheduleTemplates.delete(id);
+  });
+}
+
+// 模板事件
+export async function getEventsByTemplate(templateId: number): Promise<ScheduleEvent[]> {
+  return db.scheduleEvents.where("templateId").equals(templateId).sortBy("order");
+}
+
+export async function createScheduleEvent(e: Omit<ScheduleEvent, "id" | "createdAt" | "updatedAt">): Promise<number> {
+  const now = Date.now();
+  return db.scheduleEvents.add({ ...e, createdAt: now, updatedAt: now });
+}
+
+export async function updateScheduleEvent(id: number, updates: Partial<ScheduleEvent>): Promise<void> {
+  await db.scheduleEvents.update(id, { ...updates, updatedAt: Date.now() });
+}
+
+export async function deleteScheduleEvent(id: number): Promise<void> {
+  await db.scheduleEvents.delete(id);
+}
+
+export async function deleteEventsByTemplate(templateId: number): Promise<void> {
+  await db.scheduleEvents.where("templateId").equals(templateId).delete();
+}
+
+// 日程记录
+export async function getDaySchedule(date: string): Promise<DaySchedule | undefined> {
+  return db.daySchedules.where("date").equals(date).first();
+}
+
+export async function saveDaySchedule(ds: Omit<DaySchedule, "id" | "createdAt" | "updatedAt">): Promise<number> {
+  const now = Date.now();
+  return db.daySchedules.add({ ...ds, createdAt: now, updatedAt: now });
+}
+
+export async function updateDaySchedule(id: number, updates: Partial<DaySchedule>): Promise<void> {
+  await db.daySchedules.update(id, { ...updates, updatedAt: Date.now() });
+}
+
+// 查找某天匹配的模板
+export async function findActiveTemplate(date: string): Promise<ScheduleTemplate | null> {
+  const templates = await db.scheduleTemplates.toArray();
+  for (const t of templates) {
+    for (const range of t.dateRanges) {
+      if (date >= range.from && date <= range.to) {
+        return t;
+      }
+    }
+  }
+  return null;
+}
+
+// 生成当天日程（如果还没生成）
+export async function generateDaySchedule(date: string): Promise<DaySchedule | null> {
+  // 先检查是否已存在
+  const existing = await getDaySchedule(date);
+  if (existing) return existing;
+
+  const template = await findActiveTemplate(date);
+  if (!template) return null;
+
+  const events = await getEventsByTemplate(template.id!);
+  if (events.length === 0) {
+    // Create empty schedule
+    const id = await saveDaySchedule({
+      date,
+      templateId: template.id!,
+      events: [],
+    });
+    return (await db.daySchedules.get(id)) ?? null;
+  }
+
+  const dayEvents: import("./types").DayScheduleEvent[] = events.map((e) => ({
+    eventId: e.id!,
+    title: e.title,
+    startTime: e.startTime,
+    endTime: e.endTime,
+    note: e.note,
+    completed: false,
+  }));
+
+  const id = await saveDaySchedule({
+    date,
+    templateId: template.id!,
+    events: dayEvents,
+  });
+
+  return (await db.daySchedules.get(id)) ?? null;
 }

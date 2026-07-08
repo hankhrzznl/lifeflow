@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Home, Layers, Menu, X,
-  Settings, BarChart3, Trash2, Puzzle, ChevronRight, Bell,
+  Settings, BarChart3, Trash2, Puzzle, ChevronRight, Bell, CalendarDays,
 } from "lucide-react";
 import { getPluginsForNavbar } from "@/lib/db";
 import { getPluginConfig } from "@/lib/plugin-config";
@@ -113,6 +113,10 @@ export default function BottomTabBar() {
     {
       id: "review", label: "回顾", icon: BarChart3, path: "/review",
       active: isActive("/review"),
+    },
+    {
+      id: "schedule", label: "日程", icon: CalendarDays, path: "/schedule",
+      active: isActive("/schedule"),
     },
     {
       id: "more", label: "更多", icon: Menu, path: null,

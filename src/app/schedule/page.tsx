@@ -115,7 +115,7 @@ function TemplateModal({
   onSave: () => void;
 }) {
   const [name, setName] = useState("");
-  const [rangeText, setRangeText] = useState("");
+  const [dateRanges, setDateRanges] = useState<DateRange[]>([]);
   const [events, setEvents] = useState<ScheduleEvent[]>([]);
   const [eventTitle, setEventTitle] = useState("");
   const [eventStart, setEventStart] = useState("08:00");
@@ -127,7 +127,7 @@ function TemplateModal({
     if (!open) return;
     if (template) {
       setName(template.name);
-      setRangeText(template.dateRanges.map((r) => `${r.from}~${r.to}`).join(", "));
+      setDateRanges(template.dateRanges.length > 0 ? template.dateRanges : [{ from: "", to: "" }]);
       setLoading(true);
       getEventsByTemplate(template.id!).then((list) => {
         setEvents(list);
@@ -135,26 +135,23 @@ function TemplateModal({
       });
     } else {
       setName("");
-      setRangeText("");
+      setDateRanges([{ from: "", to: "" }]);
       setEvents([]);
     }
   }, [open, template]);
-
-  const parseRanges = (text: string): DateRange[] => {
-    return text.split(",").map((s) => s.trim()).filter(Boolean).map((part) => {
-      const [from, to] = part.split("~").map((s) => s.trim());
-      return { from: from || "", to: to || from || "" };
-    }).filter((r) => r.from);
-  };
 
   const handleSaveTemplate = async () => {
     if (!name.trim()) return;
     setSaving(true);
     try {
-      const ranges = parseRanges(rangeText);
+      const ranges = dateRanges.filter((r) => r.from && r.to);
+      if (ranges.length === 0) {
+        showToast({ message: "请至少设置一个有效的日期段", type: "warning" });
+        setSaving(false);
+        return;
+      }
       if (template?.id) {
         await updateTemplate(template.id, { name: name.trim(), dateRanges: ranges });
-        // Replace events
         await deleteEventsByTemplate(template.id);
         for (let i = 0; i < events.length; i++) {
           const { id, templateId: _, createdAt, updatedAt, ...rest } = events[i] as any;
@@ -222,10 +219,48 @@ function TemplateModal({
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">生效日期</label>
-                <input value={rangeText} onChange={(e) => setRangeText(e.target.value)}
-                  placeholder="2025-07-04~2025-08-04, 2025-07-10~2025-07-20"
-                  className="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-                <p className="text-xs text-gray-400 mt-1">格式：YYYY-MM-DD~YYYY-MM-DD，多段用逗号分隔</p>
+                <div className="space-y-2 mb-2">
+                  {dateRanges.map((range, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <input
+                        type="date"
+                        value={range.from}
+                        onChange={(e) => {
+                          const next = [...dateRanges];
+                          next[i] = { ...next[i], from: e.target.value };
+                          setDateRanges(next);
+                        }}
+                        className="flex-1 px-3 py-2 rounded-xl bg-gray-50 border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      />
+                      <span className="text-gray-400 text-sm">—</span>
+                      <input
+                        type="date"
+                        value={range.to}
+                        onChange={(e) => {
+                          const next = [...dateRanges];
+                          next[i] = { ...next[i], to: e.target.value };
+                          setDateRanges(next);
+                        }}
+                        className="flex-1 px-3 py-2 rounded-xl bg-gray-50 border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      />
+                      {dateRanges.length > 1 && (
+                        <button
+                          onClick={() => setDateRanges((prev) => prev.filter((_, j) => j !== i))}
+                          className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 flex-shrink-0"
+                        >
+                          <X className="w-4 h-4 text-red-400" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <button
+                  onClick={() => setDateRanges((prev) => [...prev, { from: "", to: "" }])}
+                  className="flex items-center gap-1.5 text-xs font-medium text-indigo-600 hover:text-indigo-700 transition-colors"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  添加日期段
+                </button>
               </div>
 
               {/* 事件设计 */}

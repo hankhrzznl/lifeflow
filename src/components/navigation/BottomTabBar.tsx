@@ -111,12 +111,12 @@ export default function BottomTabBar() {
       active: isActive("/planner"),
     },
     {
-      id: "review", label: "回顾", icon: BarChart3, path: "/review",
-      active: isActive("/review"),
-    },
-    {
       id: "schedule", label: "日程", icon: CalendarDays, path: "/schedule",
       active: isActive("/schedule"),
+    },
+    {
+      id: "review", label: "回顾", icon: BarChart3, path: "/review",
+      active: isActive("/review"),
     },
     {
       id: "more", label: "更多", icon: Menu, path: null,
@@ -162,7 +162,6 @@ export default function BottomTabBar() {
                   active={active}
                   onClick={() => setOpenPanel("more")}
                 >
-                  {/* 激活指示器小圆点 */}
                   {active && (
                     <span className="w-1 h-1 rounded-full bg-blue-500 mb-0.5" />
                   )}
@@ -172,6 +171,33 @@ export default function BottomTabBar() {
                   />
                   <span className="text-[11px] font-medium">{tab.label}</span>
                 </RippleButton>
+              );
+            }
+
+            // 日程悬浮圆形按钮
+            if (tab.id === "schedule") {
+              return (
+                <Link
+                  key={tab.id}
+                  href={tab.path!}
+                  onClick={closePanel}
+                  className="relative flex flex-col items-center justify-center min-w-[44px]"
+                >
+                  <motion.div
+                    whileHover={{ scale: 1.08 }}
+                    whileTap={{ scale: 0.92 }}
+                    className={`w-14 h-14 rounded-full flex items-center justify-center shadow-lg -mt-6 transition-colors ${
+                      active
+                        ? "bg-violet-600 shadow-violet-500/40"
+                        : "bg-violet-600 shadow-violet-500/20"
+                    }`}
+                  >
+                    <tab.icon className="w-7 h-7 text-white" strokeWidth={1.5} />
+                  </motion.div>
+                  <span className={`text-[11px] font-medium mt-0.5 ${active ? "text-violet-600" : "text-gray-400"}`}>
+                    {tab.label}
+                  </span>
+                </Link>
               );
             }
 

@@ -1,9 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Zap, Send } from "lucide-react";
+import { Zap, Send, ChevronDown } from "lucide-react";
 import { db } from "@/lib/db";
 import { getAllSubmodules } from "@/lib/db";
 import type { Submodule } from "@/lib/types";
@@ -11,8 +10,13 @@ import { showToast } from "@/components/ui/Toast";
 
 // ==================== 主组件 ====================
 
-export default function QuickCaptureBar() {
-  const router = useRouter();
+export default function QuickCaptureBar({
+  inboxExpanded,
+  onToggleInbox,
+}: {
+  inboxExpanded?: boolean;
+  onToggleInbox?: () => void;
+}) {
   const [inputValue, setInputValue] = useState("");
   const [isFocused, setIsFocused] = useState(false);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -147,14 +151,15 @@ export default function QuickCaptureBar() {
           <Send size={18} className="text-white" strokeWidth={2} />
         </motion.button>
 
-        {/* 展开链接 */}
+        {/* 展开/收起 */}
         <button
-          onClick={() => router.push("/capture")}
+          onClick={onToggleInbox}
           className="text-sm text-gray-500 hover:text-gray-700
                      dark:text-gray-400 dark:hover:text-gray-200
-                     transition-colors duration-200 flex-shrink-0"
+                     transition-colors duration-200 flex-shrink-0 flex items-center gap-0.5"
         >
-          展开
+          <span>{inboxExpanded ? "收起" : "展开"}</span>
+          <ChevronDown className={`w-3.5 h-3.5 transition-transform ${inboxExpanded ? "rotate-180" : ""}`} strokeWidth={2} />
         </button>
       </div>
 

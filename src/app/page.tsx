@@ -12,6 +12,7 @@ import { getProjectsWithSubmodules, getSubmodulesByProject, getTasksBySubmodule 
 import { showToast } from "@/components/ui/Toast";
 import OverviewHeader from "@/components/layout/OverviewHeader";
 import QuickCaptureBar from "@/components/layout/QuickCaptureBar";
+import CaptureInbox from "@/components/layout/CaptureInbox";
 
 // ==================== 工具 ====================
 
@@ -311,6 +312,7 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [selectedProject, setSelectedProject] = useState<ProjectV2 | null>(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [inboxExpanded, setInboxExpanded] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -411,7 +413,11 @@ export default function HomePage() {
 
         {/* 快速捕捉栏 */}
         <div className="mt-6">
-          <QuickCaptureBar />
+          <QuickCaptureBar
+            inboxExpanded={inboxExpanded}
+            onToggleInbox={() => setInboxExpanded((v) => !v)}
+          />
+          <CaptureInbox visible={inboxExpanded} />
         </div>
       </div>
     </div>

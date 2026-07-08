@@ -108,24 +108,28 @@ type BoardData = {
 function ProjectExpandView({
   project,
   projectIndex,
+  boards,
   onBack,
 }: {
   project: ProjectV2;
   projectIndex: number;
+  boards: Board[];
   onBack: () => void;
 }) {
   const gradient = getProjectGradient(projectIndex);
-  const projectId = project.id!;
   const [boardsData, setBoardsData] = useState<BoardData[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedSections, setExpandedSections] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     const load = async () => {
+      if (boards.length === 0) {
+        setBoardsData([]);
+        setLoading(false);
+        return;
+      }
       setLoading(true);
       try {
-        const boards = await getBoardsByProject(projectId);
-        console.log("[ProjectExpandView] projectId:", projectId, "boards:", boards.length);
         const data: BoardData[] = [];
 
         for (const board of boards) {
@@ -153,7 +157,7 @@ function ProjectExpandView({
       }
     };
     load();
-  }, [projectId]);
+  }, [boards]);
 
   const handleToggleTask = useCallback(async (task: Task) => {
     if (!task.id) return;
@@ -211,7 +215,7 @@ function ProjectExpandView({
       <div className={`rounded-2xl bg-gradient-to-br ${gradient} p-5 mb-5 shadow-sm`}>
         <h3 className="text-xl font-bold text-white">{project.name}</h3>
         <p className="text-sm text-white/70 mt-1">
-          {boardsData.length} 个大模块 · {totalSections} 个子模块 · {totalTasks} 个任务
+          {loading ? "加载中..." : `${boardsData.length} 个大模块 · ${totalSections} 个子模块 · ${totalTasks} 个任务`}
         </p>
       </div>
 
@@ -495,21 +499,20 @@ export default function HomePage() {
             ))}
           </div>
         ) : selectedProject ? (
-          <AnimatePresence mode="wait">
-            <motion.div
-              key="expand-view"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.25 }}
-            >
-              <ProjectExpandView
-                project={selectedProject}
-                projectIndex={selectedIndex}
-                onBack={() => setSelectedProject(null)}
-              />
-            </motion.div>
-          </AnimatePresence>
+          <motion.div
+            key={`expand-${selectedProject.id}`}
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.25 }}
+          >
+            <ProjectExpandView
+              project={selectedProject}
+              projectIndex={selectedIndex}
+              boards={projectBoards[selectedProject.id!] || []}
+              onBack={() => setSelectedProject(null)}
+            />
+          </motion.div>
         ) : projects.length === 0 ? (
           <div className="text-center py-16">
             <FolderKanban className="w-10 h-10 text-gray-300 mx-auto mb-3" strokeWidth={1.5} />

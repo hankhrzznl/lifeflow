@@ -1,12 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
+import { useEffect, useState, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
-  ArrowRight, FolderKanban, ChevronLeft, ChevronDown, ChevronRight, CheckCircle2,
+  ArrowRight, FolderKanban, ChevronLeft, ChevronDown,
+  CheckCircle, Circle, Layers,
 } from "lucide-react";
 import type { ProjectV2, Board, Section, Task } from "@/lib/types";
-import { getAllProjectsV2, getBoardsByProject, getSectionsByBoard, getTasksBySection, updateTask } from "@/lib/db";
+import { getAllProjectsV2, getBoardsByProject, getSectionsByBoard, getTasksBySection } from "@/lib/db";
+import { db } from "@/lib/db";
+import { showToast } from "@/components/ui/Toast";
 import OverviewHeader from "@/components/layout/OverviewHeader";
 import QuickCaptureBar from "@/components/layout/QuickCaptureBar";
 import CaptureInbox from "@/components/layout/CaptureInbox";
@@ -26,27 +29,26 @@ const PROJECT_GRADIENTS = [
   "from-blue-400 via-indigo-400 to-violet-500",
 ];
 
+const PROJECT_COLORS = [
+  "#6366f1", "#10b981", "#f43f5e", "#0ea5e9", "#f59e0b",
+  "#14b8a6", "#a855f7", "#3b82f6",
+];
+
 function getProjectGradient(index: number): string {
   return PROJECT_GRADIENTS[index % PROJECT_GRADIENTS.length];
+}
+function getProjectColor(index: number): string {
+  return PROJECT_COLORS[index % PROJECT_COLORS.length];
 }
 
 // ==================== 项目卡片 ====================
 
 function ProjectCard({
-  project,
-  index,
-  boardCount,
-  boardNames,
-  onClick,
+  project, index, boardCount, boardNames, onClick,
 }: {
-  project: ProjectV2;
-  index: number;
-  boardCount: number;
-  boardNames: string[];
-  onClick: () => void;
+  project: ProjectV2; index: number; boardCount: number; boardNames: string[]; onClick: () => void;
 }) {
   const gradient = getProjectGradient(index);
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
@@ -57,24 +59,18 @@ function ProjectCard({
     >
       <div className="absolute -top-12 -right-12 w-44 h-44 rounded-full bg-white/15 blur-2xl pointer-events-none" />
       <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-white/20 to-transparent rounded-bl-full pointer-events-none" />
-
       <div className="relative z-10 flex flex-col h-full">
         <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-white/25 backdrop-blur-sm flex items-center justify-center mb-5">
           <FolderKanban className="w-6 h-6 md:w-7 md:h-7 text-white" strokeWidth={1.8} />
         </div>
-
         <h2 className="text-2xl md:text-3xl font-bold mb-1.5">{project.name}</h2>
         <p className="text-white/80 text-sm md:text-base mb-4">
           {boardCount > 0 ? `${boardCount} 个大模块` : "暂无大模块"}
         </p>
-
         {boardNames.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-5">
             {boardNames.slice(0, 4).map((name) => (
-              <span
-                key={name}
-                className="px-3 py-1 rounded-full text-xs font-medium bg-white/20 backdrop-blur-sm border border-white/20"
-              >
+              <span key={name} className="px-3 py-1 rounded-full text-xs font-medium bg-white/20 backdrop-blur-sm border border-white/20">
                 {name}
               </span>
             ))}
@@ -85,7 +81,6 @@ function ProjectCard({
             )}
           </div>
         )}
-
         <div className="mt-auto flex items-center gap-1.5 text-sm font-medium text-white/90">
           <span>点击查看大模块</span>
           <ArrowRight className="w-4 h-4" strokeWidth={2} />
@@ -95,37 +90,261 @@ function ProjectCard({
   );
 }
 
-// ==================== 大模块卡片 ====================
+// ==================== 大模块列表 ====================
 
-function BoardCard({
-  board,
-  index,
-  onClick,
+function BoardListView({
+  project, boards, onBack, onBoardClick,
 }: {
-  board: Board;
-  index: number;
-  onClick: () => void;
+  project: ProjectV2; boards: Board[]; onBack: () => void; onBoardClick: (board: Board) => void;
 }) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.05, duration: 0.35 }}
-      onClick={onClick}
-      className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-5 cursor-pointer hover:shadow-md hover:border-indigo-200 dark:hover:border-indigo-800 transition-all"
-    >
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-bold text-gray-900 dark:text-white">{board.name}</h3>
-          {board.stages && board.stages.length > 0 && (
-            <p className="text-xs text-gray-400 mt-1">
-              {board.stages.length} 个阶段
-            </p>
+    <div>
+      <button onClick={onBack} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors mb-3">
+        <ChevronLeft className="w-4 h-4" />
+        <span>返回项目列表</span>
+      </button>
+      <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">{project.name}</h2>
+      {boards.length === 0 ? (
+        <div className="text-center py-12">
+          <FolderKanban className="w-8 h-8 text-gray-300 mx-auto mb-2" strokeWidth={1.5} />
+          <p className="text-sm text-gray-400">暂无大模块</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {boards.map((board, i) => (
+            <motion.div
+              key={board.id}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.05, duration: 0.35 }}
+              onClick={() => onBoardClick(board)}
+              className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-5 cursor-pointer hover:shadow-md hover:border-indigo-200 dark:hover:border-indigo-800 transition-all"
+            >
+              <div>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white">{board.name}</h3>
+                {board.stages && board.stages.length > 0 && (
+                  <p className="text-xs text-gray-400 mt-1">{board.stages.length} 个阶段</p>
+                )}
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ==================== 模块详情（子模块+任务） ====================
+
+function BoardDetailView({
+  board, project, projectIndex, onBack,
+}: {
+  board: Board; project: ProjectV2; projectIndex: number; onBack: () => void;
+}) {
+  const [sections, setSections] = useState<Section[]>([]);
+  const [tasksBySection, setTasksBySection] = useState<Map<number, Task[]>>(new Map());
+  const [loading, setLoading] = useState(true);
+  const [expandedStages, setExpandedStages] = useState<Set<number>>(new Set());
+  const projectColor = getProjectColor(projectIndex);
+
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      try {
+        const secs = await getSectionsByBoard(board.id!);
+        setSections(secs);
+        const taskMap = new Map<number, Task[]>();
+        for (const sec of secs) {
+          const tasks = await getTasksBySection(sec.id!);
+          tasks.sort((a, b) => {
+            if (a.status === "done" && b.status !== "done") return 1;
+            if (a.status !== "done" && b.status === "done") return -1;
+            return (b.createdAt || 0) - (a.createdAt || 0);
+          });
+          taskMap.set(sec.id!, tasks);
+        }
+        setTasksBySection(taskMap);
+        const stages = board.stages || [];
+        if (stages.length > 0) setExpandedStages(new Set([0]));
+      } catch (err) {
+        console.error("Failed to load board detail:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, [board.id]);
+
+  const handleToggleTask = useCallback(async (task: Task) => {
+    if (!task.id) return;
+    const newStatus: Task["status"] = task.status === "done" ? "active" : "done";
+    await db.tasks.update(task.id, { status: newStatus, updatedAt: Date.now() });
+    showToast({
+      message: newStatus === "done" ? "任务已完成" : "任务已恢复",
+      type: newStatus === "done" ? "success" : "info",
+    });
+    setTasksBySection((prev) => {
+      const next = new Map(prev);
+      for (const [sid, taskList] of next) {
+        next.set(sid, taskList.map((t) => (t.id === task.id ? { ...t, status: newStatus } : t)));
+      }
+      return next;
+    });
+  }, []);
+
+  const toggleStage = (stageIdx: number) => {
+    setExpandedStages((prev) => {
+      const next = new Set(prev);
+      if (next.has(stageIdx)) next.delete(stageIdx);
+      else next.add(stageIdx);
+      return next;
+    });
+  };
+
+  const stages = board.stages || [];
+  const hasStages = stages.length > 0;
+  let totalTasks = 0;
+  for (const taskList of tasksBySection.values()) totalTasks += taskList.length;
+
+  const detailCounts = `${sections.length} 个子模块 · ${totalTasks} 个任务`;
+
+  return (
+    <div>
+      <button onClick={onBack} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors mb-4">
+        <ChevronLeft className="w-4 h-4" />
+        <span>返回大模块列表</span>
+      </button>
+      <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-1">{board.name}</h2>
+      <p className="text-xs text-gray-400 mb-5">{project.name} · {detailCounts}</p>
+
+      {loading ? (
+        <div className="space-y-3">
+          {[1, 2, 3].map((i) => <div key={i} className="skeleton h-16 rounded-2xl" />)}
+        </div>
+      ) : hasStages ? (
+        <div className="space-y-4">
+          {stages.map((stage, stageIdx) => {
+            const stageSections = sections.filter((s) => (s.stageIndex ?? 0) === stageIdx);
+            const isExpanded = expandedStages.has(stageIdx);
+            return (
+              <div key={stageIdx} className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 overflow-hidden">
+                <button
+                  onClick={() => toggleStage(stageIdx)}
+                  className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                >
+                  <ChevronDown className={`w-4 h-4 text-gray-400 flex-shrink-0 transition-transform ${isExpanded ? "" : "-rotate-90"}`} />
+                  <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: projectColor }} />
+                  <span className="flex-1 text-sm font-semibold text-gray-900 dark:text-white text-left">{stage.name}</span>
+                  <span className="text-xs text-gray-400">{stageSections.length} 子模块</span>
+                </button>
+                <AnimatePresence>
+                  {isExpanded && (
+                    <motion.div
+                      initial={{ height: 0 }} animate={{ height: "auto" }} exit={{ height: 0 }}
+                      className="overflow-hidden"
+                    >
+                      {stage.achievements.length > 0 && (
+                        <div className="px-4 pb-2 space-y-0.5">
+                          {stage.achievements.map((ach, ai) => (
+                            <div key={ai} className="flex items-center gap-2 pl-8 text-xs text-indigo-500 dark:text-indigo-400">
+                              <CheckCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                              {ach}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {stageSections.length === 0 ? (
+                        <p className="px-4 pb-3 pl-12 text-xs text-gray-400">暂无子模块</p>
+                      ) : (
+                        <div className="border-t border-gray-50 dark:border-gray-800">
+                          {stageSections.map((section) => {
+                            const sectionTasks = tasksBySection.get(section.id!) || [];
+                            return (
+                              <div key={section.id} className="border-b border-gray-50 dark:border-gray-800 last:border-0">
+                                <div className="flex items-center gap-3 px-4 py-2.5 pl-12 bg-gray-50/50 dark:bg-gray-800/30">
+                                  <Layers className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+                                  <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{section.name}</span>
+                                  <span className="text-xs text-gray-400">{sectionTasks.length} 任务</span>
+                                </div>
+                                {sectionTasks.length > 0 && (
+                                  <div className="pb-1">
+                                    {sectionTasks.map((task) => (
+                                      <motion.button
+                                        key={task.id}
+                                        whileTap={{ scale: 0.98 }}
+                                        onClick={() => handleToggleTask(task)}
+                                        className={`w-full flex items-center gap-3 px-4 py-2 pl-16 text-left transition-colors ${
+                                          task.status === "done" ? "text-gray-400 dark:text-gray-500" : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                                        }`}
+                                      >
+                                        {task.status === "done" ? (
+                                          <CheckCircle className="w-4 h-4 text-emerald-500 flex-shrink-0" strokeWidth={1.5} />
+                                        ) : (
+                                          <Circle className="w-4 h-4 text-gray-300 dark:text-gray-600 flex-shrink-0" strokeWidth={1.5} />
+                                        )}
+                                        <span className={`flex-1 text-xs ${task.status === "done" ? "line-through" : "text-gray-700 dark:text-gray-300"}`}>
+                                          {task.title}
+                                        </span>
+                                      </motion.button>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {sections.length === 0 ? (
+            <p className="text-center text-sm text-gray-400 py-8">暂无子模块和任务</p>
+          ) : (
+            sections.map((section) => {
+              const sectionTasks = tasksBySection.get(section.id!) || [];
+              return (
+                <div key={section.id} className="rounded-xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 overflow-hidden">
+                  <div className="flex items-center gap-3 px-4 py-2.5 bg-gray-50/50 dark:bg-gray-800/30">
+                    <Layers className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+                    <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{section.name}</span>
+                    <span className="text-xs text-gray-400">{sectionTasks.length} 任务</span>
+                  </div>
+                  {sectionTasks.length > 0 && (
+                    <div>
+                      {sectionTasks.map((task) => (
+                        <motion.button
+                          key={task.id}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={() => handleToggleTask(task)}
+                          className={`w-full flex items-center gap-3 px-4 py-2 pl-12 text-left transition-colors ${
+                            task.status === "done" ? "text-gray-400 dark:text-gray-500" : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                          }`}
+                        >
+                          {task.status === "done" ? (
+                            <CheckCircle className="w-4 h-4 text-emerald-500 flex-shrink-0" strokeWidth={1.5} />
+                          ) : (
+                            <Circle className="w-4 h-4 text-gray-300 dark:text-gray-600 flex-shrink-0" strokeWidth={1.5} />
+                          )}
+                          <span className={`flex-1 text-xs ${task.status === "done" ? "line-through" : "text-gray-700 dark:text-gray-300"}`}>
+                            {task.title}
+                          </span>
+                        </motion.button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })
           )}
         </div>
-        <ChevronRight className="w-4 h-4 text-gray-300" />
-      </div>
-    </motion.div>
+      )}
+    </div>
   );
 }
 
@@ -140,15 +359,14 @@ export default function HomePage() {
   // drill-down state
   const [view, setView] = useState<"projects" | "boards" | "detail">("projects");
   const [selectedProject, setSelectedProject] = useState<ProjectV2 | null>(null);
+  const [selectedProjectIndex, setSelectedProjectIndex] = useState(0);
   const [selectedBoard, setSelectedBoard] = useState<Board | null>(null);
-  const [detailSections, setDetailSections] = useState<(Section & { tasks: Task[] })[]>([]);
 
   useEffect(() => {
     const load = async () => {
       try {
         const list = await getAllProjectsV2();
         setProjects(list);
-
         const map: Record<number, Board[]> = {};
         for (const proj of list) {
           const bds = await getBoardsByProject(proj.id!);
@@ -164,76 +382,9 @@ export default function HomePage() {
     load();
   }, []);
 
-  const handleProjectClick = (proj: ProjectV2) => {
-    setSelectedProject(proj);
-    setView("boards");
-  };
-
-  const handleBoardClick = async (board: Board) => {
-    setSelectedBoard(board);
-    try {
-      const sections = await getSectionsByBoard(board.id!);
-      const withTasks = await Promise.all(
-        sections.map(async (s) => {
-          const tasks = await getTasksBySection(s.id!);
-          return { ...s, tasks: tasks.filter((t) => t.status === "active") };
-        })
-      );
-      setDetailSections(withTasks);
-    } catch (err) {
-      console.error("Failed to load board detail:", err);
-      setDetailSections([]);
-    }
-    setView("detail");
-  };
-
-  const handleBack = () => {
-    if (view === "detail") {
-      setView("boards");
-    } else if (view === "boards") {
-      setView("projects");
-    }
-  };
-
-  const handleToggleTask = async (task: Task) => {
-    const newStatus = task.status === "done" ? "active" : "done";
-    await updateTask(task.id!, { status: newStatus });
-    setDetailSections((prev) =>
-      prev.map((s) => ({
-        ...s,
-        tasks: s.tasks.map((t) =>
-          t.id === task.id ? { ...t, status: newStatus } : t
-        ),
-      }))
-    );
-  };
-
-  // 按 stageIndex 分组 sections
-  const groupedByStage = (() => {
-    if (!selectedBoard?.stages) return [];
-    const stages = selectedBoard.stages;
-    return stages.map((stage, si) => ({
-      stage,
-      sections: detailSections.filter((s) => (s.stageIndex ?? 0) === si),
-    }));
-  })();
-
-  const noStageSections = detailSections.filter((s) => s.stageIndex === undefined || s.stageIndex === null);
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-gray-950 dark:to-gray-900 text-slate-900 dark:text-white">
       <div className="mx-auto max-w-5xl px-5 pt-8 pb-24 md:px-8 md:pt-10">
-        {/* 非项目列表视图时的返回按钮 */}
-        {view !== "projects" && (
-          <button
-            onClick={handleBack}
-            className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 mb-4 transition-colors"
-          >
-            <ChevronLeft className="w-4 h-4" />
-            {view === "boards" ? "返回项目列表" : `返回 ${selectedProject?.name}`}
-          </button>
-        )}
-
         <OverviewHeader />
 
         {/* 人物框 */}
@@ -242,22 +393,17 @@ export default function HomePage() {
         </div>
 
         {/* === 视图切换 === */}
-
         {view === "projects" && (
           <>
             {loading ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
-                {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="skeleton h-[240px] rounded-3xl" />
-                ))}
+                {[1, 2, 3, 4].map((i) => <div key={i} className="skeleton h-[240px] rounded-3xl" />)}
               </div>
             ) : projects.length === 0 ? (
               <div className="text-center py-16">
                 <FolderKanban className="w-10 h-10 text-gray-300 mx-auto mb-3" strokeWidth={1.5} />
                 <p className="text-sm text-gray-500 mb-1">暂无项目</p>
-                <p className="text-xs text-gray-400">
-                  在规划页中创建项目，它们将自动显示在这里
-                </p>
+                <p className="text-xs text-gray-400">在规划页中创建项目，它们将自动显示在这里</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
@@ -270,7 +416,7 @@ export default function HomePage() {
                       index={i}
                       boardCount={boards.length}
                       boardNames={boards.map((b) => b.name)}
-                      onClick={() => handleProjectClick(proj)}
+                      onClick={() => { setSelectedProject(proj); setSelectedProjectIndex(i); setView("boards"); }}
                     />
                   );
                 })}
@@ -280,74 +426,26 @@ export default function HomePage() {
         )}
 
         {view === "boards" && selectedProject && (
-          <>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">{selectedProject.name}</h2>
-            {(() => {
-              const boards = projectBoards[selectedProject.id!] || [];
-              if (boards.length === 0) {
-                return (
-                  <div className="text-center py-12">
-                    <FolderKanban className="w-8 h-8 text-gray-300 mx-auto mb-2" strokeWidth={1.5} />
-                    <p className="text-sm text-gray-400">暂无大模块</p>
-                  </div>
-                );
-              }
-              return (
-                <div className="space-y-3">
-                  {boards.map((board, i) => (
-                    <BoardCard
-                      key={board.id}
-                      board={board}
-                      index={i}
-                      onClick={() => handleBoardClick(board)}
-                    />
-                  ))}
-                </div>
-              );
-            })()}
-          </>
+          <BoardListView
+            project={selectedProject}
+            boards={projectBoards[selectedProject.id!] || []}
+            onBack={() => setView("projects")}
+            onBoardClick={(board) => { setSelectedBoard(board); setView("detail"); }}
+          />
         )}
 
-        {view === "detail" && selectedBoard && (
-          <div>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-1">{selectedBoard.name}</h2>
-            <p className="text-xs text-gray-400 mb-5">{selectedProject?.name}</p>
-
-            {/* 有阶段：按阶段分组 */}
-            {groupedByStage.length > 0 && groupedByStage.map(({ stage, sections }, si) => (
-              <div key={si} className="mb-5">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="w-1.5 h-5 rounded-full bg-indigo-400" />
-                  <h3 className="text-sm font-bold text-gray-700 dark:text-gray-300">{stage.name}</h3>
-                </div>
-                {sections.length === 0 ? (
-                  <p className="text-xs text-gray-400 pl-3.5">暂无子模块</p>
-                ) : (
-                  <div className="space-y-2 pl-3.5">
-                    {sections.map((section) => (
-                      <TaskSectionBlock key={section.id} section={section} onToggleTask={handleToggleTask} />
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-
-            {/* 无阶段的子模块 */}
-            {groupedByStage.length === 0 && noStageSections.length > 0 && noStageSections.map((section) => (
-              <TaskSectionBlock key={section.id} section={section} onToggleTask={handleToggleTask} />
-            ))}
-            {groupedByStage.length === 0 && noStageSections.length === 0 && detailSections.length === 0 && (
-              <p className="text-center text-sm text-gray-400 py-8">暂无子模块和任务</p>
-            )}
-          </div>
+        {view === "detail" && selectedBoard && selectedProject && (
+          <BoardDetailView
+            board={selectedBoard}
+            project={selectedProject}
+            projectIndex={selectedProjectIndex}
+            onBack={() => setView("boards")}
+          />
         )}
 
         {/* 快速捕捉栏 */}
         <div className="mt-8">
-          <QuickCaptureBar
-            inboxExpanded={inboxExpanded}
-            onToggleInbox={() => setInboxExpanded((v) => !v)}
-          />
+          <QuickCaptureBar inboxExpanded={inboxExpanded} onToggleInbox={() => setInboxExpanded((v) => !v)} />
           <CaptureInbox visible={inboxExpanded} />
         </div>
 
@@ -357,70 +455,6 @@ export default function HomePage() {
           <TodayTimeline />
         </div>
       </div>
-    </div>
-  );
-}
-
-// ==================== 子模块+任务块 ====================
-
-function TaskSectionBlock({
-  section,
-  onToggleTask,
-}: {
-  section: Section & { tasks: Task[] };
-  onToggleTask: (task: Task) => void;
-}) {
-  const [expanded, setExpanded] = useState(false);
-
-  return (
-    <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl overflow-hidden">
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
-      >
-        <div className="text-left">
-          <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{section.name}</span>
-          <span className="text-xs text-gray-400 ml-2">{section.tasks.length} 个任务</span>
-        </div>
-        <ChevronDown className={`w-4 h-4 text-gray-300 transition-transform ${expanded ? "rotate-180" : ""}`} />
-      </button>
-
-      {expanded && (
-        <div className="border-t border-gray-100 dark:border-gray-800">
-          {section.tasks.length === 0 ? (
-            <p className="px-4 py-3 text-xs text-gray-400">暂无任务</p>
-          ) : (
-            section.tasks.map((task) => (
-              <div
-                key={task.id}
-                className="flex items-center gap-3 px-4 py-2.5 border-b border-gray-50 dark:border-gray-800/50 last:border-b-0"
-              >
-                <button
-                  onClick={() => onToggleTask(task)}
-                  className="flex-shrink-0"
-                >
-                  <CheckCircle2
-                    className={`w-4 h-4 ${
-                      task.status === "done"
-                        ? "text-green-400 fill-green-400"
-                        : "text-gray-300 dark:text-gray-600"
-                    }`}
-                  />
-                </button>
-                <span
-                  className={`text-sm flex-1 ${
-                    task.status === "done"
-                      ? "line-through text-gray-400"
-                      : "text-gray-700 dark:text-gray-300"
-                  }`}
-                >
-                  {task.title}
-                </span>
-              </div>
-            ))
-          )}
-        </div>
-      )}
     </div>
   );
 }

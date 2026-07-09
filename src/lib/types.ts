@@ -908,3 +908,39 @@ export interface DaySchedule {
   createdAt: number;
   updatedAt: number;
 }
+
+// ==================== 用户设置 ====================
+
+export interface UserSettings {
+  id?: number;
+  sleepTarget: number;      // 每日睡眠目标（小时），默认 8
+  weight: number;           // 体重（kg），默认 60
+  cupSize: number;          // 水杯大小（ml），默认 200
+  avatarDataUrl?: string;   // 头像 Base64
+  createdAt: number;
+}
+
+// ==================== 每日饮水 ====================
+
+export interface WaterEntry {
+  ml: number;
+  timestamp: number;
+}
+
+export interface DailyWaterRecord {
+  id?: number;
+  date: string;             // "YYYY-MM-DD"
+  entries: WaterEntry[];    // 每次饮水记录
+  totalMl: number;          // 今日总饮水
+  createdAt: number;
+}
+
+// ==================== 每日自我评分 ====================
+
+export interface DailySelfAssessment {
+  id?: number;
+  date: string;             // "YYYY-MM-DD"
+  physicalScore: number;    // 身体状态 0-100
+  moodScore: number;        // 情绪 0-100
+  createdAt: number;
+}

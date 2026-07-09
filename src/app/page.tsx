@@ -11,6 +11,7 @@ import OverviewHeader from "@/components/layout/OverviewHeader";
 import QuickCaptureBar from "@/components/layout/QuickCaptureBar";
 import CaptureInbox from "@/components/layout/CaptureInbox";
 import TodayTimeline from "@/components/schedule/TodayTimeline";
+import CharacterFrame from "@/components/CharacterFrame";
 
 // ==================== 工具 ====================
 
@@ -124,6 +125,11 @@ export default function HomePage() {
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-gray-950 dark:to-gray-900 text-slate-900 dark:text-white">
       <div className="mx-auto max-w-5xl px-5 pt-8 pb-24 md:px-8 md:pt-10">
         <OverviewHeader />
+
+        {/* 人物框 */}
+        <div className="mt-6 mb-6">
+          <CharacterFrame />
+        </div>
 
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">

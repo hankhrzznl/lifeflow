@@ -41,6 +41,9 @@ import type {
   ScheduleTemplate,
   ScheduleEvent,
   DaySchedule,
+  UserSettings,
+  DailyWaterRecord,
+  DailySelfAssessment,
 } from "./types";
 
 export class LifeFlowDB extends Dexie {
@@ -85,6 +88,9 @@ export class LifeFlowDB extends Dexie {
   scheduleTemplates!: Table<ScheduleTemplate, number>;
   scheduleEvents!: Table<ScheduleEvent, number>;
   daySchedules!: Table<DaySchedule, number>;
+  userSettings!: Table<UserSettings, number>;
+  dailyWaterRecords!: Table<DailyWaterRecord, number>;
+  dailySelfAssessments!: Table<DailySelfAssessment, number>;
 
   constructor() {
     super("LifeFlowDB");
@@ -389,6 +395,12 @@ export class LifeFlowDB extends Dexie {
       if (typeof window !== "undefined" && window.location.hostname === "localhost") {
         console.log("[LifeFlowDB v23] Removed deprecated submodules table");
       }
+    });
+
+    this.version(24).stores({
+      userSettings: "++id",
+      dailyWaterRecords: "++id, date",
+      dailySelfAssessments: "++id, date",
     });
   }
 }
@@ -1975,4 +1987,104 @@ export async function ensureDefaultTemplate(): Promise<ScheduleTemplate | null> 
 
 export async function getAllDaySchedules(): Promise<DaySchedule[]> {
   return db.daySchedules.orderBy("date").reverse().toArray();
+}
+
+// ==================== 用户设置 ====================
+
+export async function getUserSettings(): Promise<UserSettings> {
+  const existing = await db.userSettings.toArray();
+  if (existing.length > 0) return existing[0];
+  // 返回默认值
+  return {
+    sleepTarget: 8,
+    weight: 60,
+    cupSize: 200,
+    createdAt: Date.now(),
+  };
+}
+
+export async function saveUserSettings(settings: Partial<UserSettings>): Promise<void> {
+  const existing = await db.userSettings.toArray();
+  if (existing.length > 0) {
+    await db.userSettings.update(existing[0].id!, { ...settings, createdAt: Date.now() });
+  } else {
+    await db.userSettings.add({
+      sleepTarget: settings.sleepTarget ?? 8,
+      weight: settings.weight ?? 60,
+      cupSize: settings.cupSize ?? 200,
+      avatarDataUrl: settings.avatarDataUrl,
+      createdAt: Date.now(),
+    });
+  }
+}
+
+// ==================== 每日饮水 ====================
+
+function getTodayStr(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+export async function getTodayWaterRecord(): Promise<DailyWaterRecord | null> {
+  const today = getTodayStr();
+  const result = await db.dailyWaterRecords.where("date").equals(today).first();
+  return result ?? null;
+}
+
+export async function addWaterIntake(ml: number): Promise<DailyWaterRecord> {
+  const today = getTodayStr();
+  const existing = await db.dailyWaterRecords.where("date").equals(today).first();
+  if (existing) {
+    await db.dailyWaterRecords.update(existing.id!, {
+      entries: [...existing.entries, { ml, timestamp: Date.now() }],
+      totalMl: existing.totalMl + ml,
+    });
+    return (await db.dailyWaterRecords.get(existing.id!))!;
+  }
+  const id = await db.dailyWaterRecords.add({
+    date: today,
+    entries: [{ ml, timestamp: Date.now() }],
+    totalMl: ml,
+    createdAt: Date.now(),
+  });
+  return (await db.dailyWaterRecords.get(id))!;
+}
+
+export async function undoLastWaterIntake(): Promise<DailyWaterRecord> {
+  const today = getTodayStr();
+  const existing = await db.dailyWaterRecords.where("date").equals(today).first();
+  if (!existing || existing.entries.length === 0) throw new Error("No entry to undo");
+  const popped = [...existing.entries];
+  const last = popped.pop()!;
+  await db.dailyWaterRecords.update(existing.id!, {
+    entries: popped,
+    totalMl: Math.max(0, existing.totalMl - last.ml),
+  });
+  return (await db.dailyWaterRecords.get(existing.id!))!;
+}
+
+// ==================== 每日自我评分 ====================
+
+export async function getTodaySelfAssessment(): Promise<DailySelfAssessment | null> {
+  const today = getTodayStr();
+  const result = await db.dailySelfAssessments.where("date").equals(today).first();
+  return result ?? null;
+}
+
+export async function saveSelfAssessment(physicalScore: number, moodScore: number): Promise<void> {
+  const today = getTodayStr();
+  const existing = await db.dailySelfAssessments.where("date").equals(today).first();
+  if (existing) {
+    await db.dailySelfAssessments.update(existing.id!, {
+      physicalScore,
+      moodScore,
+      createdAt: Date.now(),
+    });
+  } else {
+    await db.dailySelfAssessments.add({
+      date: today,
+      physicalScore,
+      moodScore,
+      createdAt: Date.now(),
+    });
+  }
 }

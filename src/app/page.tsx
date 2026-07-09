@@ -4,12 +4,13 @@ import { useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowRight, FolderKanban, ChevronLeft, ChevronDown,
-  CheckCircle, Circle, Layers,
+  CheckCircle, Circle, Layers, Clock,
 } from "lucide-react";
 import type { ProjectV2, Board, Section, Task } from "@/lib/types";
 import { getAllProjectsV2, getBoardsByProject, getSectionsByBoard, getTasksBySection } from "@/lib/db";
 import { db } from "@/lib/db";
 import { showToast } from "@/components/ui/Toast";
+import Link from "next/link";
 import OverviewHeader from "@/components/layout/OverviewHeader";
 import QuickCaptureBar from "@/components/layout/QuickCaptureBar";
 import CaptureInbox from "@/components/layout/CaptureInbox";
@@ -451,7 +452,26 @@ export default function HomePage() {
 
         {/* 日程时间线 */}
         <div className="mt-8">
-          <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-3">今日日程</h2>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Clock className="w-4 h-4 text-gray-400" />
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white">今日日程</h2>
+            </div>
+            <div className="flex items-center gap-1">
+              <Link
+                href="/schedule?view=history"
+                className="px-2.5 py-1 text-xs font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-100 dark:hover:text-gray-300 dark:hover:bg-gray-800 rounded-lg transition-colors"
+              >
+                历史
+              </Link>
+              <Link
+                href="/schedule?view=templates"
+                className="px-2.5 py-1 text-xs font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-100 dark:hover:text-gray-300 dark:hover:bg-gray-800 rounded-lg transition-colors"
+              >
+                模板
+              </Link>
+            </div>
+          </div>
           <TodayTimeline />
         </div>
       </div>

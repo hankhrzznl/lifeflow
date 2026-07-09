@@ -553,15 +553,18 @@ export default function CharacterFrame() {
           </button>
         </div>
 
-        {/* 230 / 240 阈值指示 */}
-        <div className="mt-3 grid grid-cols-2 gap-2 text-[10px] text-gray-400">
-          <div className={`px-2 py-1 rounded-md text-center ${rageTotal >= 240 ? "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 font-semibold" : "bg-gray-50 dark:bg-gray-800"}`}>
-            {rageTotal >= 240 ? "✦ 已变色" : "≥240 变色"}
+        {/* 状态文案 */}
+        {rageTotal >= 240 && (
+          <div className={`mt-3 text-center text-sm font-bold tracking-wide ${
+            rageTotal >= 300
+              ? "text-yellow-500 animate-pulse"
+              : rageTotal >= 270
+              ? "text-yellow-600"
+              : "text-yellow-500"
+          }`}>
+            {rageTotal >= 300 ? "完美" : rageTotal >= 270 ? "状态极佳" : "状态良好"}
           </div>
-          <div className={`px-2 py-1 rounded-md text-center ${rageTotal >= 270 ? "bg-yellow-200 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-300 font-semibold animate-pulse" : "bg-gray-50 dark:bg-gray-800"}`}>
-            {rageTotal >= 270 ? "✦ 已激活" : "≥270 动画"}
-          </div>
-        </div>
+        )}
       </motion.div>
 
       {/* 弹窗 */}

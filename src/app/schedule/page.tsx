@@ -14,6 +14,7 @@ import {
 import TodayTimeline from "@/components/schedule/TodayTimeline";
 import type { ScheduleTemplate, ScheduleEvent, DaySchedule, DayScheduleEvent, DateRange } from "@/lib/types";
 import { showToast } from "@/components/ui/Toast";
+import { useSearchParams } from "next/navigation";
 
 // ==================== 工具 ====================
 
@@ -369,7 +370,9 @@ function HistoryView() {
 // ==================== 主页面 ====================
 
 export default function SchedulePage() {
-  const [view, setView] = useState<"today" | "history" | "templates">("today");
+  const searchParams = useSearchParams();
+  const initialView = searchParams.get("view") as "today" | "history" | "templates" | null;
+  const [view, setView] = useState<"today" | "history" | "templates">(initialView || "today");
   const [templates, setTemplates] = useState<ScheduleTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);

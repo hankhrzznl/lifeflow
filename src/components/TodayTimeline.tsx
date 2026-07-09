@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, Clock, ChevronDown } from "lucide-react";
 import { db, updateTask } from "@/lib/db";
@@ -31,6 +32,7 @@ function getTagColor(tag: string): string {
 }
 
 export default function TodayTimeline() {
+  const router = useRouter();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -148,7 +150,20 @@ export default function TodayTimeline() {
             </span>
           )}
         </div>
-        <span className="text-xs text-gray-400">00:00 — 24:00</span>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => router.push("/schedule?view=history")}
+            className="px-2.5 py-1 text-xs font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            历史
+          </button>
+          <button
+            onClick={() => router.push("/schedule?view=templates")}
+            className="px-2.5 py-1 text-xs font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            模板
+          </button>
+        </div>
       </div>
 
       {/* Timeline grid */}

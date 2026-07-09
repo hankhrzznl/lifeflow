@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 import {
   ArrowRight, FolderKanban,
 } from "lucide-react";
@@ -37,11 +38,13 @@ function ProjectCard({
   index,
   boardCount,
   boardNames,
+  onClick,
 }: {
   project: ProjectV2;
   index: number;
   boardCount: number;
   boardNames: string[];
+  onClick: () => void;
 }) {
   const gradient = getProjectGradient(index);
 
@@ -50,7 +53,8 @@ function ProjectCard({
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.08, duration: 0.4, ease: "easeOut" }}
-      className={`group relative overflow-hidden rounded-3xl bg-gradient-to-br ${gradient} p-6 md:p-7 text-white shadow-lg shadow-slate-200/60 min-h-[200px] md:min-h-[240px] flex flex-col`}
+      onClick={onClick}
+      className={`group relative overflow-hidden rounded-3xl bg-gradient-to-br ${gradient} p-6 md:p-7 text-white shadow-lg shadow-slate-200/60 min-h-[200px] md:min-h-[240px] flex flex-col cursor-pointer hover:scale-[1.02] transition-transform`}
     >
       <div className="absolute -top-12 -right-12 w-44 h-44 rounded-full bg-white/15 blur-2xl pointer-events-none" />
       <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-white/20 to-transparent rounded-bl-full pointer-events-none" />
@@ -95,6 +99,7 @@ function ProjectCard({
 // ==================== 主页面 ====================
 
 export default function HomePage() {
+  const router = useRouter();
   const [projects, setProjects] = useState<ProjectV2[]>([]);
   const [projectBoards, setProjectBoards] = useState<Record<number, Board[]>>({});
   const [loading, setLoading] = useState(true);
@@ -156,6 +161,7 @@ export default function HomePage() {
                   index={i}
                   boardCount={boards.length}
                   boardNames={boards.map((b) => b.name)}
+                  onClick={() => router.push("/planner")}
                 />
               );
             })}

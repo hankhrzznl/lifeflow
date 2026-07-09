@@ -187,7 +187,7 @@ function SettingsPanel({
         <div className="mb-5">
           <div className="flex items-center justify-between mb-2">
             <label className="text-sm font-medium text-gray-700 dark:text-gray-300">晚上睡眠目标（小时）</label>
-            <span className="text-lg font-bold text-indigo-500">{sleepTarget}h</span>
+            <span className="text-lg font-bold text-red-500">{sleepTarget}h</span>
           </div>
           <input
             type="range"
@@ -198,7 +198,7 @@ function SettingsPanel({
             onChange={(e) => setSleepTarget(Number(e.target.value))}
             className="w-full h-2 rounded-full bg-gray-200 dark:bg-gray-700 appearance-none cursor-pointer
               [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 
-              [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-indigo-500 [&::-webkit-slider-thumb]:shadow-md"
+              [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-red-500 [&::-webkit-slider-thumb]:shadow-md"
           />
           <div className="flex justify-between text-[10px] text-gray-400 mt-1">
             <span>4h</span><span>12h</span>
@@ -209,7 +209,7 @@ function SettingsPanel({
         <div className="mb-5">
           <div className="flex items-center justify-between mb-2">
             <label className="text-sm font-medium text-gray-700 dark:text-gray-300">午睡目标（小时）</label>
-            <span className="text-lg font-bold text-orange-500">{napTarget}h</span>
+            <span className="text-lg font-bold text-yellow-500">{napTarget}h</span>
           </div>
           <input
             type="range"
@@ -220,7 +220,7 @@ function SettingsPanel({
             onChange={(e) => setNapTarget(Number(e.target.value))}
             className="w-full h-2 rounded-full bg-gray-200 dark:bg-gray-700 appearance-none cursor-pointer
               [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 
-              [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-orange-500 [&::-webkit-slider-thumb]:shadow-md"
+              [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-yellow-500 [&::-webkit-slider-thumb]:shadow-md"
           />
           <div className="flex justify-between text-[10px] text-gray-400 mt-1">
             <span>0h</span><span>0.5h</span>
@@ -231,7 +231,7 @@ function SettingsPanel({
         <div className="mb-5">
           <div className="flex items-center justify-between mb-2">
             <label className="text-sm font-medium text-gray-700 dark:text-gray-300">体重（kg）</label>
-            <span className="text-lg font-bold text-emerald-500">{weight}kg</span>
+            <span className="text-lg font-bold text-blue-500">{weight}kg</span>
           </div>
           <input
             type="range"
@@ -242,7 +242,7 @@ function SettingsPanel({
             onChange={(e) => setWeight(Number(e.target.value))}
             className="w-full h-2 rounded-full bg-gray-200 dark:bg-gray-700 appearance-none cursor-pointer
               [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 
-              [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-emerald-500 [&::-webkit-slider-thumb]:shadow-md"
+              [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-blue-500 [&::-webkit-slider-thumb]:shadow-md"
           />
           <div className="flex justify-between text-[10px] text-gray-400 mt-1">
             <span>40kg</span><span>120kg</span>
@@ -486,10 +486,7 @@ export default function CharacterFrame() {
                   <Moon className="w-3.5 h-3.5 text-red-400" /> 睡眠
                 </span>
                 <span className="text-xs font-bold text-red-500">
-                  {isAfterNap
-                    ? `夜 ${sleepHours.toFixed(1)}/${settings.sleepTarget}h · 午 ${napHours.toFixed(1)}/${settings.napTarget}h`
-                    : `${sleepHours.toFixed(1)}/${settings.sleepTarget}h`
-                  }
+                  {(sleepHours + (isAfterNap ? napHours : 0)).toFixed(1)}/{settings.sleepTarget}h
                 </span>
               </div>
               {isAfterNap ? (

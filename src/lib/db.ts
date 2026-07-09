@@ -1997,7 +1997,7 @@ export async function getUserSettings(): Promise<UserSettings> {
   // 返回默认值
   return {
     sleepTarget: 8,
-    napTarget: 2,
+    napTarget: 0.5,
     weight: 60,
     cupSizes: [200, 300, 500],
     createdAt: Date.now(),
@@ -2011,7 +2011,7 @@ export async function saveUserSettings(settings: Partial<UserSettings>): Promise
   } else {
     await db.userSettings.add({
       sleepTarget: settings.sleepTarget ?? 8,
-      napTarget: settings.napTarget ?? 2,
+      napTarget: settings.napTarget ?? 0.5,
       weight: settings.weight ?? 60,
       cupSizes: settings.cupSizes ?? [200, 300, 500],
       avatarDataUrl: settings.avatarDataUrl,

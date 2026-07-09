@@ -214,8 +214,8 @@ function SettingsPanel({
           <input
             type="range"
             min={0}
-            max={4}
-            step={0.5}
+            max={0.5}
+            step={0.1}
             value={napTarget}
             onChange={(e) => setNapTarget(Number(e.target.value))}
             className="w-full h-2 rounded-full bg-gray-200 dark:bg-gray-700 appearance-none cursor-pointer
@@ -223,7 +223,7 @@ function SettingsPanel({
               [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-orange-500 [&::-webkit-slider-thumb]:shadow-md"
           />
           <div className="flex justify-between text-[10px] text-gray-400 mt-1">
-            <span>0h</span><span>4h</span>
+            <span>0h</span><span>0.5h</span>
           </div>
         </div>
 
@@ -293,7 +293,7 @@ function SettingsPanel({
 // ==================== 人物框主体 ====================
 
 export default function CharacterFrame() {
-  const [settings, setSettings] = useState({ sleepTarget: 8, napTarget: 2, weight: 60, cupSizes: DEFAULT_CUP_SIZES, waterTarget: 1800, avatarDataUrl: undefined as string | undefined });
+  const [settings, setSettings] = useState({ sleepTarget: 8, napTarget: 0.5, weight: 60, cupSizes: DEFAULT_CUP_SIZES, waterTarget: 1800, avatarDataUrl: undefined as string | undefined });
   const [sleepHours, setSleepHours] = useState(0);
   const [napHours, setNapHours] = useState(0);
   const [isAfterNap, setIsAfterNap] = useState(false);
@@ -311,7 +311,7 @@ export default function CharacterFrame() {
         const waterTarget = Math.round(s.weight * 30);
         setSettings({
           sleepTarget: s.sleepTarget,
-          napTarget: s.napTarget ?? 2,
+          napTarget: s.napTarget ?? 0.5,
           weight: s.weight,
           cupSizes: s.cupSizes ?? DEFAULT_CUP_SIZES,
           waterTarget,

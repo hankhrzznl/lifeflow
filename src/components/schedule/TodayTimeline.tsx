@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronLeft, ChevronRight, AlertCircle, Clock, CheckCircle, Circle, Target,
@@ -114,6 +115,7 @@ function CalibrateModal({
 // ==================== 今日日程视图 ====================
 
 export default function TodayTimeline() {
+  const router = useRouter();
   const [date, setDate] = useState(getTodayStr());
   const [schedule, setSchedule] = useState<DaySchedule | null>(null);
   const [loading, setLoading] = useState(true);
@@ -203,10 +205,24 @@ export default function TodayTimeline() {
             <span className="text-xs text-indigo-500 font-medium">今天</span>
           )}
         </div>
-        <button onClick={() => setDate(shiftDate(date, 1))}
-          className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100">
-          <ChevronRight className="w-5 h-5 text-gray-400" />
-        </button>
+        <div className="flex items-center gap-1">
+          <button onClick={() => setDate(shiftDate(date, 1))}
+            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100">
+            <ChevronRight className="w-5 h-5 text-gray-400" />
+          </button>
+          <button
+            onClick={() => router.push("/schedule?view=history")}
+            className="px-2.5 py-1 text-xs font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            历史
+          </button>
+          <button
+            onClick={() => router.push("/schedule?view=templates")}
+            className="px-2.5 py-1 text-xs font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            模板
+          </button>
+        </div>
       </div>
 
       {/* 跳回今天 */}

@@ -18,9 +18,10 @@ function getTodayStr(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-function calcSleepFromSchedule(daySchedule: any): number {
-  if (!daySchedule?.events) return 0;
-  let totalMinutes = 0;
+function calcSleepFromSchedule(daySchedule: any): { nightHours: number; napHours: number; isAfterNap: boolean } {
+  if (!daySchedule?.events) return { nightHours: 0, napHours: 0, isAfterNap: false };
+  
+  const sleepEvents: any[] = [];
   for (const ev of daySchedule.events) {
     if (ev.title?.includes("睡")) {
       const start = ev.actualStartTime || ev.startTime;
@@ -30,10 +31,28 @@ function calcSleepFromSchedule(daySchedule: any): number {
       const [eh, em] = end.split(":").map(Number);
       let mins = (eh * 60 + em) - (sh * 60 + sm);
       if (mins < 0) mins += 24 * 60;
-      totalMinutes += mins;
+      const startMin = sh * 60 + sm;
+      sleepEvents.push({ minutes: mins, startMin, startTime: start });
     }
   }
-  return totalMinutes / 60;
+  
+  // 按时长排序：长的 = 晚上睡觉，短的 = 午睡
+  sleepEvents.sort((a, b) => b.minutes - a.minutes);
+  
+  const nightHours = sleepEvents.length > 0 ? sleepEvents[0].minutes / 60 : 0;
+  const napHours = sleepEvents.length > 1 ? sleepEvents[1].minutes / 60 : 0;
+  
+  // 判断当前是否在午睡之后
+  const now = new Date();
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  let isAfterNap = false;
+  if (sleepEvents.length > 1) {
+    // 午睡开始时间
+    const napStart = sleepEvents[1].startMin;
+    isAfterNap = nowMin >= napStart;
+  }
+  
+  return { nightHours, napHours, isAfterNap };
 }
 
 // ==================== 自我评分面板 ====================
@@ -131,11 +150,12 @@ function SettingsPanel({
   onSave,
   onClose,
 }: {
-  settings: { sleepTarget: number; weight: number; cupSizes: number[]; waterTarget: number };
-  onSave: (s: { sleepTarget: number; weight: number; cupSizes: number[] }) => void;
+  settings: { sleepTarget: number; napTarget: number; weight: number; cupSizes: number[]; waterTarget: number };
+  onSave: (s: { sleepTarget: number; napTarget: number; weight: number; cupSizes: number[] }) => void;
   onClose: () => void;
 }) {
   const [sleepTarget, setSleepTarget] = useState(settings.sleepTarget);
+  const [napTarget, setNapTarget] = useState(settings.napTarget);
   const [weight, setWeight] = useState(settings.weight);
   const [cupSizes, setCupSizes] = useState(settings.cupSizes);
 
@@ -166,7 +186,7 @@ function SettingsPanel({
         {/* 睡眠目标 */}
         <div className="mb-5">
           <div className="flex items-center justify-between mb-2">
-            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">每日睡眠目标（小时）</label>
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">晚上睡眠目标（小时）</label>
             <span className="text-lg font-bold text-indigo-500">{sleepTarget}h</span>
           </div>
           <input
@@ -182,6 +202,28 @@ function SettingsPanel({
           />
           <div className="flex justify-between text-[10px] text-gray-400 mt-1">
             <span>4h</span><span>12h</span>
+          </div>
+        </div>
+
+        {/* 午睡目标 */}
+        <div className="mb-5">
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">午睡目标（小时）</label>
+            <span className="text-lg font-bold text-orange-500">{napTarget}h</span>
+          </div>
+          <input
+            type="range"
+            min={0}
+            max={4}
+            step={0.5}
+            value={napTarget}
+            onChange={(e) => setNapTarget(Number(e.target.value))}
+            className="w-full h-2 rounded-full bg-gray-200 dark:bg-gray-700 appearance-none cursor-pointer
+              [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 
+              [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-orange-500 [&::-webkit-slider-thumb]:shadow-md"
+          />
+          <div className="flex justify-between text-[10px] text-gray-400 mt-1">
+            <span>0h</span><span>4h</span>
           </div>
         </div>
 
@@ -237,7 +279,7 @@ function SettingsPanel({
         </div>
 
         <button
-          onClick={() => onSave({ sleepTarget, weight, cupSizes })}
+          onClick={() => onSave({ sleepTarget, napTarget, weight, cupSizes })}
           className="w-full py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-emerald-500 text-white font-semibold text-sm
             hover:from-indigo-600 hover:to-emerald-600 transition-all active:scale-95"
         >
@@ -251,8 +293,10 @@ function SettingsPanel({
 // ==================== 人物框主体 ====================
 
 export default function CharacterFrame() {
-  const [settings, setSettings] = useState({ sleepTarget: 8, weight: 60, cupSizes: DEFAULT_CUP_SIZES, waterTarget: 1800, avatarDataUrl: undefined as string | undefined });
+  const [settings, setSettings] = useState({ sleepTarget: 8, napTarget: 2, weight: 60, cupSizes: DEFAULT_CUP_SIZES, waterTarget: 1800, avatarDataUrl: undefined as string | undefined });
   const [sleepHours, setSleepHours] = useState(0);
+  const [napHours, setNapHours] = useState(0);
+  const [isAfterNap, setIsAfterNap] = useState(false);
   const [waterMl, setWaterMl] = useState(0);
   const [selfAssessment, setSelfAssessment] = useState<{ physicalScore: number; moodScore: number } | null>(null);
   const [showSelfPanel, setShowSelfPanel] = useState(false);
@@ -267,6 +311,7 @@ export default function CharacterFrame() {
         const waterTarget = Math.round(s.weight * 30);
         setSettings({
           sleepTarget: s.sleepTarget,
+          napTarget: s.napTarget ?? 2,
           weight: s.weight,
           cupSizes: s.cupSizes ?? DEFAULT_CUP_SIZES,
           waterTarget,
@@ -276,7 +321,10 @@ export default function CharacterFrame() {
         // 睡眠数据
         const today = getTodayStr();
         const ds = await getDaySchedule(today);
-        setSleepHours(calcSleepFromSchedule(ds));
+        const { nightHours, napHours: nap, isAfterNap: afterNap } = calcSleepFromSchedule(ds);
+        setSleepHours(nightHours);
+        setNapHours(nap);
+        setIsAfterNap(afterNap);
 
         // 饮水数据
         const wr = await getTodayWaterRecord();
@@ -296,7 +344,10 @@ export default function CharacterFrame() {
 
   // 睡眠进度
   const sleepPct = Math.min((sleepHours / settings.sleepTarget) * 100, 100);
-  const sleepScore = Math.round(Math.min((sleepHours / settings.sleepTarget) * 100, 100));
+  const napPct = napHours > 0 ? Math.min((napHours / settings.napTarget) * 100, 100) : 0;
+  const sleepScore = isAfterNap
+    ? Math.round(Math.min(sleepHours / settings.sleepTarget * 80 + napHours / settings.napTarget * 20, 100))
+    : Math.round(Math.min((sleepHours / settings.sleepTarget) * 100, 100));
 
   // 饮水进度
   const waterPct = Math.min((waterMl / settings.waterTarget) * 100, 100);
@@ -341,7 +392,7 @@ export default function CharacterFrame() {
   }, []);
 
   // 设置保存
-  const handleSettingsSave = useCallback(async (s: { sleepTarget: number; weight: number; cupSizes: number[] }) => {
+  const handleSettingsSave = useCallback(async (s: { sleepTarget: number; napTarget: number; weight: number; cupSizes: number[] }) => {
     await saveUserSettings(s);
     const waterTarget = Math.round(s.weight * 30);
     setSettings((prev) => ({ ...prev, ...s, waterTarget }));
@@ -434,16 +485,38 @@ export default function CharacterFrame() {
                 <span className="text-xs font-medium text-gray-500 dark:text-gray-400 flex items-center gap-1">
                   <Moon className="w-3.5 h-3.5 text-red-400" /> 睡眠
                 </span>
-                <span className="text-xs font-bold text-red-500">{sleepHours.toFixed(1)}/{settings.sleepTarget}h</span>
+                <span className="text-xs font-bold text-red-500">
+                  {isAfterNap
+                    ? `夜 ${sleepHours.toFixed(1)}/${settings.sleepTarget}h · 午 ${napHours.toFixed(1)}/${settings.napTarget}h`
+                    : `${sleepHours.toFixed(1)}/${settings.sleepTarget}h`
+                  }
+                </span>
               </div>
-              <div className="w-full h-3 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${sleepPct}%` }}
-                  transition={{ duration: 0.8, ease: "easeOut" }}
-                  className="h-full rounded-full bg-gradient-to-r from-red-400 to-red-500"
-                />
-              </div>
+              {isAfterNap ? (
+                <div className="w-full h-3 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden flex">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${Math.min((sleepPct / 100) * 80, 80)}%` }}
+                    transition={{ duration: 0.8, ease: "easeOut" }}
+                    className="h-full bg-gradient-to-r from-red-400 to-red-500 rounded-l-full"
+                  />
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${Math.min((napPct / 100) * 20, 20)}%` }}
+                    transition={{ duration: 0.8, ease: "easeOut" }}
+                    className="h-full bg-gradient-to-r from-orange-400 to-amber-400 rounded-r-full"
+                  />
+                </div>
+              ) : (
+                <div className="w-full h-3 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${sleepPct}%` }}
+                    transition={{ duration: 0.8, ease: "easeOut" }}
+                    className="h-full rounded-full bg-gradient-to-r from-red-400 to-red-500"
+                  />
+                </div>
+              )}
             </div>
 
             {/* MP - 饮水 */}

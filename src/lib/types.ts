@@ -913,7 +913,8 @@ export interface DaySchedule {
 
 export interface UserSettings {
   id?: number;
-  sleepTarget: number;      // 每日睡眠目标（小时），默认 8
+  sleepTarget: number;      // 每日睡眠目标-晚上（小时），默认 8
+  napTarget: number;        // 午睡目标（小时），默认 2
   weight: number;           // 体重（kg），默认 60
   cupSizes: number[];       // 水杯预设值（ml），默认 [200, 300, 500]
   avatarDataUrl?: string;   // 头像 Base64

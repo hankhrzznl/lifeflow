@@ -1998,7 +1998,7 @@ export async function getUserSettings(): Promise<UserSettings> {
   return {
     sleepTarget: 8,
     weight: 60,
-    cupSize: 200,
+    cupSizes: [200, 300, 500],
     createdAt: Date.now(),
   };
 }
@@ -2011,7 +2011,7 @@ export async function saveUserSettings(settings: Partial<UserSettings>): Promise
     await db.userSettings.add({
       sleepTarget: settings.sleepTarget ?? 8,
       weight: settings.weight ?? 60,
-      cupSize: settings.cupSize ?? 200,
+      cupSizes: settings.cupSizes ?? [200, 300, 500],
       avatarDataUrl: settings.avatarDataUrl,
       createdAt: Date.now(),
     });

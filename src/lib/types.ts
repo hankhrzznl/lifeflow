@@ -915,7 +915,7 @@ export interface UserSettings {
   id?: number;
   sleepTarget: number;      // 每日睡眠目标（小时），默认 8
   weight: number;           // 体重（kg），默认 60
-  cupSize: number;          // 水杯大小（ml），默认 200
+  cupSizes: number[];       // 水杯预设值（ml），默认 [200, 300, 500]
   avatarDataUrl?: string;   // 头像 Base64
   createdAt: number;
 }

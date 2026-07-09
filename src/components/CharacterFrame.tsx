@@ -12,7 +12,7 @@ import {
   getDaySchedule,
 } from "@/lib/db";
 
-const CUP_PRESETS = [200, 300, 500];
+const DEFAULT_CUP_SIZES = [200, 300, 500];
 
 function getTodayStr(): string {
   return new Date().toISOString().slice(0, 10);
@@ -131,15 +131,15 @@ function SettingsPanel({
   onSave,
   onClose,
 }: {
-  settings: { sleepTarget: number; weight: number; cupSize: number; waterTarget: number };
-  onSave: (s: { sleepTarget: number; weight: number; cupSize: number }) => void;
+  settings: { sleepTarget: number; weight: number; cupSizes: number[]; waterTarget: number };
+  onSave: (s: { sleepTarget: number; weight: number; cupSizes: number[] }) => void;
   onClose: () => void;
 }) {
   const [sleepTarget, setSleepTarget] = useState(settings.sleepTarget);
   const [weight, setWeight] = useState(settings.weight);
-  const [cupSize, setCupSize] = useState(settings.cupSize);
+  const [cupSizes, setCupSizes] = useState(settings.cupSizes);
 
-  const previewWaterTarget = Math.round(weight * 35);
+  const previewWaterTarget = Math.round(weight * 30);
 
   return (
     <motion.div
@@ -210,28 +210,34 @@ function SettingsPanel({
           </p>
         </div>
 
-        {/* 水杯大小 */}
+        {/* 水杯预设值 */}
         <div className="mb-6">
-          <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-2">默认水杯大小</label>
+          <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-2">水杯预设值（ml）</label>
           <div className="flex gap-2">
-            {[200, 300, 500].map((size) => (
-              <button
-                key={size}
-                onClick={() => setCupSize(size)}
-                className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all ${
-                  cupSize === size
-                    ? "bg-blue-500 text-white shadow-md"
-                    : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200"
-                }`}
-              >
-                {size}ml
-              </button>
+            {cupSizes.map((size, idx) => (
+              <input
+                key={idx}
+                type="number"
+                min={50}
+                max={2000}
+                step={50}
+                value={size}
+                onChange={(e) => {
+                  const val = Math.max(50, Math.min(2000, Number(e.target.value) || 50));
+                  const next = [...cupSizes];
+                  next[idx] = val;
+                  setCupSizes(next);
+                }}
+                className="flex-1 px-3 py-2 rounded-xl text-sm text-center font-medium
+                  bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300
+                  border border-gray-200 dark:border-gray-700 focus:outline-none focus:border-blue-400"
+              />
             ))}
           </div>
         </div>
 
         <button
-          onClick={() => onSave({ sleepTarget, weight, cupSize })}
+          onClick={() => onSave({ sleepTarget, weight, cupSizes })}
           className="w-full py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-emerald-500 text-white font-semibold text-sm
             hover:from-indigo-600 hover:to-emerald-600 transition-all active:scale-95"
         >
@@ -245,7 +251,7 @@ function SettingsPanel({
 // ==================== 人物框主体 ====================
 
 export default function CharacterFrame() {
-  const [settings, setSettings] = useState({ sleepTarget: 8, weight: 60, cupSize: 200, waterTarget: 2100, avatarDataUrl: undefined as string | undefined });
+  const [settings, setSettings] = useState({ sleepTarget: 8, weight: 60, cupSizes: DEFAULT_CUP_SIZES, waterTarget: 1800, avatarDataUrl: undefined as string | undefined });
   const [sleepHours, setSleepHours] = useState(0);
   const [waterMl, setWaterMl] = useState(0);
   const [selfAssessment, setSelfAssessment] = useState<{ physicalScore: number; moodScore: number } | null>(null);
@@ -258,11 +264,11 @@ export default function CharacterFrame() {
     const load = async () => {
       try {
         const s = await getUserSettings();
-        const waterTarget = Math.round(s.weight * 35);
+        const waterTarget = Math.round(s.weight * 30);
         setSettings({
           sleepTarget: s.sleepTarget,
           weight: s.weight,
-          cupSize: s.cupSize,
+          cupSizes: s.cupSizes ?? DEFAULT_CUP_SIZES,
           waterTarget,
           avatarDataUrl: s.avatarDataUrl,
         });
@@ -335,9 +341,9 @@ export default function CharacterFrame() {
   }, []);
 
   // 设置保存
-  const handleSettingsSave = useCallback(async (s: { sleepTarget: number; weight: number; cupSize: number }) => {
+  const handleSettingsSave = useCallback(async (s: { sleepTarget: number; weight: number; cupSizes: number[] }) => {
     await saveUserSettings(s);
-    const waterTarget = Math.round(s.weight * 35);
+    const waterTarget = Math.round(s.weight * 30);
     setSettings((prev) => ({ ...prev, ...s, waterTarget }));
     setShowSettings(false);
   }, []);
@@ -500,7 +506,7 @@ export default function CharacterFrame() {
         {/* 操作按钮行 */}
         <div className="mt-4 flex items-center gap-2 flex-wrap">
           {/* 饮水按钮 */}
-          {CUP_PRESETS.map((ml) => (
+          {settings.cupSizes.map((ml) => (
             <button
               key={ml}
               onClick={() => handleDrink(ml)}

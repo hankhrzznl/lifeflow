@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Home, Layers, Menu, X,
+  Layers, Menu, X,
   Settings, BarChart3, Trash2, Puzzle, ChevronRight, Bell, CalendarDays, Heart,
 } from "lucide-react";
 import { getPluginsForNavbar } from "@/lib/db";
@@ -104,16 +104,12 @@ export default function BottomTabBar() {
 
   const baseTabs = [
     {
-      id: "home", label: "主页", icon: Home, path: "/",
-      active: pathname === "/",
+      id: "today", label: "今日", icon: CalendarDays, path: "/today",
+      active: isActive("/today") || pathname === "/",
     },
     {
       id: "plan", label: "规划", icon: Layers, path: "/planner",
       active: isActive("/planner"),
-    },
-    {
-      id: "schedule", label: "日程", icon: CalendarDays, path: "/schedule",
-      active: isActive("/schedule"),
     },
     {
       id: "review", label: "回顾", icon: BarChart3, path: "/review",
@@ -175,8 +171,8 @@ export default function BottomTabBar() {
               );
             }
 
-            // 日程悬浮圆形按钮
-            if (tab.id === "schedule") {
+            // 今日悬浮圆形按钮
+            if (tab.id === "today") {
               return (
                 <Link
                   key={tab.id}

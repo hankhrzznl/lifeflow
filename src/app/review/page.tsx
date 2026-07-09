@@ -956,13 +956,15 @@ export default function ReviewPage() {
   // 骨架屏
   if (loading) {
     return (
-      <div className="flex flex-col h-full max-w-2xl mx-auto px-4 pt-6 pb-24">
+      <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-gray-950 dark:to-gray-900">
+      <div className="mx-auto max-w-5xl px-5 pt-8 pb-24 md:px-8 md:pt-10">
         <div className="skeleton h-8 w-20 mb-2" />
         <div className="skeleton h-4 w-40 mb-4" />
         <div className="skeleton h-9 w-full rounded-xl mb-4" />
         <div className="skeleton h-9 w-48 rounded-xl mb-4" />
         <div className="skeleton h-64 rounded-2xl mb-4" />
         <div className="skeleton h-40 rounded-2xl" />
+      </div>
       </div>
     );
   }
@@ -975,7 +977,8 @@ export default function ReviewPage() {
   ];
 
   return (
-    <div className="flex flex-col h-full max-w-2xl mx-auto px-4 pt-6 pb-24">
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-gray-950 dark:to-gray-900 text-slate-900 dark:text-white">
+      <div className="mx-auto max-w-5xl px-5 pt-8 pb-24 md:px-8 md:pt-10">
       {/* 标题 */}
       <h1 className="text-xl font-bold text-gray-900 mb-1">回顾</h1>
       <p className="text-sm text-gray-500 mb-5">查看历史数据，对比分析，调整计划</p>
@@ -1120,6 +1123,7 @@ export default function ReviewPage() {
           )}
         </>
       )}
+    </div>
     </div>
   );
 }

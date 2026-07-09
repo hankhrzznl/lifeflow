@@ -108,8 +108,8 @@ export default function PlannerPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="mx-auto max-w-5xl px-4 py-6 pb-24 md:px-6 md:py-8">
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-gray-950 dark:to-gray-900">
+      <div className="mx-auto max-w-5xl px-5 py-8 pb-24 md:px-8 md:py-10">
         {/* 标题区域 — 入场动画 延迟 0ms */}
         <FadeInUp delay={0} className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900">规划</h1>

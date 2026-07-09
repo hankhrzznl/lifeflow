@@ -3,14 +3,12 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useCallback, useState, useEffect } from 'react';
-import { Layers, Settings, BarChart3, Trash2, Puzzle, Heart, Inbox, Calendar, List, Target, ChevronDown, X } from 'lucide-react';
+import { CalendarDays, Settings, BarChart3, Trash2, Puzzle, Heart, Target, List, Layers, ChevronDown, X } from 'lucide-react';
 import { getPluginsForNavbar } from '@/lib/db';
 import { getPluginConfig } from '@/lib/plugin-config';
 import type { PluginMetadata } from '@/lib/types';
 
 const planItems = [
-  { label: '捕捉', href: '/capture', icon: Inbox },
-  { label: '今日', href: '/today', icon: Calendar },
   { label: '安排', href: '/pending', icon: List },
   { label: '项目', href: '/projects', icon: Layers },
   { label: '目标', href: '/goals', icon: Target },
@@ -62,15 +60,27 @@ export default function DesktopSidebarV2() {
         </div>
 
         <nav className="flex-1 px-4 py-4 space-y-1">
-          <button
-            onClick={() => setShowPlanMenu(true)}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors ${
-              isActive('/capture') || isActive('/today') || isActive('/pending') || isActive('/projects') || isActive('/goals')
+          <Link
+            href="/today"
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors ${
+              isActive('/today') || pathname === '/'
                 ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-medium'
                 : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
             }`}
           >
-            <Layers className={`w-5 h-5 ${isActive('/capture') || isActive('/today') || isActive('/pending') || isActive('/projects') || isActive('/goals') ? 'fill-current text-blue-500' : 'text-gray-400'} stroke-[1.5]`} />
+            <CalendarDays className={`w-5 h-5 ${isActive('/today') || pathname === '/' ? 'fill-current text-blue-500' : 'text-gray-400'} stroke-[1.5]`} />
+            <span className="text-sm">今日</span>
+          </Link>
+
+          <button
+            onClick={() => setShowPlanMenu(true)}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors ${
+              isActive('/pending') || isActive('/projects') || isActive('/goals')
+                ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-medium'
+                : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
+            }`}
+          >
+            <Layers className={`w-5 h-5 ${isActive('/pending') || isActive('/projects') || isActive('/goals') ? 'fill-current text-blue-500' : 'text-gray-400'} stroke-[1.5]`} />
             <span className="text-sm flex-1 text-left">规划</span>
             <ChevronDown className="w-4 h-4" />
           </button>

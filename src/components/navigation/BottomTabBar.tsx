@@ -104,8 +104,8 @@ export default function BottomTabBar() {
 
   const baseTabs = [
     {
-      id: "today", label: "今日", icon: CalendarDays, path: "/today",
-      active: isActive("/today") || pathname === "/",
+      id: "today", label: "主页", icon: CalendarDays, path: "/",
+      active: pathname === "/",
     },
     {
       id: "plan", label: "规划", icon: Layers, path: "/planner",

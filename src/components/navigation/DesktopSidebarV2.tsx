@@ -61,15 +61,15 @@ export default function DesktopSidebarV2() {
 
         <nav className="flex-1 px-4 py-4 space-y-1">
           <Link
-            href="/today"
+            href="/"
             className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors ${
-              isActive('/today') || pathname === '/'
+              pathname === '/'
                 ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-medium'
                 : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
             }`}
           >
-            <CalendarDays className={`w-5 h-5 ${isActive('/today') || pathname === '/' ? 'fill-current text-blue-500' : 'text-gray-400'} stroke-[1.5]`} />
-            <span className="text-sm">今日</span>
+            <CalendarDays className={`w-5 h-5 ${pathname === '/' ? 'fill-current text-blue-500' : 'text-gray-400'} stroke-[1.5]`} />
+            <span className="text-sm">主页</span>
           </Link>
 
           <button

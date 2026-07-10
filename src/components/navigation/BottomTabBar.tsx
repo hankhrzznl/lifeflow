@@ -6,14 +6,13 @@ import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Layers, Menu, X,
-  Settings, BarChart3, Trash2, Puzzle, ChevronRight, Bell, CalendarDays, Heart, Bot,
+  Settings, BarChart3, Trash2, Puzzle, ChevronRight, Bell, CalendarDays, Bot,
 } from "lucide-react";
 import { getPluginsForNavbar } from "@/lib/db";
 import { getPluginConfig } from "@/lib/plugin-config";
 import type { PluginMetadata } from "@/lib/types";
 
 const moreItems = [
-  { label: "运动", href: "/health", icon: Heart },
   { label: "提醒", href: "/reminders", icon: Bell },
   { label: "设置", href: "/settings", icon: Settings },
   { label: "回收站", href: "/trash", icon: Trash2 },
@@ -121,7 +120,7 @@ export default function BottomTabBar() {
     },
     {
       id: "more", label: "更多", icon: Menu, path: null,
-      active: pathname.startsWith("/settings") || pathname.startsWith("/trash") || pathname.startsWith("/reminders") || pathname.startsWith("/plugins") || pathname.startsWith("/health"),
+      active: pathname.startsWith("/settings") || pathname.startsWith("/trash") || pathname.startsWith("/reminders") || pathname.startsWith("/plugins"),
     },
   ];
 

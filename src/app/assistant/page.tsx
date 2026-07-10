@@ -27,7 +27,7 @@ const cards = [
     title: "记账",
     desc: "多账户 · 预算 · 报表 · 月度统计",
     icon: Wallet,
-    href: "/plugins/finance",
+    href: "/assistant/finance",
     color: "from-emerald-500 to-teal-600",
     bg: "bg-emerald-50 dark:bg-emerald-900/20",
     iconColor: "text-emerald-500",

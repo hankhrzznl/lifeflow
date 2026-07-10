@@ -282,7 +282,7 @@ export default function FinancePage() {
 
         {/* 浮动添加按钮 */}
         {selectedAccountId !== null && !showForm && !showAccountSheet && (
-          <div className="fixed bottom-20 right-5 md:right-8 z-40 flex flex-col gap-2">
+          <div className="fixed bottom-24 right-5 md:right-8 z-40 flex flex-col gap-2">
             <button
               onClick={() => openForm("expense")}
               className="w-12 h-12 rounded-full bg-red-500 text-white shadow-lg hover:bg-red-600 transition-colors flex items-center justify-center"
@@ -308,7 +308,7 @@ export default function FinancePage() {
             className="fixed inset-0 z-50 bg-black/40" onClick={() => setShowForm(false)}>
             <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="absolute bottom-0 left-0 right-0 bg-white dark:bg-gray-900 rounded-t-3xl max-h-[85vh] overflow-y-auto"
+              className="absolute bottom-0 left-0 right-0 bg-white dark:bg-gray-900 rounded-t-3xl max-h-[85vh] overflow-y-auto pb-24"
               onClick={(e) => e.stopPropagation()}>
               <div className="p-5">
                 <div className="flex items-center justify-between mb-4">
@@ -378,7 +378,7 @@ export default function FinancePage() {
             className="fixed inset-0 z-50 bg-black/40" onClick={() => setShowAccountSheet(false)}>
             <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="absolute bottom-0 left-0 right-0 bg-white dark:bg-gray-900 rounded-t-3xl p-5"
+              className="absolute bottom-0 left-0 right-0 bg-white dark:bg-gray-900 rounded-t-3xl p-5 pb-24"
               onClick={(e) => e.stopPropagation()}>
               <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">新建账户</h3>
               <input id="accName" placeholder="账户名称" defaultValue=""

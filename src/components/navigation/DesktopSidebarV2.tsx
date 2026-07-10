@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useCallback, useState, useEffect } from 'react';
-import { CalendarDays, Settings, BarChart3, Trash2, Puzzle, Heart, Target, List, Layers, ChevronDown, X } from 'lucide-react';
+import { CalendarDays, Settings, BarChart3, Trash2, Puzzle, Heart, Target, List, Layers, ChevronDown, X, Bot } from 'lucide-react';
 import { getPluginsForNavbar } from '@/lib/db';
 import { getPluginConfig } from '@/lib/plugin-config';
 import type { PluginMetadata } from '@/lib/types';
@@ -95,6 +95,18 @@ export default function DesktopSidebarV2() {
           >
             <Heart className={`w-5 h-5 ${isActive('/health') ? 'fill-current text-blue-500' : 'text-gray-400'} stroke-[1.5]`} />
             <span className="text-sm">健康</span>
+          </Link>
+
+          <Link
+            href="/assistant"
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors ${
+              isActive('/assistant')
+                ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-medium'
+                : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
+            }`}
+          >
+            <Bot className={`w-5 h-5 ${isActive('/assistant') ? 'fill-current text-blue-500' : 'text-gray-400'} stroke-[1.5]`} />
+            <span className="text-sm">助手</span>
           </Link>
 
           <div className="mx-4 my-3 border-t border-gray-200 dark:border-gray-800" />

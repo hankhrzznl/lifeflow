@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Moon, Droplets, Wallet, ArrowRight } from "lucide-react";
+import { Moon, Droplets, Wallet, Dumbbell, ArrowRight } from "lucide-react";
 
 const cards = [
   {
@@ -32,6 +32,15 @@ const cards = [
     bg: "bg-emerald-50 dark:bg-emerald-900/20",
     iconColor: "text-emerald-500",
   },
+  {
+    title: "健身",
+    desc: "力量训练记录 · 趋势图表 · 肌群管理",
+    icon: Dumbbell,
+    href: "/assistant/fitness",
+    color: "from-orange-500 to-red-600",
+    bg: "bg-orange-50 dark:bg-orange-900/20",
+    iconColor: "text-orange-500",
+  },
 ];
 
 export default function AssistantPage() {
@@ -41,7 +50,7 @@ export default function AssistantPage() {
         <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-1">助手</h1>
         <p className="text-sm text-gray-500 mb-6">生活辅助工具</p>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {cards.map((card, i) => (
             <Link key={card.title} href={card.href}>
               <motion.div

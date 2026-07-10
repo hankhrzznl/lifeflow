@@ -282,7 +282,7 @@ export default function FinancePage() {
 
         {/* 浮动添加按钮 */}
         {selectedAccountId !== null && !showForm && !showAccountSheet && (
-          <div className="fixed bottom-24 right-5 md:right-8 z-40 flex flex-col gap-2">
+          <div className="fixed bottom-40 right-5 md:right-8 z-40 flex flex-col gap-2">
             <button
               onClick={() => openForm("expense")}
               className="w-12 h-12 rounded-full bg-red-500 text-white shadow-lg hover:bg-red-600 transition-colors flex items-center justify-center"

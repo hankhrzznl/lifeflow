@@ -86,12 +86,14 @@ function MuscleGroupCard({
   onSelect,
   onManageSubMuscles,
   onSelectSubMuscle,
+  selectedSubMuscleId,
 }: {
   group: MuscleGroup;
   subMuscles: SubMuscle[];
   onSelect: (group: MuscleGroup, subMuscles: SubMuscle[]) => void;
   onManageSubMuscles: (group: MuscleGroup) => void;
-  onSelectSubMuscle: (group: MuscleGroup, subMuscle: SubMuscle) => void;
+  onSelectSubMuscle: (subMuscle: SubMuscle) => void;
+  selectedSubMuscleId?: number | null;
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -147,8 +149,12 @@ function MuscleGroupCard({
               {subMuscles.map((subMuscle) => (
                 <div
                   key={subMuscle.id}
-                  onClick={() => onSelectSubMuscle(group, subMuscle)}
-                  className="flex items-center justify-between p-3 bg-gray-700/30 rounded-xl hover:bg-gray-700/50 transition-colors cursor-pointer"
+                  onClick={() => onSelectSubMuscle(subMuscle)}
+                  className={`flex items-center justify-between p-3 rounded-xl transition-colors cursor-pointer ${
+                    selectedSubMuscleId === subMuscle.id
+                      ? "bg-indigo-500/20 border border-indigo-500/30"
+                      : "bg-gray-700/30 hover:bg-gray-700/50"
+                  }`}
                 >
                   <div>
                     <p className="text-white font-medium">{subMuscle.name}</p>
@@ -607,8 +613,7 @@ function AddRecordModal({
   muscleGroups,
   subMuscles,
   presetExercises,
-  onSuccess,
-  initialSubMuscle,
+  onSuccess
 }: {
   isOpen: boolean;
   onClose: () => void;
@@ -616,7 +621,6 @@ function AddRecordModal({
   subMuscles: SubMuscle[];
   presetExercises: PresetExercise[];
   onSuccess: () => void;
-  initialSubMuscle?: SubMuscle | null;
 }) {
   const [selectedGroup, setSelectedGroup] = useState<MuscleGroup | null>(null);
   const [selectedSubMuscle, setSelectedSubMuscle] = useState<SubMuscle | null>(null);
@@ -630,18 +634,6 @@ function AddRecordModal({
   const [notes, setNotes] = useState("");
   const [step, setStep] = useState(1);
   const [equipment, setEquipment] = useState("");
-
-  // 从肌群卡片点击子肌肉项时自动预选
-  useEffect(() => {
-    if (initialSubMuscle && isOpen) {
-      const parentGroup = muscleGroups.find(g => g.id === initialSubMuscle.muscleGroupId);
-      if (parentGroup) {
-        setSelectedGroup(parentGroup);
-        setSelectedSubMuscle(initialSubMuscle);
-        setStep(2);
-      }
-    }
-  }, [initialSubMuscle, isOpen]);
 
   const filteredSubMuscles = selectedGroup
     ? subMuscles.filter(s => s.muscleGroupId === selectedGroup.id)
@@ -1211,7 +1203,7 @@ export default function MusclePage() {
     totalVolume: 0,
   });
   const [showAddModal, setShowAddModal] = useState(false);
-  const [quickSubMuscle, setQuickSubMuscle] = useState<SubMuscle | null>(null);
+  const [selectedSubMuscleId, setSelectedSubMuscleId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [managingMuscleGroup, setManagingMuscleGroup] = useState<MuscleGroup | null>(null);
   const [editingGroup, setEditingGroup] = useState<MuscleGroup | null>(null);
@@ -1278,9 +1270,8 @@ export default function MusclePage() {
     }
   };
 
-  const handleSelectSubMuscle = (group: MuscleGroup, subMuscle: SubMuscle) => {
-    setQuickSubMuscle(subMuscle);
-    setShowAddModal(true);
+  const handleSelectSubMuscle = (subMuscle: SubMuscle) => {
+    setSelectedSubMuscleId(prev => prev === subMuscle.id ? null : (subMuscle.id ?? null));
   };
 
   if (isLoading) {
@@ -1324,24 +1315,50 @@ export default function MusclePage() {
                 onSelect={handleSelectGroup}
                 onManageSubMuscles={setManagingMuscleGroup}
                 onSelectSubMuscle={handleSelectSubMuscle}
+                selectedSubMuscleId={selectedSubMuscleId}
               />
             );
           })}
         </div>
       </Card>
 
-      <MuscleProgressChart records={recentRecords} onSelectExercise={() => {}} />
+      {selectedSubMuscleId && (() => {
+        const selectedSm = subMuscles.find(s => s.id === selectedSubMuscleId);
+        const filteredRecords = recentRecords.filter(r => r.subMuscleId === selectedSubMuscleId);
+        if (!selectedSm) return null;
+        return (
+          <div className="mt-4">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-indigo-400" />
+                <h3 className="text-sm font-bold text-white">{selectedSm.name}</h3>
+              </div>
+              <button
+                onClick={() => setSelectedSubMuscleId(null)}
+                className="text-xs text-gray-400 hover:text-gray-300"
+              >
+                清除筛选
+              </button>
+            </div>
+            <RecentRecordsCard records={filteredRecords} subMuscles={subMuscles} />
+          </div>
+        );
+      })()}
 
-      <RecentRecordsCard records={recentRecords} subMuscles={subMuscles} />
+      {!selectedSubMuscleId && (
+        <>
+          <MuscleProgressChart records={recentRecords} onSelectExercise={() => {}} />
+          <RecentRecordsCard records={recentRecords} subMuscles={subMuscles} />
+        </>
+      )}
 
       <AddRecordModal
         isOpen={showAddModal}
-        onClose={() => { setShowAddModal(false); setQuickSubMuscle(null); }}
+        onClose={() => setShowAddModal(false)}
         muscleGroups={muscleGroups}
         subMuscles={subMuscles}
         presetExercises={presetExercises}
         onSuccess={loadData}
-        initialSubMuscle={quickSubMuscle}
       />
 
       {managingMuscleGroup && (

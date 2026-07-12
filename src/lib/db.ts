@@ -44,6 +44,7 @@ import type {
   UserSettings,
   DailyWaterRecord,
   DailySelfAssessment,
+  FinBudget,
 } from "./types";
 
 export class LifeFlowDB extends Dexie {
@@ -64,6 +65,7 @@ export class LifeFlowDB extends Dexie {
   timeSegments!: Table<TimeSegment, number>;
   finRecords!: Table<FinRecord, number>;
   finAccounts!: Table<FinAccount, number>;
+  finBudgets!: Table<FinBudget, number>;
   reviewRecords!: Table<ReviewRecord, number>;
   reminders!: Table<Reminder, number>;
   reminderLogs!: Table<ReminderLog, number>;
@@ -401,6 +403,14 @@ export class LifeFlowDB extends Dexie {
       userSettings: "++id",
       dailyWaterRecords: "++id, date",
       dailySelfAssessments: "++id, date",
+    });
+
+    this.version(25).stores({
+      finBudgets: "++id, monthKey",
+    }).upgrade(async () => {
+      if (typeof window !== "undefined" && window.location.hostname === "localhost") {
+        console.log("[LifeFlowDB v25] Added finBudgets table");
+      }
     });
   }
 }
@@ -1352,6 +1362,10 @@ export async function getFinRecordsByMonth(year: number, month: number, accountI
 
 export async function deleteFinRecord(id: number): Promise<void> {
   await db.finRecords.delete(id);
+}
+
+export async function updateFinRecord(id: number, changes: Partial<Omit<FinRecord, "id" | "createdAt">>): Promise<void> {
+  await db.finRecords.update(id, changes as Record<string, unknown>);
 }
 
 export async function getFinAccounts(): Promise<FinAccount[]> {

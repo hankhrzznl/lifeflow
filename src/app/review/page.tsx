@@ -2,11 +2,12 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
+import Link from "next/link";
 import {
   CheckCheck, ListTodo, TrendingUp,
   AlertCircle, Target, Zap, BarChart3, Plus, Trash2,
   Save, Lightbulb, AlertTriangle, Rocket, ChevronLeft, ChevronRight,
-  X, Check, Sparkles,
+  X, Check, Sparkles, ArrowRight, Activity,
 } from "lucide-react";
 import {
   getReviewRecordByPeriod, createOrUpdateReviewRecord,
@@ -807,6 +808,18 @@ export default function ReviewPage() {
             <ListTodo className="w-4 h-4" />
             生成本期待办 ({improvements.filter(Boolean).length} 项)
           </button>
+        </section>
+
+        {/* 跳转统计页 */}
+        <section className="flex justify-center">
+          <Link
+            href="/stats"
+            className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-gradient-to-r from-emerald-50 to-blue-50 dark:from-emerald-950/30 dark:to-blue-950/30 border border-emerald-200 dark:border-emerald-800 text-sm font-medium text-emerald-700 dark:text-emerald-300 hover:shadow-md transition-shadow"
+          >
+            <Activity className="w-4 h-4" />
+            查看健康/财务统计
+            <ArrowRight className="w-4 h-4" />
+          </Link>
         </section>
       </div>
     </div>

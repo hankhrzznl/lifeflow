@@ -237,8 +237,17 @@ export interface FinRecord {
   category: string;
   date: string;
   note?: string;
+  tag?: string;
   accountId: number;
   createdAt: number;
+}
+
+export interface FinBudget {
+  id?: number;
+  monthKey: string;
+  amount: number;
+  createdAt: number;
+  updatedAt: number;
 }
 
 export interface FinAccount {

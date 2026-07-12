@@ -363,16 +363,15 @@ export interface ReviewRecord {
   type: 'daily' | 'weekly' | 'monthly';
   dateKey: string;
   summary?: string;
-  stats: {
-    tasksDone: number;
-    tasksPending: number;
-    tasksOverdue: number;
-    habitStreaks: number;
-    focusMinutes: number;
-    financeIncome: number;
-    financeExpense: number;
-  };
+  stats?: Record<string, number>;
+  highlights?: string[];
+  problems?: string[];
+  improvements?: string[];
+  periodType?: 'week' | 'month';
+  periodStart?: number;
+  periodEnd?: number;
   createdAt: number;
+  updatedAt?: number;
 }
 
 export interface WorkoutRecord {

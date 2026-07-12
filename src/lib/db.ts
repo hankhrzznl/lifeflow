@@ -937,6 +937,38 @@ export async function getInboxItems(): Promise<CaptureItem[]> {
   return db.capture.toArray();
 }
 
+// 将捕捉记录转为任务
+export async function captureToTask(
+  captureId: number,
+  options: {
+    startTime?: number;
+    endTime?: number;
+    priority?: Task["priority"];
+  }
+): Promise<number> {
+  const capture = await db.capture.get(captureId);
+  if (!capture) throw new Error("Capture item not found");
+
+  const today = new Date();
+  const taskStart = options.startTime ?? new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+  const taskEnd = options.endTime ?? taskStart + 24 * 60 * 60 * 1000;
+
+  const taskId = await createTask({
+    title: capture.content,
+    type: "daily",
+    status: "active",
+    priority: options.priority ?? "not-urgent-important",
+    tags: capture.tags || [],
+    startTime: taskStart,
+    endTime: taskEnd,
+  });
+
+  // 从收件箱移除该条捕捉记录
+  await db.capture.delete(captureId);
+
+  return taskId;
+}
+
 export async function getEventsByTimeRange(startTime: number, endTime: number): Promise<CalendarEvent[]> {
   return db.events
     .where("startTime")
@@ -987,6 +1019,52 @@ export async function createReviewRecord(record: Omit<ReviewRecord, "id" | "crea
 
 export async function getReviewRecordByKey(key: string): Promise<ReviewRecord | undefined> {
   return db.reviewRecords.where("reviewKey").equals(key).first();
+}
+
+export async function getReviewRecordByPeriod(
+  periodType: string,
+  periodStart: number,
+  periodEnd: number
+): Promise<ReviewRecord | undefined> {
+  return db.reviewRecords
+    .where("periodType")
+    .equals(periodType)
+    .and((r) => r.periodStart === periodStart && r.periodEnd === periodEnd)
+    .first();
+}
+
+export async function createOrUpdateReviewRecord(
+  record: Omit<ReviewRecord, "id" | "createdAt">
+): Promise<number> {
+  const now = Date.now();
+  const existing = await db.reviewRecords
+    .where("dateKey")
+    .equals(record.dateKey)
+    .first();
+
+  if (existing && existing.id !== undefined) {
+    await db.reviewRecords.update(existing.id, {
+      ...record,
+      updatedAt: now,
+    });
+    return existing.id;
+  }
+
+  return db.reviewRecords.add({
+    ...record,
+    createdAt: now,
+    updatedAt: now,
+  });
+}
+
+export async function getReviewRecordsByRange(
+  start: number,
+  end: number
+): Promise<ReviewRecord[]> {
+  return db.reviewRecords
+    .where("createdAt")
+    .between(start, end)
+    .toArray();
 }
 
 export async function getMonthlyTaskStats(year?: number, month?: number): Promise<{ completed: number; active: number; new: number }> {
@@ -1070,11 +1148,17 @@ export async function createProjectV2(
   name: string,
   color?: string
 ): Promise<number> {
-  return db.projectV2s.add({ 
+  const projectId = await db.projectV2s.add({ 
     name, 
     color,
     createdAt: Date.now() 
   });
+  
+  // Auto-create a default Board and Section for the new project
+  const boardId = await createBoard("默认", projectId);
+  await createSection("默认", boardId);
+  
+  return projectId;
 }
 
 export async function updateProjectV2(id: number, updates: Partial<ProjectV2>): Promise<void> {

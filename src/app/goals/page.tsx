@@ -340,7 +340,7 @@ function GoalsContent() {
   const [shorttermTasks, setShorttermTasks] = useState<Task[]>([]);
   const [dailyTasks, setDailyTasks] = useState<Task[]>([]);
 
-  const [showAddForm, setShowAddForm] = useState(false);
+  const [detailTaskId, setDetailTaskId] = useState<number | null>(null);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const tabDirection = useRef<number>(0);
@@ -348,7 +348,6 @@ function GoalsContent() {
   const [shorttermFilter, setShorttermFilter] = useState<ShortTermFilter>("全部");
   const [dailyFilter, setDailyFilter] = useState<DailyFilter>("全部");
   const [shorttermCelebrationShrunk, setShorttermCelebrationShrunk] = useState(false);
-  const [detailTaskId, setDetailTaskId] = useState<number | null>(null);
 
   const showToast = useCallback((message: string, type: "success" | "error" = "success") => {
     setToast({ message, type });
@@ -385,7 +384,6 @@ function GoalsContent() {
       tabDirection.current = newIdx > oldIdx ? 1 : -1;
       setTabAnimDir(newIdx > oldIdx ? 1 : -1);
       setCurrentView(view);
-      setShowAddForm(false);
     },
     [currentView]
   );
@@ -452,35 +450,6 @@ function GoalsContent() {
     [currentView, loadShortterm, loadDaily, showToast]
   );
 
-  const handleAddTask = useCallback(
-    async (title: string, viewType: "short-term" | "daily-trivial") => {
-      try {
-        const taskType = viewType === "short-term" ? "shortterm" as const : "daily" as const;
-        const taskData: Omit<Task, "id" | "createdAt" | "updatedAt"> = {
-          title,
-          type: taskType,
-          status: "active",
-          classification: viewType,
-        };
-
-        await createTask(taskData);
-        setShowAddForm(false);
-
-        switch (viewType) {
-          case "short-term":
-            await loadShortterm();
-            break;
-          case "daily-trivial":
-            await loadDaily();
-            break;
-        }
-      } catch {
-        showToast("添加失败", "error");
-      }
-    },
-    [loadShortterm, loadDaily, showToast]
-  );
-
   const handleDeleteTask = useCallback(
     async (task: Task) => {
       try {
@@ -521,7 +490,7 @@ function GoalsContent() {
   );
 
   const handleMainAddClick = () => {
-    setShowAddForm(true);
+    router.push("/planner");
   };
 
   const filteredShortterm = useMemo(() => {
@@ -586,8 +555,8 @@ function GoalsContent() {
           icon={CalendarDays}
           title="规划你的下一步"
           description="将大目标拆解为可执行的短期事件"
-          actionLabel="创建短期事件"
-          onAction={handleMainAddClick}
+          actionLabel="去安排页管理"
+          onAction={() => router.push("/planner")}
         />
       );
     }
@@ -596,19 +565,28 @@ function GoalsContent() {
       shorttermTasks.length > 0 &&
       shorttermTasks.every((t) => t.status === "done");
 
+    const shorttermCompleted = shorttermTasks.filter(t => t.status === "done").length;
+    const shorttermRate = shorttermTasks.length > 0 ? Math.round((shorttermCompleted / shorttermTasks.length) * 100) : 0;
+
     const filters: ShortTermFilter[] = ["全部", "进行中", "已完成", "已逾期", "本周", "本月"];
 
     return (
       <div className="px-4 py-4">
-        <AnimatePresence>
-          {showAddForm && (
-            <AddTaskForm
-              placeholder="输入短期事件名称"
-              onSubmit={(title) => handleAddTask(title, "short-term")}
-              onCancel={() => setShowAddForm(false)}
+        {/* 整体完成率统计 */}
+        <div className="mb-4">
+          <div className="flex items-center justify-between text-xs mb-1">
+            <span className="text-gray-500 dark:text-gray-400">整体完成率</span>
+            <span className="font-semibold text-gray-700 dark:text-gray-300">{shorttermCompleted}/{shorttermTasks.length} · {shorttermRate}%</span>
+          </div>
+          <div className="h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${shorttermRate}%` }}
+              transition={{ duration: 0.5 }}
+              className="h-full bg-gradient-to-r from-indigo-400 to-indigo-600 rounded-full"
             />
-          )}
-        </AnimatePresence>
+          </div>
+        </div>
 
         {allDone && (
           <motion.div
@@ -668,15 +646,13 @@ function GoalsContent() {
           ))}
         </div>
 
-        {!showAddForm && (
-          <button
-            onClick={handleMainAddClick}
-            className="mt-3 w-full flex items-center justify-center gap-1.5 py-3 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-700 text-sm text-gray-500 dark:text-gray-400 hover:border-indigo-300 dark:hover:border-indigo-700 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            添加短期事件
-          </button>
-        )}
+        <button
+          onClick={() => router.push("/planner")}
+          className="mt-3 w-full flex items-center justify-center gap-1.5 py-3 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-700 text-sm text-gray-500 dark:text-gray-400 hover:border-indigo-300 dark:hover:border-indigo-700 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+        >
+          <CalendarDays className="w-4 h-4" />
+          去安排页管理短期事件
+        </button>
       </div>
     );
   };
@@ -691,8 +667,8 @@ function GoalsContent() {
           icon={ClipboardList}
           title="开始日常琐事"
           description="记录每天需要完成的小任务"
-          actionLabel="创建日常琐事"
-          onAction={handleMainAddClick}
+          actionLabel="去安排页管理"
+          onAction={() => router.push("/planner")}
         />
       );
     }
@@ -704,16 +680,6 @@ function GoalsContent() {
 
     return (
       <div className="px-4 py-4">
-        <AnimatePresence>
-          {showAddForm && (
-            <AddTaskForm
-              placeholder="输入日常琐事名称"
-              onSubmit={(title) => handleAddTask(title, "daily-trivial")}
-              onCancel={() => setShowAddForm(false)}
-            />
-          )}
-        </AnimatePresence>
-
         <div className="mb-4">
           <div className="flex items-center justify-between text-sm mb-1">
             <span className="text-gray-500 dark:text-gray-400">完成进度</span>
@@ -756,15 +722,13 @@ function GoalsContent() {
           ))}
         </div>
 
-        {!showAddForm && (
-          <button
-            onClick={handleMainAddClick}
-            className="mt-3 w-full flex items-center justify-center gap-1.5 py-3 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-700 text-sm text-gray-500 dark:text-gray-400 hover:border-indigo-300 dark:hover:border-indigo-700 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            添加日常琐事
-          </button>
-        )}
+        <button
+          onClick={() => router.push("/planner")}
+          className="mt-3 w-full flex items-center justify-center gap-1.5 py-3 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-700 text-sm text-gray-500 dark:text-gray-400 hover:border-emerald-300 dark:hover:border-emerald-700 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
+        >
+          <ClipboardList className="w-4 h-4" />
+          去安排页管理日常琐事
+        </button>
       </div>
     );
   };
@@ -834,10 +798,10 @@ function GoalsContent() {
 
       <button
         onClick={handleMainAddClick}
-        className="fixed bottom-24 right-4 z-30 bg-blue-500 w-14 h-14 rounded-full shadow-lg flex items-center justify-center hover:bg-blue-600 transition-colors active:scale-95"
-        aria-label="添加任务"
+        className="fixed bottom-24 right-4 z-30 bg-indigo-500 w-14 h-14 rounded-full shadow-lg flex items-center justify-center hover:bg-indigo-600 transition-colors active:scale-95"
+        aria-label="前往安排页"
       >
-        <Plus className="w-6 h-6 text-white" />
+        <CalendarDays className="w-6 h-6 text-white" />
       </button>
 
       {detailTaskId !== null && (

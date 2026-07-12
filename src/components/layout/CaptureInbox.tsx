@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Inbox, Trash2, X, Mountain,
   CalendarDays, ClipboardList, CheckSquare, XCircle,
-  ChevronRight, Zap,
+  ChevronRight, Zap, Sun, Sunrise, CalendarRange,
 } from "lucide-react";
-import { createTask, deleteTask, restoreTask, updateTask, createSection, updateSection, getTasksByType, getAllProjectsV2, getBoardsByProject, getSectionsByBoard } from "@/lib/db";
+import { createTask, deleteTask, restoreTask, updateTask, createSection, updateSection, getTasksByType, getAllProjectsV2, getBoardsByProject, getSectionsByBoard, captureToTask } from "@/lib/db";
 import type { Task, GoalViewType, ProjectV2, Board, Section, Priority } from "@/lib/types";
 import { PRIORITY_CONFIG } from "@/lib/types";
 import { showToast } from "@/components/ui/Toast";
@@ -41,6 +42,7 @@ const GOAL_TYPES: { type: GoalViewType; label: string; desc: string; icon: typeo
 // ==================== 主组件 ====================
 
 export default function CaptureInbox({ visible, onRefresh }: { visible: boolean; onRefresh?: () => void }) {
+  const router = useRouter();
   const [items, setItems] = useState<Task[]>([]);
   const allActiveRef = useRef<Task[]>([]);
   const [hasMore, setHasMore] = useState(false);
@@ -102,6 +104,52 @@ export default function CaptureInbox({ visible, onRefresh }: { visible: boolean;
       await loadItems();
     } catch { /* ignore */ }
   };
+
+  // 快速操作：今日
+  const handleQuickToday = useCallback(async (id: number) => {
+    try {
+      const today = new Date();
+      const start = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+      const end = start + 24 * 60 * 60 * 1000;
+      await captureToTask(id, { startTime: start, endTime: end });
+      showToast({ message: "已添加到今日", type: "success" });
+      await loadItems();
+    } catch { showToast({ message: "操作失败", type: "error" }); }
+  }, [loadItems]);
+
+  // 快速操作：明天
+  const handleQuickTomorrow = useCallback(async (id: number) => {
+    try {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const start = new Date(tomorrow.getFullYear(), tomorrow.getMonth(), tomorrow.getDate()).getTime();
+      const end = start + 24 * 60 * 60 * 1000;
+      await captureToTask(id, { startTime: start, endTime: end });
+      showToast({ message: "已添加到明天", type: "success" });
+      await loadItems();
+    } catch { showToast({ message: "操作失败", type: "error" }); }
+  }, [loadItems]);
+
+  // 快速操作：本周
+  const handleQuickWeek = useCallback(async (id: number) => {
+    try {
+      const now = new Date();
+      const dayOfWeek = now.getDay();
+      const daysUntilEndOfWeek = dayOfWeek === 0 ? 0 : 7 - dayOfWeek;
+      const endOfWeek = new Date(now);
+      endOfWeek.setDate(now.getDate() + daysUntilEndOfWeek);
+      endOfWeek.setHours(23, 59, 59, 999);
+      const start = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+      await captureToTask(id, { startTime: start, endTime: endOfWeek.getTime() });
+      showToast({ message: "已添加到本周", type: "success" });
+      await loadItems();
+    } catch { showToast({ message: "操作失败", type: "error" }); }
+  }, [loadItems]);
+
+  // 快速操作：完整安排（跳转到安排页处理中状态）
+  const handleFullSchedule = useCallback((id: number, title: string) => {
+    router.push(`/planner?tab=pending&captureId=${id}&captureTitle=${encodeURIComponent(title)}`);
+  }, [router]);
 
   const handleNextStep = useCallback(async (item: Task) => {
     setClassifyTarget(item);
@@ -320,18 +368,41 @@ export default function CaptureInbox({ visible, onRefresh }: { visible: boolean;
                           ))}
                           <span className="text-xs text-gray-400 dark:text-gray-500">{relativeTime(item.createdAt)}</span>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5">
                           <button
-                            onClick={(e) => { e.stopPropagation(); handleNextStep(item); }}
-                            className="text-xs text-violet-600 dark:text-violet-400 font-medium hover:text-violet-700 active:scale-[0.97] transition-transform min-w-[40px] min-h-[32px] flex items-center justify-center"
+                            onClick={(e) => { e.stopPropagation(); handleQuickToday(item.id!); }}
+                            className="text-xs text-amber-600 dark:text-amber-400 font-medium hover:text-amber-700 active:scale-[0.97] transition-transform min-w-[36px] min-h-[28px] flex items-center justify-center bg-amber-50 dark:bg-amber-900/20 rounded-lg px-2"
+                            title="今日"
                           >
-                            下一步
+                            <Sun className="w-3 h-3" />
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleQuickTomorrow(item.id!); }}
+                            className="text-xs text-blue-600 dark:text-blue-400 font-medium hover:text-blue-700 active:scale-[0.97] transition-transform min-w-[36px] min-h-[28px] flex items-center justify-center bg-blue-50 dark:bg-blue-900/20 rounded-lg px-2"
+                            title="明天"
+                          >
+                            <Sunrise className="w-3 h-3" />
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleQuickWeek(item.id!); }}
+                            className="text-xs text-purple-600 dark:text-purple-400 font-medium hover:text-purple-700 active:scale-[0.97] transition-transform min-w-[36px] min-h-[28px] flex items-center justify-center bg-purple-50 dark:bg-purple-900/20 rounded-lg px-2"
+                            title="本周"
+                          >
+                            <CalendarRange className="w-3 h-3" />
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleFullSchedule(item.id!, item.title); }}
+                            className="text-xs text-violet-600 dark:text-violet-400 font-medium hover:text-violet-700 active:scale-[0.97] transition-transform min-w-[36px] min-h-[28px] flex items-center justify-center bg-violet-50 dark:bg-violet-900/20 rounded-lg px-2"
+                            title="完整安排"
+                          >
+                            <ChevronRight className="w-3.5 h-3.5" />
                           </button>
                           <button
                             onClick={(e) => { e.stopPropagation(); handleDelete(item.id!); }}
-                            className="text-xs text-red-400 font-medium hover:text-red-500 active:scale-[0.97] transition-transform min-w-[40px] min-h-[32px] flex items-center justify-center"
+                            className="text-xs text-red-400 font-medium hover:text-red-500 active:scale-[0.97] transition-transform min-w-[36px] min-h-[28px] flex items-center justify-center bg-red-50 dark:bg-red-900/20 rounded-lg px-2"
+                            title="删除"
                           >
-                            删除
+                            <Trash2 className="w-3 h-3" />
                           </button>
                         </div>
                       </div>

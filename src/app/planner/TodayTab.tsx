@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { motion } from "framer-motion";
-import { Check, Calendar, Inbox } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Check, Calendar, Inbox, Edit3, ChevronRight, X } from "lucide-react";
 import { db, updateTask } from "@/lib/db";
+import { PRIORITY_CONFIG } from "@/lib/types";
 import type { Task, Priority } from "@/lib/types";
 import { showToast } from "@/components/ui/Toast";
 
@@ -57,6 +58,9 @@ export default function TodayTab({ onUpdate }: TodayTabProps) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [completedIds, setCompletedIds] = useState<Set<number>>(new Set());
+  // 就地编辑状态
+  const [editingTaskId, setEditingTaskId] = useState<number | null>(null);
+  const [editTitle, setEditTitle] = useState("");
 
   const loadTasks = useCallback(async () => {
     setLoading(true);
@@ -95,7 +99,59 @@ export default function TodayTab({ onUpdate }: TodayTabProps) {
     [onUpdate]
   );
 
+  // 就地编辑：打开编辑模式
+  const openEdit = useCallback((task: Task) => {
+    setEditingTaskId(task.id ?? null);
+    setEditTitle(task.title);
+  }, []);
+
+  // 保存标题编辑
+  const saveEditTitle = useCallback(async (taskId: number) => {
+    if (!editTitle.trim()) return;
+    try {
+      await updateTask(taskId, { title: editTitle.trim() });
+      showToast({ message: "标题已更新", type: "success" });
+      setEditingTaskId(null);
+      await loadTasks();
+      onUpdate?.();
+    } catch {
+      showToast({ message: "更新失败", type: "error" });
+    }
+  }, [editTitle, loadTasks, onUpdate]);
+
+  // 切换优先级
+  const handlePriorityChange = useCallback(async (taskId: number, priority: Priority) => {
+    try {
+      await updateTask(taskId, { priority });
+      showToast({ message: "优先级已更新", type: "success" });
+      await loadTasks();
+      onUpdate?.();
+    } catch {
+      showToast({ message: "更新失败", type: "error" });
+    }
+  }, [loadTasks, onUpdate]);
+
+  // 一键顺延到明天/后天
+  const handlePostpone = useCallback(async (taskId: number, days: number) => {
+    try {
+      const target = new Date();
+      target.setDate(target.getDate() + days);
+      const start = new Date(target.getFullYear(), target.getMonth(), target.getDate()).getTime();
+      const end = start + 24 * 60 * 60 * 1000;
+      await updateTask(taskId, { startTime: start, endTime: end });
+      showToast({ message: `已顺延到${days === 1 ? "明天" : "后天"}`, type: "success" });
+      setEditingTaskId(null);
+      await loadTasks();
+      onUpdate?.();
+    } catch {
+      showToast({ message: "操作失败", type: "error" });
+    }
+  }, [loadTasks, onUpdate]);
+
   const activeTasks = tasks.filter((t) => t.id != null && !completedIds.has(t.id));
+  const totalCount = tasks.length;
+  const doneCount = tasks.length - activeTasks.length;
+  const completionRate = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0;
 
   if (loading) {
     return (
@@ -111,22 +167,43 @@ export default function TodayTab({ onUpdate }: TodayTabProps) {
       {/* Section header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center">
-          <h2 className="text-base font-semibold text-gray-900">今日待办</h2>
-          <span className="bg-blue-100 text-blue-700 text-xs font-medium px-2 py-0.5 rounded-full ml-2">
+          <h2 className="text-base font-semibold text-gray-900 dark:text-white">今日待办</h2>
+          <span className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-medium px-2 py-0.5 rounded-full ml-2">
             {activeTasks.length}
           </span>
         </div>
-        <button className="text-sm text-blue-600 hover:text-blue-700 transition-colors">
-          + 从捕捉添加
-        </button>
       </div>
+
+      {/* 完成率进度条 */}
+      {totalCount > 0 && (
+        <div className="mb-4">
+          <div className="flex items-center justify-between text-xs mb-1">
+            <span className="text-gray-500 dark:text-gray-400">当日完成率</span>
+            <span className="font-semibold text-gray-700 dark:text-gray-300">{doneCount}/{totalCount} · {completionRate}%</span>
+          </div>
+          <div className="h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${completionRate}%` }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
+              className={`h-full rounded-full ${
+                completionRate === 100
+                  ? "bg-emerald-500"
+                  : completionRate >= 50
+                  ? "bg-blue-500"
+                  : "bg-amber-500"
+              }`}
+            />
+          </div>
+        </div>
+      )}
 
       {tasks.length === 0 ? (
         /* Empty state */
         <div className="flex flex-col items-center justify-center py-16">
           <Inbox className="w-12 h-12 text-gray-300" />
           <p className="text-base font-medium text-gray-500 mt-3">暂无今日待办</p>
-          <p className="text-sm text-gray-400 mt-1">在捕捉页面勾选「转为任务」</p>
+          <p className="text-sm text-gray-400 mt-1">在收件箱中使用快速操作添加任务</p>
         </div>
       ) : (
         /* Task cards */
@@ -139,80 +216,154 @@ export default function TodayTab({ onUpdate }: TodayTabProps) {
             const tid = task.id;
             if (tid == null) return null;
             const isDone = completedIds.has(tid);
+            const isEditing = editingTaskId === tid;
+
             return (
               <motion.div
                 key={tid}
                 variants={itemVariants}
-                className={`bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex items-start gap-3 mb-3 transition-shadow hover:shadow-md ${
+                className={`bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 p-4 mb-3 transition-shadow hover:shadow-md ${
                   isDone ? "opacity-60" : ""
                 }`}
               >
-                {/* Left: Checkbox */}
-                <button
-                  onClick={() => !isDone && handleComplete(task)}
-                  disabled={isDone}
-                  className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5 transition-colors ${
-                    isDone
-                      ? "bg-blue-500 border-blue-500"
-                      : "border-gray-300 bg-transparent hover:border-blue-400"
-                  }`}
-                >
-                  {isDone && <Check className="w-3.5 h-3.5 text-white" />}
-                </button>
-
-                {/* Center: Title + Tags */}
-                <div className="flex-1 min-w-0">
-                  <p
-                    className={`text-base font-medium text-gray-900 ${
-                      isDone ? "line-through" : ""
-                    }`}
-                  >
-                    {task.title}
-                  </p>
-                  {task.tags && task.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 mt-1.5">
-                      {task.tags.map((tag) => (
-                        <span
-                          key={tag}
-                          className={`text-xs font-medium px-2 py-0.5 rounded-full ${getTagStyle(tag)}`}
+                {isEditing ? (
+                  /* 编辑模式 */
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={editTitle}
+                        onChange={(e) => setEditTitle(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") saveEditTitle(tid); if (e.key === "Escape") setEditingTaskId(null); }}
+                        className="flex-1 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        autoFocus
+                      />
+                      <button
+                        onClick={() => saveEditTitle(tid)}
+                        className="px-3 py-2 text-xs font-medium bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                      >
+                        保存
+                      </button>
+                      <button
+                        onClick={() => setEditingTaskId(null)}
+                        className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                    {/* 优先级快捷切换 */}
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-xs text-gray-400">优先级:</span>
+                      {PRIORITY_CONFIG.map((opt) => (
+                        <button
+                          key={opt.key}
+                          onClick={() => handlePriorityChange(tid, opt.key)}
+                          className={`text-xs px-2 py-1 rounded-full border transition-colors ${
+                            task.priority === opt.key
+                              ? `${opt.bg} ${opt.color} border-current`
+                              : "border-gray-200 dark:border-gray-700 text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800"
+                          }`}
                         >
-                          {tag}
-                        </span>
+                          <span className="inline-block w-1.5 h-1.5 rounded-full mr-1" style={{ backgroundColor: opt.hex }} />
+                          {opt.label}
+                        </button>
                       ))}
                     </div>
-                  )}
-                  <div className="flex items-center gap-2 mt-1.5">
-                    {/* Priority dot */}
-                    {task.priority && (
-                      <div
-                        className={`w-2 h-2 rounded-full flex-shrink-0 ${getPriorityDot(task.priority)}`}
-                      />
-                    )}
-                    {/* Date */}
-                    {task.startTime && (
-                      <div className="flex items-center gap-1">
-                        <Calendar className="w-3 h-3 text-gray-400" />
-                        <span className="text-xs text-gray-400">
-                          {formatDate(task.startTime)}
-                        </span>
-                      </div>
-                    )}
+                    {/* 顺延按钮 */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-400">顺延:</span>
+                      <button
+                        onClick={() => handlePostpone(tid, 1)}
+                        className="text-xs px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors"
+                      >
+                        明天
+                      </button>
+                      <button
+                        onClick={() => handlePostpone(tid, 2)}
+                        className="text-xs px-2.5 py-1 rounded-lg bg-violet-50 dark:bg-violet-900/20 text-violet-600 hover:bg-violet-100 dark:hover:bg-violet-900/40 transition-colors"
+                      >
+                        后天
+                      </button>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  /* 普通展示模式 */
+                  <div className="flex items-start gap-3">
+                    {/* Left: Checkbox */}
+                    <button
+                      onClick={() => !isDone && handleComplete(task)}
+                      disabled={isDone}
+                      className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5 transition-colors ${
+                        isDone
+                          ? "bg-blue-500 border-blue-500"
+                          : "border-gray-300 bg-transparent hover:border-blue-400"
+                      }`}
+                    >
+                      {isDone && <Check className="w-3.5 h-3.5 text-white" />}
+                    </button>
 
-                {/* Right: Complete button */}
-                <motion.button
-                  whileTap={isDone ? undefined : { scale: 0.92 }}
-                  onClick={() => !isDone && handleComplete(task)}
-                  disabled={isDone}
-                  className={`text-xs font-medium px-3 py-1.5 rounded-full border flex-shrink-0 transition-colors ${
-                    isDone
-                      ? "text-gray-400 bg-gray-50 border-gray-200 cursor-default"
-                      : "text-emerald-600 bg-emerald-50 hover:bg-emerald-100 border-emerald-200"
-                  }`}
-                >
-                  {isDone ? "已完成" : "完成"}
-                </motion.button>
+                    {/* Center: Title + Tags */}
+                    <div className="flex-1 min-w-0">
+                      <p
+                        className={`text-base font-medium text-gray-900 dark:text-gray-100 ${
+                          isDone ? "line-through" : ""
+                        }`}
+                      >
+                        {task.title}
+                      </p>
+                      {task.tags && task.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 mt-1.5">
+                          {task.tags.map((tag) => (
+                            <span
+                              key={tag}
+                              className={`text-xs font-medium px-2 py-0.5 rounded-full ${getTagStyle(tag)}`}
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      <div className="flex items-center gap-2 mt-1.5">
+                        {task.priority && (
+                          <div
+                            className={`w-2 h-2 rounded-full flex-shrink-0 ${getPriorityDot(task.priority)}`}
+                          />
+                        )}
+                        {task.startTime && (
+                          <div className="flex items-center gap-1">
+                            <Calendar className="w-3 h-3 text-gray-400" />
+                            <span className="text-xs text-gray-400">
+                              {formatDate(task.startTime)}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Right: Edit & Complete buttons */}
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <button
+                        onClick={() => openEdit(task)}
+                        className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                        title="编辑"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                      </button>
+                      <motion.button
+                        whileTap={isDone ? undefined : { scale: 0.92 }}
+                        onClick={() => !isDone && handleComplete(task)}
+                        disabled={isDone}
+                        className={`text-xs font-medium px-3 py-1.5 rounded-full border transition-colors ${
+                          isDone
+                            ? "text-gray-400 bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 cursor-default"
+                            : "text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 border-emerald-200 dark:border-emerald-800"
+                        }`}
+                      >
+                        {isDone ? "已完成" : "完成"}
+                      </motion.button>
+                    </div>
+                  </div>
+                )}
               </motion.div>
             );
           })}

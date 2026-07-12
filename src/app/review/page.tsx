@@ -1,887 +1,235 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
-  ArrowLeft, Moon, Dumbbell, Sparkles,
-  GraduationCap, BookOpen, Sprout, Repeat,
-  Target, TrendingUp, TrendingDown, Minus,
-  CheckCheck, ListTodo, Flame, Wallet,
-  BarChart3,
+  CheckCheck, ListTodo, TrendingUp,
+  AlertCircle, Target, Zap, BarChart3, Plus, Trash2,
+  Save, Lightbulb, AlertTriangle, Rocket, ChevronLeft, ChevronRight,
+  X, Check, Sparkles,
 } from "lucide-react";
 import {
-  getWeeklyTaskStats, getActiveSchedulableTasks, getMonthlyTaskStats, getMonthlyHabitStats, getMonthlyFinanceStats,
-  initBuiltInPlugins, getAllProjectsV2,
-  createReviewRecord, getReviewRecordByKey,
+  getReviewRecordByPeriod, createOrUpdateReviewRecord,
+  createTask,
 } from "@/lib/db";
 import { showToast } from "@/components/ui/Toast";
-import type { ProjectV2, ReviewRecord, Task } from "@/lib/types";
+import type { ReviewRecord, Task, ProjectV2, HabitLog } from "@/lib/types";
+import { PRIORITY_CONFIG } from "@/lib/types";
 import { db } from "@/lib/db";
-import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer, Legend,
-} from "recharts";
-
-// ==================== 类型 ====================
-
-type TimeGranularity = "day" | "week" | "month" | "quarter";
-type CompareMode = "time" | "goal";
-type ChartDataPoint = Record<string, number | string>;
-
-interface ProjectMetrics {
-  line1Key: string;
-  line1Label: string;
-  line1Color: string;
-  line2Key: string;
-  line2Label: string;
-  line2Color: string;
-  goal1?: number;
-  goal2?: number;
-}
-
-interface CompareRow {
-  label: string;
-  thisPeriod: number;
-  lastPeriod: number;
-  change: number;
-  unit: string;
-  isBetterUp: boolean;
-}
 
 // ==================== 工具函数 ====================
 
-function getTodayStr(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+type PeriodType = "week" | "month";
+
+function getDateStrLocal(y: number, m: number, d: number): string {
+  return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 }
 
-function formatDate(ts: number): string {
+function getDateStr(ts: number): string {
   const d = new Date(ts);
-  return `${d.getMonth() + 1}/${d.getDate()}`;
+  return getDateStrLocal(d.getFullYear(), d.getMonth() + 1, d.getDate());
 }
 
-function formatDateFull(ts: number): string {
-  const d = new Date(ts);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
-function getDaysInRange(start: number, end: number): string[] {
-  const days: string[] = [];
-  const cur = new Date(start);
-  while (cur.getTime() <= end) {
-    days.push(formatDateFull(cur.getTime()));
-    cur.setDate(cur.getDate() + 1);
-  }
-  return days;
-}
-
-// ==================== 子模块指标配置 ====================
-
-function getProjectMetrics(project: ProjectV2): ProjectMetrics {
-  switch (project.name) {
-    case "睡眠":
-      return {
-        line1Key: "duration", line1Label: "睡眠时长(h)", line1Color: "#8b5cf6",
-        line2Key: "quality", line2Label: "睡眠质量", line2Color: "#f59e0b",
-        goal1: 8, goal2: 8,
-      };
-    case "体态":
-      return {
-        line1Key: "weight", line1Label: "体重(kg)", line1Color: "#10b981",
-        line2Key: "bodyFat", line2Label: "体脂率(%)", line2Color: "#ef4444",
-        goal1: undefined, goal2: undefined,
-      };
-    case "运动":
-      return {
-        line1Key: "count", line1Label: "运动次数", line1Color: "#3b82f6",
-        line2Key: "duration", line2Label: "运动时长(min)", line2Color: "#f59e0b",
-        goal1: undefined, goal2: undefined,
-      };
-    case "考公":
-      return {
-        line1Key: "studyMin", line1Label: "学习时长(h)", line1Color: "#6366f1",
-        line2Key: "tasksDone", line2Label: "完成任务", line2Color: "#f97316",
-        goal1: 4, goal2: undefined,
-      };
-    case "毕业":
-      return {
-        line1Key: "tasksDone", line1Label: "论文任务", line1Color: "#8b5cf6",
-        line2Key: "focusMin", line2Label: "专注时长(h)", line2Color: "#10b981",
-        goal1: undefined, goal2: undefined,
-      };
-    case "习惯":
-      return {
-        line1Key: "checkins", line1Label: "打卡次数", line1Color: "#ec4899",
-        line2Key: "completionRate", line2Label: "完成率(%)", line2Color: "#14b8a6",
-        goal1: undefined, goal2: 100,
-      };
-    case "规划":
-      return {
-        line1Key: "activeProjects", line1Label: "活跃项目", line1Color: "#f43f5e",
-        line2Key: "tasksDone", line2Label: "完成任务", line2Color: "#6366f1",
-        goal1: undefined, goal2: undefined,
-      };
-    case "成长":
-      return {
-        line1Key: "journalCount", line1Label: "日记篇数", line1Color: "#a855f7",
-        line2Key: "mood", line2Label: "心情指数", line2Color: "#eab308",
-        goal1: undefined, goal2: 7,
-      };
-    default:
-      return {
-        line1Key: "v1", line1Label: "指标1", line1Color: "#6366f1",
-        line2Key: "v2", line2Label: "指标2", line2Color: "#f97316",
-      };
-  }
-}
-
-// ==================== 数据加载函数 ====================
-
-async function loadSleepData(granularity: TimeGranularity): Promise<{ chart: ChartDataPoint[]; compare: CompareRow[] }> {
-  const now = Date.now();
-  const days = granularity === "day" ? 30 : granularity === "week" ? 90 : granularity === "month" ? 365 : 730;
-  const start = now - days * 24 * 60 * 60 * 1000;
-
-  const records = await db.sleepRecords
-    .where("timestamp")
-    .between(start, now)
-    .toArray();
-
-  const dailyMap: Record<string, { durations: number[]; qualities: number[] }> = {};
-  for (const r of records) {
-    const d = formatDateFull(r.timestamp || 0);
-    if (!dailyMap[d]) dailyMap[d] = { durations: [], qualities: [] };
-    dailyMap[d].durations.push(r.sleepDuration ? Math.round(r.sleepDuration / 60) : 0);
-    dailyMap[d].qualities.push(r.sleepQuality || 0);
-  }
-
-  const chart = aggregateChartData(dailyMap, granularity, now, days,
-    (v) => v.durations.length > 0 ? v.durations.reduce((a, b) => a + b, 0) / v.durations.length : 0,
-    (v) => v.qualities.length > 0 ? v.qualities.reduce((a, b) => a + b, 0) / v.qualities.length : 0,
-  );
-
-  const compare = buildCompareRows(dailyMap, granularity, now, days,
-    (v) => v.durations.length > 0 ? v.durations.reduce((a, b) => a + b, 0) / v.durations.length : 0,
-    (v) => v.qualities.length > 0 ? v.qualities.reduce((a, b) => a + b, 0) / v.qualities.length : 0,
-    [
-      { label: "平均睡眠时长", unit: "小时", isBetterUp: false },
-      { label: "平均睡眠质量", unit: "分", isBetterUp: true },
-    ],
-  );
-
-  return { chart, compare };
-}
-
-async function loadBodyMetricData(granularity: TimeGranularity): Promise<{ chart: ChartDataPoint[]; compare: CompareRow[] }> {
-  const now = Date.now();
-  const days = granularity === "day" ? 30 : granularity === "week" ? 90 : granularity === "month" ? 365 : 730;
-  const start = now - days * 24 * 60 * 60 * 1000;
-
-  const weightRecords = await db.bodyMetricRecords
-    .where("timestamp")
-    .between(start, now)
-    .filter((r) => r.type === "weight")
-    .toArray();
-
-  const fatRecords = await db.bodyMetricRecords
-    .where("timestamp")
-    .between(start, now)
-    .filter((r) => r.type === "bodyFat")
-    .toArray();
-
-  const dailyMap: Record<string, { weights: number[]; fats: number[] }> = {};
-  for (const r of weightRecords) {
-    const d = formatDateFull(r.timestamp || 0);
-    if (!dailyMap[d]) dailyMap[d] = { weights: [], fats: [] };
-    dailyMap[d].weights.push(r.value);
-  }
-  for (const r of fatRecords) {
-    const d = formatDateFull(r.timestamp || 0);
-    if (!dailyMap[d]) dailyMap[d] = { weights: [], fats: [] };
-    dailyMap[d].fats.push(r.secondaryValue || r.value);
-  }
-
-  const chart = aggregateChartData(dailyMap, granularity, now, days,
-    (v) => v.weights.length > 0 ? v.weights.reduce((a, b) => a + b, 0) / v.weights.length : 0,
-    (v) => v.fats.length > 0 ? v.fats.reduce((a, b) => a + b, 0) / v.fats.length : 0,
-  );
-
-  const compare = buildCompareRows(dailyMap, granularity, now, days,
-    (v) => v.weights.length > 0 ? v.weights.reduce((a, b) => a + b, 0) / v.weights.length : 0,
-    (v) => v.fats.length > 0 ? v.fats.reduce((a, b) => a + b, 0) / v.fats.length : 0,
-    [
-      { label: "平均体重", unit: "kg", isBetterUp: false },
-      { label: "平均体脂率", unit: "%", isBetterUp: false },
-    ],
-  );
-
-  return { chart, compare };
-}
-
-async function loadWorkoutData(granularity: TimeGranularity): Promise<{ chart: ChartDataPoint[]; compare: CompareRow[] }> {
-  const now = Date.now();
-  const days = granularity === "day" ? 30 : granularity === "week" ? 90 : granularity === "month" ? 365 : 730;
-  const start = now - days * 24 * 60 * 60 * 1000;
-
-  const records = await db.workouts
-    .where("startTime")
-    .between(start, now)
-    .toArray();
-
-  const dailyMap: Record<string, { counts: number[]; durations: number[] }> = {};
-  for (const r of records) {
-    const d = formatDateFull(r.startTime || 0);
-    if (!dailyMap[d]) dailyMap[d] = { counts: [], durations: [] };
-    dailyMap[d].counts.push(1);
-    dailyMap[d].durations.push(r.duration || 0);
-  }
-
-  const chart = aggregateChartData(dailyMap, granularity, now, days,
-    (v) => v.counts.reduce((a, b) => a + b, 0),
-    (v) => Math.round(v.durations.reduce((a, b) => a + b, 0) / 60),
-  );
-
-  const compare = buildCompareRows(dailyMap, granularity, now, days,
-    (v) => v.counts.reduce((a, b) => a + b, 0),
-    (v) => Math.round(v.durations.reduce((a, b) => a + b, 0) / 60),
-    [
-      { label: "运动次数", unit: "次", isBetterUp: true },
-      { label: "运动总时长", unit: "分钟", isBetterUp: true },
-    ],
-  );
-
-  return { chart, compare };
-}
-
-async function loadKaogongData(granularity: TimeGranularity): Promise<{ chart: ChartDataPoint[]; compare: CompareRow[] }> {
-  const now = Date.now();
-  const days = granularity === "day" ? 30 : granularity === "week" ? 90 : granularity === "month" ? 365 : 730;
-  const start = now - days * 24 * 60 * 60 * 1000;
-
-  const tasks = await db.tasks
-    .filter((t) => !!(t.tags && t.tags.includes("考公")))
-    .toArray();
-
-  const focusLogs = await db.focusLogs
-    .where("startTime")
-    .between(start, now)
-    .toArray();
-
-  // 找出考公相关任务的 ID
-  const kaogongTaskIds = new Set(tasks.map((t) => t.id).filter(Boolean) as number[]);
-  const relevantFocusLogs = focusLogs.filter((f) => kaogongTaskIds.has(f.eventId));
-
-  const dailyMap: Record<string, { studyMin: number[]; tasksDone: number[] }> = {};
-
-  for (const f of relevantFocusLogs) {
-    const d = formatDateFull(f.startTime || 0);
-    if (!dailyMap[d]) dailyMap[d] = { studyMin: [], tasksDone: [] };
-    dailyMap[d].studyMin.push(Math.round((f.duration || 0) / 60));
-  }
-
-  for (const t of tasks) {
-    if (t.status === "done") {
-      const d = formatDateFull(t.updatedAt || 0);
-      if (!dailyMap[d]) dailyMap[d] = { studyMin: [], tasksDone: [] };
-      dailyMap[d].tasksDone.push(1);
-    }
-  }
-
-  const chart = aggregateChartData(dailyMap, granularity, now, days,
-    (v) => v.studyMin.reduce((a, b) => a + b, 0) / 60,
-    (v) => v.tasksDone.reduce((a, b) => a + b, 0),
-  );
-
-  const compare = buildCompareRows(dailyMap, granularity, now, days,
-    (v) => v.studyMin.reduce((a, b) => a + b, 0) / 60,
-    (v) => v.tasksDone.reduce((a, b) => a + b, 0),
-    [
-      { label: "学习时长", unit: "小时", isBetterUp: true },
-      { label: "完成任务", unit: "个", isBetterUp: true },
-    ],
-  );
-
-  return { chart, compare };
-}
-
-async function loadGraduationData(granularity: TimeGranularity): Promise<{ chart: ChartDataPoint[]; compare: CompareRow[] }> {
-  const now = Date.now();
-  const days = granularity === "day" ? 30 : granularity === "week" ? 90 : granularity === "month" ? 365 : 730;
-  const start = now - days * 24 * 60 * 60 * 1000;
-
-  const tasks = await db.tasks
-    .filter((t) => !!(t.tags && t.tags.includes("毕业")))
-    .toArray();
-
-  const focusLogs = await db.focusLogs
-    .where("startTime")
-    .between(start, now)
-    .toArray();
-
-  const graduationTaskIds = new Set(tasks.map((t) => t.id).filter(Boolean) as number[]);
-  const relevantFocusLogs = focusLogs.filter((f) => graduationTaskIds.has(f.eventId));
-
-  const dailyMap: Record<string, { tasksDone: number[]; focusMin: number[] }> = {};
-
-  for (const f of relevantFocusLogs) {
-    const d = formatDateFull(f.startTime || 0);
-    if (!dailyMap[d]) dailyMap[d] = { tasksDone: [], focusMin: [] };
-    dailyMap[d].focusMin.push(Math.round((f.duration || 0) / 60));
-  }
-
-  for (const t of tasks) {
-    if (t.status === "done") {
-      const d = formatDateFull(t.updatedAt || 0);
-      if (!dailyMap[d]) dailyMap[d] = { tasksDone: [], focusMin: [] };
-      dailyMap[d].tasksDone.push(1);
-    }
-  }
-
-  const chart = aggregateChartData(dailyMap, granularity, now, days,
-    (v) => v.tasksDone.reduce((a, b) => a + b, 0),
-    (v) => v.focusMin.reduce((a, b) => a + b, 0) / 60,
-  );
-
-  const compare = buildCompareRows(dailyMap, granularity, now, days,
-    (v) => v.tasksDone.reduce((a, b) => a + b, 0),
-    (v) => v.focusMin.reduce((a, b) => a + b, 0) / 60,
-    [
-      { label: "论文任务", unit: "个", isBetterUp: true },
-      { label: "专注时长", unit: "小时", isBetterUp: true },
-    ],
-  );
-
-  return { chart, compare };
-}
-
-async function loadHabitData(granularity: TimeGranularity): Promise<{ chart: ChartDataPoint[]; compare: CompareRow[] }> {
+function getPeriodRange(
+  periodType: PeriodType,
+  offset: number
+): { start: number; end: number; label: string; dateKey: string } {
   const now = new Date();
-  const days = granularity === "day" ? 30 : granularity === "week" ? 90 : granularity === "month" ? 365 : 730;
-  const start = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+  if (periodType === "week") {
+    // Monday-based week
+    const dayOfWeek = now.getDay();
+    const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() + mondayOffset + offset * 7);
+    monday.setHours(0, 0, 0, 0);
+    const sunday = new Date(monday);
+    sunday.setDate(sunday.getDate() + 6);
+    sunday.setHours(23, 59, 59, 999);
 
-  const logs = await db.habit_logs.toArray();
-  const allHabits = await db.tasks.where("type").equals("habit").count();
-
-  const dailyMap: Record<string, { checkins: number[] }> = {};
-
-  for (const log of logs) {
-    const d = log.date;
-    if (!dailyMap[d]) dailyMap[d] = { checkins: [] };
-    dailyMap[d].checkins.push(log.count || 1);
-  }
-
-  const chart = aggregateChartData(dailyMap, granularity, now.getTime(), days,
-    (v) => v.checkins.reduce((a, b) => a + b, 0),
-    (v) => allHabits > 0 ? Math.round((v.checkins.reduce((a, b) => a + b, 0) / allHabits) * 100) : 0,
-  );
-
-  const compare = buildCompareRows(dailyMap, granularity, now.getTime(), days,
-    (v) => v.checkins.reduce((a, b) => a + b, 0),
-    (v) => allHabits > 0 ? Math.round((v.checkins.reduce((a, b) => a + b, 0) / allHabits) * 100) : 0,
-    [
-      { label: "打卡次数", unit: "次", isBetterUp: true },
-      { label: "完成率", unit: "%", isBetterUp: true },
-    ],
-  );
-
-  return { chart, compare };
-}
-
-async function loadPlanningData(granularity: TimeGranularity): Promise<{ chart: ChartDataPoint[]; compare: CompareRow[] }> {
-  const now = Date.now();
-  const days = granularity === "day" ? 30 : granularity === "week" ? 90 : granularity === "month" ? 365 : 730;
-  const start = now - days * 24 * 60 * 60 * 1000;
-
-  const projects = await db.projectV2s.toArray();
-  const tasks = await db.tasks.toArray();
-
-  const dailyMap: Record<string, { activeProjects: number[]; tasksDone: number[] }> = {};
-
-  for (const t of tasks) {
-    if (t.status === "done" && t.updatedAt) {
-      const d = formatDateFull(t.updatedAt);
-      if (!dailyMap[d]) dailyMap[d] = { activeProjects: [], tasksDone: [] };
-      dailyMap[d].tasksDone.push(1);
-    }
-  }
-
-  const chart = aggregateChartData(dailyMap, granularity, now, days,
-    () => projects.length,
-    (v) => v.tasksDone.reduce((a, b) => a + b, 0),
-  );
-
-  const compare = buildCompareRows(dailyMap, granularity, now, days,
-    () => projects.length,
-    (v) => v.tasksDone.reduce((a, b) => a + b, 0),
-    [
-      { label: "活跃项目", unit: "个", isBetterUp: true },
-      { label: "完成任务", unit: "个", isBetterUp: true },
-    ],
-  );
-
-  return { chart, compare };
-}
-
-async function loadGrowthData(granularity: TimeGranularity): Promise<{ chart: ChartDataPoint[]; compare: CompareRow[] }> {
-  const now = Date.now();
-  const days = granularity === "day" ? 30 : granularity === "week" ? 90 : granularity === "month" ? 365 : 730;
-  const start = now - days * 24 * 60 * 60 * 1000;
-
-  const journalEntries = await db.journalEntries
-    .where("timestamp")
-    .between(start, now)
-    .toArray();
-
-  const healthRecords = await db.healthRecords
-    .where("timestamp")
-    .between(start, now)
-    .filter((r) => r.metricType === "mood")
-    .toArray();
-
-  const dailyMap: Record<string, { journalCount: number[]; moods: number[] }> = {};
-
-  for (const j of journalEntries) {
-    const d = formatDateFull(j.timestamp || 0);
-    if (!dailyMap[d]) dailyMap[d] = { journalCount: [], moods: [] };
-    dailyMap[d].journalCount.push(1);
-  }
-
-  for (const h of healthRecords) {
-    const d = h.date;
-    if (!dailyMap[d]) dailyMap[d] = { journalCount: [], moods: [] };
-    dailyMap[d].moods.push(h.value);
-  }
-
-  const chart = aggregateChartData(dailyMap, granularity, now, days,
-    (v) => v.journalCount.reduce((a, b) => a + b, 0),
-    (v) => v.moods.length > 0 ? v.moods.reduce((a, b) => a + b, 0) / v.moods.length : 0,
-  );
-
-  const compare = buildCompareRows(dailyMap, granularity, now, days,
-    (v) => v.journalCount.reduce((a, b) => a + b, 0),
-    (v) => v.moods.length > 0 ? v.moods.reduce((a, b) => a + b, 0) / v.moods.length : 0,
-    [
-      { label: "日记篇数", unit: "篇", isBetterUp: true },
-      { label: "平均心情", unit: "分", isBetterUp: true },
-    ],
-  );
-
-  return { chart, compare };
-}
-
-// ==================== 数据聚合工具 ====================
-
-function aggregateChartData<T>(
-  dailyMap: Record<string, T>,
-  granularity: TimeGranularity,
-  now: number,
-  totalDays: number,
-  extractV1: (v: T) => number,
-  extractV2: (v: T) => number,
-): ChartDataPoint[] {
-  if (granularity === "day") {
-    const days = getDaysInRange(now - totalDays * 24 * 60 * 60 * 1000, now);
-    return days.map((d) => {
-      const v = dailyMap[d];
-      return {
-        date: d.slice(5),
-        v1: v ? Math.round(extractV1(v) * 10) / 10 : 0,
-        v2: v ? Math.round(extractV2(v) * 10) / 10 : 0,
-      };
-    }).slice(-30);
-  }
-
-  if (granularity === "week") {
-    const weeks: Record<string, T[]> = {};
-    for (const [date, val] of Object.entries(dailyMap)) {
-      const d = new Date(date);
-      const weekStart = new Date(d);
-      weekStart.setDate(d.getDate() - d.getDay());
-      const key = formatDateFull(weekStart.getTime());
-      if (!weeks[key]) weeks[key] = [];
-      weeks[key].push(val);
-    }
-    return Object.entries(weeks)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .slice(-12)
-      .map(([key, vals]) => ({
-        date: key.slice(5),
-        v1: Math.round((vals.reduce((s: number, v: T) => s + extractV1(v), 0) / vals.length) * 10) / 10,
-        v2: Math.round((vals.reduce((s: number, v: T) => s + extractV2(v), 0) / vals.length) * 10) / 10,
-      }));
-  }
-
-  if (granularity === "month") {
-    const months: Record<string, T[]> = {};
-    for (const [date, val] of Object.entries(dailyMap)) {
-      const key = date.slice(0, 7);
-      if (!months[key]) months[key] = [];
-      months[key].push(val);
-    }
-    return Object.entries(months)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .slice(-12)
-      .map(([key, vals]) => ({
-        date: key,
-        v1: Math.round((vals.reduce((s: number, v: T) => s + extractV1(v), 0) / vals.length) * 10) / 10,
-        v2: Math.round((vals.reduce((s: number, v: T) => s + extractV2(v), 0) / vals.length) * 10) / 10,
-      }));
-  }
-
-  // quarter
-  const quarters: Record<string, T[]> = {};
-  for (const [date, val] of Object.entries(dailyMap)) {
-    const d = new Date(date);
-    const q = Math.floor(d.getMonth() / 3) + 1;
-    const key = `${d.getFullYear()}-Q${q}`;
-    if (!quarters[key]) quarters[key] = [];
-    quarters[key].push(val);
-  }
-  return Object.entries(quarters)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .slice(-8)
-    .map(([key, vals]) => ({
-      date: key,
-      v1: Math.round((vals.reduce((s: number, v: T) => s + extractV1(v), 0) / vals.length) * 10) / 10,
-      v2: Math.round((vals.reduce((s: number, v: T) => s + extractV2(v), 0) / vals.length) * 10) / 10,
-    }));
-}
-
-function buildCompareRows<T>(
-  dailyMap: Record<string, T>,
-  _granularity: TimeGranularity,
-  now: number,
-  totalDays: number,
-  extractV1: (v: T) => number,
-  extractV2: (v: T) => number,
-  rowDefs: { label: string; unit: string; isBetterUp: boolean }[],
-): CompareRow[] {
-  const halfDays = Math.floor(totalDays / 2);
-  const mid = now - halfDays * 24 * 60 * 60 * 1000;
-
-  const thisPeriod: string[] = [];
-  const lastPeriod: string[] = [];
-  for (const date of Object.keys(dailyMap)) {
-    const ts = new Date(date).getTime();
-    if (ts >= mid) thisPeriod.push(date);
-    else lastPeriod.push(date);
-  }
-
-  const thisVals1 = thisPeriod.map((d) => extractV1(dailyMap[d]));
-  const lastVals1 = lastPeriod.map((d) => extractV1(dailyMap[d]));
-  const thisVals2 = thisPeriod.map((d) => extractV2(dailyMap[d]));
-  const lastVals2 = lastPeriod.map((d) => extractV2(dailyMap[d]));
-
-  const avg = (arr: number[]) => arr.length > 0 ? arr.reduce((a: number, b: number) => a + b, 0) / arr.length : 0;
-
-  const this1 = Math.round(avg(thisVals1) * 10) / 10;
-  const last1 = Math.round(avg(lastVals1) * 10) / 10;
-  const this2 = Math.round(avg(thisVals2) * 10) / 10;
-  const last2 = Math.round(avg(lastVals2) * 10) / 10;
-
-  const change1 = last1 > 0 ? Math.round(((this1 - last1) / last1) * 100) : 0;
-  const change2 = last2 > 0 ? Math.round(((this2 - last2) / last2) * 100) : 0;
-
-  return [
-    {
-      label: rowDefs[0].label,
-      thisPeriod: this1,
-      lastPeriod: last1,
-      change: change1,
-      unit: rowDefs[0].unit,
-      isBetterUp: rowDefs[0].isBetterUp,
-    },
-    {
-      label: rowDefs[1].label,
-      thisPeriod: this2,
-      lastPeriod: last2,
-      change: change2,
-      unit: rowDefs[1].unit,
-      isBetterUp: rowDefs[1].isBetterUp,
-    },
-  ];
-}
-
-// ==================== 数据加载调度 ====================
-
-async function loadProjectData(
-  project: ProjectV2,
-  granularity: TimeGranularity,
-): Promise<{ chart: ChartDataPoint[]; compare: CompareRow[] } | null> {
-  try {
-    switch (project.name) {
-      case "睡眠": return loadSleepData(granularity);
-      case "体态": return loadBodyMetricData(granularity);
-      case "运动": return loadWorkoutData(granularity);
-      case "考公": return loadKaogongData(granularity);
-      case "毕业": return loadGraduationData(granularity);
-      case "习惯": return loadHabitData(granularity);
-      case "规划": return loadPlanningData(granularity);
-      case "成长": return loadGrowthData(granularity);
-      default: return null;
-    }
-  } catch (err) {
-    console.error(`Failed to load data for ${project.name}:`, err);
-    return null;
+    const sm = monday.getMonth() + 1;
+    const sd = monday.getDate();
+    const em = sunday.getMonth() + 1;
+    const ed = sunday.getDate();
+    return {
+      start: monday.getTime(),
+      end: sunday.getTime(),
+      label: `${sm}/${sd} - ${em}/${ed}`,
+      dateKey: `week-${getDateStrLocal(monday.getFullYear(), sm, sd)}`,
+    };
+  } else {
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1 + offset;
+    const realMonth = ((month - 1) % 12 + 12) % 12 + 1;
+    const realYear = year + Math.floor((month - 1) / 12);
+    const start = new Date(realYear, realMonth - 1, 1, 0, 0, 0, 0);
+    const end = new Date(realYear, realMonth, 0, 23, 59, 59, 999);
+    return {
+      start: start.getTime(),
+      end: end.getTime(),
+      label: `${realYear}年${realMonth}月`,
+      dateKey: `${realYear}-${String(realMonth).padStart(2, "0")}`,
+    };
   }
 }
 
 // ==================== 子组件 ====================
 
-function ChangeBadge({ change, isBetterUp }: { change: number; isBetterUp: boolean }) {
-  const isPositive = change > 0;
-  const isBetter = isBetterUp ? isPositive : !isPositive;
-  const color = change === 0 ? "text-gray-400" : isBetter ? "text-emerald-500" : "text-red-500";
-  const Icon = change > 0 ? TrendingUp : change < 0 ? TrendingDown : Minus;
-
-  return (
-    <span className={`inline-flex items-center gap-0.5 text-xs font-medium ${color}`}>
-      <Icon className="w-3 h-3" />
-      {change > 0 ? "+" : ""}{change}%
-    </span>
-  );
-}
-
-function CompareTable({
-  rows,
-  compareMode,
-  metrics,
+function PeriodSwitcher({
+  periodType,
+  setPeriodType,
+  periodOffset,
+  setPeriodOffset,
+  range,
 }: {
-  rows: CompareRow[];
-  compareMode: CompareMode;
-  metrics: ProjectMetrics;
+  periodType: PeriodType;
+  setPeriodType: (t: PeriodType) => void;
+  periodOffset: number;
+  setPeriodOffset: (o: number) => void;
+  range: { start: number; end: number; label: string };
 }) {
-  if (compareMode === "goal") {
-    return (
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-        <h3 className="text-sm font-semibold text-gray-700 mb-3">目标对比</h3>
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-gray-500">{metrics.line1Label}</span>
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-bold text-gray-900">{rows[0]?.thisPeriod ?? "-"}</span>
-              {metrics.goal1 !== undefined && (
-                <>
-                  <span className="text-xs text-gray-400">/</span>
-                  <span className="text-xs text-gray-400">目标 {metrics.goal1}</span>
-                  <span className={`text-xs font-medium ${(rows[0]?.thisPeriod ?? 0) >= metrics.goal1 ? "text-emerald-500" : "text-amber-500"}`}>
-                    {metrics.goal1 > 0 ? Math.round(((rows[0]?.thisPeriod ?? 0) / metrics.goal1) * 100) : 0}%
-                  </span>
-                </>
-              )}
-            </div>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-gray-500">{metrics.line2Label}</span>
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-bold text-gray-900">{rows[1]?.thisPeriod ?? "-"}</span>
-              {metrics.goal2 !== undefined && (
-                <>
-                  <span className="text-xs text-gray-400">/</span>
-                  <span className="text-xs text-gray-400">目标 {metrics.goal2}</span>
-                  <span className={`text-xs font-medium ${(rows[1]?.thisPeriod ?? 0) >= metrics.goal2 ? "text-emerald-500" : "text-amber-500"}`}>
-                    {metrics.goal2 > 0 ? Math.round(((rows[1]?.thisPeriod ?? 0) / metrics.goal2) * 100) : 0}%
-                  </span>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-        {metrics.goal1 === undefined && metrics.goal2 === undefined && (
-          <p className="text-xs text-gray-400 mt-2">暂未设置目标值</p>
-        )}
-      </div>
-    );
-  }
-
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-      <h3 className="text-sm font-semibold text-gray-700 mb-3">本周 vs 上周</h3>
-      <div className="overflow-x-auto">
-        <table className="w-full text-xs">
-          <thead>
-            <tr className="text-gray-400">
-              <th className="text-left font-normal pb-2">指标</th>
-              <th className="text-right font-normal pb-2">本周</th>
-              <th className="text-right font-normal pb-2">上周</th>
-              <th className="text-right font-normal pb-2">变化</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row, i) => (
-              <tr key={i} className="border-t border-gray-50">
-                <td className="py-2.5 text-gray-600">{row.label}</td>
-                <td className="py-2.5 text-right font-medium text-gray-900">{row.thisPeriod}{row.unit}</td>
-                <td className="py-2.5 text-right text-gray-500">{row.lastPeriod}{row.unit}</td>
-                <td className="py-2.5 text-right">
-                  <ChangeBadge change={row.change} isBetterUp={row.isBetterUp} />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
-function EmptyChart() {
-  return (
-    <div className="flex flex-col items-center justify-center py-16 text-gray-400">
-      <BarChart3 className="w-10 h-10 mb-3 text-gray-300" strokeWidth={1.5} />
-      <p className="text-sm font-medium">暂无数据</p>
-      <p className="text-xs mt-1">该模块暂无历史数据，开始记录后将自动生成趋势图</p>
-    </div>
-  );
-}
-
-// ==================== 全部视图（聚合摘要） ====================
-
-function AllSummaryView() {
-  const [loading, setLoading] = useState(true);
-  const [taskStats, setTaskStats] = useState({ completed: 0, active: 0, new: 0 });
-  const [habitStats, setHabitStats] = useState({ completed: 0, total: 0, streak: 0 });
-  const [financeStats, setFinanceStats] = useState({ income: 0, expense: 0, balance: 0 });
-  const [weeklyDone, setWeeklyDone] = useState(0);
-  const [weeklyPending, setWeeklyPending] = useState(0);
-  const [pendingTasks, setPendingTasks] = useState<Task[]>([]);
-  const [summary, setSummary] = useState("");
-  const [savedRecord, setSavedRecord] = useState<ReviewRecord | null>(null);
-  const [saving, setSaving] = useState(false);
-
-  const now = new Date();
-  const currentYear = now.getFullYear();
-  const currentMonth = now.getMonth() + 1;
-
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    try {
-      await initBuiltInPlugins();
-      const [monthTasks, monthHabits, monthFinance, weekTasks, pending] =
-        await Promise.all([
-          getMonthlyTaskStats(currentYear, currentMonth),
-          getMonthlyHabitStats(currentYear, currentMonth),
-          getMonthlyFinanceStats(currentYear, currentMonth),
-          getWeeklyTaskStats(),
-          getActiveSchedulableTasks(),
-        ]);
-      setTaskStats(monthTasks);
-      setHabitStats(monthHabits);
-      setFinanceStats(monthFinance);
-      setWeeklyDone(weekTasks.completed);
-      setWeeklyPending(weekTasks.active);
-      setPendingTasks(pending.slice(0, 10));
-
-      const todayKey = getTodayStr();
-      const existingDaily = await getReviewRecordByKey(todayKey);
-      if (existingDaily) {
-        setSavedRecord(existingDaily);
-        setSummary(existingDaily.summary || "");
-      }
-    } catch { /* ignore */ }
-    finally { setLoading(false); }
-  }, [currentYear, currentMonth]);
-
-  useEffect(() => { loadData(); }, [loadData]);
-
-  const handleSave = async () => {
-    setSaving(true);
-    try {
-      const key = getTodayStr();
-      await createReviewRecord({
-        type: "daily",
-        dateKey: key,
-        summary: summary || undefined,
-        stats: {
-          tasksDone: weeklyDone,
-          tasksPending: weeklyPending,
-          tasksOverdue: 0,
-          habitStreaks: habitStats.completed,
-          focusMinutes: 0,
-          financeIncome: financeStats.income,
-          financeExpense: financeStats.expense,
-        },
-      });
-      showToast({ message: "回顾已保存", type: "success" });
-      const r = await getReviewRecordByKey(key);
-      if (r) setSavedRecord(r);
-    } catch {
-      showToast({ message: "保存失败", type: "error" });
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="space-y-3">
-        {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="skeleton h-24 rounded-2xl" />
+    <div className="flex items-center gap-3">
+      {/* 周/月切换 */}
+      <div className="relative flex bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
+        <motion.div
+          layoutId="review-period-indicator"
+          className="absolute top-1 bottom-1 rounded-lg bg-white dark:bg-gray-700 shadow-sm z-0"
+          style={{ width: "calc(50% - 4px)" }}
+          animate={{ left: periodType === "week" ? "4px" : "calc(50% + 0px)" }}
+          transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+        />
+        {(["week", "month"] as PeriodType[]).map((t) => (
+          <button
+            key={t}
+            onClick={() => {
+              setPeriodType(t);
+              setPeriodOffset(0);
+            }}
+            className={`relative z-10 px-4 py-2 text-sm font-medium rounded-lg transition-colors duration-200 ${
+              periodType === t
+                ? "text-gray-900 dark:text-white font-semibold"
+                : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+            }`}
+          >
+            {t === "week" ? "周度" : "月度"}
+          </button>
         ))}
       </div>
-    );
-  }
 
-  return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-3">
-        <StatCard icon={<CheckCheck className="w-4 h-4" />} iconColor="text-emerald-500" label="本周完成" value={weeklyDone} />
-        <StatCard icon={<ListTodo className="w-4 h-4" />} iconColor="text-amber-500" label="待办" value={weeklyPending} />
-        <StatCard icon={<Flame className="w-4 h-4" />} iconColor="text-orange-500" label="习惯打卡" value={habitStats.completed} />
-        <StatCard icon={<Wallet className="w-4 h-4" />} iconColor="text-blue-500" label="今日支出" value={financeStats.expense.toFixed(0)} valueColor="text-red-500" />
-      </div>
+      {/* 前后导航 */}
+      <button
+        onClick={() => setPeriodOffset(periodOffset - 1)}
+        className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 transition-colors"
+      >
+        <ChevronLeft className="w-4 h-4" />
+      </button>
+      <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 min-w-[120px] text-center">
+        {range.label}
+      </span>
+      <button
+        onClick={() => setPeriodOffset(periodOffset + 1)}
+        className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 transition-colors"
+      >
+        <ChevronRight className="w-4 h-4" />
+      </button>
 
-      {pendingTasks.length > 0 && (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <Target className="w-4 h-4 text-indigo-500" />
-            <h3 className="text-sm font-semibold text-gray-700">待办预览</h3>
-          </div>
-          <div className="space-y-1">
-            {pendingTasks.slice(0, 5).map((t) => (
-              <div key={t.id} className="text-xs text-gray-500 truncate pl-1 border-l-2 border-gray-200">{t.title}</div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-        <p className="text-sm font-semibold text-gray-700 mb-2">今日反思</p>
-        <textarea
-          value={summary}
-          onChange={(e) => setSummary(e.target.value)}
-          placeholder="今天完成了什么？有什么需要改进？"
-          rows={4}
-          className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-        />
+      {periodOffset !== 0 && (
         <button
-          onClick={handleSave}
-          disabled={saving}
-          className="mt-2 w-full py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50"
+          onClick={() => setPeriodOffset(0)}
+          className="px-3 py-1.5 text-xs font-medium bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg hover:bg-indigo-200 dark:hover:bg-indigo-900/50 transition-colors"
         >
-          {saving ? "保存中..." : savedRecord ? "更新回顾" : "保存回顾"}
+          今天
         </button>
-      </div>
+      )}
     </div>
   );
 }
 
-function StatCard({
-  icon, iconColor, label, value, valueColor,
+function OverviewCard({
+  icon,
+  iconColor,
+  label,
+  value,
+  sub,
+  iconBg,
 }: {
   icon: React.ReactNode;
   iconColor: string;
+  iconBg: string;
   label: string;
   value: string | number;
-  valueColor?: string;
+  sub?: string;
 }) {
   return (
-    <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
-      <div className="flex items-center gap-2 mb-1">
-        <span className={iconColor}>{icon}</span>
-        <span className="text-xs text-gray-500">{label}</span>
+    <div className="bg-white dark:bg-gray-900 rounded-2xl p-4 border border-gray-100 dark:border-gray-800 shadow-sm">
+      <div className="flex items-center gap-2 mb-2">
+        <div className={`w-8 h-8 rounded-lg ${iconBg} flex items-center justify-center`}>
+          <span className={iconColor}>{icon}</span>
+        </div>
+        <span className="text-xs text-gray-500 dark:text-gray-400">{label}</span>
       </div>
-      <p className={`text-2xl font-bold ${valueColor || "text-gray-900"}`}>{value}</p>
+      <p className="text-2xl font-bold text-gray-900 dark:text-white">{value}</p>
+      {sub && <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{sub}</p>}
+    </div>
+  );
+}
+
+function PriorityBar({
+  label,
+  count,
+  total,
+  color,
+}: {
+  label: string;
+  count: number;
+  total: number;
+  color: string;
+}) {
+  const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-xs text-gray-600 dark:text-gray-400 w-20 shrink-0">{label}</span>
+      <div className="flex-1 h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+        <motion.div
+          initial={{ width: 0 }}
+          animate={{ width: `${Math.min(pct, 100)}%` }}
+          className={`h-full rounded-full ${color}`}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+        />
+      </div>
+      <span className="text-xs font-mono text-gray-500 dark:text-gray-400 w-16 text-right">
+        {count} ({pct}%)
+      </span>
+    </div>
+  );
+}
+
+function ProjectProgressBar({
+  name,
+  done,
+  total,
+  color,
+}: {
+  name: string;
+  done: number;
+  total: number;
+  color: string;
+}) {
+  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{name}</span>
+        <span className="text-xs text-gray-500 dark:text-gray-400">{done}/{total} ({pct}%)</span>
+      </div>
+      <div className="h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+        <motion.div
+          initial={{ width: 0 }}
+          animate={{ width: `${Math.min(pct, 100)}%` }}
+          style={{ backgroundColor: color || "#6366F1" }}
+          className="h-full rounded-full"
+          transition={{ duration: 0.5, ease: "easeOut" }}
+        />
+      </div>
     </div>
   );
 }
@@ -889,241 +237,578 @@ function StatCard({
 // ==================== 主页面 ====================
 
 export default function ReviewPage() {
-  const [projects, setProjects] = useState<ProjectV2[]>([]);
+  const [periodType, setPeriodType] = useState<PeriodType>("week");
+  const [periodOffset, setPeriodOffset] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [allTasks, setAllTasks] = useState<Task[]>([]);
+  const [projects, setProjects] = useState<ProjectV2[]>([]);
+  const [habitLogs, setHabitLogs] = useState<HabitLog[]>([]);
 
-  // 当前选中的项目（null = 全部）
-  const [selectedName, setSelectedName] = useState<string | null>(null);
+  // 回顾记录编辑器状态
+  const [highlights, setHighlights] = useState<string[]>([]);
+  const [problems, setProblems] = useState<string[]>([]);
+  const [improvements, setImprovements] = useState<string[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [existingRecord, setExistingRecord] = useState<ReviewRecord | null>(null);
+  const [editingIndex, setEditingIndex] = useState<{ section: "h" | "p" | "i"; index: number } | null>(null);
+  const [editValue, setEditValue] = useState("");
 
-  // 粒度和对比模式
-  const [granularity, setGranularity] = useState<TimeGranularity>("day");
-  const [compareMode, setCompareMode] = useState<CompareMode>("time");
-
-  // 图表数据
-  const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
-  const [compareRows, setCompareRows] = useState<CompareRow[]>([]);
-  const [dataLoading, setDataLoading] = useState(false);
-  const [noData, setNoData] = useState(false);
-
-  // 当前选中的项目对象
-  const selectedProject = projects.find((p) => p.name === selectedName) ?? null;
-  const metrics = selectedProject ? getProjectMetrics(selectedProject) : null;
-
-  // 初始化
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const all = await getAllProjectsV2();
-        setProjects(all);
-      } catch (err) {
-        console.error("Failed to load projects:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
-  }, []);
+  const range = getPeriodRange(periodType, periodOffset);
 
   // 加载数据
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [tasks, projs, hLogs] = await Promise.all([
+        db.tasks.toArray(),
+        db.projectV2s.toArray(),
+        db.habit_logs.toArray(),
+      ]);
+      setAllTasks(tasks);
+      setProjects(projs);
+      setHabitLogs(hLogs);
+
+      // 加载该周期的回顾记录
+      const record = await getReviewRecordByPeriod(
+        periodType,
+        range.start,
+        range.end
+      );
+      if (record) {
+        setExistingRecord(record);
+        setHighlights(record.highlights || []);
+        setProblems(record.problems || []);
+        setImprovements(record.improvements || []);
+      } else {
+        setExistingRecord(null);
+        setHighlights([]);
+        setProblems([]);
+        setImprovements([]);
+      }
+    } catch {
+      // silent
+    } finally {
+      setLoading(false);
+    }
+  }, [periodType, periodOffset, range.start, range.end]);
+
   useEffect(() => {
-    if (!selectedProject) {
-      setChartData([]);
-      setCompareRows([]);
-      setNoData(false);
+    loadData();
+  }, [loadData]);
+
+  // ── 计算统计 ──
+
+  // 该周期内的任务
+  const periodTasks = allTasks.filter((t) => {
+    // 按 startTime 或 createdAt 判断是否在周期内
+    const refTime = t.startTime || t.createdAt;
+    if (!refTime) return false;
+    return refTime >= range.start && refTime <= range.end;
+  });
+
+  // 执行概况
+  const completedCount = periodTasks.filter((t) => t.status === "done").length;
+  const activeCount = periodTasks.filter((t) => t.status === "active").length;
+  const totalInPeriod = completedCount + activeCount;
+  const completionRate = totalInPeriod > 0 ? Math.round((completedCount / totalInPeriod) * 100) : 0;
+
+  // 过期任务：有 dueDate 且已过期且未完成
+  const now = Date.now();
+  const overdueCount = allTasks.filter(
+    (t) => t.dueDate && t.dueDate < now && t.status === "active"
+  ).length;
+
+  // 周期天数
+  const periodDays = Math.ceil((range.end - range.start) / (1000 * 60 * 60 * 24)) + 1;
+  const avgDaily = periodDays > 0 ? (completedCount / periodDays).toFixed(1) : "0";
+
+  // 优先级分布
+  const priorityCounts: Record<string, number> = {};
+  for (const t of periodTasks) {
+    const p = t.priority || "not-urgent-not-important";
+    priorityCounts[p] = (priorityCounts[p] || 0) + 1;
+  }
+  const totalPriorityCount = Object.values(priorityCounts).reduce((a, b) => a + b, 0);
+
+  // 短期事件
+  const shortTermTasks = periodTasks.filter((t) => t.type === "shortterm" || t.classification === "short-term");
+  const stCompleted = shortTermTasks.filter((t) => t.status === "done").length;
+  const stTotal = shortTermTasks.length;
+  const stRate = stTotal > 0 ? Math.round((stCompleted / stTotal) * 100) : 0;
+  const stOverdue = shortTermTasks.filter(
+    (t) => t.dueDate && t.dueDate < now && t.status === "active"
+  ).length;
+
+  // 截止日期分布（短期事件）
+  const stWithDeadline = shortTermTasks.filter((t) => t.dueDate);
+  const deadlineMet = stWithDeadline.filter(
+    (t) => t.status === "done" && t.dueDate
+  ).length;
+  const deadlineTotal = stWithDeadline.length;
+
+  // 每日习惯
+  const habitTasks = periodTasks.filter((t) => t.type === "habit");
+  const habitIds = new Set(habitTasks.map((t) => t.id).filter(Boolean) as number[]);
+  const periodHabitLogs = habitLogs.filter((l) => {
+    if (!habitIds.has(l.taskId)) return false;
+    const dayTs = new Date(l.date + "T00:00:00").getTime();
+    return dayTs >= range.start && dayTs <= range.end;
+  });
+  const habitCompleted = periodHabitLogs.length;
+  const habitTotal = habitTasks.length * periodDays;
+  const habitRate = habitTotal > 0 ? Math.round((habitCompleted / habitTotal) * 100) : 0;
+
+  // 连续打卡天数（简单计算：从今天往前看连续的天数）
+  const getConsecutiveDays = (): number => {
+    if (habitTasks.length === 0) return 0;
+    const logDates = new Set(periodHabitLogs.map((l) => l.date));
+    let consecutive = 0;
+    const today = new Date();
+    while (true) {
+      const d = getDateStrLocal(today.getFullYear(), today.getMonth() + 1, today.getDate() - consecutive);
+      if (logDates.has(d)) {
+        consecutive++;
+      } else {
+        break;
+      }
+    }
+    return consecutive;
+  };
+  const consecutiveDays = getConsecutiveDays();
+
+  // 中断次数（累计有几天没打卡任何习惯）
+  const breakCount = (() => {
+    let breaks = 0;
+    const cur = new Date(range.start);
+    while (cur.getTime() <= range.end) {
+      const d = getDateStr(cur.getTime());
+      const hasLog = periodHabitLogs.some((l) => l.date === d);
+      if (!hasLog) breaks++;
+      cur.setDate(cur.getDate() + 1);
+    }
+    return breaks;
+  })();
+
+  // 项目完成统计
+  const projectStats = (() => {
+    const map: Record<string, { name: string; color: string; done: number; total: number }> = {};
+    for (const t of periodTasks) {
+      if (!t.projectId) continue;
+      const pidStr = String(t.projectId);
+      const proj = projects.find((p) => p.id !== undefined && String(p.id) === pidStr);
+      if (proj) {
+        if (!map[pidStr]) map[pidStr] = { name: proj.name, color: proj.color || "#6366F1", done: 0, total: 0 };
+        map[pidStr].total++;
+        if (t.status === "done") map[pidStr].done++;
+      }
+    }
+    return Object.values(map).sort((a, b) => b.total - a.total);
+  })();
+
+  // ── 保存回顾 ──
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await createOrUpdateReviewRecord({
+        type: periodType === "week" ? "weekly" : "monthly",
+        dateKey: range.dateKey,
+        stats: {
+          tasksDone: completedCount,
+          tasksPending: activeCount,
+          tasksOverdue: overdueCount,
+          habitStreaks: consecutiveDays,
+          focusMinutes: 0,
+          financeIncome: 0,
+          financeExpense: 0,
+        },
+        highlights: highlights.filter(Boolean),
+        problems: problems.filter(Boolean),
+        improvements: improvements.filter(Boolean),
+        periodType,
+        periodStart: range.start,
+        periodEnd: range.end,
+      });
+      showToast({ message: "回顾已保存", type: "success" });
+      loadData();
+    } catch {
+      showToast({ message: "保存失败", type: "error" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // ── 生成本期待办 ──
+
+  const handleGenerateTasks = async () => {
+    const items = improvements.filter(Boolean);
+    if (items.length === 0) {
+      showToast({ message: "暂无改进项可生成", type: "warning" });
       return;
     }
-
-    let cancelled = false;
-    setDataLoading(true);
-    setNoData(false);
-
-    loadProjectData(selectedProject, granularity).then((result) => {
-      if (cancelled) return;
-      if (result && result.chart.length > 0) {
-        setChartData(result.chart);
-        setCompareRows(result.compare);
-      } else {
-        setChartData([]);
-        setCompareRows([]);
-        setNoData(true);
+    try {
+      for (const item of improvements) {
+        if (!item.trim()) continue;
+        await createTask({
+          title: `[改进] ${item.trim()}`,
+          type: "shortterm",
+          status: "active",
+          priority: "not-urgent-important",
+          tags: ["改进", "review"],
+        });
       }
-      setDataLoading(false);
+      showToast({ message: `已生成 ${improvements.length} 个待办任务`, type: "success" });
+    } catch {
+      showToast({ message: "生成失败", type: "error" });
+    }
+  };
+
+  // ── 编辑项辅助函数 ──
+
+  const handleAddItem = (setter: React.Dispatch<React.SetStateAction<string[]>>) => {
+    setter((prev) => [...prev, ""]);
+  };
+
+  const handleDeleteItem = (
+    index: number,
+    setter: React.Dispatch<React.SetStateAction<string[]>>
+  ) => {
+    setter((prev) => prev.filter((_, i) => i !== index));
+    if (editingIndex?.index === index) setEditingIndex(null);
+  };
+
+  const startEdit = (section: "h" | "p" | "i", index: number, current: string) => {
+    setEditingIndex({ section, index });
+    setEditValue(current);
+  };
+
+  const commitEdit = (
+    section: "h" | "p" | "i",
+    index: number,
+    setter: React.Dispatch<React.SetStateAction<string[]>>
+  ) => {
+    setter((prev) => {
+      const next = [...prev];
+      next[index] = editValue.trim();
+      return next;
     });
+    setEditingIndex(null);
+  };
 
-    return () => { cancelled = true; };
-  }, [selectedProject, granularity]);
+  // ── 渲染 ──
 
-  // 骨架屏
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-gray-950 dark:to-gray-900">
-      <div className="mx-auto max-w-5xl px-5 pt-8 pb-24 md:px-8 md:pt-10">
-        <div className="skeleton h-8 w-20 mb-2" />
-        <div className="skeleton h-4 w-40 mb-4" />
-        <div className="skeleton h-9 w-full rounded-xl mb-4" />
-        <div className="skeleton h-9 w-48 rounded-xl mb-4" />
-        <div className="skeleton h-64 rounded-2xl mb-4" />
-        <div className="skeleton h-40 rounded-2xl" />
-      </div>
+        <div className="mx-auto max-w-3xl px-5 pt-8 pb-24 md:px-8 md:pt-10">
+          <div className="skeleton h-8 w-20 mb-2" />
+          <div className="skeleton h-4 w-40 mb-6" />
+          <div className="skeleton h-9 w-full rounded-xl mb-6" />
+          <div className="grid grid-cols-2 gap-3 mb-6">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="skeleton h-24 rounded-2xl" />
+            ))}
+          </div>
+          <div className="skeleton h-48 rounded-2xl mb-6" />
+          <div className="skeleton h-64 rounded-2xl" />
+        </div>
       </div>
     );
   }
 
-  const tabOptions: { key: TimeGranularity; label: string }[] = [
-    { key: "day", label: "日" },
-    { key: "week", label: "周" },
-    { key: "month", label: "月" },
-    { key: "quarter", label: "季" },
-  ];
+  // 渲染编辑列表组件
+  const renderEditableList = (
+    title: string,
+    icon: React.ReactNode,
+    items: string[],
+    setter: React.Dispatch<React.SetStateAction<string[]>>,
+    section: "h" | "p" | "i",
+    placeholder: string,
+  ) => (
+    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-4">
+      <div className="flex items-center gap-2 mb-3">
+        {icon}
+        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">{title}</h3>
+        <span className="text-xs text-gray-400">({items.filter(Boolean).length} 项)</span>
+      </div>
+      <div className="space-y-2">
+        {items.map((item, i) => (
+          <div key={i} className="flex items-center gap-2 group">
+            <span className="w-1.5 h-1.5 rounded-full bg-gray-300 dark:bg-gray-600 shrink-0" />
+            {editingIndex?.section === section && editingIndex.index === i ? (
+              <div className="flex-1 flex items-center gap-1">
+                <input
+                  type="text"
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") commitEdit(section, i, setter);
+                    if (e.key === "Escape") setEditingIndex(null);
+                  }}
+                  className="flex-1 px-2 py-1 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  autoFocus
+                />
+                <button
+                  onClick={() => commitEdit(section, i, setter)}
+                  className="p-1 text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={() => setEditingIndex(null)}
+                  className="p-1 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ) : (
+              <>
+                <span
+                  className="flex-1 text-sm text-gray-700 dark:text-gray-300 cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400"
+                  onClick={() => startEdit(section, i, item)}
+                >
+                  {item || <span className="text-gray-400 italic">点击编辑...</span>}
+                </span>
+                <button
+                  onClick={() => handleDeleteItem(i, setter)}
+                  className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </>
+            )}
+          </div>
+        ))}
+      </div>
+      <button
+        onClick={() => handleAddItem(setter)}
+        className="mt-3 flex items-center gap-1 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors"
+      >
+        <Plus className="w-3.5 h-3.5" />
+        添加{placeholder}
+      </button>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-gray-950 dark:to-gray-900 text-slate-900 dark:text-white">
-      <div className="mx-auto max-w-5xl px-5 pt-8 pb-24 md:px-8 md:pt-10">
-      {/* 标题 */}
-      <h1 className="text-xl font-bold text-gray-900 mb-1">回顾</h1>
-      <p className="text-sm text-gray-500 mb-5">查看历史数据，对比分析，调整计划</p>
+      <div className="mx-auto max-w-3xl px-5 pt-8 pb-24 md:px-8 md:pt-10 space-y-5">
+        {/* 标题 */}
+        <div>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white">回顾</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">周期性复盘，持续改进</p>
+        </div>
 
-      {/* 项目文字选项行 */}
-      <div className="flex gap-2 overflow-x-auto pb-2 mb-4 scrollbar-hide">
-        <button
-          onClick={() => setSelectedName(null)}
-          className={`shrink-0 px-4 py-2 text-sm font-medium rounded-xl transition-all ${
-            selectedName === null
-              ? "bg-orange-500 text-white shadow-sm"
-              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-          }`}
-        >
-          全部
-        </button>
-        {projects.map((p) => (
-          <button
-            key={p.id}
-            onClick={() => setSelectedName(p.name)}
-            className={`shrink-0 px-4 py-2 text-sm font-medium rounded-xl transition-all ${
-              selectedName === p.name
-                ? "bg-orange-500 text-white shadow-sm"
-                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-            }`}
-          >
-            {p.name}
-          </button>
-        ))}
-      </div>
+        {/* 周期切换 */}
+        <PeriodSwitcher
+          periodType={periodType}
+          setPeriodType={setPeriodType}
+          periodOffset={periodOffset}
+          setPeriodOffset={setPeriodOffset}
+          range={range}
+        />
 
-      {/* 全部视图 */}
-      {selectedName === null ? (
-        <AllSummaryView />
-      ) : (
-        <>
-          {/* 时间范围 Tab + 对比模式切换 */}
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
-              {tabOptions.map(({ key, label }) => (
-                <button
-                  key={key}
-                  onClick={() => setGranularity(key)}
-                  className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
-                    granularity === key
-                      ? "bg-white text-gray-900 shadow-sm"
-                      : "text-gray-500 hover:text-gray-700"
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
+        {/* 执行概况 */}
+        <section>
+          <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-3 uppercase tracking-wide">
+            执行概况
+          </h2>
+          <div className="grid grid-cols-2 gap-3">
+            <OverviewCard
+              icon={<CheckCheck className="w-4 h-4" />}
+              iconColor="text-emerald-600"
+              iconBg="bg-emerald-100 dark:bg-emerald-900/30"
+              label="任务完成"
+              value={completedCount}
+              sub="本周期完成的任务数"
+            />
+            <OverviewCard
+              icon={<TrendingUp className="w-4 h-4" />}
+              iconColor="text-blue-600"
+              iconBg="bg-blue-100 dark:bg-blue-900/30"
+              label="完成率"
+              value={`${completionRate}%`}
+              sub={`${completedCount}/${totalInPeriod} 个任务`}
+            />
+            <OverviewCard
+              icon={<AlertCircle className="w-4 h-4" />}
+              iconColor="text-red-600"
+              iconBg="bg-red-100 dark:bg-red-900/30"
+              label="过期任务"
+              value={overdueCount}
+              sub="所有未完成的过期任务"
+            />
+            <OverviewCard
+              icon={<BarChart3 className="w-4 h-4" />}
+              iconColor="text-violet-600"
+              iconBg="bg-violet-100 dark:bg-violet-900/30"
+              label="日均完成"
+              value={avgDaily}
+              sub={`${periodDays} 天周期`}
+            />
+          </div>
+        </section>
+
+        {/* 优先级分布 */}
+        <section className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-4">
+          <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-4 uppercase tracking-wide">
+            优先级分布
+          </h2>
+          <div className="space-y-3">
+            {PRIORITY_CONFIG.map((p) => (
+              <PriorityBar
+                key={p.key}
+                label={p.label}
+                count={priorityCounts[p.key] || 0}
+                total={totalPriorityCount}
+                color={p.bg.replace("bg-", "bg-").replace("100", "500")}
+              />
+            ))}
+          </div>
+        </section>
+
+        {/* 目标达成 */}
+        <section className="space-y-3">
+          <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+            目标达成
+          </h2>
+
+          {/* 短期事件 */}
+          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Target className="w-4 h-4 text-amber-500" />
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">短期事件</h3>
             </div>
-
-            <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
-              <button
-                onClick={() => setCompareMode("time")}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
-                  compareMode === "time"
-                    ? "bg-white text-gray-900 shadow-sm"
-                    : "text-gray-500 hover:text-gray-700"
-                }`}
-              >
-                时间对比
-              </button>
-              <button
-                onClick={() => setCompareMode("goal")}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
-                  compareMode === "goal"
-                    ? "bg-white text-gray-900 shadow-sm"
-                    : "text-gray-500 hover:text-gray-700"
-                }`}
-              >
-                目标对比
-              </button>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <p className="text-xs text-gray-400 dark:text-gray-500">完成率</p>
+                <p className="text-lg font-bold text-gray-900 dark:text-white">{stRate}%</p>
+                <p className="text-xs text-gray-400">{stCompleted}/{stTotal} 个</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-400 dark:text-gray-500">过期率</p>
+                <p className="text-lg font-bold text-red-500">
+                  {stTotal > 0 ? Math.round((stOverdue / stTotal) * 100) : 0}%
+                </p>
+                <p className="text-xs text-gray-400">{stOverdue} 个过期</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-400 dark:text-gray-500">截止日期</p>
+                <p className="text-lg font-bold text-gray-900 dark:text-white">
+                  {deadlineTotal > 0 ? Math.round((deadlineMet / deadlineTotal) * 100) : 0}%
+                </p>
+                <p className="text-xs text-gray-400">{deadlineMet}/{deadlineTotal} 达标</p>
+              </div>
             </div>
           </div>
 
-          {/* 图表区 */}
-          {dataLoading ? (
-            <div className="flex items-center justify-center py-16">
-              <div className="w-5 h-5 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+          {/* 每日习惯 */}
+          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Sparkles className="w-4 h-4 text-purple-500" />
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">每日习惯</h3>
             </div>
-          ) : noData ? (
-            <EmptyChart />
-          ) : (
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={`${selectedProject?.name}-${granularity}`}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-4"
-              >
-                <p className="text-xs text-gray-500 mb-3">
-                  {metrics?.line1Label} & {metrics?.line2Label} 趋势
-                </p>
-                <ResponsiveContainer width="100%" height={260}>
-                  <LineChart data={chartData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis dataKey="date" tick={{ fontSize: 11, fill: "#9ca3af" }} tickLine={false} />
-                    <YAxis tick={{ fontSize: 11, fill: "#9ca3af" }} tickLine={false} />
-                    <Tooltip
-                      contentStyle={{ borderRadius: 12, border: "1px solid #e5e7eb", fontSize: 13 }}
-                      formatter={(value, name) => [value, name] as [number, string]}
-                    />
-                    <Legend
-                      wrapperStyle={{ fontSize: 11 }}
-                    />
-                    {metrics && (
-                      <>
-                        <Line
-                          type="monotone"
-                          dataKey="v1"
-                          name={metrics.line1Label}
-                          stroke={metrics.line1Color}
-                          strokeWidth={2}
-                          dot={{ fill: metrics.line1Color, r: 2 }}
-                          activeDot={{ r: 4 }}
-                        />
-                        <Line
-                          type="monotone"
-                          dataKey="v2"
-                          name={metrics.line2Label}
-                          stroke={metrics.line2Color}
-                          strokeWidth={2}
-                          dot={{ fill: metrics.line2Color, r: 2 }}
-                          activeDot={{ r: 4 }}
-                        />
-                      </>
-                    )}
-                  </LineChart>
-                </ResponsiveContainer>
-              </motion.div>
-            </AnimatePresence>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <p className="text-xs text-gray-400 dark:text-gray-500">完成率</p>
+                <p className="text-lg font-bold text-gray-900 dark:text-white">{habitRate}%</p>
+                <p className="text-xs text-gray-400">{habitCompleted}/{habitTotal || "-"} 次</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-400 dark:text-gray-500">连续打卡</p>
+                <p className="text-lg font-bold text-emerald-500">{consecutiveDays}</p>
+                <p className="text-xs text-gray-400">天</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-400 dark:text-gray-500">中断次数</p>
+                <p className="text-lg font-bold text-amber-500">{breakCount}</p>
+                <p className="text-xs text-gray-400">{periodDays} 天中</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* 项目完成 */}
+        {projectStats.length > 0 && (
+          <section className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-4">
+            <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-4 uppercase tracking-wide">
+              项目完成
+            </h2>
+            <div className="space-y-3">
+              {projectStats.map((ps) => (
+                <ProjectProgressBar
+                  key={ps.name}
+                  name={ps.name}
+                  done={ps.done}
+                  total={ps.total}
+                  color={ps.color}
+                />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* 回顾记录编辑器 */}
+        <section className="space-y-3">
+          <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+            周期回顾
+          </h2>
+
+          {renderEditableList(
+            "亮点",
+            <Lightbulb className="w-4 h-4 text-amber-500" />,
+            highlights,
+            setHighlights,
+            "h",
+            "亮点项",
+          )}
+          {renderEditableList(
+            "问题",
+            <AlertTriangle className="w-4 h-4 text-red-500" />,
+            problems,
+            setProblems,
+            "p",
+            "问题项",
+          )}
+          {renderEditableList(
+            "改进点",
+            <Rocket className="w-4 h-4 text-indigo-500" />,
+            improvements,
+            setImprovements,
+            "i",
+            "改进点",
           )}
 
-          {/* 对比表 */}
-          {!dataLoading && !noData && metrics && (
-            <CompareTable rows={compareRows} compareMode={compareMode} metrics={metrics} />
-          )}
-        </>
-      )}
-    </div>
+          {/* 保存按钮 */}
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="w-full py-3 rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            <Save className="w-4 h-4" />
+            {saving ? "保存中..." : existingRecord ? "更新回顾" : "保存回顾"}
+          </button>
+        </section>
+
+        {/* 闭环操作 */}
+        <section className="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/30 dark:to-purple-950/30 rounded-2xl border border-indigo-200 dark:border-indigo-800 p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Zap className="w-4 h-4 text-indigo-500" />
+            <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">闭环行动</h2>
+          </div>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+            将本期的改进点转化为待办任务，放入「待安排」池中，确保改进落地执行。
+          </p>
+          <button
+            onClick={handleGenerateTasks}
+            disabled={improvements.filter(Boolean).length === 0}
+            className="w-full py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            <ListTodo className="w-4 h-4" />
+            生成本期待办 ({improvements.filter(Boolean).length} 项)
+          </button>
+        </section>
+      </div>
     </div>
   );
 }

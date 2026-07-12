@@ -18,7 +18,7 @@ export default function QuickCaptureBar({
   onToggleInbox?: () => void;
 }) {
   const [inputValue, setInputValue] = useState("");
-  const [isFocused, setIsFocused] = useState(false);
+  const [showTagSelector, setShowTagSelector] = useState(false);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [tags, setTags] = useState<ProjectV2[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -28,7 +28,7 @@ export default function QuickCaptureBar({
     getAllProjectsV2().then((list) => setTags(list));
   }, []);
 
-  // 发送
+  // 发送（发送后保留焦点，支持连续快速输入）
   const handleSend = async () => {
     if (!inputValue.trim()) return;
 
@@ -44,8 +44,9 @@ export default function QuickCaptureBar({
       showToast({ message: "想法已捕捉", type: "success" });
       setInputValue("");
       setSelectedTags([]);
-      setIsFocused(false);
-      inputRef.current?.blur();
+      setShowTagSelector(false);
+      // 保留焦点，支持连续快速输入
+      inputRef.current?.focus();
     } catch (err) {
       console.error("Failed to capture:", err);
       showToast({ message: "保存失败", type: "error" });
@@ -64,6 +65,15 @@ export default function QuickCaptureBar({
       setInputValue((prev) => (prev ? `${prev} ${tagText}` : tagText));
     }
     inputRef.current?.focus();
+  };
+
+  // 输入变化时检测 # 触发标签选择器
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setInputValue(e.target.value);
+    // 检测输入 # 触发标签选择器
+    if (e.target.value.endsWith("#")) {
+      setShowTagSelector(true);
+    }
   };
 
   // 回车发送
@@ -123,11 +133,11 @@ export default function QuickCaptureBar({
           ref={inputRef}
           type="text"
           value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-          onFocus={() => setIsFocused(true)}
-          onBlur={() => setTimeout(() => setIsFocused(false), 200)}
+          onChange={handleInputChange}
+          onFocus={() => {}}
+          onBlur={() => setTimeout(() => setShowTagSelector(false), 200)}
           onKeyDown={handleKeyDown}
-          placeholder="快速记录想法..."
+          placeholder="快速记录想法...（输入 # 添加标签）"
           className="h-10 sm:h-11 flex-1 bg-gray-100 dark:bg-gray-800 rounded-xl px-4
                      text-sm text-gray-900 dark:text-white
                      placeholder:text-gray-400
@@ -163,9 +173,9 @@ export default function QuickCaptureBar({
         </button>
       </div>
 
-      {/* 标签选择器（聚焦时展开） */}
+      {/* 标签选择器（输入#或点击标签按钮时展开，聚焦时收起减少视觉干扰） */}
       <AnimatePresence>
-        {isFocused && tags.length > 0 && (
+        {showTagSelector && tags.length > 0 && (
           <motion.div
             variants={tagContainerVariants}
             initial="hidden"

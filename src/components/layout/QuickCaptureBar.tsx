@@ -22,14 +22,15 @@ export default function QuickCaptureBar({
   const [showTagSelector, setShowTagSelector] = useState(false);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [tags, setTags] = useState<ProjectV2[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // 加载项目作为标签数据
+  // 加载项目
   useEffect(() => {
     getAllProjectsV2().then((list) => setTags(list));
   }, []);
 
-  // 发送（发送后保留焦点，支持连续快速输入）
+  // 发送
   const handleSend = async () => {
     if (!inputValue.trim()) return;
 
@@ -39,7 +40,8 @@ export default function QuickCaptureBar({
         type: "daily",
         status: "active",
         tags: [...selectedTags],
-      });
+        projectId: selectedProjectId ?? undefined,
+      } as any);
 
       showToast({ message: "想法已捕捉", type: "success" });
       setInputValue("");
@@ -129,6 +131,18 @@ export default function QuickCaptureBar({
         <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-violet-600 flex items-center justify-center flex-shrink-0">
           <Zap size={20} className="text-white" strokeWidth={2} />
         </div>
+
+        {/* 项目选择 */}
+        <select
+          value={selectedProjectId ?? ""}
+          onChange={(e) => setSelectedProjectId(e.target.value ? Number(e.target.value) : null)}
+          className="h-10 sm:h-11 bg-gray-100 dark:bg-gray-800 rounded-xl px-2 text-xs text-gray-600 dark:text-gray-400 border-0 focus:outline-none focus:ring-2 focus:ring-violet-500 flex-shrink-0 max-w-[100px] sm:max-w-[120px] appearance-none cursor-pointer"
+        >
+          <option value="">收件箱</option>
+          {tags.map((p) => (
+            <option key={p.id} value={p.id}>{p.name}</option>
+          ))}
+        </select>
 
         {/* 输入框 */}
         <input

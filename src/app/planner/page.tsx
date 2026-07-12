@@ -4,14 +4,12 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  CalendarCheck, LayoutDashboard, FolderKanban, ChevronRight, Inbox, Plus, X,
-  ChevronDown, Target, CheckCircle, Clock, ExternalLink, ArrowRight,
-  CalendarDays, ClipboardList,
+  CalendarCheck, LayoutDashboard, FolderKanban, ChevronRight, Inbox,
+  Plus, X, ChevronDown, Target, CheckCircle, CalendarDays, ClipboardList,
 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import { getTasksByType, getAllProjectsV2, createProjectV2, captureToTask } from "@/lib/db";
+import { getTasksByType, getAllProjectsV2, createProjectV2 } from "@/lib/db";
 import TodayTab from "./TodayTab";
-import { showToast } from "@/components/ui/Toast";
 import type { ProjectV2, Task } from "@/lib/types";
 
 const COLORS = ["#007AFF", "#34C759", "#FF9500", "#FF3B30", "#AF52DE", "#5856D6"];
@@ -30,96 +28,37 @@ const PLANNER_TABS: { key: PlannerTab; label: string; desc: string; icon: typeof
 function ExpandedProjectCard({
   project,
   onClose,
-  onUpdate,
 }: {
   project: ProjectV2;
   onClose: () => void;
-  onUpdate: () => void;
 }) {
   const router = useRouter();
   const [goals, setGoals] = useState<Task[]>([]);
-  const [pendingTasks, setPendingTasks] = useState<Task[]>([]);
-  const [arrangedTasks, setArrangedTasks] = useState<Task[]>([]);
   const [loaded, setLoaded] = useState(false);
-
-  // 处理中：点击待安排任务弹出分类
-  const [classifyItem, setClassifyItem] = useState<Task | null>(null);
 
   useEffect(() => {
     (async () => {
       const pid = String(project.id);
-      // 目标 = shortterm + daily 中属于该项目的任务
-      const [shortterm, daily, allDaily] = await Promise.all([
+      const [shortterm, daily] = await Promise.all([
         getTasksByType("shortterm"),
         getTasksByType("daily"),
-        getTasksByType("daily"),
       ]);
-
       const allGoals = [...shortterm, ...daily].filter((t) => t.projectId === pid);
       setGoals(allGoals);
-
-      // 所有 daily 任务中 active 且属于该项目的是捕捉任务（待安排）
-      const pending = allDaily.filter((t) => t.projectId === pid && t.status === "active");
-      setPendingTasks(pending);
-
-      // arranged = 已安排的任务（非 active 状态的 daily 任务 + 有 startTime 的）
-      const arranged = allDaily.filter(
-        (t) => t.projectId === pid && t.status !== "active" && t.startTime
-      );
-      setArrangedTasks(arranged);
-
       setLoaded(true);
     })();
   }, [project.id]);
 
-  // 目标进度统计
-  const goalStats = (() => {
-    const shorttermGoals = goals.filter((g) => g.type === "shortterm");
-    const dailyGoals = goals.filter(
-      (g) => g.type === "daily" && g.classification === "daily-trivial"
-    );
-
-    const stDone = shorttermGoals.filter((g) => g.status === "done").length;
-    const stTotal = shorttermGoals.length;
-    const stProgress = stTotal > 0 ? Math.round((stDone / stTotal) * 100) : 0;
-
-    // 习惯打卡：检查今日是否完成（简单基于 status）
-    const dgDone = dailyGoals.filter((g) => g.status === "done").length;
-    const dgTotal = dailyGoals.length;
-    const dgProgress = dgTotal > 0 ? Math.round((dgDone / dgTotal) * 100) : 0;
-
-    return { shortterm: { done: stDone, total: stTotal, progress: stProgress }, daily: { done: dgDone, total: dgTotal, progress: dgProgress } };
-  })();
-
-  // 处理待安排任务
-  const handleClassifyTask = (task: Task) => {
-    setClassifyItem(task);
-  };
-
-  const handleClassifySubmit = async (type: "short-term" | "daily-trivial") => {
-    if (!classifyItem) return;
-    try {
-      // 更新任务类型和分类
-      const { updateTask } = await import("@/lib/db");
-      await updateTask(classifyItem.id!, {
-        type: type === "short-term" ? "shortterm" : "daily",
-        classification: type,
-      });
-      // 保持 active 状态，但添加默认开始时间
-      const today = new Date();
-      const start = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
-      await captureToTask(classifyItem.id!, { startTime: start, endTime: start + 86400000 });
-      showToast({ message: `已分类为${type === "short-term" ? "短期事件" : "每日习惯"}`, type: "success" });
-      setClassifyItem(null);
-      onUpdate();
-    } catch {
-      showToast({ message: "操作失败", type: "error" });
-    }
-  };
+  const shorttermGoals = goals.filter((g) => g.type === "shortterm");
+  const dailyGoals = goals.filter((g) => g.type === "daily" && g.classification === "daily-trivial");
+  const stDone = shorttermGoals.filter((g) => g.status === "done").length;
+  const stProgress = shorttermGoals.length > 0 ? Math.round((stDone / shorttermGoals.length) * 100) : 0;
+  const dgDone = dailyGoals.filter((g) => g.status === "done").length;
+  const dgProgress = dailyGoals.length > 0 ? Math.round((dgDone / dailyGoals.length) * 100) : 0;
 
   if (!loaded) {
     return (
-      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 shadow-md">
+      <div className="bg-white dark:bg-gray-900 rounded-b-2xl border border-indigo-200 dark:border-indigo-800 border-t-0 p-4 shadow-md">
         <div className="flex justify-center py-8">
           <div className="w-6 h-6 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin" />
         </div>
@@ -127,252 +66,108 @@ function ExpandedProjectCard({
     );
   }
 
+  const progressColor = (pct: number) =>
+    pct >= 80 ? "linear-gradient(90deg, #34C759, #30D158)"
+    : pct >= 40 ? "linear-gradient(90deg, #FF9500, #FFB340)"
+    : "linear-gradient(90deg, #007AFF, #5AC8FA)";
+
   return (
-    <>
-      <motion.div
-        initial={{ height: 0, opacity: 0 }}
-        animate={{ height: "auto", opacity: 1 }}
-        exit={{ height: 0, opacity: 0 }}
-        className="overflow-hidden"
-      >
-        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-indigo-200 dark:border-indigo-800 shadow-md overflow-hidden">
-          {/* 头部 */}
-          <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div
-                className="w-9 h-9 rounded-lg flex items-center justify-center"
-                style={{ backgroundColor: `${project.color}20`, color: project.color }}
-              >
-                <FolderKanban className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{project.name}</h3>
-              </div>
+    <motion.div
+      initial={{ height: 0, opacity: 0 }}
+      animate={{ height: "auto", opacity: 1 }}
+      exit={{ height: 0, opacity: 0 }}
+      className="overflow-hidden"
+    >
+      <div className="bg-white dark:bg-gray-900 rounded-b-2xl border border-indigo-200 dark:border-indigo-800 border-t-0 shadow-md overflow-hidden">
+        {/* 头部 */}
+        <div className="p-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div
+              className="w-9 h-9 rounded-lg flex items-center justify-center"
+              style={{ backgroundColor: `${project.color}20`, color: project.color }}
+            >
+              <FolderKanban className="w-5 h-5" />
             </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => router.push(`/projects/${project.id}`)}
-                className="flex items-center gap-1 text-xs text-indigo-600 dark:text-indigo-400 hover:underline"
-              >
-                <ExternalLink className="w-3 h-3" />
-                查看详情
-              </button>
-              <button onClick={onClose} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg">
-                <ChevronDown className="w-5 h-5 text-gray-400" />
-              </button>
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{project.name}</h3>
+          </div>
+          <button onClick={onClose} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg">
+            <ChevronDown className="w-5 h-5 text-gray-400" />
+          </button>
+        </div>
+
+        {/* 汇总进度 */}
+        <div className="px-4 pb-3 grid grid-cols-2 gap-3">
+          <div className="bg-blue-50 dark:bg-blue-900/10 rounded-xl p-3">
+            <div className="flex items-center gap-1.5 mb-1">
+              <CalendarDays className="w-3.5 h-3.5 text-blue-500" />
+              <span className="text-xs text-gray-600 dark:text-gray-400">短期事件</span>
+            </div>
+            <div className="text-lg font-bold text-gray-900 dark:text-white">{stDone}<span className="text-sm font-normal text-gray-400">/{shorttermGoals.length}</span></div>
+            <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full mt-1.5 overflow-hidden">
+              <motion.div initial={{ width: 0 }} animate={{ width: `${stProgress}%` }} transition={{ duration: 0.5 }} className="h-full rounded-full" style={{ background: progressColor(stProgress) }} />
             </div>
           </div>
-
-          {/* 目标进度 */}
-          <div className="px-4 py-4 border-b border-gray-100 dark:border-gray-800">
-            <div className="flex items-center gap-2 mb-3">
-              <Target className="w-4 h-4 text-indigo-500" />
-              <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">目标</span>
+          <div className="bg-green-50 dark:bg-green-900/10 rounded-xl p-3">
+            <div className="flex items-center gap-1.5 mb-1">
+              <ClipboardList className="w-3.5 h-3.5 text-green-500" />
+              <span className="text-xs text-gray-600 dark:text-gray-400">日常习惯</span>
             </div>
-
-            {/* 短期事件 */}
-            <div className="mb-3">
-              <div className="flex items-center justify-between mb-1.5">
-                <div className="flex items-center gap-1.5">
-                  <CalendarDays className="w-3.5 h-3.5 text-blue-500" />
-                  <span className="text-xs text-gray-600 dark:text-gray-400">短期事件</span>
-                </div>
-                <span className="text-xs text-gray-400">
-                  {goalStats.shortterm.done}/{goalStats.shortterm.total}
-                </span>
-              </div>
-              <div className="h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${goalStats.shortterm.progress}%` }}
-                  transition={{ duration: 0.5, ease: "easeOut" }}
-                  className="h-full rounded-full"
-                  style={{
-                    background: goalStats.shortterm.progress >= 80
-                      ? "linear-gradient(90deg, #34C759, #30D158)"
-                      : goalStats.shortterm.progress >= 40
-                      ? "linear-gradient(90deg, #FF9500, #FFB340)"
-                      : "linear-gradient(90deg, #007AFF, #5AC8FA)",
-                  }}
-                />
-              </div>
-              <p className="text-[10px] text-gray-400 mt-1">
-                {goalStats.shortterm.total === 0
-                  ? "暂无短期事件"
-                  : `${goalStats.shortterm.progress}% 完成`}
-              </p>
+            <div className="text-lg font-bold text-gray-900 dark:text-white">{dgDone}<span className="text-sm font-normal text-gray-400">/{dailyGoals.length}</span></div>
+            <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full mt-1.5 overflow-hidden">
+              <motion.div initial={{ width: 0 }} animate={{ width: `${dgProgress}%` }} transition={{ duration: 0.5 }} className="h-full rounded-full" style={{ background: progressColor(dgProgress) }} />
             </div>
-
-            {/* 日常习惯 */}
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <div className="flex items-center gap-1.5">
-                  <ClipboardList className="w-3.5 h-3.5 text-green-500" />
-                  <span className="text-xs text-gray-600 dark:text-gray-400">日常习惯</span>
-                </div>
-                <span className="text-xs text-gray-400">
-                  {goalStats.daily.done}/{goalStats.daily.total}
-                </span>
-              </div>
-              <div className="h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${goalStats.daily.progress}%` }}
-                  transition={{ duration: 0.5, ease: "easeOut" }}
-                  className="h-full rounded-full"
-                  style={{
-                    background: goalStats.daily.progress >= 80
-                      ? "linear-gradient(90deg, #34C759, #30D158)"
-                      : goalStats.daily.progress >= 40
-                      ? "linear-gradient(90deg, #FF9500, #FFB340)"
-                      : "linear-gradient(90deg, #007AFF, #5AC8FA)",
-                  }}
-                />
-              </div>
-              <p className="text-[10px] text-gray-400 mt-1">
-                {goalStats.daily.total === 0
-                  ? "暂无关卡"
-                  : `${goalStats.daily.progress}% 今日打卡`}
-              </p>
-            </div>
-
-            {/* 目标基本信息列表 */}
-            {goals.length > 0 && (
-              <div className="mt-3 space-y-1">
-                {goals.slice(0, 5).map((goal) => (
-                  <div key={goal.id} className="flex items-center gap-2 text-xs py-1">
-                    {goal.status === "done" ? (
-                      <CheckCircle className="w-3 h-3 text-green-500 shrink-0" />
-                    ) : (
-                      <Clock className="w-3 h-3 text-gray-400 shrink-0" />
-                    )}
-                    <span className={`truncate ${goal.status === "done" ? "text-gray-400 line-through" : "text-gray-600 dark:text-gray-400"}`}>
-                      {goal.title}
-                    </span>
-                    <span className="text-[10px] text-gray-400 ml-auto shrink-0">
-                      {goal.type === "shortterm" ? "短期" : "习惯"}
-                    </span>
-                  </div>
-                ))}
-                {goals.length > 5 && (
-                  <p className="text-[10px] text-gray-400 text-center">还有 {goals.length - 5} 个目标...</p>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* 已安排 */}
-          <div className="px-4 py-4 border-b border-gray-100 dark:border-gray-800">
-            <div className="flex items-center gap-2 mb-3">
-              <CheckCircle className="w-4 h-4 text-green-500" />
-              <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">已安排</span>
-              <span className="text-xs text-gray-400">({arrangedTasks.length})</span>
-            </div>
-            {arrangedTasks.length > 0 ? (
-              <div className="space-y-1.5 max-h-40 overflow-y-auto">
-                {arrangedTasks.slice(0, 10).map((task) => (
-                  <div key={task.id} className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400 py-1">
-                    <div className="w-1.5 h-1.5 rounded-full bg-green-400 shrink-0" />
-                    <span className="truncate">{task.title}</span>
-                  </div>
-                ))}
-                {arrangedTasks.length > 10 && (
-                  <p className="text-[10px] text-gray-400 text-center">还有 {arrangedTasks.length - 10} 条...</p>
-                )}
-              </div>
-            ) : (
-              <p className="text-xs text-gray-400 py-2">暂无已安排任务</p>
-            )}
-          </div>
-
-          {/* 待安排 */}
-          <div className="px-4 py-4">
-            <div className="flex items-center gap-2 mb-3">
-              <Clock className="w-4 h-4 text-amber-500" />
-              <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">待安排</span>
-              <span className="text-xs text-gray-400">({pendingTasks.length})</span>
-            </div>
-            {pendingTasks.length > 0 ? (
-              <div className="space-y-1.5 max-h-48 overflow-y-auto">
-                {pendingTasks.map((task) => (
-                  <button
-                    key={task.id}
-                    onClick={() => handleClassifyTask(task)}
-                    className="w-full flex items-center gap-2 p-2 bg-amber-50 dark:bg-amber-900/10 rounded-lg text-xs text-gray-700 dark:text-gray-300 hover:bg-amber-100 dark:hover:bg-amber-900/20 transition-colors text-left group"
-                  >
-                    <Clock className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                    <span className="truncate flex-1">{task.title}</span>
-                    <ArrowRight className="w-3.5 h-3.5 text-amber-400 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <p className="text-xs text-gray-400 py-2">暂无待安排任务</p>
-            )}
           </div>
         </div>
-      </motion.div>
 
-      {/* 处理中 Sheet */}
-      <AnimatePresence>
-        {classifyItem && (
-          <motion.div
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-end justify-center"
-            onClick={() => setClassifyItem(null)}
-          >
-            <motion.div
-              initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
-              transition={{ type: "spring", stiffness: 400, damping: 40 }}
-              onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-lg bg-white dark:bg-gray-900 rounded-t-2xl"
-            >
-              <div className="w-10 h-1 bg-gray-300 dark:bg-gray-700 rounded-full mx-auto mt-3 mb-1" />
-              <div className="px-6 pt-4 pb-6">
-                <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-1">处理中</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                  "{classifyItem.title.slice(0, 40)}" 分类为？
-                </p>
-                <div className="space-y-2">
-                  <button
-                    onClick={() => handleClassifySubmit("short-term")}
-                    className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left"
-                  >
-                    <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
-                      <CalendarDays className="w-5 h-5 text-blue-500" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">短期事件</p>
-                      <p className="text-xs text-gray-400">有截止日期的独立事件</p>
-                    </div>
-                    <ChevronRight className="w-5 h-5 text-gray-400 ml-auto" />
-                  </button>
-                  <button
-                    onClick={() => handleClassifySubmit("daily-trivial")}
-                    className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left"
-                  >
-                    <div className="w-10 h-10 rounded-xl bg-green-50 dark:bg-green-900/20 flex items-center justify-center">
-                      <ClipboardList className="w-5 h-5 text-green-500" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">日常习惯</p>
-                      <p className="text-xs text-gray-400">每天重复的习惯打卡</p>
-                    </div>
-                    <ChevronRight className="w-5 h-5 text-gray-400 ml-auto" />
-                  </button>
-                </div>
+        {/* 目标列表 */}
+        <div className="px-4 pb-3">
+          <div className="flex items-center gap-2 mb-2">
+            <Target className="w-4 h-4 text-indigo-500" />
+            <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">目标列表</span>
+            <span className="text-xs text-gray-400">({goals.length})</span>
+          </div>
+          {goals.length > 0 ? (
+            <div className="space-y-1">
+              {goals.map((goal) => (
                 <button
-                  onClick={() => setClassifyItem(null)}
-                  className="mt-4 w-full py-3 rounded-xl border border-gray-200 dark:border-gray-700 text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                  key={goal.id}
+                  onClick={() => router.push(`/projects/${project.id}/goals/${goal.id}`)}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left group"
                 >
-                  取消
+                  {goal.status === "done" ? (
+                    <CheckCircle className="w-4 h-4 text-green-500 shrink-0" />
+                  ) : (
+                    <div className="w-4 h-4 rounded-full border-2 border-gray-300 dark:border-gray-600 shrink-0" />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-sm truncate ${goal.status === "done" ? "text-gray-400 line-through" : "text-gray-800 dark:text-gray-200"}`}>
+                      {goal.title}
+                    </p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-md ${
+                        goal.type === "shortterm"
+                          ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
+                          : "bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400"
+                      }`}>
+                        {goal.type === "shortterm" ? "短期事件" : "日常习惯"}
+                      </span>
+                      {goal.dueDate && (
+                        <span className="text-[10px] text-gray-400">
+                          截止 {new Date(goal.dueDate).toLocaleDateString("zh-CN")}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-gray-500 transition-colors" />
                 </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-gray-400 py-4 text-center">暂无目标，请在项目中添加短期事件或日常习惯</p>
+          )}
+        </div>
+      </div>
+    </motion.div>
   );
 }
 
@@ -383,13 +178,11 @@ function ProjectList({
   pendingCounts,
   unclassifiedCount,
   onCreateProject,
-  onUpdate,
 }: {
   projects: ProjectV2[];
   pendingCounts: Record<number, number>;
   unclassifiedCount: number;
   onCreateProject: () => void;
-  onUpdate: () => void;
 }) {
   const router = useRouter();
   const [expandedId, setExpandedId] = useState<number | null>(null);
@@ -458,7 +251,6 @@ function ProjectList({
                 <ExpandedProjectCard
                   project={project}
                   onClose={() => setExpandedId(null)}
-                  onUpdate={onUpdate}
                 />
               )}
             </AnimatePresence>
@@ -559,7 +351,6 @@ export default function PlannerPage() {
   }, [searchParams]);
 
   const handleTodayUpdate = useCallback(() => setTodayKey((k) => k + 1), []);
-  const handleProjectUpdate = useCallback(() => { loadProjectData(); }, [loadProjectData]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-gray-950 dark:to-gray-900">
@@ -617,7 +408,6 @@ export default function PlannerPage() {
                   pendingCounts={pendingCounts}
                   unclassifiedCount={unclassifiedCount}
                   onCreateProject={() => { setNewProjectName(""); setShowNewProject(true); }}
-                  onUpdate={handleProjectUpdate}
                 />
               )}
               {activeTab === "today" && (

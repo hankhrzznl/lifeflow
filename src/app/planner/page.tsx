@@ -2,22 +2,24 @@
 
 import { useState, useRef, useCallback, Suspense, lazy, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Clock, CalendarCheck, LayoutGrid } from "lucide-react";
+import { Clock, CalendarCheck, LayoutGrid, Flag } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { getTasksByType } from "@/lib/db";
 import TodayTab from "./TodayTab";
 
 const PendingPage = lazy(() => import("@/app/pending/page").then((mod) => ({ default: mod.default })));
 const ProjectsPage = lazy(() => import("@/app/projects/page").then((mod) => ({ default: mod.default })));
+const GoalsPage = lazy(() => import("@/app/goals/page").then((mod) => ({ default: mod.default })));
 
 // ==================== Tab 定义 ====================
 
-type PlannerTab = "today" | "pending" | "projects";
+type PlannerTab = "today" | "pending" | "projects" | "goals";
 
 const PLANNER_TABS: { key: PlannerTab; label: string; desc: string; icon: typeof Clock }[] = [
   { key: "today", label: "今日", desc: "今天要做的事", icon: Clock },
   { key: "pending", label: "安排", desc: "捕捉的想法，分类到项目", icon: CalendarCheck },
   { key: "projects", label: "项目", desc: "管理项目、子模块和任务", icon: LayoutGrid },
+  { key: "goals", label: "目标", desc: "目标进度、习惯打卡统计", icon: Flag },
 ];
 
 const TAB_COUNT = PLANNER_TABS.length;
@@ -41,7 +43,7 @@ function SlidingTabBar({
   return (
     <div
       ref={containerRef}
-      className="relative grid grid-cols-3 gap-1 bg-gray-100 rounded-xl p-1"
+      className="relative grid grid-cols-4 gap-1 bg-gray-100 rounded-xl p-1"
     >
       {/* 滑动指示器 */}
       <motion.div
@@ -60,23 +62,23 @@ function SlidingTabBar({
           <button
             key={tab.key}
             onClick={() => onTabChange(tab.key)}
-            className={`relative z-10 flex flex-col items-center justify-center py-2 px-3 rounded-lg text-sm transition-colors duration-200 ${
+            className={`relative z-10 flex flex-col items-center justify-center py-2 px-1 rounded-lg text-sm transition-colors duration-200 ${
               active
                 ? "text-gray-900"
                 : "text-gray-500 hover:text-gray-700"
             }`}
           >
-            <div className="flex items-center gap-1.5">
-              <tab.icon className="w-[18px] h-[18px]" strokeWidth={2} />
+            <div className="flex items-center gap-1">
+              <tab.icon className="w-[16px] h-[16px]" strokeWidth={2} />
               <span className={active ? "font-semibold" : "font-medium"}>{tab.label}</span>
               {tab.key === "pending" && pendingCount > 0 && (
-                <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-white bg-violet-500 rounded-full">
+                <span className="inline-flex items-center justify-center min-w-[16px] h-[16px] px-1 text-[9px] font-bold text-white bg-violet-500 rounded-full">
                   {pendingCount > 99 ? "99+" : pendingCount}
                 </span>
               )}
             </div>
             {active && (
-              <span className="text-[10px] text-gray-400 mt-0.5">{tab.desc}</span>
+              <span className="text-[9px] text-gray-400 mt-0.5">{tab.desc}</span>
             )}
           </button>
         );
@@ -123,7 +125,7 @@ export default function PlannerPage() {
   // 从 URL 参数读取 tab
   useEffect(() => {
     const tab = searchParams.get("tab");
-    if (tab && ["today", "pending", "projects"].includes(tab)) {
+    if (tab && ["today", "pending", "projects", "goals"].includes(tab)) {
       setActiveTab(tab as PlannerTab);
     }
   }, [searchParams]);
@@ -146,7 +148,7 @@ export default function PlannerPage() {
         <FadeInUp delay={0} className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900">规划</h1>
           <p className="text-sm text-gray-500 mt-1">
-            捕捉 → 安排 → 项目 · 清晰的规划流程
+            捕捉 → 安排 → 项目 · 目标追踪进度
           </p>
         </FadeInUp>
 
@@ -182,6 +184,7 @@ export default function PlannerPage() {
                 )}
                 {activeTab === "pending" && <PendingPage />}
                 {activeTab === "projects" && <ProjectsPage />}
+                {activeTab === "goals" && <GoalsPage />}
               </Suspense>
             </motion.div>
           </AnimatePresence>

@@ -6,14 +6,14 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft, LayoutDashboard, Inbox, CheckSquare, Trash2, ChevronRight,
   Target, Zap, Sun, CalendarRange, Clock, FolderKanban, Plus,
+  ChevronDown, Layers,
 } from "lucide-react";
 import Link from "next/link";
-import {
-  getProjectV2, getBoardsByProject, getSectionsByBoard, getTasksBySection,
+import { getProjectV2, getBoardsByProject, getSectionsByBoard, getTasksBySection,
   getTasksByType, createTask, updateTask, deleteTask, captureToTask,
 } from "@/lib/db";
 import { showToast } from "@/components/ui/Toast";
-import type { ProjectV2, Board, Task } from "@/lib/types";
+import type { ProjectV2, Board, Task, Section } from "@/lib/types";
 
 type DetailTab = "overview" | "pending" | "arranged";
 
@@ -48,6 +48,10 @@ export default function ProjectDetailPage() {
   // 待安排 & 已安排
   const [pendingTasks, setPendingTasks] = useState<Task[]>([]);
   const [arrangedTasks, setArrangedTasks] = useState<Task[]>([]);
+
+  // 展开态：Board → Sections
+  const [expandedBoards, setExpandedBoards] = useState<Set<number>>(new Set());
+  const [boardSections, setBoardSections] = useState<Map<number, Section[]>>(new Map());
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -111,6 +115,22 @@ export default function ProjectDetailPage() {
     await deleteTask(taskId);
     showToast({ message: "已删除", type: "info" });
     await loadData();
+  };
+
+  // 展开/折叠子模块
+  const toggleBoard = async (boardId: number) => {
+    const next = new Set(expandedBoards);
+    if (next.has(boardId)) {
+      next.delete(boardId);
+      setExpandedBoards(next);
+    } else {
+      next.add(boardId);
+      setExpandedBoards(next);
+      if (!boardSections.has(boardId)) {
+        const sections = await getSectionsByBoard(boardId);
+        setBoardSections((prev) => new Map(prev).set(boardId, sections));
+      }
+    }
   };
 
   if (loading) {
@@ -213,21 +233,56 @@ export default function ProjectDetailPage() {
                   </div>
                 </div>
 
-                {/* 子模块列表 */}
+                {/* 子模块列表 — 可展开 */}
                 <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-4">
                   <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">子模块</h3>
                   {boards.length > 0 ? (
-                    <div className="space-y-2">
-                      {boards.map((board) => (
-                        <Link
-                          key={board.id}
-                          href={`/projects/${projectId}/boards/${board.id}`}
-                          className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-750 transition-colors"
-                        >
-                          <span className="text-sm text-gray-700 dark:text-gray-300">{board.name}</span>
-                          <ChevronRight className="w-4 h-4 text-gray-400" />
-                        </Link>
-                      ))}
+                    <div className="space-y-1">
+                      {boards.map((board) => {
+                        const isExpanded = expandedBoards.has(board.id!);
+                        const sections = boardSections.get(board.id!) || [];
+                        return (
+                          <div key={board.id}>
+                            <button
+                              onClick={() => toggleBoard(board.id!)}
+                              className="w-full flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-750 transition-colors"
+                            >
+                              <div className="flex items-center gap-2">
+                                <Layers className="w-4 h-4 text-gray-400" />
+                                <span className="text-sm text-gray-700 dark:text-gray-300">{board.name}</span>
+                              </div>
+                              <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
+                            </button>
+                            <AnimatePresence>
+                              {isExpanded && (
+                                <motion.div
+                                  initial={{ height: 0, opacity: 0 }}
+                                  animate={{ height: "auto", opacity: 1 }}
+                                  exit={{ height: 0, opacity: 0 }}
+                                  className="overflow-hidden"
+                                >
+                                  <div className="ml-4 mt-1 space-y-1 pb-1">
+                                    {sections.length > 0 ? (
+                                      sections.map((section) => (
+                                        <Link
+                                          key={section.id}
+                                          href={`/projects/${projectId}/boards/${board.id}/sections/${section.id}`}
+                                          className="flex items-center justify-between p-2.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group"
+                                        >
+                                          <span className="text-sm text-gray-600 dark:text-gray-400">{section.name}</span>
+                                          <ChevronRight className="w-3.5 h-3.5 text-gray-300 group-hover:text-gray-500" />
+                                        </Link>
+                                      ))
+                                    ) : (
+                                      <p className="text-xs text-gray-400 py-3 text-center">暂无子模块</p>
+                                    )}
+                                  </div>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+                          </div>
+                        );
+                      })}
                     </div>
                   ) : (
                     <p className="text-xs text-gray-400 py-4 text-center">暂无子模块</p>

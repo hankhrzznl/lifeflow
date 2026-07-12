@@ -39,6 +39,14 @@ export default function UnclassifiedPage() {
     load();
   };
 
+  const handleQuickTomorrow = async (id: number) => {
+    const t = new Date(); t.setDate(t.getDate() + 1);
+    const start = new Date(t.getFullYear(), t.getMonth(), t.getDate()).getTime();
+    await captureToTask(id, { startTime: start, endTime: start + 86400000 });
+    showToast({ message: "已添加到明天", type: "success" });
+    load();
+  };
+
   const handleDelete = async (id: number) => {
     await deleteTask(id);
     showToast({ message: "已删除", type: "info" });
@@ -84,6 +92,7 @@ export default function UnclassifiedPage() {
                   <span className="text-xs text-gray-400">{relativeTime(task.createdAt)}</span>
                   <div className="flex-1" />
                   <button onClick={() => handleQuickToday(task.id!)} className="px-2 py-1 text-xs bg-amber-50 dark:bg-amber-900/20 text-amber-600 rounded-lg hover:bg-amber-100">今日</button>
+                  <button onClick={() => handleQuickTomorrow(task.id!)} className="px-2 py-1 text-xs bg-blue-50 dark:bg-blue-900/20 text-blue-600 rounded-lg hover:bg-blue-100">明天</button>
                   <button onClick={() => handleDelete(task.id!)} className="px-2 py-1 text-xs bg-red-50 dark:bg-red-900/20 text-red-500 rounded-lg hover:bg-red-100">删除</button>
                 </div>
               </motion.div>

@@ -3,11 +3,14 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { CalendarCheck, LayoutDashboard, FolderKanban, ChevronRight, Inbox, Plus } from "lucide-react";
+import { CalendarCheck, LayoutDashboard, FolderKanban, ChevronRight, Inbox, Plus, X } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import { getTasksByType, getAllProjectsV2 } from "@/lib/db";
+import { getTasksByType, getAllProjectsV2, createProjectV2 } from "@/lib/db";
 import TodayTab from "./TodayTab";
+import { showToast } from "@/components/ui/Toast";
 import type { ProjectV2, Task } from "@/lib/types";
+
+const COLORS = ["#007AFF", "#34C759", "#FF9500", "#FF3B30", "#AF52DE", "#5856D6"];
 
 // ==================== Tab 定义 ====================
 
@@ -24,10 +27,12 @@ function ProjectList({
   projects,
   pendingCounts,
   unclassifiedCount,
+  onCreateProject,
 }: {
   projects: ProjectV2[];
   pendingCounts: Record<number, number>;
   unclassifiedCount: number;
+  onCreateProject: () => void;
 }) {
   const router = useRouter();
 
@@ -88,8 +93,24 @@ function ProjectList({
         <div className="text-center py-12">
           <FolderKanban className="w-10 h-10 text-gray-300 mx-auto mb-3" />
           <p className="text-sm text-gray-400">暂无项目</p>
+          <button
+            onClick={onCreateProject}
+            className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-indigo-600 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl hover:bg-indigo-100 transition-colors"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            创建第一个项目
+          </button>
         </div>
       )}
+
+      {/* 新建项目按钮 */}
+      <button
+        onClick={onCreateProject}
+        className="w-full flex items-center justify-center gap-2 py-3 text-sm text-gray-500 hover:text-gray-700 bg-white dark:bg-gray-900 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 hover:border-gray-300 transition-colors"
+      >
+        <Plus className="w-4 h-4" />
+        新建项目
+      </button>
     </div>
   );
 }
@@ -118,6 +139,16 @@ export default function PlannerPage() {
   const [projects, setProjects] = useState<ProjectV2[]>([]);
   const [pendingCounts, setPendingCounts] = useState<Record<number, number>>({});
   const [unclassifiedCount, setUnclassifiedCount] = useState(0);
+  const [showNewProject, setShowNewProject] = useState(false);
+  const [newProjectName, setNewProjectName] = useState("");
+
+  const handleCreateProject = useCallback(async () => {
+    if (!newProjectName.trim()) return;
+    await createProjectV2(newProjectName.trim(), COLORS[Math.floor(Math.random() * COLORS.length)]);
+    setNewProjectName("");
+    setShowNewProject(false);
+    await loadProjectData();
+  }, [newProjectName]);
 
   const loadProjectData = useCallback(async () => {
     const allProjects = await getAllProjectsV2();
@@ -207,6 +238,7 @@ export default function PlannerPage() {
                   projects={projects}
                   pendingCounts={pendingCounts}
                   unclassifiedCount={unclassifiedCount}
+                  onCreateProject={() => { setNewProjectName(""); setShowNewProject(true); }}
                 />
               )}
               {activeTab === "today" && (
@@ -216,6 +248,53 @@ export default function PlannerPage() {
           </AnimatePresence>
         </FadeInUp>
       </div>
+
+      {/* 新建项目弹窗 */}
+      <AnimatePresence>
+        {showNewProject && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/40 flex items-end justify-center"
+            onClick={() => setShowNewProject(false)}
+          >
+            <motion.div
+              initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
+              transition={{ type: "spring", stiffness: 400, damping: 40 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-lg bg-white dark:bg-gray-900 rounded-t-2xl p-6"
+            >
+              <div className="w-10 h-1 bg-gray-300 dark:bg-gray-700 rounded-full mx-auto mb-4" />
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">新建项目</h3>
+                <button onClick={() => setShowNewProject(false)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg">
+                  <X className="w-5 h-5 text-gray-400" />
+                </button>
+              </div>
+              <input
+                type="text"
+                value={newProjectName}
+                onChange={(e) => setNewProjectName(e.target.value)}
+                placeholder="项目名称"
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-4"
+                autoFocus
+                onKeyDown={(e) => e.key === "Enter" && handleCreateProject()}
+              />
+              <div className="flex gap-3">
+                <button onClick={() => setShowNewProject(false)} className="flex-1 py-3 rounded-xl border border-gray-200 dark:border-gray-700 text-sm text-gray-500">
+                  取消
+                </button>
+                <button
+                  onClick={handleCreateProject}
+                  disabled={!newProjectName.trim()}
+                  className="flex-1 py-3 rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 disabled:opacity-40"
+                >
+                  创建
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

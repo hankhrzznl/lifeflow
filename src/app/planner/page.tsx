@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback, Suspense, lazy, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Clock, CalendarCheck, LayoutGrid, Flag } from "lucide-react";
+import { CalendarCheck, LayoutDashboard } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { getTasksByType } from "@/lib/db";
 import TodayTab from "./TodayTab";
@@ -13,13 +13,11 @@ const GoalsPage = lazy(() => import("@/app/goals/page").then((mod) => ({ default
 
 // ==================== Tab 定义 ====================
 
-type PlannerTab = "today" | "pending" | "projects" | "goals";
+type PlannerTab = "pending" | "dashboard";
 
-const PLANNER_TABS: { key: PlannerTab; label: string; desc: string; icon: typeof Clock }[] = [
-  { key: "today", label: "今日", desc: "今天要做的事", icon: Clock },
-  { key: "pending", label: "安排", desc: "捕捉的想法，分类到项目", icon: CalendarCheck },
-  { key: "projects", label: "项目", desc: "管理项目、子模块和任务", icon: LayoutGrid },
-  { key: "goals", label: "目标", desc: "目标进度、习惯打卡统计", icon: Flag },
+const PLANNER_TABS: { key: PlannerTab; label: string; desc: string; icon: typeof CalendarCheck }[] = [
+  { key: "pending", label: "安排", desc: "捕捉的想法，快速分类处理", icon: CalendarCheck },
+  { key: "dashboard", label: "今日", desc: "今日任务 · 项目 · 目标进度", icon: LayoutDashboard },
 ];
 
 const TAB_COUNT = PLANNER_TABS.length;
@@ -43,7 +41,7 @@ function SlidingTabBar({
   return (
     <div
       ref={containerRef}
-      className="relative grid grid-cols-4 gap-1 bg-gray-100 rounded-xl p-1"
+      className="relative grid grid-cols-2 gap-1 bg-gray-100 rounded-xl p-1"
     >
       {/* 滑动指示器 */}
       <motion.div
@@ -62,23 +60,23 @@ function SlidingTabBar({
           <button
             key={tab.key}
             onClick={() => onTabChange(tab.key)}
-            className={`relative z-10 flex flex-col items-center justify-center py-2 px-1 rounded-lg text-sm transition-colors duration-200 ${
+            className={`relative z-10 flex flex-col items-center justify-center py-2.5 px-4 rounded-lg text-sm transition-colors duration-200 ${
               active
                 ? "text-gray-900"
                 : "text-gray-500 hover:text-gray-700"
             }`}
           >
-            <div className="flex items-center gap-1">
-              <tab.icon className="w-[16px] h-[16px]" strokeWidth={2} />
+            <div className="flex items-center gap-2">
+              <tab.icon className="w-[18px] h-[18px]" strokeWidth={2} />
               <span className={active ? "font-semibold" : "font-medium"}>{tab.label}</span>
               {tab.key === "pending" && pendingCount > 0 && (
-                <span className="inline-flex items-center justify-center min-w-[16px] h-[16px] px-1 text-[9px] font-bold text-white bg-violet-500 rounded-full">
+                <span className="inline-flex items-center justify-center min-w-[20px] h-[20px] px-1.5 text-[11px] font-bold text-white bg-violet-500 rounded-full">
                   {pendingCount > 99 ? "99+" : pendingCount}
                 </span>
               )}
             </div>
             {active && (
-              <span className="text-[9px] text-gray-400 mt-0.5">{tab.desc}</span>
+              <span className="text-[10px] text-gray-400 mt-0.5">{tab.desc}</span>
             )}
           </button>
         );
@@ -118,15 +116,16 @@ function FadeInUp({
 
 export default function PlannerPage() {
   const searchParams = useSearchParams();
-  const [activeTab, setActiveTab] = useState<PlannerTab>("today");
+  const [activeTab, setActiveTab] = useState<PlannerTab>("pending");
   const [todayKey, setTodayKey] = useState(0);
   const [pendingCount, setPendingCount] = useState(0);
 
   // 从 URL 参数读取 tab
   useEffect(() => {
     const tab = searchParams.get("tab");
-    if (tab && ["today", "pending", "projects", "goals"].includes(tab)) {
-      setActiveTab(tab as PlannerTab);
+    if (tab === "pending") setActiveTab("pending");
+    if (tab === "dashboard" || tab === "today" || tab === "projects" || tab === "goals") {
+      setActiveTab("dashboard");
     }
   }, [searchParams]);
 
@@ -148,7 +147,7 @@ export default function PlannerPage() {
         <FadeInUp delay={0} className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900">规划</h1>
           <p className="text-sm text-gray-500 mt-1">
-            捕捉 → 安排 → 项目 · 目标追踪进度
+            安排待办 · 今日执行 · 追踪目标
           </p>
         </FadeInUp>
 
@@ -179,12 +178,34 @@ export default function PlannerPage() {
                   </div>
                 }
               >
-                {activeTab === "today" && (
-                  <TodayTab key={todayKey} onUpdate={handleTodayUpdate} />
-                )}
                 {activeTab === "pending" && <PendingPage />}
-                {activeTab === "projects" && <ProjectsPage />}
-                {activeTab === "goals" && <GoalsPage />}
+                {activeTab === "dashboard" && (
+                  <div className="space-y-6">
+                    {/* 今日任务 */}
+                    <section>
+                      <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
+                        今日任务
+                      </h2>
+                      <TodayTab key={todayKey} onUpdate={handleTodayUpdate} />
+                    </section>
+
+                    {/* 项目管理 */}
+                    <section>
+                      <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
+                        项目管理
+                      </h2>
+                      <ProjectsPage />
+                    </section>
+
+                    {/* 目标进度 */}
+                    <section>
+                      <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
+                        目标进度
+                      </h2>
+                      <GoalsPage />
+                    </section>
+                  </div>
+                )}
               </Suspense>
             </motion.div>
           </AnimatePresence>

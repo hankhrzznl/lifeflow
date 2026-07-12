@@ -466,16 +466,6 @@ export default function CaptureInbox({ visible, onRefresh }: { visible: boolean;
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{`"${classifyTarget!.title.slice(0, 40)}" 要创建为？`}</p>
                 <div className="space-y-1">
                   <button
-                    onClick={async () => { setFlowPhase("moduleForm"); const p = await getAllProjectsV2().catch(() => [] as ProjectV2[]); setProjects(p); setBoards([]); setSections([]); }}
-                    className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left active:scale-[0.98]"
-                  >
-                    <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center">
-                      <Mountain className="w-5 h-5 text-indigo-500" />
-                    </div>
-                    <span className="flex-1 text-sm font-medium text-gray-900 dark:text-gray-100">子模块（长期目标）</span>
-                    <ChevronRight className="w-5 h-5 text-gray-400" />
-                  </button>
-                  <button
                     onClick={() => { setFlowPhase("taskClassify"); }}
                     className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left active:scale-[0.98]"
                   >

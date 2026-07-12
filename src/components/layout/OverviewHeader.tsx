@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Bell, Moon, Sun, User, Zap, Timer } from "lucide-react";
+import { Bell, Moon, Sun, Settings, Zap, Timer } from "lucide-react";
 
 // ==================== 工具 ====================
 
@@ -26,7 +26,7 @@ function IconButton({
   onClick,
   badge,
 }: {
-  icon: typeof Bell;
+  icon: React.ElementType;
   onClick?: () => void;
   badge?: number;
 }) {
@@ -178,7 +178,7 @@ export default function OverviewHeader() {
 
         {/* 设置 */}
         <motion.div variants={itemVariants}>
-          <IconButton icon={User} onClick={() => router.push("/settings")} />
+          <IconButton icon={Settings} onClick={() => router.push("/settings")} />
         </motion.div>
       </motion.div>
     </motion.div>

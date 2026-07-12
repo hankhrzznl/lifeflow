@@ -1,74 +1,15 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
-  Layers, Menu, X,
-  Settings, BarChart3, Trash2, Puzzle, ChevronRight, Bell, CalendarDays, Bot, TrendingUp,
+  Layers, BarChart3, CalendarDays, Bot, TrendingUp,
 } from "lucide-react";
 import { getPluginsForNavbar } from "@/lib/db";
 import { getPluginConfig } from "@/lib/plugin-config";
 import type { PluginMetadata } from "@/lib/types";
-
-const moreItems = [
-  { label: "提醒", href: "/reminders", icon: Bell },
-  { label: "设置", href: "/settings", icon: Settings },
-  { label: "回收站", href: "/trash", icon: Trash2 },
-  { label: "插件", href: "/plugins", icon: Puzzle },
-];
-
-// ==================== 涟漪按钮 ====================
-
-function RippleButton({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  const [ripples, setRipples] = useState<{ id: number; x: number; y: number }[]>([]);
-  const idRef = useRef(0);
-
-  const handleClick = (e: React.MouseEvent) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    const id = idRef.current++;
-    setRipples((prev) => [...prev, { id, x, y }]);
-    setTimeout(() => {
-      setRipples((prev) => prev.filter((r) => r.id !== id));
-    }, 400);
-    onClick();
-  };
-
-  return (
-    <motion.button
-      whileTap={{ scale: 0.95 }}
-      onClick={handleClick}
-      className={`relative flex flex-col items-center justify-center gap-0.5 min-w-[44px] min-h-[44px] overflow-hidden ${
-        active ? "text-blue-500" : "text-gray-400"
-      }`}
-    >
-      {ripples.map((r) => (
-        <span
-          key={r.id}
-          className="absolute rounded-full bg-blue-500/20 pointer-events-none animate-ripple"
-          style={{
-            left: r.x - 20,
-            top: r.y - 20,
-            width: 40,
-            height: 40,
-          }}
-        />
-      ))}
-      {children}
-    </motion.button>
-  );
-}
 
 export default function BottomTabBar() {
   const pathname = usePathname();
@@ -95,11 +36,7 @@ export default function BottomTabBar() {
     setEntered(true);
   }, []);
 
-  const [openPanel, setOpenPanel] = useState<"more" | null>(null);
-
   const isActive = useCallback((path: string) => pathname.startsWith(path), [pathname]);
-
-  const closePanel = () => setOpenPanel(null);
 
   const baseTabs = [
     {
@@ -121,10 +58,6 @@ export default function BottomTabBar() {
     {
       id: "stats", label: "统计", icon: TrendingUp, path: "/stats",
       active: isActive("/stats"),
-    },
-    {
-      id: "more", label: "更多", icon: Menu, path: null,
-      active: pathname.startsWith("/settings") || pathname.startsWith("/trash") || pathname.startsWith("/reminders") || pathname.startsWith("/plugins"),
     },
   ];
 
@@ -158,33 +91,12 @@ export default function BottomTabBar() {
             if (!tab) return null;
             const active = tab.active;
 
-            // "更多"按钮
-            if (tab.id === "more") {
-              return (
-                <RippleButton
-                  key={tab.id}
-                  active={active}
-                  onClick={() => setOpenPanel("more")}
-                >
-                  {active && (
-                    <span className="w-1 h-1 rounded-full bg-blue-500 mb-0.5" />
-                  )}
-                  <tab.icon
-                    className="w-6 h-6"
-                    strokeWidth={1.5}
-                  />
-                  <span className="text-[11px] font-medium">{tab.label}</span>
-                </RippleButton>
-              );
-            }
-
             // 今日悬浮圆形按钮
             if (tab.id === "today") {
               return (
                 <Link
                   key={tab.id}
                   href={tab.path!}
-                  onClick={closePanel}
                   className="relative flex flex-col items-center justify-center min-w-[44px]"
                 >
                   <motion.div
@@ -210,7 +122,6 @@ export default function BottomTabBar() {
                 <Link
                   key={tab.id}
                   href={tab.path}
-                  onClick={closePanel}
                   className={`relative flex flex-col items-center justify-center gap-0.5 min-w-[44px] min-h-[44px] overflow-hidden ${
                     active ? "text-blue-500" : "text-gray-400"
                   }`}
@@ -235,51 +146,6 @@ export default function BottomTabBar() {
           })}
         </div>
       </motion.nav>
-
-      {openPanel && (
-        <div
-          className="fixed inset-0 bg-black/40 z-50"
-          onClick={closePanel}
-        />
-      )}
-      <AnimatePresence>
-        {openPanel === "more" && (
-          <motion.div
-            initial={{ y: "100%" }}
-            animate={{ y: 0 }}
-            exit={{ y: "100%" }}
-            transition={{ type: "spring", stiffness: 400, damping: 40 }}
-            className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-2xl pb-[max(24px,env(safe-area-inset-bottom))]"
-          >
-            <div className="flex items-center justify-between px-4 pt-4 pb-2">
-              <h2 className="text-base font-semibold text-gray-900">
-                更多
-              </h2>
-              <button
-                onClick={closePanel}
-                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100"
-              >
-                <X className="w-5 h-5 text-gray-400" />
-              </button>
-            </div>
-
-            <div className="px-2 pb-2">
-              {moreItems.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={closePanel}
-                  className="flex items-center gap-3 h-14 px-4 rounded-xl text-gray-900 hover:bg-gray-50 transition-colors"
-                >
-                  <item.icon className="w-5 h-5 text-gray-500" strokeWidth={1.5} />
-                  <span className="text-sm">{item.label}</span>
-                  <ChevronRight className="w-4 h-4 text-gray-300 ml-auto" />
-                </Link>
-              ))}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </>
   );
 }

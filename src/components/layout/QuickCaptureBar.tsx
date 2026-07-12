@@ -3,8 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Zap, Send, ChevronDown } from "lucide-react";
-import { db } from "@/lib/db";
-import { getAllProjectsV2 } from "@/lib/db";
+import { createTask, getAllProjectsV2 } from "@/lib/db";
 import type { ProjectV2 } from "@/lib/types";
 import { showToast } from "@/components/ui/Toast";
 
@@ -33,12 +32,11 @@ export default function QuickCaptureBar({
     if (!inputValue.trim()) return;
 
     try {
-      await db.capture.add({
-        content: inputValue.trim(),
-        status: "inbox" as const,
+      await createTask({
+        title: inputValue.trim(),
+        type: "daily",
+        status: "active",
         tags: [...selectedTags],
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
       });
 
       showToast({ message: "想法已捕捉", type: "success" });

@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useRef, useCallback, Suspense, lazy } from "react";
+import { useState, useRef, useCallback, Suspense, lazy, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Clock, CalendarCheck, Flag, LayoutGrid } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { getTasksByType } from "@/lib/db";
 import TodayTab from "./TodayTab";
 
 const PendingPage = lazy(() => import("@/app/pending/page").then((mod) => ({ default: mod.default })));
@@ -26,10 +28,12 @@ function SlidingTabBar({
   tabs,
   activeTab,
   onTabChange,
+  pendingCount = 0,
 }: {
   tabs: typeof PLANNER_TABS;
   activeTab: PlannerTab;
   onTabChange: (key: PlannerTab) => void;
+  pendingCount?: number;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -63,6 +67,11 @@ function SlidingTabBar({
           >
             <tab.icon className="w-[18px] h-[18px]" strokeWidth={2} />
             <span>{tab.label}</span>
+            {tab.key === "pending" && pendingCount > 0 && (
+              <span className="ml-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-white bg-violet-500 rounded-full">
+                {pendingCount > 99 ? "99+" : pendingCount}
+              </span>
+            )}
           </button>
         );
       })}
@@ -100,8 +109,25 @@ function FadeInUp({
 // ==================== 主组件 ====================
 
 export default function PlannerPage() {
+  const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<PlannerTab>("today");
   const [todayKey, setTodayKey] = useState(0);
+  const [pendingCount, setPendingCount] = useState(0);
+
+  // 从 URL 参数读取 tab
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    if (tab && ["today", "pending", "goals", "projects"].includes(tab)) {
+      setActiveTab(tab as PlannerTab);
+    }
+  }, [searchParams]);
+
+  // 加载待安排数量
+  useEffect(() => {
+    getTasksByType("daily").then((tasks) => {
+      setPendingCount(tasks.filter((t) => t.status === "active").length);
+    });
+  }, [activeTab]);
 
   const handleTodayUpdate = useCallback(() => {
     setTodayKey((k) => k + 1);
@@ -124,6 +150,7 @@ export default function PlannerPage() {
             tabs={PLANNER_TABS}
             activeTab={activeTab}
             onTabChange={setActiveTab}
+            pendingCount={pendingCount}
           />
         </FadeInUp>
 

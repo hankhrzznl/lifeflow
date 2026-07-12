@@ -417,6 +417,18 @@ export default function CaptureInbox({ visible, onRefresh }: { visible: boolean;
               )}
             </AnimatePresence>
           </div>
+
+          {/* 跳转规划页 */}
+          {items.length > 0 && (
+            <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+              <button
+                onClick={() => router.push("/planner?tab=pending")}
+                className="w-full flex items-center justify-center gap-2 py-2 text-xs font-medium text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/20 rounded-lg transition-colors"
+              >
+                在规划页中分类安排 <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
         </div>
       </motion.div>
 

@@ -1,14 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import OverviewHeader from "@/components/layout/OverviewHeader";
 import QuickCaptureBar from "@/components/layout/QuickCaptureBar";
 import CaptureInbox from "@/components/layout/CaptureInbox";
 import TodayTab from "@/app/planner/TodayTab";
 import TodayTimeline from "@/components/schedule/TodayTimeline";
+import { getTasksByType } from "@/lib/db";
 
 export default function TodayPage() {
   const [inboxExpanded, setInboxExpanded] = useState(false);
+  const [inboxCount, setInboxCount] = useState(0);
+
+  // 加载收件箱数量
+  const loadInboxCount = () => {
+    getTasksByType("daily").then((tasks) => {
+      setInboxCount(tasks.filter((t) => t.status === "active").length);
+    });
+  };
+
+  useEffect(() => { loadInboxCount(); }, []);
+  useEffect(() => { if (!inboxExpanded) loadInboxCount(); }, [inboxExpanded]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-gray-950 dark:to-gray-900 text-slate-900 dark:text-white">
@@ -20,8 +32,9 @@ export default function TodayPage() {
           <QuickCaptureBar
             inboxExpanded={inboxExpanded}
             onToggleInbox={() => setInboxExpanded((v) => !v)}
+            inboxCount={inboxCount}
           />
-          <CaptureInbox visible={inboxExpanded} />
+          <CaptureInbox visible={inboxExpanded} onRefresh={loadInboxCount} />
         </div>
 
         {/* 今日任务 */}

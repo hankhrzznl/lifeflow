@@ -12,9 +12,11 @@ import { showToast } from "@/components/ui/Toast";
 export default function QuickCaptureBar({
   inboxExpanded,
   onToggleInbox,
+  inboxCount = 0,
 }: {
   inboxExpanded?: boolean;
   onToggleInbox?: () => void;
+  inboxCount?: number;
 }) {
   const [inputValue, setInputValue] = useState("");
   const [showTagSelector, setShowTagSelector] = useState(false);
@@ -43,6 +45,8 @@ export default function QuickCaptureBar({
       setInputValue("");
       setSelectedTags([]);
       setShowTagSelector(false);
+      // 自动展开收件箱显示新捕捉的内容
+      if (!inboxExpanded && onToggleInbox) onToggleInbox();
       // 保留焦点，支持连续快速输入
       inputRef.current?.focus();
     } catch (err) {
@@ -164,9 +168,14 @@ export default function QuickCaptureBar({
           onClick={onToggleInbox}
           className="text-sm text-gray-500 hover:text-gray-700
                      dark:text-gray-400 dark:hover:text-gray-200
-                     transition-colors duration-200 flex-shrink-0 flex items-center gap-0.5"
+                     transition-colors duration-200 flex-shrink-0 flex items-center gap-1"
         >
           <span>{inboxExpanded ? "收起" : "展开"}</span>
+          {!inboxExpanded && inboxCount > 0 && (
+            <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-white bg-violet-500 rounded-full">
+              {inboxCount}
+            </span>
+          )}
           <ChevronDown className={`w-3.5 h-3.5 transition-transform ${inboxExpanded ? "rotate-180" : ""}`} strokeWidth={2} />
         </button>
       </div>

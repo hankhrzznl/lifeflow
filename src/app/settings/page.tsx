@@ -4,11 +4,11 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Key, Download, Upload, Trash2, Eye, EyeOff, AlertTriangle,
-  Layers, RefreshCw, Calendar, Flag, Tag,
+  Layers, RefreshCw, Calendar, Flag, Tag, Bookmark,
 } from "lucide-react";
 import { db, exportAllData, importAllData } from "@/lib/db";
 import { showToast } from "@/components/ui/Toast";
-import type { UserSettings, LinkageSettings } from "@/lib/types";
+import type { UserSettings, LinkageSettings, GoalTemplate } from "@/lib/types";
 
 const API_KEY_STORAGE_KEY = "lifeflow_api_key";
 
@@ -77,6 +77,9 @@ export default function SettingsPage() {
     autoAppendTags: true,
   });
   const [linkageLoaded, setLinkageLoaded] = useState(false);
+  const [templates, setTemplates] = useState<GoalTemplate[]>([]);
+  const [showTemplateView, setShowTemplateView] = useState(false);
+  const [viewingTemplate, setViewingTemplate] = useState<GoalTemplate | null>(null);
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -90,6 +93,16 @@ export default function SettingsPage() {
       }
     };
     loadSettings();
+  }, []);
+
+  useEffect(() => {
+    const loadTemplates = async () => {
+      try {
+        const all = await db.goalTemplates.toArray();
+        setTemplates(all);
+      } catch {}
+    };
+    loadTemplates();
   }, []);
 
   const handleToggleLinkage = async (key: keyof LinkageSettings) => {
@@ -165,6 +178,12 @@ export default function SettingsPage() {
     } catch {
       showToast({ message: "清除失败，请重试", type: "error", duration: 3000 });
     }
+  }
+
+  async function handleDeleteTemplate(id: number) {
+    await db.goalTemplates.delete(id);
+    setTemplates(prev => prev.filter(t => t.id !== id));
+    showToast({ message: "模板已删除", type: "success", duration: 2000 });
   }
 
   function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
@@ -372,6 +391,58 @@ export default function SettingsPage() {
           </motion.button>
         </div>
 
+        {/* === 我的模板 === */}
+        <div className="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-100 dark:border-gray-800">
+          <div className="flex items-start gap-3 mb-4">
+            <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center flex-shrink-0">
+              <Bookmark className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center justify-between">
+                <h3 className="text-base font-semibold text-gray-900 dark:text-white">我的模板</h3>
+                <span className="text-xs text-gray-400">{templates.length} 个</span>
+              </div>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                管理自定义的目标模板，内置模板不可删除
+              </p>
+            </div>
+          </div>
+
+          {templates.length > 0 ? (
+            <div className="space-y-2">
+              {templates.map(t => (
+                <div key={t.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-lg">{t.icon}</span>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{t.name}</p>
+                      <p className="text-xs text-gray-400">{t.plans.length} 个阶段 · {t.category}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => { setViewingTemplate(t); setShowTemplateView(true); }}
+                      className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </button>
+                    {!t.isBuiltIn && (
+                      <button
+                        onClick={() => handleDeleteTemplate(t.id!)}
+                        className="p-1.5 text-red-400 hover:text-red-600 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-gray-400 text-center py-4">暂无模板，从目标详情页可将目标保存为模板</p>
+          )}
+        </div>
+
         {/* === 版本信息 === */}
         <div className="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-100 dark:border-gray-800">
           <div className="flex items-center gap-4">
@@ -447,6 +518,42 @@ export default function SettingsPage() {
                     className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium bg-red-500 text-white hover:bg-red-600 transition-colors">确认清除</motion.button>
                 </div>
               </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showTemplateView && viewingTemplate && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-end justify-center bg-black/40"
+            onClick={() => setShowTemplateView(false)}>
+            <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
+              transition={{ type: "spring", stiffness: 400, damping: 40 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-lg bg-white dark:bg-gray-900 rounded-t-2xl p-6 max-h-[70vh] overflow-y-auto">
+              <div className="w-10 h-1 bg-gray-300 dark:bg-gray-700 rounded-full mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">{viewingTemplate.name}</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{viewingTemplate.description}</p>
+              <div className="space-y-3">
+                {viewingTemplate.plans.map((p, i) => (
+                  <div key={i} className="p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
+                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{p.name}</p>
+                    <div className="mt-2 space-y-1">
+                      {p.tasks.map((t, j) => (
+                        <div key={j} className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                          <span className="w-1 h-1 rounded-full bg-gray-400" />
+                          {t.title}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <button onClick={() => setShowTemplateView(false)}
+                className="mt-4 w-full py-3 rounded-xl border border-gray-200 dark:border-gray-700 text-sm text-gray-500">
+                关闭
+              </button>
             </motion.div>
           </motion.div>
         )}

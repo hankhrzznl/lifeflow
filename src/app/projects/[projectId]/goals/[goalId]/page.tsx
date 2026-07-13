@@ -6,12 +6,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft, CheckCircle, Clock, ArrowRight, ChevronRight, CalendarDays, ClipboardList,
   Target, Plus, MoreHorizontal, Edit2, Archive, Play, Pause, Lock, Unlock, AlertCircle, X,
-  Tag, Trash2,
+  Tag, Trash2, Bookmark,
 } from "lucide-react";
-import { getProjectV2, getGoal, getPlansByGoal, createPlan, updateGoal, deleteGoal, deletePlan } from "@/lib/db";
+import { getProjectV2, getGoal, getPlansByGoal, createPlan, updateGoal, deleteGoal, deletePlan, db } from "@/lib/db";
 import { recalculateGoalProgress } from "@/lib/linkage";
 import { showToast } from "@/components/ui/Toast";
-import type { ProjectV2, Goal, Plan, Priority, GoalStatus } from "@/lib/types";
+import type { ProjectV2, Goal, Plan, Priority, GoalStatus, GoalTemplate } from "@/lib/types";
 
 const PRIORITY_CONFIG = [
   { key: "urgent-important" as Priority, label: "重要紧急", color: "bg-red-100 text-red-600" },
@@ -202,6 +202,46 @@ export default function GoalDetailPage() {
     router.push(`/planner`);
   }, [goal, router]);
 
+  const handleSaveAsTemplate = useCallback(async () => {
+    if (!goal) return;
+    try {
+      const plans = await getPlansByGoal(goal.id!);
+      const templatePlans = await Promise.all(plans.map(async (plan) => {
+        const tasks = await (() => {
+          return db.tasks.where("planId").equals(plan.id!).toArray();
+        })();
+        return {
+          name: plan.name,
+          weight: plan.weight,
+          daysOffset: 0,
+          tasks: tasks.map(t => ({
+            title: t.title,
+            weight: t.weight || 1,
+            type: t.type,
+          })),
+        };
+      }));
+
+      const template: GoalTemplate = {
+        name: goal.name,
+        description: goal.description || "",
+        category: "custom",
+        type: goal.type,
+        icon: "📋",
+        deadlineDays: goal.deadline ? Math.ceil((goal.deadline - goal.createdAt) / (24 * 60 * 60 * 1000)) : 30,
+        plans: templatePlans,
+        isBuiltIn: false,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
+
+      await db.goalTemplates.add(template);
+      showToast({ message: "已保存为模板", type: "success" });
+    } catch {
+      showToast({ message: "保存失败", type: "error" });
+    }
+  }, [goal]);
+
   if (!loaded || !goal || !project) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center">
@@ -229,13 +269,21 @@ export default function GoalDetailPage() {
               <h1 className="text-xl font-bold text-gray-900 dark:text-white">{goal.name}</h1>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{project.name}</p>
             </div>
-            <div className="relative">
+            <div className="flex items-center">
               <button
-                onClick={() => setShowMoreMenu(!showMoreMenu)}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
+                onClick={handleSaveAsTemplate}
+                className="mr-1 p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
+                title="保存为模板"
               >
-                <MoreHorizontal className="w-5 h-5 text-gray-400" />
+                <Bookmark className="w-5 h-5 text-gray-400" />
               </button>
+              <div className="relative">
+                <button
+                  onClick={() => setShowMoreMenu(!showMoreMenu)}
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
+                >
+                  <MoreHorizontal className="w-5 h-5 text-gray-400" />
+                </button>
               <AnimatePresence>
                 {showMoreMenu && (
                   <motion.div
@@ -273,6 +321,7 @@ export default function GoalDetailPage() {
                   </motion.div>
                 )}
               </AnimatePresence>
+            </div>
             </div>
           </div>
         </motion.div>

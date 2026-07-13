@@ -47,6 +47,7 @@ import type {
   FinBudget,
   Goal,
   Plan,
+  GoalTemplate,
 } from "./types";
 import { recalculateAllProgress } from "./linkage";
 
@@ -98,6 +99,7 @@ export class LifeFlowDB extends Dexie {
   dailySelfAssessments!: Table<DailySelfAssessment, number>;
   goals!: Table<Goal, number>;
   plans!: Table<Plan, number>;
+  goalTemplates!: Table<GoalTemplate, number>;
 
   constructor() {
     super("LifeFlowDB");
@@ -556,6 +558,176 @@ export class LifeFlowDB extends Dexie {
 
       if (isLocal) {
         console.log(`[LifeFlowDB v26] Migration complete. goals: ${allGoals.length}, plans: ${allPlans.length}`);
+      }
+    });
+
+    this.version(27).stores({
+      goals: "++id, projectId, type, status",
+      plans: "++id, goalId, status, predecessorPlanIds, isUnlocked",
+      goalTemplates: "++id, category, type, isBuiltIn",
+    }).upgrade(async (tx) => {
+      console.log("[LifeFlowDB v27] Upgrading plans with dependency fields...");
+      const allPlans = await tx.table("plans").toArray();
+      for (const plan of allPlans) {
+        await tx.table("plans").update(plan.id!, {
+          predecessorPlanIds: plan.predecessorPlanIds || [],
+          isUnlocked: plan.isUnlocked !== undefined ? plan.isUnlocked : true,
+        });
+      }
+
+      // Insert built-in templates
+      const builtInTemplates: GoalTemplate[] = [
+        {
+          name: "备考学习目标",
+          description: "完整的备考学习计划，从基础到冲刺三个阶段",
+          category: "study",
+          type: "task",
+          icon: "📚",
+          deadlineDays: 90,
+          plans: [
+            { name: "基础阶段", weight: 3, daysOffset: 0, tasks: [
+              { title: "整理考试大纲和资料", weight: 1, type: "daily" },
+              { title: "每日基础知识点学习", weight: 3, type: "daily" },
+              { title: "每周基础测试", weight: 1, type: "shortterm" },
+              { title: "整理错题本", weight: 1, type: "daily" },
+            ]},
+            { name: "强化阶段", weight: 4, daysOffset: 30, tasks: [
+              { title: "专题突破训练", weight: 3, type: "daily" },
+              { title: "模拟考试练习", weight: 2, type: "shortterm" },
+              { title: "薄弱环节重点攻克", weight: 2, type: "daily" },
+              { title: "每周复盘总结", weight: 1, type: "daily" },
+            ]},
+            { name: "冲刺阶段", weight: 3, daysOffset: 60, tasks: [
+              { title: "全真模拟考试", weight: 3, type: "shortterm" },
+              { title: "高频考点速记", weight: 2, type: "daily" },
+              { title: "考前心态调整", weight: 1, type: "daily" },
+              { title: "最终查漏补缺", weight: 2, type: "daily" },
+            ]},
+          ],
+          isBuiltIn: true,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        },
+        {
+          name: "跑步提分目标",
+          description: "1000米跑步成绩提升训练计划",
+          category: "fitness",
+          type: "fitness",
+          icon: "🏃",
+          deadlineDays: 60,
+          plans: [
+            { name: "基础耐力期", weight: 3, daysOffset: 0, tasks: [
+              { title: "慢跑30分钟", weight: 2, type: "daily" },
+              { title: "核心力量训练", weight: 1, type: "daily" },
+              { title: "拉伸放松15分钟", weight: 1, type: "daily" },
+            ]},
+            { name: "间歇提升期", weight: 4, daysOffset: 20, tasks: [
+              { title: "400米间歇跑×5组", weight: 3, type: "daily" },
+              { title: "下肢力量训练", weight: 2, type: "daily" },
+              { title: "配速适应训练", weight: 2, type: "daily" },
+            ]},
+            { name: "冲刺达标期", weight: 3, daysOffset: 40, tasks: [
+              { title: "1000米计时跑", weight: 3, type: "shortterm" },
+              { title: "节奏跑训练", weight: 2, type: "daily" },
+              { title: "赛前减量调整", weight: 1, type: "daily" },
+            ]},
+          ],
+          isBuiltIn: true,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        },
+        {
+          name: "作息调整目标",
+          description: "21天养成规律作息习惯",
+          category: "life",
+          type: "sleep",
+          icon: "😴",
+          deadlineDays: 21,
+          plans: [
+            { name: "适应期", weight: 3, daysOffset: 0, tasks: [
+              { title: "设置固定闹钟", weight: 1, type: "daily" },
+              { title: "睡前1小时放下手机", weight: 2, type: "habit" },
+              { title: "记录入睡时间", weight: 1, type: "daily" },
+            ]},
+            { name: "稳定期", weight: 3, daysOffset: 7, tasks: [
+              { title: "保持固定起床时间", weight: 2, type: "habit" },
+              { title: "午休不超过30分钟", weight: 1, type: "daily" },
+              { title: "睡前轻度拉伸", weight: 1, type: "habit" },
+            ]},
+            { name: "巩固期", weight: 3, daysOffset: 14, tasks: [
+              { title: "每日规律睡眠打卡", weight: 2, type: "habit" },
+              { title: "周末不补觉超过1小时", weight: 1, type: "daily" },
+              { title: "复盘睡眠质量", weight: 1, type: "daily" },
+            ]},
+          ],
+          isBuiltIn: true,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        },
+        {
+          name: "月度储蓄目标",
+          description: "建立储蓄习惯，管控月度开支",
+          category: "finance",
+          type: "finance",
+          icon: "💰",
+          deadlineDays: 30,
+          plans: [
+            { name: "预算管控期", weight: 3, daysOffset: 0, tasks: [
+              { title: "统计固定支出", weight: 1, type: "daily" },
+              { title: "制定月度预算", weight: 1, type: "shortterm" },
+              { title: "每日记账", weight: 2, type: "habit" },
+            ]},
+            { name: "支出削减期", weight: 4, daysOffset: 10, tasks: [
+              { title: "识别非必要支出", weight: 1, type: "daily" },
+              { title: "取消不必要订阅", weight: 1, type: "shortterm" },
+              { title: "比价优化日常消费", weight: 1, type: "daily" },
+            ]},
+            { name: "复盘调整期", weight: 3, daysOffset: 20, tasks: [
+              { title: "计算月度结余", weight: 1, type: "shortterm" },
+              { title: "调整下月预算", weight: 1, type: "shortterm" },
+              { title: "设置储蓄自动转账", weight: 1, type: "shortterm" },
+            ]},
+          ],
+          isBuiltIn: true,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        },
+        {
+          name: "习惯养成目标",
+          description: "66天养成一个终身习惯",
+          category: "life",
+          type: "task",
+          icon: "⭐",
+          deadlineDays: 66,
+          plans: [
+            { name: "启动期", weight: 2, daysOffset: 0, tasks: [
+              { title: "明确习惯目标和意义", weight: 1, type: "shortterm" },
+              { title: "设置每日最小行动", weight: 1, type: "daily" },
+              { title: "创建环境提示", weight: 1, type: "daily" },
+            ]},
+            { name: "成长期", weight: 4, daysOffset: 7, tasks: [
+              { title: "每日打卡记录", weight: 3, type: "habit" },
+              { title: "每周进度回顾", weight: 1, type: "daily" },
+              { title: "调整行动策略", weight: 1, type: "daily" },
+            ]},
+            { name: "固化期", weight: 4, daysOffset: 33, tasks: [
+              { title: "每日打卡不中断", weight: 3, type: "habit" },
+              { title: "形成自动化流程", weight: 1, type: "daily" },
+              { title: "庆祝达成里程碑", weight: 1, type: "shortterm" },
+            ]},
+          ],
+          isBuiltIn: true,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        },
+      ];
+
+      const existingTemplates = await tx.table("goalTemplates").count();
+      if (existingTemplates === 0) {
+        for (const t of builtInTemplates) {
+          await tx.table("goalTemplates").add(t);
+        }
+        console.log(`[LifeFlowDB v27] Inserted ${builtInTemplates.length} built-in templates`);
       }
     });
   }
@@ -1566,6 +1738,7 @@ export async function exportAllData(): Promise<string> {
     "scheduleEvents",
     "daySchedules",
     "exercises",
+    "goalTemplates",
   ];
 
   const data: Record<string, unknown[]> = {};
@@ -1582,7 +1755,7 @@ export async function exportAllData(): Promise<string> {
   }
 
   return JSON.stringify({
-    version: 26,
+    version: 27,
     exportedAt: new Date().toISOString(),
     data,
   }, null, 2);
@@ -1640,6 +1813,7 @@ export async function importAllData(data: any): Promise<void> {
     "scheduleEvents",
     "daySchedules",
     "exercises",
+    "goalTemplates",
   ];
 
   await db.transaction("rw", tables.map(t => (db as any)[t]), async () => {

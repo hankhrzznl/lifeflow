@@ -7,7 +7,7 @@ import {
   CalendarCheck, LayoutDashboard, FolderKanban, ChevronRight, Inbox,
   Plus, X, ChevronDown, Target, CheckCircle, CalendarDays, ClipboardList,
   MoreHorizontal, Play, Pause, Archive, Trash2, Filter, ArrowUpDown, EyeOff, Eye,
-  GripVertical, ListTodo, Circle, ChevronLeft, CheckCircle2
+  GripVertical, ListTodo, Circle, ChevronLeft, CheckCircle2, CheckSquare, Square, Lock
 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import {
@@ -15,7 +15,7 @@ import {
   getTasksByType, deleteGoal, deletePlan, updateGoal, updatePlan, assignTasksToPlan,
   getAllGoals, getAllPlans
 } from "@/lib/db";
-import { completeTask, uncompleteTask, moveTaskToPlan } from "@/lib/linkage";
+import { completeTask, uncompleteTask, moveTaskToPlan, batchCompleteTasks, batchDeleteTasks, batchMoveTasks } from "@/lib/linkage";
 import { showToast } from "@/components/ui/Toast";
 import TodayTab from "./TodayTab";
 import type { ProjectV2, Goal, Plan, Task, GoalStatus, Priority } from "@/lib/types";
@@ -110,10 +110,16 @@ function TaskItem({
   task,
   onToggle,
   planStatus,
+  batchMode,
+  isSelected,
+  onToggleSelect,
 }: {
   task: Task;
   onToggle: (id: number) => void;
   planStatus: GoalStatus;
+  batchMode?: boolean;
+  isSelected?: boolean;
+  onToggleSelect?: () => void;
 }) {
   const isPaused = planStatus === "paused";
 
@@ -123,6 +129,18 @@ function TaskItem({
         isPaused ? "opacity-60" : "hover:bg-gray-50 dark:hover:bg-gray-800"
       }`}
     >
+      {batchMode && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onToggleSelect?.(); }}
+          className="mt-0.5 shrink-0"
+        >
+          {isSelected ? (
+            <CheckSquare className="w-5 h-5 text-indigo-500" />
+          ) : (
+            <Square className="w-5 h-5 text-gray-400" />
+          )}
+        </button>
+      )}
       <button
         onClick={() => !isPaused && onToggle(task.id!)}
         className={`mt-0.5 shrink-0 ${isPaused ? "cursor-not-allowed" : ""}`}
@@ -161,6 +179,13 @@ function PlanCard({
   onArchive,
   isExpanded,
   onToggleExpand,
+  batchMode,
+  selectedTaskIds,
+  onToggleTaskSelection,
+  onEnterBatchMode,
+  onExitBatchMode,
+  onBatchComplete,
+  onBatchDelete,
 }: {
   planWithTasks: PlanWithTasks;
   goalStatus: GoalStatus;
@@ -172,17 +197,25 @@ function PlanCard({
   onArchive: () => void;
   isExpanded: boolean;
   onToggleExpand: () => void;
+  batchMode?: boolean;
+  selectedTaskIds?: Set<number>;
+  onToggleTaskSelection?: (taskId: number) => void;
+  onEnterBatchMode?: () => void;
+  onExitBatchMode?: () => void;
+  onBatchComplete?: () => void;
+  onBatchDelete?: () => void;
 }) {
   const { plan, tasks } = planWithTasks;
   const isPaused = goalStatus === "paused" || plan.status === "paused";
   const doneCount = tasks.filter(t => t.status === "done").length;
   const progress = tasks.length > 0 ? Math.round((doneCount / tasks.length) * 100) : 0;
+  const isUnlocked = (plan as any).isUnlocked !== false;
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 4 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`bg-white dark:bg-gray-900 rounded-xl border ${getStatusStyle(plan.status)} ${isPaused ? "opacity-60" : ""}`}
+      className={`bg-white dark:bg-gray-900 rounded-xl border ${getStatusStyle(plan.status)} ${isPaused ? "opacity-60" : ""} ${!isUnlocked ? "opacity-60 grayscale" : ""}`}
     >
       <div className="p-3">
         <div className="flex items-center gap-2">
@@ -200,6 +233,12 @@ function PlanCard({
                 {getStatusLabel(plan.status)}
               </span>
             </div>
+
+            {!isUnlocked && (
+              <div className="flex items-center gap-1 text-xs text-amber-500 mt-1">
+                <Lock className="w-3 h-3" /> 待解锁 — 需完成前置计划
+              </div>
+            )}
 
             <div className="flex items-center gap-3 mt-1.5">
               <span className="text-xs text-gray-400">
@@ -256,9 +295,39 @@ function PlanCard({
             className="overflow-hidden border-t border-gray-100 dark:border-gray-800"
           >
             <div className="p-3 pt-1 space-y-1">
+              {/* 批量操作工具栏 */}
+              <div className="flex justify-end mb-1">
+                {!batchMode ? (
+                  <button
+                    onClick={() => onEnterBatchMode?.()}
+                    className="text-xs text-gray-400 hover:text-indigo-500 transition-colors"
+                  >
+                    批量操作
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => onExitBatchMode?.()} className="text-xs text-gray-400">取消</button>
+                    <span className="text-xs text-gray-500">已选 {selectedTaskIds?.size || 0}</span>
+                    {(selectedTaskIds?.size ?? 0) > 0 && (
+                      <>
+                        <button onClick={() => onBatchComplete?.()} className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-lg">完成</button>
+                        <button onClick={() => onBatchDelete?.()} className="text-xs px-2 py-1 bg-red-100 text-red-700 rounded-lg">删除</button>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
               {tasks.length > 0 ? (
                 tasks.map(task => (
-                  <TaskItem key={task.id} task={task} onToggle={onToggleTask} planStatus={plan.status} />
+                  <TaskItem
+                    key={task.id}
+                    task={task}
+                    onToggle={onToggleTask}
+                    planStatus={plan.status}
+                    batchMode={batchMode}
+                    isSelected={selectedTaskIds?.has(task.id!)}
+                    onToggleSelect={() => onToggleTaskSelection?.(task.id!)}
+                  />
                 ))
               ) : (
                 <p className="text-xs text-gray-400 py-2 text-center">暂无任务</p>
@@ -289,6 +358,13 @@ function GoalCard({
   onArchive,
   isExpanded,
   onToggleExpand,
+  batchMode,
+  selectedTaskIds,
+  onToggleTaskSelection,
+  onEnterBatchMode,
+  onExitBatchMode,
+  onBatchComplete,
+  onBatchDelete,
 }: {
   goalWithPlans: GoalWithPlans;
   projectId: number;
@@ -300,6 +376,13 @@ function GoalCard({
   onArchive: () => void;
   isExpanded: boolean;
   onToggleExpand: () => void;
+  batchMode?: boolean;
+  selectedTaskIds?: Set<number>;
+  onToggleTaskSelection?: (taskId: number) => void;
+  onEnterBatchMode?: () => void;
+  onExitBatchMode?: () => void;
+  onBatchComplete?: () => void;
+  onBatchDelete?: () => void;
 }) {
   const { goal, plans } = goalWithPlans;
   const isPaused = goal.status === "paused";
@@ -412,6 +495,13 @@ function GoalCard({
                     onArchive={() => {}}
                     isExpanded={false}
                     onToggleExpand={() => {}}
+                    batchMode={batchMode}
+                    selectedTaskIds={selectedTaskIds}
+                    onToggleTaskSelection={onToggleTaskSelection}
+                    onEnterBatchMode={onEnterBatchMode}
+                    onExitBatchMode={onExitBatchMode}
+                    onBatchComplete={onBatchComplete}
+                    onBatchDelete={onBatchDelete}
                   />
                 ))
               ) : (
@@ -439,6 +529,13 @@ function ProjectCard({
   onArchivePlan,
   isExpanded,
   onToggleExpand,
+  batchMode,
+  selectedTaskIds,
+  onToggleTaskSelection,
+  onEnterBatchMode,
+  onExitBatchMode,
+  onBatchComplete,
+  onBatchDelete,
 }: {
   projectWithGoals: ProjectWithGoals;
   onToggleTask: (id: number) => void;
@@ -453,6 +550,13 @@ function ProjectCard({
   onArchivePlan: (planId: number) => void;
   isExpanded: boolean;
   onToggleExpand: () => void;
+  batchMode?: boolean;
+  selectedTaskIds?: Set<number>;
+  onToggleTaskSelection?: (taskId: number) => void;
+  onEnterBatchMode?: () => void;
+  onExitBatchMode?: () => void;
+  onBatchComplete?: () => void;
+  onBatchDelete?: () => void;
 }) {
   const { project, goals } = projectWithGoals;
 
@@ -504,6 +608,13 @@ function ProjectCard({
                     onArchive={() => onArchiveGoal(goal.id!)}
                     isExpanded={false}
                     onToggleExpand={() => {}}
+                    batchMode={batchMode}
+                    selectedTaskIds={selectedTaskIds}
+                    onToggleTaskSelection={onToggleTaskSelection}
+                    onEnterBatchMode={onEnterBatchMode}
+                    onExitBatchMode={onExitBatchMode}
+                    onBatchComplete={onBatchComplete}
+                    onBatchDelete={onBatchDelete}
                   />
                 ))
               ) : (
@@ -621,6 +732,9 @@ function PlannerPageInner() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [sortBy, setSortBy] = useState("created");
+  const [batchMode, setBatchMode] = useState(false);
+  const [selectedTaskIds, setSelectedTaskIds] = useState<Set<number>>(new Set());
+  const [showBatchActions, setShowBatchActions] = useState(false);
 
   const handleCreateProject = useCallback(async () => {
     if (!newProjectName.trim()) return;
@@ -753,6 +867,33 @@ function PlannerPageInner() {
     router.push("/projects/unclassified");
   };
 
+  const toggleTaskSelection = (taskId: number) => {
+    setSelectedTaskIds(prev => {
+      const next = new Set(prev);
+      if (next.has(taskId)) next.delete(taskId); else next.add(taskId);
+      return next;
+    });
+  };
+
+  const handleBatchComplete = async () => {
+    const ids = [...selectedTaskIds];
+    await batchCompleteTasks(ids);
+    setSelectedTaskIds(new Set());
+    setBatchMode(false);
+    showToast({ message: `已完成 ${ids.length} 个任务`, type: "success" });
+    await loadData();
+  };
+
+  const handleBatchDelete = async () => {
+    const ids = [...selectedTaskIds];
+    if (!confirm(`确定删除 ${ids.length} 个任务？`)) return;
+    await batchDeleteTasks(ids);
+    setSelectedTaskIds(new Set());
+    setBatchMode(false);
+    showToast({ message: `已删除 ${ids.length} 个任务`, type: "success" });
+    await loadData();
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-gray-950 dark:to-gray-900">
       <div className="mx-auto max-w-3xl px-5 py-6 pb-24">
@@ -883,6 +1024,13 @@ function PlannerPageInner() {
                         onArchivePlan={handleArchivePlan}
                         isExpanded={expandedProjectIds.includes(project.project.id!)}
                         onToggleExpand={() => handleToggleProject(project.project.id!)}
+                        batchMode={batchMode}
+                        selectedTaskIds={selectedTaskIds}
+                        onToggleTaskSelection={toggleTaskSelection}
+                        onEnterBatchMode={() => setBatchMode(true)}
+                        onExitBatchMode={() => { setBatchMode(false); setSelectedTaskIds(new Set()); }}
+                        onBatchComplete={handleBatchComplete}
+                        onBatchDelete={handleBatchDelete}
                       />
                     ))}
 

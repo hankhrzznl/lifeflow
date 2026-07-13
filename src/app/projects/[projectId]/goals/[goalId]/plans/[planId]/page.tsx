@@ -6,10 +6,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft, Plus, MoreHorizontal, CheckCircle, Circle, Calendar,
   Clock, Trash2, Edit2, Archive, Play, Pause, Tag, AlertCircle, X,
-  ChevronDown, ChevronRight, Target, ListTodo, Lock, Unlock,
+  ChevronDown, ChevronRight, Target, ListTodo, Lock, Unlock, Link2,
 } from "lucide-react";
-import { getPlan, getGoal, getProjectV2, updateTask, getTasksByType, createTask, updatePlan } from "@/lib/db";
+import { getPlan, getGoal, getProjectV2, updateTask, getTasksByType, createTask, updatePlan, getPlansByGoal } from "@/lib/db";
 import { completeTask, uncompleteTask, deleteTask, recalculatePlanProgress } from "@/lib/linkage";
+import { addPredecessor, removePredecessor, getPredecessorDetails } from "@/lib/planDependency";
+import { showToast } from "@/components/ui/Toast";
 import type { Plan, Goal, ProjectV2, Task, Priority, GoalStatus } from "@/lib/types";
 
 const PRIORITY_CONFIG = [
@@ -120,6 +122,9 @@ export default function PlanDetailPage() {
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [editingProgress, setEditingProgress] = useState(false);
   const [progressValue, setProgressValue] = useState(0);
+  const [showDependencySheet, setShowDependencySheet] = useState(false);
+  const [predecessors, setPredecessors] = useState<Array<{ id: number; name: string; status: string; progress: number }>>([]);
+  const [availablePlans, setAvailablePlans] = useState<Plan[]>([]);
 
   const loadData = useCallback(async () => {
     const [p, g, proj] = await Promise.all([
@@ -140,6 +145,10 @@ export default function PlanDetailPage() {
     const allTasks = [...shortterm, ...daily, ...longterm, ...habit];
     const planTasks = allTasks.filter((t: Task) => t.planId === planId);
     setTasks(planTasks);
+    const deps = await getPredecessorDetails(planId);
+    setPredecessors(deps);
+    const allGoalPlans = await getPlansByGoal(goalId);
+    setAvailablePlans(allGoalPlans.filter(p => p.id !== planId && !deps.find(d => d.id === p.id)));
     setLoaded(true);
   }, [planId, goalId, projectId]);
 
@@ -148,6 +157,11 @@ export default function PlanDetailPage() {
   }, [loadData]);
 
   const handleToggleTask = useCallback(async (taskId: number) => {
+    if (!plan) return;
+    if (plan.isUnlocked === false) {
+      showToast({ message: "请先完成所有前置计划", type: "warning" });
+      return;
+    }
     const task = tasks.find(t => t.id === taskId);
     if (!task) return;
 
@@ -157,7 +171,7 @@ export default function PlanDetailPage() {
       await completeTask(taskId);
     }
     await loadData();
-  }, [tasks, loadData]);
+  }, [tasks, loadData, plan]);
 
   const handleDeleteTask = useCallback(async (taskId: number) => {
     await deleteTask(taskId);
@@ -219,6 +233,24 @@ export default function PlanDetailPage() {
     setPlan(prev => prev ? { ...prev, status } : null);
     setShowMoreMenu(false);
   }, [plan]);
+
+  const handleAddDependency = useCallback(async (predecessorId: number) => {
+    try {
+      await addPredecessor(planId, predecessorId);
+      const deps = await getPredecessorDetails(planId);
+      setPredecessors(deps);
+      showToast({ message: "依赖已添加", type: "success" });
+    } catch (err: any) {
+      showToast({ message: err.message || "添加失败", type: "error" });
+    }
+  }, [planId]);
+
+  const handleRemoveDependency = useCallback(async (predecessorId: number) => {
+    await removePredecessor(planId, predecessorId);
+    const deps = await getPredecessorDetails(planId);
+    setPredecessors(deps);
+    showToast({ message: "依赖已移除", type: "success" });
+  }, [planId]);
 
   if (!loaded || !plan || !goal || !project) {
     return (
@@ -302,6 +334,34 @@ export default function PlanDetailPage() {
                   >
                     <Unlock className="w-3 h-3" /> 解锁自动计算
                   </button>
+                </div>
+              )}
+              {/* 依赖管理 */}
+              <button
+                onClick={() => setShowDependencySheet(true)}
+                className="mt-3 flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-indigo-500 transition-colors"
+              >
+                <Link2 className="w-3.5 h-3.5" />
+                依赖设置 ({predecessors.length})
+              </button>
+
+              {predecessors.length > 0 && (
+                <div className="mt-2 space-y-1">
+                  {predecessors.map(p => (
+                    <div key={p.id} className="flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-1.5">
+                        <span className={`w-1.5 h-1.5 rounded-full ${p.status === "completed" ? "bg-green-500" : "bg-gray-400"}`} />
+                        <span className="text-gray-600 dark:text-gray-400">{p.name}</span>
+                        <span className="text-gray-400">{p.progress}%</span>
+                      </div>
+                      <button
+                        onClick={() => handleRemoveDependency(p.id)}
+                        className="text-red-400 hover:text-red-500"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
@@ -513,6 +573,75 @@ export default function PlanDetailPage() {
                   保存
                 </button>
               </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showDependencySheet && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/40 flex items-end justify-center"
+            onClick={() => setShowDependencySheet(false)}
+          >
+            <motion.div
+              initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
+              transition={{ type: "spring", stiffness: 400, damping: 40 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-lg bg-white dark:bg-gray-900 rounded-t-2xl p-6 max-h-[60vh] overflow-y-auto"
+            >
+              <div className="w-10 h-1 bg-gray-300 dark:bg-gray-700 rounded-full mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">依赖设置</h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+                设置前置计划后，需先完成前置计划才能解锁当前计划
+              </p>
+
+              {predecessors.length > 0 && (
+                <div className="mb-4">
+                  <p className="text-xs font-medium text-gray-500 mb-2">当前前置计划</p>
+                  <div className="space-y-2">
+                    {predecessors.map(p => (
+                      <div key={p.id} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <span className={`w-2 h-2 rounded-full ${p.status === "completed" ? "bg-green-500" : "bg-gray-400"}`} />
+                          <span className="text-sm text-gray-700 dark:text-gray-300">{p.name}</span>
+                          <span className="text-xs text-gray-400">{p.progress}%</span>
+                        </div>
+                        <button onClick={() => handleRemoveDependency(p.id)} className="p-1 text-red-400 hover:text-red-500">
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {availablePlans.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium text-gray-500 mb-2">添加前置计划</p>
+                  <div className="space-y-1">
+                    {availablePlans.map(p => (
+                      <button
+                        key={p.id}
+                        onClick={() => handleAddDependency(p.id!)}
+                        className="w-full flex items-center gap-2 p-2 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg text-left"
+                      >
+                        <Plus className="w-4 h-4 text-indigo-500" />
+                        <span className="text-sm text-gray-700 dark:text-gray-300">{p.name}</span>
+                        <span className="text-xs text-gray-400 ml-auto">{p.progress}%</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <button
+                onClick={() => setShowDependencySheet(false)}
+                className="mt-4 w-full py-3 rounded-xl border border-gray-200 dark:border-gray-700 text-sm text-gray-500"
+              >
+                关闭
+              </button>
             </motion.div>
           </motion.div>
         )}

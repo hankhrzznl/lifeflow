@@ -260,6 +260,8 @@ export interface Plan {
   progress: number;
   progressLocked?: boolean;
   order: number;
+  predecessorPlanIds?: number[];
+  isUnlocked?: boolean;
   createdAt: number;
   updatedAt: number;
 }
@@ -1007,4 +1009,33 @@ export interface DailySelfAssessment {
   physicalScore: number;    // 身体状态 0-100
   moodScore: number;        // 情绪 0-100
   createdAt: number;
+}
+
+// ==================== 目标模板 ====================
+
+export interface GoalTemplate {
+  id?: number;
+  name: string;
+  description: string;
+  category: 'study' | 'fitness' | 'life' | 'finance' | 'custom';
+  type: GoalType;
+  icon: string;
+  deadlineDays: number;
+  plans: GoalTemplatePlan[];
+  isBuiltIn: boolean;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface GoalTemplatePlan {
+  name: string;
+  weight: number;
+  daysOffset: number;
+  tasks: GoalTemplateTask[];
+}
+
+export interface GoalTemplateTask {
+  title: string;
+  weight: number;
+  type: Task['type'];
 }

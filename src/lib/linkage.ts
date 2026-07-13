@@ -1,6 +1,7 @@
 import type { Transaction } from "dexie";
 import { db } from "./db";
-import type { Task, Plan, Goal, GoalStatus, GoalType } from "./types";
+import type { Task, Plan, Goal, GoalStatus, GoalType, Priority } from "./types";
+import { cascadeLock, cascadeUnlock } from "./planDependency";
 
 // ==================== 防抖机制 ====================
 
@@ -87,6 +88,7 @@ async function recalculatePlanProgressInternal(planId: number, tx: Transaction):
     const settings = await tx.table("userSettings").toArray();
     const autoSyncStatus = settings[0]?.linkageSettings?.autoSyncStatus ?? true;
 
+    const wasCompleted = plan.status === "completed";
     const updates: Partial<Plan> = { progress };
     if (autoSyncStatus) {
       updates.status = getTargetStatus(progress);
@@ -94,6 +96,15 @@ async function recalculatePlanProgressInternal(planId: number, tx: Transaction):
     updates.updatedAt = Date.now();
 
     await tx.table("plans").update(planId, updates);
+
+    // 计划刚完成时级联解锁后置计划
+    if (!wasCompleted && progress >= 100) {
+      await cascadeUnlock(planId, tx);
+    }
+    // 计划从完成回退时级联回锁后置计划
+    if (wasCompleted && progress < 100) {
+      await cascadeLock(planId, tx);
+    }
 
     await recalculateGoalProgressInternal(plan.goalId, tx);
   }
@@ -362,6 +373,14 @@ export async function completeTask(taskId: number): Promise<void> {
   await db.transaction("rw", [db.tasks, db.plans, db.goals, db.userSettings, db.workouts, db.sleepRecords, db.dailyWaterRecords, db.finRecords], async (tx) => {
     const task = await tx.table("tasks").get(taskId);
     if (!task || task.status === "done") return;
+
+    // 检查任务所属计划是否已解锁
+    if (task.planId) {
+      const plan = await tx.table("plans").get(task.planId);
+      if (plan && plan.isUnlocked === false) {
+        throw new Error("请先完成所有前置计划");
+      }
+    }
 
     await tx.table("tasks").update(taskId, {
       status: "done" as const,
@@ -646,5 +665,121 @@ export async function validateDataConsistency(): Promise<{ valid: boolean; issue
 export async function notifyGoalProgressUpdate(goalId: number): Promise<void> {
   debounce(`goal-${goalId}`, async () => {
     await recalculateGoalProgress(goalId);
+  });
+}
+
+// ==================== 模板生成 ====================
+
+export async function applyGoalTemplate(
+  templateId: number,
+  projectId: number,
+  startDate: string,
+  previewOnly: boolean = false
+): Promise<{
+  goal: Partial<Goal>;
+  plans: Array<{
+    plan: Partial<Plan>;
+    tasks: Array<Partial<Task>>;
+  }>;
+}> {
+  const template = await db.goalTemplates.get(templateId);
+  if (!template) throw new Error("模板不存在");
+
+  const startTimestamp = new Date(startDate + "T00:00:00").getTime();
+  const deadlineTimestamp = startTimestamp + template.deadlineDays * 24 * 60 * 60 * 1000;
+
+  // 构建目标数据
+  const goal: Partial<Goal> = {
+    projectId,
+    name: template.name,
+    description: template.description,
+    type: template.type,
+    deadline: deadlineTimestamp,
+    priority: "not-urgent-important",
+    status: "active",
+    progress: 0,
+    progressLocked: false,
+    weight: template.plans.reduce((sum, p) => sum + p.weight, 0),
+  };
+
+  // 构建计划与任务数据
+  const plansWithTasks = template.plans.map((tp, idx) => {
+    const planStart = startTimestamp + tp.daysOffset * 24 * 60 * 60 * 1000;
+    const planEnd = idx < template.plans.length - 1
+      ? startTimestamp + template.plans[idx + 1].daysOffset * 24 * 60 * 60 * 1000 - 1
+      : deadlineTimestamp;
+
+    const plan: Partial<Plan> = {
+      goalId: 0, // 将在写入后赋值
+      name: tp.name,
+      weight: tp.weight,
+      status: "active",
+      progress: 0,
+      order: idx,
+      startDate: new Date(planStart).toISOString().slice(0, 10),
+      endDate: new Date(planEnd).toISOString().slice(0, 10),
+      predecessorPlanIds: idx > 0 ? [] : [], // 第一个计划无前置
+      isUnlocked: idx === 0, // 只有第一个计划默认解锁
+    };
+
+    // 设置计划间依赖：每个计划的前置是上一个计划
+    if (idx > 0) {
+      plan.predecessorPlanIds = []; // 实际写入时根据前一个 plan 的 ID 填充
+    }
+
+    const tasks = tp.tasks.map((tt, ti) => ({
+      title: tt.title,
+      type: tt.type as Task["type"],
+      status: "active" as const,
+      priority: "not-urgent-important" as Priority,
+      weight: tt.weight,
+      order: ti,
+      projectId,
+    }));
+
+    return { plan, tasks };
+  });
+
+  if (previewOnly) {
+    return { goal, plans: plansWithTasks };
+  }
+
+  // 写入数据库
+  return await db.transaction("rw", [db.goals, db.plans, db.tasks], async (tx) => {
+    const goalId = await tx.table("goals").add({
+      ...goal,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+
+    const createdPlans: Array<{ plan: Partial<Plan>; tasks: Array<Partial<Task>> }> = [];
+    let previousPlanId: number | null = null;
+
+    for (const [idx, pw] of plansWithTasks.entries()) {
+      const predecessorIds = idx > 0 && previousPlanId ? [previousPlanId] : [];
+      const planId = await tx.table("plans").add({
+        ...pw.plan,
+        goalId,
+        predecessorPlanIds: predecessorIds,
+        isUnlocked: idx === 0,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+
+      for (const task of pw.tasks) {
+        await tx.table("tasks").add({
+          ...task,
+          goalId,
+          planId,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        } as any);
+      }
+
+      createdPlans.push({ plan: { ...pw.plan, goalId, predecessorPlanIds: predecessorIds, isUnlocked: idx === 0 }, tasks: pw.tasks.map(t => ({ ...t, goalId, planId })) });
+      previousPlanId = planId;
+    }
+
+    return { goal: { ...goal, id: goalId }, plans: createdPlans };
   });
 }

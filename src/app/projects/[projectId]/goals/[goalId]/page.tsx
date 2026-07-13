@@ -11,7 +11,8 @@ import {
 import { getProjectV2, getGoal, getPlansByGoal, createPlan, updateGoal, deleteGoal, deletePlan, db } from "@/lib/db";
 import { recalculateGoalProgress } from "@/lib/linkage";
 import { showToast } from "@/components/ui/Toast";
-import type { ProjectV2, Goal, Plan, Priority, GoalStatus, GoalTemplate } from "@/lib/types";
+import { HeatmapGrid } from "@/components/HeatmapGrid";
+import type { ProjectV2, Goal, Plan, Priority, GoalStatus, GoalTemplate, Task } from "@/lib/types";
 import { isAIEnabled, isOnline } from "@/lib/aiClient";
 import { checkGoalWarning, applySuggestion } from "@/lib/goalWarning";
 import type { WarningResult } from "@/lib/goalWarning";
@@ -108,6 +109,7 @@ export default function GoalDetailPage() {
   const [project, setProject] = useState<ProjectV2 | null>(null);
   const [goal, setGoal] = useState<Goal | null>(null);
   const [plans, setPlans] = useState<Plan[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [showAddPlan, setShowAddPlan] = useState(false);
   const [newPlanName, setNewPlanName] = useState("");
@@ -132,6 +134,9 @@ export default function GoalDetailPage() {
 
     const goalPlans = await getPlansByGoal(goalId);
     setPlans(goalPlans);
+
+    const goalTasks = await db.tasks.where("goalId").equals(goalId).toArray();
+    setTasks(goalTasks);
     setLoaded(true);
     if (g && isAIEnabled() && isOnline()) {
       checkGoalWarning(goalId).then(result => {
@@ -449,6 +454,26 @@ export default function GoalDetailPage() {
               ))}
             </div>
           )}
+
+          {/* 完成热力图 */}
+          {(() => {
+            const last3Months = new Date();
+            last3Months.setMonth(last3Months.getMonth() - 3);
+            const taskDates = tasks.filter(t => t.status === "done").map(t => {
+              const d = new Date(t.updatedAt || t.createdAt);
+              return d.toISOString().slice(0, 10);
+            });
+            const dateCounts = taskDates.reduce((acc: Record<string, number>, d) => { acc[d] = (acc[d] || 0) + 1; return acc; }, {});
+            const maxCount = Math.max(1, ...Object.values(dateCounts));
+            const heatmapData = Object.entries(dateCounts).map(([date, count]) => ({ date, count, maxCount }));
+            
+            return heatmapData.length > 0 ? (
+              <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">完成热力图</p>
+                <HeatmapGrid data={heatmapData} months={3} />
+              </div>
+            ) : null;
+          })()}
         </motion.div>
 
         {warning && (

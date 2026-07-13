@@ -7,7 +7,7 @@ import {
   CalendarCheck, LayoutDashboard, FolderKanban, ChevronRight, Inbox,
   Plus, X, ChevronDown, Target, CheckCircle, CalendarDays, ClipboardList,
   MoreHorizontal, Play, Pause, Archive, Trash2, Filter, ArrowUpDown, EyeOff, Eye,
-  GripVertical, ListTodo, Circle, ChevronLeft, CheckCircle2, CheckSquare, Square, Lock, AlertTriangle
+  GripVertical, ListTodo, Circle, ChevronLeft, CheckCircle2, CheckSquare, Square, Lock, AlertTriangle, CalendarRange
 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import {
@@ -707,6 +707,100 @@ function UnclassifiedPanel({
   );
 }
 
+function GanttView({
+  projects, ganttPeriod, setGanttPeriod, loadData,
+}: {
+  projects: ProjectWithGoals[]; ganttPeriod: "week" | "month"; setGanttPeriod: (p: "week" | "month") => void; loadData: () => void;
+}) {
+  const daysToShow = ganttPeriod === "week" ? 7 : 30;
+  const today = new Date();
+  const startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 3);
+
+  const dates: Date[] = [];
+  for (let i = 0; i < daysToShow; i++) {
+    const d = new Date(startDate);
+    d.setDate(startDate.getDate() + i);
+    dates.push(d);
+  }
+
+  const cellWidth = ganttPeriod === "week" ? 44 : 18;
+
+  const getBarStyle = (goal: Goal, plan?: Plan) => {
+    const planStart = plan?.startDate ? new Date(plan.startDate + "T00:00:00") : new Date(goal.createdAt);
+    const planEnd = plan?.endDate ? new Date(plan.endDate + "T23:59:59") : goal.deadline ? new Date(goal.deadline) : new Date(today.getTime() + 14 * 24 * 60 * 60 * 1000);
+    
+    const totalDays = Math.max(1, Math.ceil((planEnd.getTime() - planStart.getTime()) / (24 * 60 * 60 * 1000)));
+    const startOffset = Math.max(0, Math.ceil((planStart.getTime() - startDate.getTime()) / (24 * 60 * 60 * 1000)));
+    const width = Math.max(1, Math.ceil((planEnd.getTime() - planStart.getTime()) / (24 * 60 * 60 * 1000)));
+    
+    return { startOffset, width, totalDays };
+  };
+
+  const formatDate = (d: Date) => `${d.getMonth() + 1}/${d.getDate()}`;
+
+  return (
+    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
+      <div className="flex items-center justify-between p-3 border-b border-gray-100 dark:border-gray-800">
+        <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">时间线视图</span>
+        <select value={ganttPeriod} onChange={(e) => setGanttPeriod(e.target.value as any)} className="text-xs bg-gray-100 dark:bg-gray-800 rounded-lg px-2 py-1">
+          <option value="week">周视图</option>
+          <option value="month">月视图</option>
+        </select>
+      </div>
+      <div className="overflow-x-auto">
+        <div style={{ minWidth: dates.length * cellWidth + 120 }}>
+          {/* Date header */}
+          <div className="flex border-b border-gray-100 dark:border-gray-800">
+            <div className="w-[120px] shrink-0 p-2 text-xs text-gray-400">项目/目标</div>
+            {dates.map((d, i) => (
+              <div key={i} className="text-center text-[10px] text-gray-400 py-2 border-l border-gray-50 dark:border-gray-800" style={{ width: cellWidth }}>
+                {ganttPeriod === "week" ? ["日","一","二","三","四","五","六"][d.getDay()] : d.getDate()}
+              </div>
+            ))}
+          </div>
+          {/* Project/Goal/Plan rows */}
+          {projects.map(project => (
+            <div key={project.project.id}>
+              <div className="flex bg-gray-50 dark:bg-gray-800/50 border-b border-gray-100 dark:border-gray-800">
+                <div className="w-[120px] shrink-0 p-2 text-xs font-medium text-gray-700 dark:text-gray-300 truncate">{project.project.name}</div>
+                <div style={{ width: dates.length * cellWidth }} />
+              </div>
+              {project.goals.map(goal => {
+                const bar = getBarStyle(goal);
+                return (
+                  <div key={goal.id} className="flex border-b border-gray-50 dark:border-gray-800/50 hover:bg-gray-50 dark:hover:bg-gray-800/30">
+                    <div className="w-[120px] shrink-0 p-1.5 pl-4 text-xs text-gray-600 dark:text-gray-400 truncate">{goal.name}</div>
+                    <div className="relative" style={{ width: dates.length * cellWidth, height: 28 }}>
+                      {bar.startOffset < dates.length && (
+                        <div
+                          className="absolute top-1 h-6 rounded-md flex items-center px-1.5"
+                          style={{
+                            left: Math.max(0, bar.startOffset * cellWidth),
+                            width: Math.max(cellWidth, bar.width * cellWidth),
+                            backgroundColor: goal.progress >= 100 ? "#10B981" : "#6366F1",
+                            opacity: goal.status === "paused" ? 0.4 : 0.85,
+                          }}
+                        >
+                          {bar.width * cellWidth > 60 && (
+                            <span className="text-[10px] text-white truncate">{goal.progress}%</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+          {projects.length === 0 && (
+            <div className="p-8 text-center text-xs text-gray-400">暂无目标数据</div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function FadeInUp({ children, delay = 0, className }: { children: React.ReactNode; delay?: number; className?: string }) {
   return (
     <motion.div
@@ -737,6 +831,8 @@ function PlannerPageInner() {
   const [batchMode, setBatchMode] = useState(false);
   const [selectedTaskIds, setSelectedTaskIds] = useState<Set<number>>(new Set());
   const [showBatchActions, setShowBatchActions] = useState(false);
+  const [viewMode, setViewMode] = useState<"list" | "gantt">("list");
+  const [ganttPeriod, setGanttPeriod] = useState<"week" | "month">("week");
 
   const handleCreateProject = useCallback(async () => {
     if (!newProjectName.trim()) return;
@@ -999,6 +1095,14 @@ function PlannerPageInner() {
                       {showArchive ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
                       {showArchive ? "隐藏归档" : "显示归档"}
                     </button>
+
+                    <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5 ml-auto">
+                      {(["list", "gantt"] as const).map(m => (
+                        <button key={m} onClick={() => setViewMode(m)} className={`px-3 py-1 text-xs rounded-md transition-colors ${viewMode === m ? "bg-white dark:bg-gray-700 shadow-sm font-medium" : "text-gray-500"}`}>
+                          {m === "list" ? "列表" : "甘特图"}
+                        </button>
+                      ))}
+                    </div>
                   </div>
 
                   <UnclassifiedPanel
@@ -1009,7 +1113,10 @@ function PlannerPageInner() {
                     onToggleExpand={() => {}}
                   />
 
-                  <div className="space-y-3">
+                  {viewMode === "gantt" ? (
+                    <GanttView projects={projects} ganttPeriod={ganttPeriod} setGanttPeriod={setGanttPeriod} loadData={loadData} />
+                  ) : (
+                    <div className="space-y-3">
                     {projects.map(project => (
                       <ProjectCard
                         key={project.project.id}
@@ -1058,6 +1165,7 @@ function PlannerPageInner() {
                       新建项目
                     </button>
                   </div>
+                  )}
                 </div>
               )}
               {activeTab === "today" && (

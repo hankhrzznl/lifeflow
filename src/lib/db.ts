@@ -49,6 +49,8 @@ import type {
   Plan,
   GoalTemplate,
   AiSettings,
+  CustomGoalType,
+  CorrelationReport,
 } from "./types";
 import { recalculateAllProgress } from "./linkage";
 
@@ -101,6 +103,8 @@ export class LifeFlowDB extends Dexie {
   goals!: Table<Goal, number>;
   plans!: Table<Plan, number>;
   goalTemplates!: Table<GoalTemplate, number>;
+  customGoalTypes!: Table<CustomGoalType, number>;
+  correlationReports!: Table<CorrelationReport, number>;
 
   constructor() {
     super("LifeFlowDB");
@@ -768,6 +772,49 @@ export class LifeFlowDB extends Dexie {
       for (const s of existingSettings) {
         await tx.table("userSettings").update(s.id!, {
           aiSettings: s.aiSettings || { aiEnabled: true, aiGoalDecompose: true, aiReviewAnalyze: true, aiProgressWarning: true, autoWeeklyReview: false },
+        } as any);
+      }
+    });
+
+    this.version(29).stores({
+      customGoalTypes: "++id, key, isBuiltIn, enabled",
+      correlationReports: "++id, dateKey",
+    }).upgrade(async (tx) => {
+      console.log("[LifeFlowDB v29] Initializing custom goal types...");
+      
+      const builtInTypes: CustomGoalType[] = [
+        { key: "task", name: "任务型", icon: "Target", color: "#6366F1", dataSource: "task", unit: "个", calcMode: "cumulative", isBuiltIn: true, enabled: true, createdAt: Date.now(), updatedAt: Date.now() },
+        { key: "fitness", name: "健身型", icon: "Dumbbell", color: "#F97316", dataSource: "custom", unit: "次", calcMode: "cumulative", isBuiltIn: true, enabled: true, createdAt: Date.now(), updatedAt: Date.now() },
+        { key: "sleep", name: "睡眠型", icon: "Moon", color: "#8B5CF6", dataSource: "custom", unit: "天", calcMode: "check_rate", isBuiltIn: true, enabled: true, createdAt: Date.now(), updatedAt: Date.now() },
+        { key: "water", name: "饮水型", icon: "Droplets", color: "#3B82F6", dataSource: "custom", unit: "ml", calcMode: "daily_avg", isBuiltIn: true, enabled: true, createdAt: Date.now(), updatedAt: Date.now() },
+        { key: "finance", name: "财务型", icon: "Wallet", color: "#10B981", dataSource: "custom", unit: "元", calcMode: "cumulative", isBuiltIn: true, enabled: true, createdAt: Date.now(), updatedAt: Date.now() },
+      ];
+
+      const existing = await tx.table("customGoalTypes").count();
+      if (existing === 0) {
+        for (const t of builtInTypes) {
+          await tx.table("customGoalTypes").add(t);
+        }
+      }
+
+      // Update goals with customTypeId
+      const allGoals = await tx.table("goals").toArray();
+      for (const goal of allGoals) {
+        if (!goal.customTypeId) {
+          const ct = builtInTypes.find(t => t.key === goal.type);
+          await tx.table("goals").update(goal.id!, { customTypeId: ct?.id || null });
+        }
+      }
+
+      // Initialize user settings with new defaults
+      const allSettings = await tx.table("userSettings").toArray();
+      for (const s of allSettings) {
+        await tx.table("userSettings").update(s.id!, {
+          archivedDays: s.archivedDays || null,
+          cleanupDays: s.cleanupDays || null,
+          layoutDensity: s.layoutDensity || "normal",
+          warnThreshold: s.warnThreshold || 50,
+          dangerThreshold: s.dangerThreshold || 30,
         } as any);
       }
     });
@@ -1780,6 +1827,8 @@ export async function exportAllData(): Promise<string> {
     "daySchedules",
     "exercises",
     "goalTemplates",
+    "customGoalTypes",
+    "correlationReports",
   ];
 
   const data: Record<string, unknown[]> = {};
@@ -1796,7 +1845,7 @@ export async function exportAllData(): Promise<string> {
   }
 
   return JSON.stringify({
-    version: 28,
+    version: 29,
     exportedAt: new Date().toISOString(),
     data,
   }, null, 2);
@@ -1855,6 +1904,8 @@ export async function importAllData(data: any): Promise<void> {
     "daySchedules",
     "exercises",
     "goalTemplates",
+    "customGoalTypes",
+    "correlationReports",
   ];
 
   await db.transaction("rw", tables.map(t => (db as any)[t]), async () => {

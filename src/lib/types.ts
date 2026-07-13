@@ -213,6 +213,7 @@ export interface PluginMetadata {
   installedAt: number;
   updatedAt: number;
   showInNavbar?: boolean;
+  goalTypeDefinition?: { key: string; name: string; icon: string; color: string; dataSource: string; unit: string; calcMode: string };
 }
 
 export type GoalViewType = 'long-term' | 'short-term' | 'daily-trivial' | 'habits';
@@ -251,6 +252,22 @@ export interface Goal {
   predictedFinishDate?: number;
   tags?: string[];
   weight: number;
+  customTypeId?: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface CustomGoalType {
+  id?: number;
+  key: string;
+  name: string;
+  icon: string;
+  color: string;
+  dataSource: 'task' | 'habit' | 'custom';
+  unit: string;
+  calcMode: 'cumulative' | 'daily_avg' | 'check_rate';
+  isBuiltIn: boolean;
+  enabled: boolean;
   createdAt: number;
   updatedAt: number;
 }
@@ -994,6 +1011,11 @@ export interface UserSettings {
   avatarDataUrl?: string;   // 头像 Base64
   linkageSettings?: LinkageSettings;
   aiSettings?: AiSettings;
+  archivedDays?: number;
+  cleanupDays?: number;
+  layoutDensity?: 'compact' | 'normal' | 'loose';
+  warnThreshold?: number;
+  dangerThreshold?: number;
   createdAt: number;
 }
 
@@ -1060,4 +1082,17 @@ export interface AiSettings {
   aiReviewAnalyze: boolean;
   aiProgressWarning: boolean;
   autoWeeklyReview: boolean;
+}
+
+export interface CorrelationReport {
+  id?: number;
+  dateKey: string;
+  sleepCorrelation: number;
+  exerciseCorrelation: number;
+  waterCorrelation: number;
+  efficientDays: string[];
+  efficientHours: number[];
+  trendLabel: string;
+  suggestions: string[];
+  createdAt: number;
 }

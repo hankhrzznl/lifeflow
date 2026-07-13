@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Key, Download, Upload, Trash2, Eye, EyeOff, AlertTriangle,
   Layers, RefreshCw, Calendar, Flag, Tag, Bookmark,
-  Bot, Sparkles, Brain, BellRing, CalendarCheck,
+  Bot, Sparkles, Brain, BellRing, CalendarCheck, Settings2,
 } from "lucide-react";
 import { db, exportAllData, importAllData } from "@/lib/db";
 import { showToast } from "@/components/ui/Toast";
@@ -85,6 +85,22 @@ export default function SettingsPage() {
   const [aiSettings, setAiSettings] = useState<{ aiEnabled: boolean; aiGoalDecompose: boolean; aiReviewAnalyze: boolean; aiProgressWarning: boolean; autoWeeklyReview: boolean }>({
     aiEnabled: true, aiGoalDecompose: true, aiReviewAnalyze: true, aiProgressWarning: true, autoWeeklyReview: false,
   });
+
+  const [layoutDensity, setLayoutDensity] = useState<string>(
+    typeof window !== "undefined" ? localStorage.getItem("lifeflow_layout_density") || "normal" : "normal"
+  );
+  const [warnThreshold, setWarnThreshold] = useState<string>(
+    typeof window !== "undefined" ? localStorage.getItem("lifeflow_warn_threshold") || "50" : "50"
+  );
+  const [dangerThreshold, setDangerThreshold] = useState<string>(
+    typeof window !== "undefined" ? localStorage.getItem("lifeflow_danger_threshold") || "30" : "30"
+  );
+  const [autoArchiveDays, setAutoArchiveDays] = useState<string>(
+    typeof window !== "undefined" ? localStorage.getItem("lifeflow_auto_archive_days") || "" : ""
+  );
+  const [backupReminder, setBackupReminder] = useState(
+    typeof window !== "undefined" ? localStorage.getItem("lifeflow_backup_reminder") === "true" : false
+  );
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -488,6 +504,66 @@ export default function SettingsPage() {
               <ToggleRow icon={<CalendarCheck className="w-4 h-4" />} label="自动周/月复盘" description="周期结束时自动生成AI分析" enabled={aiSettings.autoWeeklyReview} onToggle={() => handleToggleAi("autoWeeklyReview")} />
             </div>
           )}
+        </div>
+
+        {/* === 深度个性化 === */}
+        <div className="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-100 dark:border-gray-800">
+          <div className="flex items-start gap-3 mb-4">
+            <div className="w-10 h-10 rounded-xl bg-teal-100 dark:bg-teal-900/30 flex items-center justify-center flex-shrink-0">
+              <Settings2 className="w-5 h-5 text-teal-600 dark:text-teal-400" />
+            </div>
+            <div>
+              <h3 className="text-base font-semibold text-gray-900 dark:text-white">个性化设置</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">自定义提醒规则、自动归档与备份策略</p>
+            </div>
+          </div>
+          
+          <div className="space-y-4">
+            {/* 布局密度 */}
+            <div>
+              <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 block">布局密度</label>
+              <div className="flex gap-2">
+                {(["compact", "normal", "loose"] as const).map(d => (
+                  <button key={d} onClick={() => { setLayoutDensity(d); localStorage.setItem("lifeflow_layout_density", d); }}
+                    className={`flex-1 py-2 text-xs rounded-xl border transition-colors ${
+                      layoutDensity === d ? "border-teal-500 bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-400" : "border-gray-200 dark:border-gray-700 text-gray-500"
+                    }`}>
+                    {d === "compact" ? "紧凑" : d === "normal" ? "标准" : "宽松"}
+                  </button>
+                ))}
+              </div>
+            </div>
+            
+            {/* 进度提醒阈值 */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">预警阈值 (%)</label>
+                <input type="number" value={warnThreshold} onChange={(e) => { setWarnThreshold(e.target.value); localStorage.setItem("lifeflow_warn_threshold", e.target.value); }}
+                  className="w-full px-3 py-2 text-sm rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white" />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">严重滞后阈值 (%)</label>
+                <input type="number" value={dangerThreshold} onChange={(e) => { setDangerThreshold(e.target.value); localStorage.setItem("lifeflow_danger_threshold", e.target.value); }}
+                  className="w-full px-3 py-2 text-sm rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white" />
+              </div>
+            </div>
+            
+            {/* 自动归档 */}
+            <div>
+              <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">完成后自动归档天数 (留空关闭)</label>
+              <input type="number" value={autoArchiveDays} onChange={(e) => { setAutoArchiveDays(e.target.value); localStorage.setItem("lifeflow_auto_archive_days", e.target.value); }}
+                placeholder="如: 30" className="w-full px-3 py-2 text-sm rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white" />
+            </div>
+            
+            {/* 备份提醒 */}
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-gray-500 dark:text-gray-400">每月备份提醒</span>
+              <button onClick={() => { setBackupReminder(!backupReminder); localStorage.setItem("lifeflow_backup_reminder", String(!backupReminder)); }}
+                className={`w-10 h-6 rounded-full relative transition-colors ${backupReminder ? "bg-teal-500" : "bg-gray-300"}`}>
+                <div className={`w-5 h-5 rounded-full bg-white absolute top-0.5 transition-transform ${backupReminder ? "translate-x-[18px]" : "translate-x-[2px]"}`} />
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* === 版本信息 === */}

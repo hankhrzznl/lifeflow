@@ -9,6 +9,8 @@ import SWUpdateBanner from "@/components/pwa/SWUpdateBanner";
 import StorageMonitor from "@/components/pwa/StorageMonitor";
 import OfflineDetector from "@/components/pwa/OfflineDetector";
 import { GlobalErrorBoundary } from "@/components/GlobalErrorBoundary";
+import UpgradeNotification from "@/components/UpgradeNotification";
+import DataValidator from "@/components/DataValidator";
 
 export const metadata: Metadata = {
   title: "LifeFlow",
@@ -47,6 +49,8 @@ export default function RootLayout({
             <SWUpdateBanner />
             <StorageMonitor />
             <OfflineDetector />
+            <UpgradeNotification />
+            <DataValidator />
             </GlobalErrorBoundary>
           </SWProvider>
         </ClientProviders>

@@ -4,9 +4,9 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useCallback, useState, useEffect } from 'react';
 import { CalendarDays, Settings, BarChart3, Trash2, Puzzle, Heart, Target, List, Layers, ChevronDown, X, Bot } from 'lucide-react';
-import { getPluginsForNavbar } from '@/lib/db';
+import { getPluginsForNavbar, getAllProjectsV2, getAllGoals } from '@/lib/db';
 import { getPluginConfig } from '@/lib/plugin-config';
-import type { PluginMetadata } from '@/lib/types';
+import type { PluginMetadata, ProjectV2, Goal } from '@/lib/types';
 
 const planItems = [
   { label: '安排', href: '/pending', icon: List },
@@ -25,25 +25,42 @@ export default function DesktopSidebarV2() {
   const pathname = usePathname();
   const [showPlanMenu, setShowPlanMenu] = useState(false);
   const [pinnedPlugins, setPinnedPlugins] = useState<PluginMetadata[]>([]);
+  const [projects, setProjects] = useState<ProjectV2[]>([]);
+  const [goals, setGoals] = useState<Goal[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const loadPinnedPlugins = useCallback(async () => {
+  const loadData = useCallback(async () => {
     try {
       const plugins = await getPluginsForNavbar();
       const pinnedPlugins = plugins.filter(p => p.showInNavbar === true);
       setPinnedPlugins(pinnedPlugins);
+      
+      const [allProjects, allGoals] = await Promise.all([
+        getAllProjectsV2(),
+        getAllGoals(),
+      ]);
+      setProjects(allProjects);
+      setGoals(allGoals);
     } catch (err) {
-      console.error('Failed to load pinned plugins:', err);
+      console.error('Failed to load sidebar data:', err);
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    loadPinnedPlugins();
-    const interval = setInterval(loadPinnedPlugins, 3000);
+    loadData();
+    const interval = setInterval(loadData, 5000);
     return () => clearInterval(interval);
-  }, [loadPinnedPlugins]);
+  }, [loadData]);
+
+  const getProjectProgress = useCallback((projectId: number): number => {
+    const projectGoals = goals.filter(g => g.projectId === projectId && g.status !== "archived");
+    if (projectGoals.length === 0) return 0;
+    const totalWeight = projectGoals.reduce((sum, g) => sum + (g.weight || 1), 0);
+    const weightedProgress = projectGoals.reduce((sum, g) => sum + (g.progress || 0) * (g.weight || 1), 0);
+    return Math.round(weightedProgress / totalWeight);
+  }, [goals]);
 
   const isActive = useCallback((href: string) => {
     return pathname.startsWith(href);
@@ -181,6 +198,30 @@ export default function DesktopSidebarV2() {
                   <span className="text-sm">{item.label}</span>
                 </Link>
               ))}
+              
+              {projects.length > 0 && (
+                <>
+                  <div className="mx-4 my-2 border-t border-gray-100 dark:border-gray-800" />
+                  <div className="px-4 py-1.5 text-xs font-medium text-gray-500 dark:text-gray-500">项目</div>
+                  {projects.map((project) => {
+                    const progress = getProjectProgress(project.id!);
+                    return (
+                      <Link
+                        key={project.id}
+                        href={`/projects/${project.id}`}
+                        onClick={() => setShowPlanMenu(false)}
+                        className="flex items-center gap-3 px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                      >
+                        <div className="w-2 h-2 rounded-full bg-blue-500" />
+                        <span className="text-sm flex-1 truncate">{project.name}</span>
+                        {progress > 0 && (
+                          <span className="text-xs text-gray-400">{progress}%</span>
+                        )}
+                      </Link>
+                    );
+                  })}
+                </>
+              )}
             </div>
           </div>
         </>

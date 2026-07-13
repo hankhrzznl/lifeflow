@@ -45,7 +45,10 @@ import type {
   DailyWaterRecord,
   DailySelfAssessment,
   FinBudget,
+  Goal,
+  Plan,
 } from "./types";
+import { recalculateAllProgress } from "./linkage";
 
 export class LifeFlowDB extends Dexie {
   capture!: Table<CaptureItem, number>;
@@ -93,6 +96,8 @@ export class LifeFlowDB extends Dexie {
   userSettings!: Table<UserSettings, number>;
   dailyWaterRecords!: Table<DailyWaterRecord, number>;
   dailySelfAssessments!: Table<DailySelfAssessment, number>;
+  goals!: Table<Goal, number>;
+  plans!: Table<Plan, number>;
 
   constructor() {
     super("LifeFlowDB");
@@ -410,6 +415,147 @@ export class LifeFlowDB extends Dexie {
     }).upgrade(async () => {
       if (typeof window !== "undefined" && window.location.hostname === "localhost") {
         console.log("[LifeFlowDB v25] Added finBudgets table");
+      }
+    });
+
+    this.version(26).stores({
+      goals: "++id, projectId, type, status, priority, createdAt, updatedAt",
+      plans: "++id, goalId, status, order, createdAt, updatedAt",
+      tasks: "++id, type, status, parentTaskId, startTime, projectId, goalId, planId, createdAt, [type+status], *tags, dueDate",
+      habit_logs: "++id, taskId, goalId, planId, date, [taskId+date], createdAt",
+      finRecords: "++id, type, amount, category, date, accountId, goalId, createdAt",
+      muscleRecords: "++id, subMuscleId, exerciseName, date, timestamp, goalId, createdAt",
+      sleepRecords: "++id, date, timestamp, goalId, createdAt",
+      dailyWaterRecords: "++id, date, goalId, createdAt",
+      boards: null,
+      sections: null,
+    }).upgrade(async (tx) => {
+      const isLocal = typeof window !== "undefined" && window.location.hostname === "localhost";
+
+      if (isLocal) {
+        console.log("[LifeFlowDB v26] Starting migration to goal-plan-task hierarchy...");
+      }
+
+      const boards = await tx.table("boards").toArray();
+      const sections = await tx.table("sections").toArray();
+      const tasks = await tx.table("tasks").toArray();
+      const habitLogs = await tx.table("habit_logs").toArray();
+
+      const boardIdToGoalId: Record<number, number> = {};
+      const sectionIdToPlanId: Record<number, number> = {};
+
+      for (const board of boards) {
+        const projectId = typeof board.projectId === "string" 
+          ? parseInt(board.projectId, 10) || 0 
+          : (board.projectId ?? 0);
+
+        const description = board.stages && board.stages.length > 0 
+          ? JSON.stringify(board.stages) 
+          : "";
+
+        const goalId = await tx.table("goals").add({
+          projectId,
+          name: board.name,
+          description,
+          type: "task" as const,
+          status: "active" as const,
+          progress: 0,
+          progressLocked: false,
+          tags: [],
+          weight: 1,
+          createdAt: board.createdAt || Date.now(),
+          updatedAt: Date.now(),
+        });
+        boardIdToGoalId[board.id!] = goalId;
+
+        if (isLocal) {
+          console.log(`[LifeFlowDB v26] Migrated board ${board.id} -> goal ${goalId}`);
+        }
+      }
+
+      for (const section of sections) {
+        const boardId = section.boardId ?? 0;
+        const goalId = boardIdToGoalId[boardId] || 0;
+
+        const planId = await tx.table("plans").add({
+          goalId,
+          name: section.name,
+          weight: 1,
+          status: "active" as const,
+          progress: 0,
+          order: section.stageIndex ?? 0,
+          createdAt: section.createdAt || Date.now(),
+          updatedAt: Date.now(),
+        });
+        sectionIdToPlanId[section.id!] = planId;
+
+        if (isLocal) {
+          console.log(`[LifeFlowDB v26] Migrated section ${section.id} -> plan ${planId}`);
+        }
+      }
+
+      for (const task of tasks) {
+        const projectId = typeof task.projectId === "string"
+          ? parseInt(task.projectId, 10) || undefined
+          : task.projectId;
+        const goalId = task.boardId ? boardIdToGoalId[task.boardId] || undefined : undefined;
+        const planId = task.sectionId ? sectionIdToPlanId[task.sectionId] || undefined : undefined;
+
+        await tx.table("tasks").update(task.id!, {
+          projectId,
+          goalId,
+          planId,
+          weight: task.weight ?? 1,
+        });
+
+        if (isLocal) {
+          console.log(`[LifeFlowDB v26] Updated task ${task.id}: goalId=${goalId}, planId=${planId}`);
+        }
+      }
+
+      for (const log of habitLogs) {
+        const task = tasks.find(t => t.id === log.taskId);
+        if (task) {
+          const goalId = task.boardId ? boardIdToGoalId[task.boardId] || undefined : undefined;
+          const planId = task.sectionId ? sectionIdToPlanId[task.sectionId] || undefined : undefined;
+          await tx.table("habit_logs").update(log.id!, {
+            goalId,
+            planId,
+          });
+        }
+      }
+
+      const allPlans = await tx.table("plans").toArray();
+      for (const plan of allPlans) {
+        const planTasks = tasks.filter(t => t.sectionId && sectionIdToPlanId[t.sectionId] === plan.id);
+        const completedCount = planTasks.filter(t => t.status === "done").length;
+        const totalCount = planTasks.length;
+        const progress = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+
+        await tx.table("plans").update(plan.id!, { progress });
+      }
+
+      const allGoals = await tx.table("goals").toArray();
+      for (const goal of allGoals) {
+        const goalPlans = allPlans.filter(p => p.goalId === goal.id);
+        if (goalPlans.length === 0) {
+          const goalTasks = tasks.filter(t => t.boardId && boardIdToGoalId[t.boardId] === goal.id);
+          const completedCount = goalTasks.filter(t => t.status === "done").length;
+          const totalCount = goalTasks.length;
+          const progress = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+          await tx.table("goals").update(goal.id!, { progress });
+        } else {
+          const totalWeight = goalPlans.reduce((sum, p) => sum + p.weight, 0);
+          let weightedProgress = 0;
+          for (const plan of goalPlans) {
+            weightedProgress += (plan.progress * plan.weight) / (totalWeight || 1);
+          }
+          await tx.table("goals").update(goal.id!, { progress: Math.round(weightedProgress) });
+        }
+      }
+
+      if (isLocal) {
+        console.log(`[LifeFlowDB v26] Migration complete. goals: ${allGoals.length}, plans: ${allPlans.length}`);
       }
     });
   }
@@ -903,16 +1049,24 @@ export async function getTimeSegmentsByDateRange(startTime: number, endTime: num
 }
 
 export async function createSection(name: string, boardId?: number, sectionData?: Partial<Omit<Section, "id" | "createdAt" | "name" | "boardId">>): Promise<number> {
-  return db.sections.add({ 
-    name, 
-    boardId,
+  return db.plans.add({
+    goalId: boardId ?? 0,
+    name,
+    weight: 1,
+    status: "active" as const,
+    progress: 0,
+    order: 0,
     createdAt: Date.now(),
-    ...sectionData
+    updatedAt: Date.now(),
+    ...sectionData,
   });
 }
 
 export async function updateSection(id: number, updates: Partial<Section>): Promise<void> {
-  await db.sections.update(id, updates);
+  const planUpdates: Partial<{ name: string; weight: number; order: number }> = {};
+  if (updates.name !== undefined) planUpdates.name = updates.name;
+  if (updates.stageIndex !== undefined) planUpdates.order = updates.stageIndex;
+  await db.plans.update(id, planUpdates);
 }
 
 export async function getAllProjectsV2(): Promise<ProjectV2[]> {
@@ -920,11 +1074,24 @@ export async function getAllProjectsV2(): Promise<ProjectV2[]> {
 }
 
 export async function getBoardsByProject(projectId: number): Promise<Board[]> {
-  return db.boards.where("projectId").equals(projectId).toArray();
+  const goals = await db.goals.where("projectId").equals(projectId).toArray();
+  return goals.map(g => ({
+    id: g.id,
+    name: g.name,
+    projectId: g.projectId,
+    createdAt: g.createdAt,
+  }));
 }
 
 export async function getSectionsByBoard(boardId: number): Promise<Section[]> {
-  return db.sections.where("boardId").equals(boardId).toArray();
+  const plans = await db.plans.where("goalId").equals(boardId).toArray();
+  return plans.map(p => ({
+    id: p.id,
+    name: p.name,
+    boardId: p.goalId,
+    stageIndex: p.order,
+    createdAt: p.createdAt,
+  }));
 }
 
 export async function getProjectV2(id: number): Promise<ProjectV2 | undefined> {
@@ -932,11 +1099,26 @@ export async function getProjectV2(id: number): Promise<ProjectV2 | undefined> {
 }
 
 export async function getBoard(id: number): Promise<Board | undefined> {
-  return db.boards.get(id);
+  const goal = await db.goals.get(id);
+  if (!goal) return undefined;
+  return {
+    id: goal.id,
+    name: goal.name,
+    projectId: goal.projectId,
+    createdAt: goal.createdAt,
+  };
 }
 
 export async function getSection(id: number): Promise<Section | undefined> {
-  return db.sections.get(id);
+  const plan = await db.plans.get(id);
+  if (!plan) return undefined;
+  return {
+    id: plan.id,
+    name: plan.name,
+    boardId: plan.goalId,
+    stageIndex: plan.order,
+    createdAt: plan.createdAt,
+  };
 }
 
 export async function getPluginsForNavbar(): Promise<PluginMetadata[]> {
@@ -1183,23 +1365,157 @@ export async function createBoard(
   name: string,
   projectId?: number
 ): Promise<number> {
-  return db.boards.add({ 
-    name, 
-    projectId,
-    createdAt: Date.now() 
+  return db.goals.add({
+    projectId: projectId ?? 0,
+    name,
+    description: "",
+    type: "task" as const,
+    status: "active" as const,
+    progress: 0,
+    progressLocked: false,
+    tags: [],
+    weight: 1,
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
   });
 }
 
 export async function updateBoard(id: number, updates: Partial<Board>): Promise<void> {
-  await db.boards.update(id, updates);
+  const goalUpdates: Partial<{ name: string; description: string; tags: string[] }> = {};
+  if (updates.name !== undefined) goalUpdates.name = updates.name;
+  if (updates.stages !== undefined) goalUpdates.description = JSON.stringify(updates.stages);
+  await db.goals.update(id, goalUpdates);
 }
 
 export async function deleteBoardToTrash(id: number): Promise<void> {
-  await db.boards.delete(id);
+  await db.transaction("rw", [db.goals, db.plans, db.tasks], async (tx) => {
+    const plans = await tx.table("plans").where("goalId").equals(id).toArray();
+    for (const plan of plans) {
+      await tx.table("tasks").where("planId").equals(plan.id!).delete();
+    }
+    await tx.table("plans").where("goalId").equals(id).delete();
+    await tx.table("goals").delete(id);
+  });
 }
 
 export async function deleteSectionToTrash(id: number): Promise<void> {
-  await db.sections.delete(id);
+  await db.transaction("rw", [db.plans, db.tasks], async (tx) => {
+    await tx.table("tasks").where("planId").equals(id).delete();
+    await tx.table("plans").delete(id);
+  });
+}
+
+export async function createGoal(goalData: Omit<Goal, "id" | "createdAt" | "updatedAt">): Promise<number> {
+  return db.goals.add({
+    ...goalData,
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+  });
+}
+
+export async function updateGoal(id: number, updates: Partial<Goal>): Promise<void> {
+  await db.goals.update(id, { ...updates, updatedAt: Date.now() });
+}
+
+export async function deleteGoal(id: number, moveTasksToUnclassified: boolean = true): Promise<void> {
+  await db.transaction("rw", [db.goals, db.plans, db.tasks], async (tx) => {
+    const plans = await tx.table("plans").where("goalId").equals(id).toArray();
+    for (const plan of plans) {
+      if (moveTasksToUnclassified) {
+        const planTasks = await tx.table("tasks").where("planId").equals(plan.id!).toArray();
+        for (const task of planTasks) {
+          await tx.table("tasks").update(task.id!, { planId: undefined, goalId: undefined });
+        }
+      } else {
+        await tx.table("tasks").where("planId").equals(plan.id!).delete();
+      }
+    }
+    await tx.table("plans").where("goalId").equals(id).delete();
+    if (moveTasksToUnclassified) {
+      const goalTasks = await tx.table("tasks").where("goalId").equals(id).toArray();
+      for (const task of goalTasks) {
+        await tx.table("tasks").update(task.id!, { goalId: undefined });
+      }
+    } else {
+      await tx.table("tasks").where("goalId").equals(id).delete();
+    }
+    await tx.table("goals").delete(id);
+  });
+}
+
+export async function getGoalsByProject(projectId: number): Promise<Goal[]> {
+  return db.goals.where("projectId").equals(projectId).toArray();
+}
+
+export async function getGoal(id: number): Promise<Goal | undefined> {
+  return db.goals.get(id);
+}
+
+export async function createPlan(planData: Omit<Plan, "id" | "createdAt" | "updatedAt">): Promise<number> {
+  const plans = await db.plans.where("goalId").equals(planData.goalId).sortBy("order");
+  const maxOrder = plans.length > 0 ? plans[plans.length - 1].order : -1;
+  return db.plans.add({
+    ...planData,
+    order: maxOrder + 1,
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+  });
+}
+
+export async function updatePlan(id: number, updates: Partial<Plan>): Promise<void> {
+  await db.plans.update(id, { ...updates, updatedAt: Date.now() });
+}
+
+export async function deletePlan(id: number, moveTasksToUnclassified: boolean = true): Promise<void> {
+  await db.transaction("rw", [db.plans, db.tasks], async (tx) => {
+    if (moveTasksToUnclassified) {
+      const plan = await tx.table("plans").get(id);
+      if (plan) {
+        const planTasks = await tx.table("tasks").where("planId").equals(id).toArray();
+        for (const task of planTasks) {
+          await tx.table("tasks").update(task.id!, { planId: undefined });
+        }
+      }
+    } else {
+      await tx.table("tasks").where("planId").equals(id).delete();
+    }
+    await tx.table("plans").delete(id);
+  });
+}
+
+export async function getPlansByGoal(goalId: number): Promise<Plan[]> {
+  return db.plans.where("goalId").equals(goalId).sortBy("order");
+}
+
+export async function getPlan(id: number): Promise<Plan | undefined> {
+  return db.plans.get(id);
+}
+
+export async function getUnassignedTasks(): Promise<Task[]> {
+  return db.tasks.filter(t => t.planId === undefined || t.planId === null).toArray();
+}
+
+export async function assignTasksToPlan(taskIds: number[], planId: number): Promise<void> {
+  const plan = await db.plans.get(planId);
+  if (!plan) return;
+  
+  await db.transaction("rw", [db.tasks], async (tx) => {
+    for (const taskId of taskIds) {
+      await tx.table("tasks").update(taskId, {
+        planId,
+        goalId: plan.goalId,
+        updatedAt: Date.now(),
+      });
+    }
+  });
+}
+
+export async function getAllGoals(): Promise<Goal[]> {
+  return db.goals.toArray();
+}
+
+export async function getAllPlans(): Promise<Plan[]> {
+  return db.plans.toArray();
 }
 
 export async function exportAllData(): Promise<string> {
@@ -1227,6 +1543,29 @@ export async function exportAllData(): Promise<string> {
     "nutritionRecords",
     "recoveryRecords",
     "enduranceRecords",
+    "goals",
+    "plans",
+    "userSettings",
+    "dailyWaterRecords",
+    "dailySelfAssessments",
+    "finRecords",
+    "finAccounts",
+    "finBudgets",
+    "reviewRecords",
+    "reminders",
+    "reminderLogs",
+    "healthRecords",
+    "workouts",
+    "journalEntries",
+    "trainingPlans",
+    "trainingExercises",
+    "dailyMetrics",
+    "dailyHealthRecords",
+    "customTrainingPlans",
+    "scheduleTemplates",
+    "scheduleEvents",
+    "daySchedules",
+    "exercises",
   ];
 
   const data: Record<string, unknown[]> = {};
@@ -1242,12 +1581,18 @@ export async function exportAllData(): Promise<string> {
     }
   }
 
-  return JSON.stringify(data, null, 2);
+  return JSON.stringify({
+    version: 26,
+    exportedAt: new Date().toISOString(),
+    data,
+  }, null, 2);
 }
 
-export async function importAllData(data: string): Promise<void> {
-  const parsedData = JSON.parse(data);
-  
+export async function importAllData(data: any): Promise<void> {
+  // Handle wrapper format: { version, exportedAt, data } vs old plain data
+  const version = data?.version;
+  const parsedData = version != null ? data.data : data;
+
   const tables = [
     "capture",
     "events",
@@ -1272,9 +1617,44 @@ export async function importAllData(data: string): Promise<void> {
     "nutritionRecords",
     "recoveryRecords",
     "enduranceRecords",
+    "goals",
+    "plans",
+    "userSettings",
+    "dailyWaterRecords",
+    "dailySelfAssessments",
+    "finRecords",
+    "finAccounts",
+    "finBudgets",
+    "reviewRecords",
+    "reminders",
+    "reminderLogs",
+    "healthRecords",
+    "workouts",
+    "journalEntries",
+    "trainingPlans",
+    "trainingExercises",
+    "dailyMetrics",
+    "dailyHealthRecords",
+    "customTrainingPlans",
+    "scheduleTemplates",
+    "scheduleEvents",
+    "daySchedules",
+    "exercises",
   ];
 
   await db.transaction("rw", tables.map(t => (db as any)[t]), async () => {
+    // Clear all tables first to avoid duplicates
+    for (const table of tables) {
+      try {
+        await (db as any)[table].clear();
+      } catch (error) {
+        if (typeof window !== "undefined" && window.location.hostname === "localhost") {
+          console.warn(`Failed to clear table ${table}:`, error);
+        }
+      }
+    }
+
+    // Import data
     for (const table of tables) {
       if (parsedData[table] && Array.isArray(parsedData[table])) {
         const tableData = parsedData[table];
@@ -1290,6 +1670,9 @@ export async function importAllData(data: string): Promise<void> {
       }
     }
   });
+
+  // Recalculate progress to trigger migration and calibration
+  await recalculateAllProgress();
 }
 
 export async function getTrashItems(): Promise<TrashItem[]> {
@@ -2130,22 +2513,30 @@ export async function getTodayWaterRecord(): Promise<DailyWaterRecord | null> {
   return result ?? null;
 }
 
-export async function addWaterIntake(ml: number): Promise<DailyWaterRecord> {
+export async function addWaterIntake(ml: number, goalId?: number): Promise<DailyWaterRecord> {
   const today = getTodayStr();
   const existing = await db.dailyWaterRecords.where("date").equals(today).first();
   if (existing) {
-    await db.dailyWaterRecords.update(existing.id!, {
+    const updateData: Partial<DailyWaterRecord> = {
       entries: [...existing.entries, { ml, timestamp: Date.now() }],
       totalMl: existing.totalMl + ml,
-    });
+    };
+    if (goalId !== undefined) {
+      updateData.goalId = goalId;
+    }
+    await db.dailyWaterRecords.update(existing.id!, updateData);
     return (await db.dailyWaterRecords.get(existing.id!))!;
   }
-  const id = await db.dailyWaterRecords.add({
+  const newRecord: Omit<DailyWaterRecord, "id"> = {
     date: today,
     entries: [{ ml, timestamp: Date.now() }],
     totalMl: ml,
     createdAt: Date.now(),
-  });
+  };
+  if (goalId !== undefined) {
+    newRecord.goalId = goalId;
+  }
+  const id = await db.dailyWaterRecords.add(newRecord);
   return (await db.dailyWaterRecords.get(id))!;
 }
 

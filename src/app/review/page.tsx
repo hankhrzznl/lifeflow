@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   CheckCheck, ListTodo, TrendingUp,
   AlertCircle, Target, Zap, BarChart3, Plus, Trash2,
@@ -11,10 +12,10 @@ import {
 } from "lucide-react";
 import {
   getReviewRecordByPeriod, createOrUpdateReviewRecord,
-  createTask,
+  createTask, getAllGoals, getPlansByGoal,
 } from "@/lib/db";
 import { showToast } from "@/components/ui/Toast";
-import type { ReviewRecord, Task, ProjectV2, HabitLog } from "@/lib/types";
+import type { ReviewRecord, Task, ProjectV2, HabitLog, Goal, Plan } from "@/lib/types";
 import { PRIORITY_CONFIG } from "@/lib/types";
 import { db } from "@/lib/db";
 
@@ -253,6 +254,12 @@ export default function ReviewPage() {
   const [existingRecord, setExistingRecord] = useState<ReviewRecord | null>(null);
   const [editingIndex, setEditingIndex] = useState<{ section: "h" | "p" | "i"; index: number } | null>(null);
   const [editValue, setEditValue] = useState("");
+  const [goals, setGoals] = useState<Goal[]>([]);
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const [showGoalPlans, setShowGoalPlans] = useState(false);
+  const [genTaskGoalId, setGenTaskGoalId] = useState<number | null>(null);
+  const [genTaskPlanId, setGenTaskPlanId] = useState<number | null>(null);
+  const router = useRouter();
 
   const range = getPeriodRange(periodType, periodOffset);
 
@@ -268,6 +275,9 @@ export default function ReviewPage() {
       setAllTasks(tasks);
       setProjects(projs);
       setHabitLogs(hLogs);
+
+      const allGoals = await getAllGoals();
+      setGoals(allGoals);
 
       // 加载该周期的回顾记录
       const record = await getReviewRecordByPeriod(
@@ -296,6 +306,14 @@ export default function ReviewPage() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  useEffect(() => {
+    if (genTaskGoalId) {
+      getPlansByGoal(genTaskGoalId).then(setPlans).catch(() => setPlans([]));
+    } else {
+      setPlans([]);
+    }
+  }, [genTaskGoalId]);
 
   // ── 计算统计 ──
 
@@ -429,6 +447,7 @@ export default function ReviewPage() {
         periodType,
         periodStart: range.start,
         periodEnd: range.end,
+        goalIds: goals.filter(g => g.status === "active" || g.status === "completed" || g.status === "paused").map(g => g.id!).filter(Boolean),
       });
       showToast({ message: "回顾已保存", type: "success" });
       loadData();
@@ -456,6 +475,8 @@ export default function ReviewPage() {
           status: "active",
           priority: "not-urgent-important",
           tags: ["改进", "review"],
+          goalId: genTaskGoalId ?? undefined,
+          planId: genTaskPlanId ?? undefined,
         });
       }
       showToast({ message: `已生成 ${improvements.length} 个待办任务`, type: "success" });
@@ -749,6 +770,136 @@ export default function ReviewPage() {
           </section>
         )}
 
+        {/* 目标达成分析 */}
+        {goals.filter(g => g.status !== "archived").length > 0 && (
+          <section className="space-y-3">
+            <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+              目标达成分析
+            </h2>
+
+            {/* 概要卡片 */}
+            <div className="grid grid-cols-2 gap-3">
+              <OverviewCard
+                icon={<Target className="w-4 h-4" />}
+                iconColor="text-blue-600"
+                iconBg="bg-blue-100 dark:bg-blue-900/30"
+                label="活跃目标"
+                value={goals.filter(g => g.status === "active").length}
+                sub={`总计 ${goals.filter(g => g.status !== "archived").length} 个目标`}
+              />
+              <OverviewCard
+                icon={<CheckCheck className="w-4 h-4" />}
+                iconColor="text-emerald-600"
+                iconBg="bg-emerald-100 dark:bg-emerald-900/30"
+                label="已达成"
+                value={goals.filter(g => g.status === "completed").length}
+                sub={`达成率 ${goals.filter(g => g.status !== "archived").length > 0 ? Math.round((goals.filter(g => g.status === "completed").length / goals.filter(g => g.status !== "archived").length) * 100) : 0}%`}
+              />
+              <OverviewCard
+                icon={<AlertCircle className="w-4 h-4" />}
+                iconColor="text-red-600"
+                iconBg="bg-red-100 dark:bg-red-900/30"
+                label="进度滞后"
+                value={goals.filter(g => {
+                  if (g.status !== "active" || !g.deadline) return false;
+                  const nowTs = Date.now();
+                  const totalDuration = g.deadline - g.createdAt;
+                  const elapsed = nowTs - g.createdAt;
+                  const expectedProgress = totalDuration > 0 ? (elapsed / totalDuration) * 100 : 0;
+                  return g.progress < 50 && g.progress < expectedProgress - 20;
+                }).length}
+                sub="进度低于预期20%以上"
+              />
+              <OverviewCard
+                icon={<BarChart3 className="w-4 h-4" />}
+                iconColor="text-violet-600"
+                iconBg="bg-violet-100 dark:bg-violet-900/30"
+                label="整体达成率"
+                value={`${goals.filter(g => g.status !== "archived").length > 0 ? Math.round(goals.filter(g => g.status === "completed").length / goals.filter(g => g.status !== "archived").length * 100) : 0}%`}
+                sub={`${goals.filter(g => g.status === "completed").length}/${goals.filter(g => g.status !== "archived").length}`}
+              />
+            </div>
+
+            {/* 按项目分组的活跃目标列表 */}
+            {projects.length > 0 && goals.filter(g => g.status === "active" || g.status === "paused").length > 0 && (
+              <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-4">
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                  <Target className="w-4 h-4 text-indigo-500" />
+                  活跃目标进度
+                </h3>
+                <div className="space-y-4">
+                  {(() => {
+                    const activeGoals = goals.filter(g => g.status === "active" || g.status === "paused");
+                    const projectGoalMap: Record<string, Goal[]> = {};
+                    for (const g of activeGoals) {
+                      const pid = String(g.projectId);
+                      if (!projectGoalMap[pid]) projectGoalMap[pid] = [];
+                      projectGoalMap[pid].push(g);
+                    }
+                    return Object.entries(projectGoalMap).map(([pid, pgoals]) => {
+                      const proj = projects.find(p => String(p.id) === pid);
+                      return (
+                        <div key={pid}>
+                          {proj && <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">{proj.name}</p>}
+                          <div className="space-y-2">
+                            {pgoals.map(goal => (
+                              <button
+                                key={goal.id}
+                                onClick={() => router.push(`/projects/${goal.projectId}/goals/${goal.id}`)}
+                                className="w-full text-left"
+                              >
+                                <div className="space-y-1">
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                      <div 
+                                        className="w-2 h-2 rounded-full" 
+                                        style={{ backgroundColor: PRIORITY_CONFIG.find(p => p.key === goal.priority)?.hex || "#6B7280" }}
+                                      />
+                                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{goal.name}</span>
+                                      <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+                                        goal.status === "paused" ? "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400" :
+                                        goal.status === "completed" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" :
+                                        "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+                                      }`}>
+                                        {goal.status === "paused" ? "暂停" : goal.status === "completed" ? "完成" : "进行中"}
+                                      </span>
+                                    </div>
+                                    <span className="text-xs text-gray-500">{goal.progress}%</span>
+                                  </div>
+                                  <div className="h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                                    <motion.div
+                                      initial={{ width: 0 }}
+                                      animate={{ width: `${Math.min(goal.progress, 100)}%` }}
+                                      className={`h-full rounded-full ${
+                                        goal.progress >= 100 ? "bg-emerald-500" :
+                                        goal.progress >= 60 ? "bg-blue-500" :
+                                        goal.progress >= 30 ? "bg-amber-500" : "bg-red-500"
+                                      }`}
+                                      transition={{ duration: 0.5, ease: "easeOut" }}
+                                    />
+                                  </div>
+                                  {goal.deadline && (
+                                    <p className="text-xs text-gray-400">
+                                      截止: {new Date(goal.deadline).toLocaleDateString("zh-CN")}
+                                      {goal.progress < 50 && goal.deadline < Date.now() + 7 * 24 * 60 * 60 * 1000 && (
+                                        <span className="text-red-500 ml-2">临近!</span>
+                                      )}
+                                    </p>
+                                  )}
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()}
+                </div>
+              </div>
+            )}
+          </section>
+        )}
+
         {/* 回顾记录编辑器 */}
         <section className="space-y-3">
           <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
@@ -798,8 +949,44 @@ export default function ReviewPage() {
             <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">闭环行动</h2>
           </div>
           <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-            将本期的改进点转化为待办任务，放入「待安排」池中，确保改进落地执行。
+            将本期的改进点转化为待办任务，可关联目标与计划，确保改进落地执行。
           </p>
+          
+          {/* 目标/计划选择器 */}
+          <div className="space-y-2 mb-3">
+            {projects.length > 0 && (
+              <select
+                value={genTaskGoalId ?? ""}
+                onChange={(e) => { 
+                  const val = e.target.value ? Number(e.target.value) : null;
+                  setGenTaskGoalId(val); 
+                  setGenTaskPlanId(null);
+                }}
+                className="w-full px-3 py-2 rounded-xl border border-indigo-200 dark:border-indigo-800 bg-white dark:bg-gray-800 text-xs text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                <option value="">选择关联目标（可选）</option>
+                {goals.filter(g => g.status === "active" || g.status === "paused").map(g => (
+                  <option key={g.id} value={g.id}>{g.name}</option>
+                ))}
+              </select>
+            )}
+            {genTaskGoalId && (
+              <select
+                value={genTaskPlanId ?? ""}
+                onChange={(e) => setGenTaskPlanId(e.target.value ? Number(e.target.value) : null)}
+                className="w-full px-3 py-2 rounded-xl border border-indigo-200 dark:border-indigo-800 bg-white dark:bg-gray-800 text-xs text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                <option value="">选择关联计划（可选）</option>
+                {(() => {
+                  const goalPlans = plans.filter(p => p.goalId === genTaskGoalId);
+                  return goalPlans.map(p => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ));
+                })()}
+              </select>
+            )}
+          </div>
+          
           <button
             onClick={handleGenerateTasks}
             disabled={improvements.filter(Boolean).length === 0}

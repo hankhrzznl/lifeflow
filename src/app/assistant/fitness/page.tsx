@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ChevronLeft, ChevronRight, ChevronDown, Plus, Dumbbell, Edit2, Trash2, Trophy,
   Flame, Award, Clock, ArrowRight,
@@ -27,10 +28,14 @@ import {
   getAllCustomTrainingPlans,
   addCustomTrainingPlan,
   deleteCustomTrainingPlan,
+  getGoalsByProject,
+  getAllProjectsV2,
 } from "@/lib/db";
+import { notifyGoalProgressUpdate } from "@/lib/linkage";
 import type {
   MuscleGroup, SubMuscle, PresetExercise, MuscleRecord,
   CustomTrainingPlan, PlanTrainingDay,
+  Goal,
 } from "@/lib/types";
 import { RPE_LABELS, REST_TIME_PRESETS } from "@/lib/types";
 
@@ -270,9 +275,9 @@ function SubMuscleManagerModal({
 // ==================== Add Record Modal (two-step) ====================
 
 function AddRecordModal({
-  isOpen, onClose, muscleGroups, subMuscles, presetExercises, onSuccess,
+  isOpen, onClose, muscleGroups, subMuscles, presetExercises, onSuccess, selectedGoalId,
 }: {
-  isOpen: boolean; onClose: () => void; muscleGroups: MuscleGroup[]; subMuscles: SubMuscle[]; presetExercises: PresetExercise[]; onSuccess: () => void;
+  isOpen: boolean; onClose: () => void; muscleGroups: MuscleGroup[]; subMuscles: SubMuscle[]; presetExercises: PresetExercise[]; onSuccess: () => void; selectedGoalId: number | null;
 }) {
   const [selectedGroup, setSelectedGroup] = useState<MuscleGroup | null>(null);
   const [selectedSubMuscle, setSelectedSubMuscle] = useState<SubMuscle | null>(null);
@@ -306,7 +311,9 @@ function AddRecordModal({
     await addMuscleRecord({
       subMuscleId: selectedSubMuscle.id!, exerciseName, sets: parseInt(sets) || 3, reps: parseInt(reps) || 10,
       weight: parseFloat(weight) || 0, rpe, restTime, feeling, date: today, timestamp: Date.now(), notes: notes || undefined,
+      goalId: selectedGoalId || undefined,
     });
+    if (selectedGoalId) { notifyGoalProgressUpdate(selectedGoalId); }
     showToast({ message: "训练记录已添加", type: "success", duration: 2000 });
     onSuccess(); onClose(); resetForm();
   };
@@ -433,9 +440,9 @@ function AddRecordModal({
 // ==================== Edit Record Modal ====================
 
 function EditRecordModal({
-  isOpen, onClose, record, subMuscles, onSuccess,
+  isOpen, onClose, record, subMuscles, onSuccess, selectedGoalId,
 }: {
-  isOpen: boolean; onClose: () => void; record: MuscleRecord | null; subMuscles: SubMuscle[]; onSuccess: () => void;
+  isOpen: boolean; onClose: () => void; record: MuscleRecord | null; subMuscles: SubMuscle[]; onSuccess: () => void; selectedGoalId: number | null;
 }) {
   const [sets, setSets] = useState("");
   const [reps, setReps] = useState("");
@@ -476,7 +483,7 @@ function EditRecordModal({
     if (!record) return;
     if (!confirm("确定要删除这条训练记录吗？")) return;
     setIsSubmitting(true);
-    try { await deleteMuscleRecord(record.id!); showToast({ message: "记录已删除", type: "success", duration: 2000 }); onSuccess(); onClose(); }
+    try { await deleteMuscleRecord(record.id!); if (selectedGoalId) { notifyGoalProgressUpdate(selectedGoalId); } showToast({ message: "记录已删除", type: "success", duration: 2000 }); onSuccess(); onClose(); }
     catch { showToast({ message: "删除失败", type: "error", duration: 2000 }); }
     finally { setIsSubmitting(false); }
   };
@@ -1157,6 +1164,9 @@ export default function FitnessPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [managingMuscleGroup, setManagingMuscleGroup] = useState<MuscleGroup | null>(null);
   const [editingRecord, setEditingRecord] = useState<MuscleRecord | null>(null);
+  const [goals, setGoals] = useState<Goal[]>([]);
+  const [selectedGoalId, setSelectedGoalId] = useState<number | null>(null);
+  const router = useRouter();
 
   const loadData = async () => {
     setIsLoading(true);
@@ -1196,6 +1206,21 @@ export default function FitnessPage() {
 
   useEffect(() => { loadData(); }, []);
 
+  useEffect(() => {
+    const loadGoals = async () => {
+      try {
+        const allProjects = await getAllProjectsV2();
+        const allGoals: Goal[] = [];
+        for (const p of allProjects) {
+          const g = await getGoalsByProject(p.id!);
+          allGoals.push(...g.filter(g => g.type === "fitness" && (g.status === "active" || g.status === "paused")));
+        }
+        setGoals(allGoals);
+      } catch {}
+    };
+    loadGoals();
+  }, []);
+
   const handleSelectGroup = async (_group: MuscleGroup, _subMuscles: SubMuscle[]) => {
     try {
       const exercises = await Promise.all(_subMuscles.map((s) => getPresetExercisesBySubMuscle(s.id!)));
@@ -1210,6 +1235,7 @@ export default function FitnessPage() {
   const handleBatchDelete = async (ids: number[]) => {
     try {
       await Promise.all(ids.map((id) => deleteMuscleRecord(id)));
+      if (selectedGoalId) { notifyGoalProgressUpdate(selectedGoalId); }
       showToast({ message: `已删除 ${ids.length} 条记录`, type: "success", duration: 2000 });
       loadData();
     } catch { showToast({ message: "删除失败", type: "error", duration: 2000 }); }
@@ -1245,6 +1271,42 @@ export default function FitnessPage() {
             <p className="text-xs text-gray-400">力量训练记录 · 计划管理</p>
           </div>
         </div>
+
+        {/* 关联健身目标 */}
+        {goals.length > 0 && (
+          <div className="mb-4 bg-orange-500/10 rounded-xl p-3 mx-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-medium text-orange-400 flex items-center gap-1">
+                <Dumbbell className="w-3.5 h-3.5" /> 关联健身目标
+              </span>
+              <select
+                value={selectedGoalId ?? ""}
+                onChange={(e) => setSelectedGoalId(e.target.value ? Number(e.target.value) : null)}
+                className="text-xs bg-gray-800 rounded-lg px-2 py-1 border border-gray-700 text-gray-300"
+              >
+                <option value="">不关联</option>
+                {goals.map(g => (
+                  <option key={g.id} value={g.id}>{g.name} ({g.progress}%)</option>
+                ))}
+              </select>
+            </div>
+            {selectedGoalId && (() => {
+              const g = goals.find(g => g.id === selectedGoalId);
+              if (!g) return null;
+              return (
+                <button onClick={() => router.push(`/projects/${g.projectId}/goals/${g.id}`)} className="w-full text-left">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-200">{g.name}</span>
+                    <span className="font-medium text-gray-300">{g.progress}%</span>
+                  </div>
+                  <div className="h-1.5 bg-gray-700 rounded-full mt-1 overflow-hidden">
+                    <div className={`h-full rounded-full transition-all ${g.progress >= 100 ? "bg-emerald-500" : "bg-orange-500"}`} style={{ width: `${Math.min(g.progress, 100)}%` }} />
+                  </div>
+                </button>
+              );
+            })()}
+          </div>
+        )}
 
         <div className="space-y-4">
           {/* Action buttons row */}
@@ -1332,7 +1394,7 @@ export default function FitnessPage() {
 
         {/* Modals */}
         <AddRecordModal isOpen={showAddModal} onClose={() => setShowAddModal(false)}
-          muscleGroups={muscleGroups} subMuscles={subMuscles} presetExercises={presetExercises} onSuccess={loadData} />
+          muscleGroups={muscleGroups} subMuscles={subMuscles} presetExercises={presetExercises} onSuccess={loadData} selectedGoalId={selectedGoalId} />
 
         {managingMuscleGroup && (
           <SubMuscleManagerModal isOpen={!!managingMuscleGroup} onClose={() => setManagingMuscleGroup(null)}
@@ -1340,7 +1402,7 @@ export default function FitnessPage() {
         )}
 
         <EditRecordModal isOpen={!!editingRecord} onClose={() => setEditingRecord(null)}
-          record={editingRecord} subMuscles={subMuscles} onSuccess={loadData} />
+          record={editingRecord} subMuscles={subMuscles} onSuccess={loadData} selectedGoalId={selectedGoalId} />
 
         <WarmupStretchModal isOpen={showWarmupModal} onClose={() => setShowWarmupModal(false)} />
 

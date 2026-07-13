@@ -8,8 +8,8 @@ import {
   CalendarDays, ClipboardList, CheckSquare, XCircle,
   ChevronRight, Zap, Sun, Sunrise, CalendarRange,
 } from "lucide-react";
-import { createTask, deleteTask, restoreTask, updateTask, createSection, updateSection, getTasksByType, getAllProjectsV2, getBoardsByProject, getSectionsByBoard, captureToTask } from "@/lib/db";
-import type { Task, GoalViewType, ProjectV2, Board, Section, Priority } from "@/lib/types";
+import { createTask, deleteTask, restoreTask, updateTask, createSection, updateSection, getTasksByType, getAllProjectsV2, getBoardsByProject, getSectionsByBoard, captureToTask, getGoalsByProject, getPlansByGoal } from "@/lib/db";
+import type { Task, GoalViewType, ProjectV2, Board, Section, Priority, Goal, Plan } from "@/lib/types";
 import { PRIORITY_CONFIG } from "@/lib/types";
 import { showToast } from "@/components/ui/Toast";
 
@@ -63,14 +63,18 @@ export default function CaptureInbox({ visible, onRefresh }: { visible: boolean;
     projectId: number | null;
     boardId: number | null;
     sectionId: number | null;
+    goalId: number | null;
+    planId: number | null;
     note: string;
     dueDate: string;
     successCriteria: string;
-  }>({ title: "", priority: "not-urgent-important", projectId: null, boardId: null, sectionId: null, note: "", dueDate: "", successCriteria: "" });
+  }>({ title: "", priority: "not-urgent-important", projectId: null, boardId: null, sectionId: null, goalId: null, planId: null, note: "", dueDate: "", successCriteria: "" });
 
   const [projects, setProjects] = useState<ProjectV2[]>([]);
   const [boards, setBoards] = useState<Board[]>([]);
   const [sections, setSections] = useState<Section[]>([]);
+  const [goals, setGoals] = useState<Goal[]>([]);
+  const [plans, setPlans] = useState<Plan[]>([]);
 
   const loadItems = useCallback(async () => {
     const all = await getTasksByType("daily");
@@ -161,6 +165,8 @@ export default function CaptureInbox({ visible, onRefresh }: { visible: boolean;
       projectId: null,
       boardId: null,
       sectionId: null,
+      goalId: null,
+      planId: null,
       note: "",
       dueDate: "",
       successCriteria: "",
@@ -184,12 +190,16 @@ export default function CaptureInbox({ visible, onRefresh }: { visible: boolean;
   }, []);
 
   const handleProjectChange = useCallback(async (projectId: number | null) => {
-    setTaskDraft((d) => ({ ...d, projectId, boardId: null, sectionId: null }));
+    setTaskDraft((d) => ({ ...d, projectId, boardId: null, sectionId: null, goalId: null, planId: null }));
     setBoards([]);
     setSections([]);
+    setGoals([]);
+    setPlans([]);
     if (projectId) {
       const b = await getBoardsByProject(projectId).catch(() => [] as Board[]);
       setBoards(b);
+      const g = await getGoalsByProject(projectId).catch(() => [] as Goal[]);
+      setGoals(g);
     }
   }, []);
 
@@ -220,6 +230,8 @@ export default function CaptureInbox({ visible, onRefresh }: { visible: boolean;
         status: "active",
         priority: taskDraft.priority,
         sectionId: taskDraft.sectionId ?? undefined,
+        goalId: taskDraft.goalId ?? undefined,
+        planId: taskDraft.planId ?? undefined,
         note: taskDraft.note || undefined,
         successCriteria: taskDraft.successCriteria || undefined,
         dueDate: taskDraft.dueDate ? new Date(taskDraft.dueDate).getTime() : undefined,
@@ -620,6 +632,23 @@ export default function CaptureInbox({ visible, onRefresh }: { visible: boolean;
                           const path = [project?.name, board?.name, s.name].filter(Boolean).join(" > ");
                           return <option key={s.id} value={s.id}>{path}</option>;
                         })}
+                      </select>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">目标/计划</label>
+                  <div className="space-y-2">
+                    {goals.length > 0 && (
+                      <select value={taskDraft.goalId ?? ""} onChange={(e) => { const val = e.target.value ? parseInt(e.target.value) : null; setTaskDraft((d) => ({ ...d, goalId: val, planId: null })); if (val) getPlansByGoal(val).then(p => setPlans(p)).catch(() => setPlans([])); else setPlans([]); }} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="">选择目标</option>
+                        {goals.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
+                      </select>
+                    )}
+                    {plans.length > 0 && (
+                      <select value={taskDraft.planId ?? ""} onChange={(e) => setTaskDraft((d) => ({ ...d, planId: e.target.value ? parseInt(e.target.value) : null }))} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="">选择计划</option>
+                        {plans.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                       </select>
                     )}
                   </div>

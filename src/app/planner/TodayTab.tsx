@@ -2,10 +2,12 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, Calendar, Inbox, Edit3, ChevronRight, X } from "lucide-react";
-import { db, updateTask } from "@/lib/db";
+import { Check, Calendar, Inbox, Edit3, ChevronRight, X, Target } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { db, updateTask, getTasksByType } from "@/lib/db";
+import { completeTask, uncompleteTask } from "@/lib/linkage";
 import { PRIORITY_CONFIG } from "@/lib/types";
-import type { Task, Priority } from "@/lib/types";
+import type { Task, Priority, Goal } from "@/lib/types";
 import { showToast } from "@/components/ui/Toast";
 
 interface TodayTabProps {
@@ -31,10 +33,14 @@ function getTagStyle(tag: string): string {
   return TAG_STYLES[tag] ?? "bg-gray-100 text-gray-600";
 }
 
-function getPriorityDot(priority?: Priority): string {
-  if (priority === "urgent-important") return "bg-red-500";
-  if (priority === "not-urgent-important") return "bg-amber-500";
-  return "bg-green-500";
+function getPriorityLevel(priority?: Priority): number {
+  const levels: Record<Priority, number> = {
+    "urgent-important": 4,
+    "not-urgent-important": 3,
+    "urgent-not-important": 2,
+    "not-urgent-not-important": 1,
+  };
+  return priority ? levels[priority] : 0;
 }
 
 function formatDate(ts: number): string {
@@ -55,28 +61,75 @@ const itemVariants = {
 };
 
 export default function TodayTab({ onUpdate }: TodayTabProps) {
+  const router = useRouter();
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [goals, setGoals] = useState<Goal[]>([]);
   const [loading, setLoading] = useState(true);
   const [completedIds, setCompletedIds] = useState<Set<number>>(new Set());
-  // 就地编辑状态
   const [editingTaskId, setEditingTaskId] = useState<number | null>(null);
   const [editTitle, setEditTitle] = useState("");
+  const [hoveredGoalId, setHoveredGoalId] = useState<number | null>(null);
 
-  const loadTasks = useCallback(async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
       const { start, end } = getTodayRange();
-      const all = await db.tasks.where("startTime").between(start, end).toArray();
-      const active = all.filter((t) => t.status === "active");
-      setTasks(active);
+      
+      const [shortterm, daily, longterm, habit] = await Promise.all([
+        getTasksByType("shortterm"),
+        getTasksByType("daily"),
+        getTasksByType("longterm"),
+        getTasksByType("habit"),
+      ]);
+      
+      const allTasks = [...shortterm, ...daily, ...longterm, ...habit];
+      const todayTasks = allTasks.filter(t => 
+        t.status === "active" && 
+        t.startTime != null && 
+        t.startTime >= start && 
+        t.startTime < end
+      );
+
+      const allGoals = await db.goals.toArray();
+      setGoals(allGoals);
+
+      const goalPriorityMap: Record<number, number> = {};
+      allGoals.forEach(g => {
+        if (g.id) {
+          goalPriorityMap[g.id] = getPriorityLevel(g.priority);
+        }
+      });
+
+      const sorted = [...todayTasks].sort((a, b) => {
+        const goalPriorityA = a.goalId ? goalPriorityMap[a.goalId] || 0 : 0;
+        const goalPriorityB = b.goalId ? goalPriorityMap[b.goalId] || 0 : 0;
+        
+        if (goalPriorityB !== goalPriorityA) {
+          return goalPriorityB - goalPriorityA;
+        }
+        
+        const taskPriorityA = getPriorityLevel(a.priority);
+        const taskPriorityB = getPriorityLevel(b.priority);
+        if (taskPriorityB !== taskPriorityA) {
+          return taskPriorityB - taskPriorityA;
+        }
+        
+        return (a.dueDate || Infinity) - (b.dueDate || Infinity);
+      });
+
+      setTasks(sorted);
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    loadTasks();
-  }, [loadTasks]);
+    loadData();
+  }, [loadData]);
+
+  const getGoalForTask = (task: Task): Goal | undefined => {
+    return goals.find(g => g.id === task.goalId);
+  };
 
   const handleComplete = useCallback(
     async (task: Task) => {
@@ -84,7 +137,7 @@ export default function TodayTab({ onUpdate }: TodayTabProps) {
       if (!id) return;
       setCompletedIds((prev) => new Set(prev).add(id));
       try {
-        await updateTask(id, { status: "done" });
+        await completeTask(id);
         showToast({ message: "已标记完成", type: "success" });
         onUpdate?.();
       } catch {
@@ -99,39 +152,56 @@ export default function TodayTab({ onUpdate }: TodayTabProps) {
     [onUpdate]
   );
 
-  // 就地编辑：打开编辑模式
+  const handleUncomplete = useCallback(
+    async (task: Task) => {
+      const id = task.id;
+      if (!id) return;
+      setCompletedIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+      try {
+        await uncompleteTask(id);
+        showToast({ message: "已取消完成", type: "success" });
+        onUpdate?.();
+      } catch {
+        setCompletedIds((prev) => new Set(prev).add(id));
+        showToast({ message: "操作失败，请重试", type: "error" });
+      }
+    },
+    [onUpdate]
+  );
+
   const openEdit = useCallback((task: Task) => {
     setEditingTaskId(task.id ?? null);
     setEditTitle(task.title);
   }, []);
 
-  // 保存标题编辑
   const saveEditTitle = useCallback(async (taskId: number) => {
     if (!editTitle.trim()) return;
     try {
       await updateTask(taskId, { title: editTitle.trim() });
       showToast({ message: "标题已更新", type: "success" });
       setEditingTaskId(null);
-      await loadTasks();
+      await loadData();
       onUpdate?.();
     } catch {
       showToast({ message: "更新失败", type: "error" });
     }
-  }, [editTitle, loadTasks, onUpdate]);
+  }, [editTitle, loadData, onUpdate]);
 
-  // 切换优先级
   const handlePriorityChange = useCallback(async (taskId: number, priority: Priority) => {
     try {
       await updateTask(taskId, { priority });
       showToast({ message: "优先级已更新", type: "success" });
-      await loadTasks();
+      await loadData();
       onUpdate?.();
     } catch {
       showToast({ message: "更新失败", type: "error" });
     }
-  }, [loadTasks, onUpdate]);
+  }, [loadData, onUpdate]);
 
-  // 一键顺延到明天/后天
   const handlePostpone = useCallback(async (taskId: number, days: number) => {
     try {
       const target = new Date();
@@ -141,12 +211,12 @@ export default function TodayTab({ onUpdate }: TodayTabProps) {
       await updateTask(taskId, { startTime: start, endTime: end });
       showToast({ message: `已顺延到${days === 1 ? "明天" : "后天"}`, type: "success" });
       setEditingTaskId(null);
-      await loadTasks();
+      await loadData();
       onUpdate?.();
     } catch {
       showToast({ message: "操作失败", type: "error" });
     }
-  }, [loadTasks, onUpdate]);
+  }, [loadData, onUpdate]);
 
   const activeTasks = tasks.filter((t) => t.id != null && !completedIds.has(t.id));
   const totalCount = tasks.length;
@@ -164,7 +234,6 @@ export default function TodayTab({ onUpdate }: TodayTabProps) {
 
   return (
     <div>
-      {/* Section header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center">
           <h2 className="text-base font-semibold text-gray-900 dark:text-white">今日待办</h2>
@@ -174,7 +243,6 @@ export default function TodayTab({ onUpdate }: TodayTabProps) {
         </div>
       </div>
 
-      {/* 完成率进度条 */}
       {totalCount > 0 && (
         <div className="mb-4">
           <div className="flex items-center justify-between text-xs mb-1">
@@ -199,14 +267,12 @@ export default function TodayTab({ onUpdate }: TodayTabProps) {
       )}
 
       {tasks.length === 0 ? (
-        /* Empty state */
         <div className="flex flex-col items-center justify-center py-16">
           <Inbox className="w-12 h-12 text-gray-300" />
           <p className="text-base font-medium text-gray-500 mt-3">暂无今日待办</p>
           <p className="text-sm text-gray-400 mt-1">在收件箱中使用快速操作添加任务</p>
         </div>
       ) : (
-        /* Task cards */
         <motion.div
           variants={containerVariants}
           initial="hidden"
@@ -217,6 +283,7 @@ export default function TodayTab({ onUpdate }: TodayTabProps) {
             if (tid == null) return null;
             const isDone = completedIds.has(tid);
             const isEditing = editingTaskId === tid;
+            const goal = getGoalForTask(task);
 
             return (
               <motion.div
@@ -227,7 +294,6 @@ export default function TodayTab({ onUpdate }: TodayTabProps) {
                 }`}
               >
                 {isEditing ? (
-                  /* 编辑模式 */
                   <div className="space-y-3">
                     <div className="flex items-center gap-2">
                       <input
@@ -251,7 +317,6 @@ export default function TodayTab({ onUpdate }: TodayTabProps) {
                         <X className="w-4 h-4" />
                       </button>
                     </div>
-                    {/* 优先级快捷切换 */}
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="text-xs text-gray-400">优先级:</span>
                       {PRIORITY_CONFIG.map((opt) => (
@@ -269,7 +334,6 @@ export default function TodayTab({ onUpdate }: TodayTabProps) {
                         </button>
                       ))}
                     </div>
-                    {/* 顺延按钮 */}
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-gray-400">顺延:</span>
                       <button
@@ -287,12 +351,9 @@ export default function TodayTab({ onUpdate }: TodayTabProps) {
                     </div>
                   </div>
                 ) : (
-                  /* 普通展示模式 */
                   <div className="flex items-start gap-3">
-                    {/* Left: Checkbox */}
                     <button
-                      onClick={() => !isDone && handleComplete(task)}
-                      disabled={isDone}
+                      onClick={() => isDone ? handleUncomplete(task) : handleComplete(task)}
                       className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5 transition-colors ${
                         isDone
                           ? "bg-blue-500 border-blue-500"
@@ -302,15 +363,43 @@ export default function TodayTab({ onUpdate }: TodayTabProps) {
                       {isDone && <Check className="w-3.5 h-3.5 text-white" />}
                     </button>
 
-                    {/* Center: Title + Tags */}
                     <div className="flex-1 min-w-0">
-                      <p
-                        className={`text-base font-medium text-gray-900 dark:text-gray-100 ${
-                          isDone ? "line-through" : ""
-                        }`}
-                      >
-                        {task.title}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        {goal && (
+                          <div className="relative">
+                            <button
+                              onMouseEnter={() => setHoveredGoalId(goal.id!)}
+                              onMouseLeave={() => setHoveredGoalId(null)}
+                              onClick={() => router.push(`/projects/${goal.projectId}/goals/${goal.id}`)}
+                              className="w-3 h-3 rounded-full flex-shrink-0"
+                              style={{ backgroundColor: PRIORITY_CONFIG.find(p => p.key === goal.priority)?.hex || "#6B7280" }}
+                            />
+                            <AnimatePresence>
+                              {hoveredGoalId === goal.id && (
+                                <motion.div
+                                  initial={{ opacity: 0, y: -4, scale: 0.95 }}
+                                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                                  exit={{ opacity: 0, y: -4, scale: 0.95 }}
+                                  className="absolute left-0 top-full mt-1 px-2 py-1.5 bg-gray-900 dark:bg-gray-800 text-white text-xs rounded-lg shadow-lg z-10 whitespace-nowrap"
+                                >
+                                  <div className="flex items-center gap-1">
+                                    <Target className="w-3 h-3" />
+                                    <span>{goal.name}</span>
+                                  </div>
+                                  <div className="text-gray-400 mt-0.5">进度: {goal.progress}%</div>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+                          </div>
+                        )}
+                        <p
+                          className={`text-base font-medium text-gray-900 dark:text-gray-100 ${
+                            isDone ? "line-through" : ""
+                          }`}
+                        >
+                          {task.title}
+                        </p>
+                      </div>
                       {task.tags && task.tags.length > 0 && (
                         <div className="flex flex-wrap gap-1.5 mt-1.5">
                           {task.tags.map((tag) => (
@@ -326,7 +415,8 @@ export default function TodayTab({ onUpdate }: TodayTabProps) {
                       <div className="flex items-center gap-2 mt-1.5">
                         {task.priority && (
                           <div
-                            className={`w-2 h-2 rounded-full flex-shrink-0 ${getPriorityDot(task.priority)}`}
+                            className={`w-2 h-2 rounded-full flex-shrink-0`}
+                            style={{ backgroundColor: PRIORITY_CONFIG.find(p => p.key === task.priority)?.hex || "#6B7280" }}
                           />
                         )}
                         {task.startTime && (
@@ -340,7 +430,6 @@ export default function TodayTab({ onUpdate }: TodayTabProps) {
                       </div>
                     </div>
 
-                    {/* Right: Edit & Complete buttons */}
                     <div className="flex items-center gap-1 flex-shrink-0">
                       <button
                         onClick={() => openEdit(task)}
@@ -350,16 +439,15 @@ export default function TodayTab({ onUpdate }: TodayTabProps) {
                         <Edit3 className="w-3.5 h-3.5" />
                       </button>
                       <motion.button
-                        whileTap={isDone ? undefined : { scale: 0.92 }}
-                        onClick={() => !isDone && handleComplete(task)}
-                        disabled={isDone}
+                        whileTap={!isDone ? { scale: 0.92 } : undefined}
+                        onClick={() => isDone ? handleUncomplete(task) : handleComplete(task)}
                         className={`text-xs font-medium px-3 py-1.5 rounded-full border transition-colors ${
                           isDone
-                            ? "text-gray-400 bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 cursor-default"
+                            ? "text-blue-600 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/40"
                             : "text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 border-emerald-200 dark:border-emerald-800"
                         }`}
                       >
-                        {isDone ? "已完成" : "完成"}
+                        {isDone ? "撤销" : "完成"}
                       </motion.button>
                     </div>
                   </div>

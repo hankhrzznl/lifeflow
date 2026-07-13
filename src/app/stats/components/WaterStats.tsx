@@ -14,6 +14,9 @@ import {
 import { getWaterRecordsByRange, getWaterStats, getUserWaterTarget } from "@/lib/waterStats";
 import type { WaterStats } from "@/lib/waterStats";
 import { showToast } from "@/components/ui/Toast";
+import { useRouter } from "next/navigation";
+import { db } from "@/lib/db";
+import type { Goal } from "@/lib/types";
 
 function getDateStrLocal(y: number, m: number, d: number): string {
   return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
@@ -50,6 +53,8 @@ export default function WaterStats({ periodType, periodOffset }: { periodType: "
   const [stats, setStats] = useState<WaterStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [waterTarget, setWaterTarget] = useState(2000);
+  const [goals, setGoals] = useState<Goal[]>([]);
+  const router = useRouter();
 
   const range = getPeriodRange(periodType, periodOffset);
 
@@ -63,6 +68,9 @@ export default function WaterStats({ periodType, periodOffset }: { periodType: "
       setWaterTarget(target);
       const s = await getWaterStats(records, target);
       setStats(s);
+
+      const allGoals = await db.goals.where("type").equals("water").toArray();
+      setGoals(allGoals.filter(g => g.status === "active" || g.status === "paused"));
     } catch (err) {
       console.error("Failed to load water stats:", err);
     } finally {
@@ -111,6 +119,28 @@ export default function WaterStats({ periodType, periodOffset }: { periodType: "
           前往录入页 <ArrowRight className="w-3 h-3" />
         </Link>
       </div>
+
+      {/* 关联目标 */}
+      {goals.length > 0 && (
+        <div className="bg-cyan-50 dark:bg-cyan-900/20 rounded-xl p-3 space-y-2">
+          <p className="text-xs font-medium text-cyan-600 dark:text-cyan-400 flex items-center gap-1">
+            <Target className="w-3.5 h-3.5" /> 关联饮水目标
+          </p>
+          {goals.map(goal => (
+            <button
+              key={goal.id}
+              onClick={() => router.push(`/projects/${goal.projectId}/goals/${goal.id}`)}
+              className="w-full text-left flex items-center justify-between"
+            >
+              <span className="text-sm text-gray-700 dark:text-gray-300">{goal.name}</span>
+              <div className="flex items-center gap-2">
+                {goal.deadline && <span className="text-xs text-gray-400">截止 {new Date(goal.deadline).toLocaleDateString("zh-CN")}</span>}
+                <span className="text-xs font-medium text-cyan-600 dark:text-cyan-400">{goal.progress}%</span>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* 四宫格指标 */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">

@@ -95,7 +95,10 @@ export interface Task {
   planned?: boolean;
   startTime?: number;
   endTime?: number;
-  projectId?: string;
+  projectId?: number;
+  goalId?: number;
+  planId?: number;
+  weight?: number;
   sectionId?: number;
   boardId?: number;
   dueDate?: number;
@@ -118,6 +121,8 @@ export interface Task {
 export interface HabitLog {
   id?: number;
   taskId: number;
+  goalId?: number;
+  planId?: number;
   date: string;
   count: number;
   note?: string;
@@ -215,12 +220,49 @@ export type GoalTab = 'long-term' | 'short-term' | 'daily-trivial' | 'habits';
 
 export type Priority = 'urgent-important' | 'not-urgent-important' | 'urgent-not-important' | 'not-urgent-not-important';
 
+export type GoalType = 'task' | 'fitness' | 'finance' | 'sleep' | 'water';
+
+export type GoalStatus = 'active' | 'completed' | 'paused' | 'archived';
+
 export const PRIORITY_CONFIG: { key: Priority; label: string; color: string; bg: string; hex: string }[] = [
   { key: 'urgent-important', label: '重要且紧急', color: 'text-red-600', bg: 'bg-red-100', hex: '#EF4444' },
   { key: 'not-urgent-important', label: '重要不紧急', color: 'text-blue-600', bg: 'bg-blue-100', hex: '#3B82F6' },
   { key: 'urgent-not-important', label: '不重要但紧急', color: 'text-amber-600', bg: 'bg-amber-100', hex: '#F59E0B' },
   { key: 'not-urgent-not-important', label: '不重要不紧急', color: 'text-gray-500', bg: 'bg-gray-100', hex: '#6B7280' },
 ];
+
+export interface Goal {
+  id?: number;
+  projectId: number;
+  name: string;
+  description?: string;
+  type: GoalType;
+  deadline?: number;
+  priority?: Priority;
+  status: GoalStatus;
+  progress: number;
+  progressLocked: boolean;
+  targetValue?: number;
+  tags?: string[];
+  weight: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface Plan {
+  id?: number;
+  goalId: number;
+  name: string;
+  startDate?: string;
+  endDate?: string;
+  weight: number;
+  status: GoalStatus;
+  progress: number;
+  progressLocked?: boolean;
+  order: number;
+  createdAt: number;
+  updatedAt: number;
+}
 
 export interface TimeSegment {
   id?: number;
@@ -239,6 +281,7 @@ export interface FinRecord {
   note?: string;
   tag?: string;
   accountId: number;
+  goalId?: number;
   createdAt: number;
 }
 
@@ -379,6 +422,7 @@ export interface ReviewRecord {
   periodType?: 'week' | 'month';
   periodStart?: number;
   periodEnd?: number;
+  goalIds?: number[];
   createdAt: number;
   updatedAt?: number;
 }
@@ -635,6 +679,7 @@ export interface MuscleRecord {
   timestamp: number;
   notes?: string;                          // 备注
   isPersonalBest?: boolean;                 // 是否个人最佳
+  goalId?: number;
   createdAt: number;
 }
 
@@ -707,6 +752,7 @@ export interface SleepRecord {
   timestamp: number;
   notes?: string;
   isPersonalBest?: boolean;
+  goalId?: number;
   createdAt: number;
 }
 
@@ -919,6 +965,13 @@ export interface DaySchedule {
 
 // ==================== 用户设置 ====================
 
+export interface LinkageSettings {
+  autoSyncStatus: boolean;
+  autoSyncDate: boolean;
+  autoInheritPriority: boolean;
+  autoAppendTags: boolean;
+}
+
 export interface UserSettings {
   id?: number;
   sleepTarget: number;      // 每日睡眠目标-晚上（小时），默认 8
@@ -926,6 +979,7 @@ export interface UserSettings {
   weight: number;           // 体重（kg），默认 60
   cupSizes: number[];       // 水杯预设值（ml），默认 [200, 300, 500]
   avatarDataUrl?: string;   // 头像 Base64
+  linkageSettings?: LinkageSettings;
   createdAt: number;
 }
 
@@ -941,6 +995,7 @@ export interface DailyWaterRecord {
   date: string;             // "YYYY-MM-DD"
   entries: WaterEntry[];    // 每次饮水记录
   totalMl: number;          // 今日总饮水
+  goalId?: number;
   createdAt: number;
 }
 

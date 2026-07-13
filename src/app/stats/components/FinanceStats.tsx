@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import {
-  ArrowRight, Wallet, TrendingUp, TrendingDown, DollarSign, PiggyBank,
+  ArrowRight, Wallet, TrendingUp, TrendingDown, DollarSign, PiggyBank, Target,
   PieChart as PieChartIcon,
 } from "lucide-react";
 import Link from "next/link";
@@ -13,6 +13,9 @@ import {
 } from "recharts";
 import { getFinRecordsByRange, getFinanceStats, getMonthBudget } from "@/lib/financeStats";
 import type { FinanceStats } from "@/lib/financeStats";
+import { useRouter } from "next/navigation";
+import { db } from "@/lib/db";
+import type { Goal } from "@/lib/types";
 
 function getDateStrLocal(y: number, m: number, d: number): string {
   return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
@@ -47,6 +50,8 @@ function getPeriodRange(periodType: "week" | "month", offset: number) {
 export default function FinanceStats({ periodType, periodOffset }: { periodType: "week" | "month"; periodOffset: number }) {
   const [stats, setStats] = useState<FinanceStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [goals, setGoals] = useState<Goal[]>([]);
+  const router = useRouter();
 
   const range = getPeriodRange(periodType, periodOffset);
 
@@ -59,6 +64,9 @@ export default function FinanceStats({ periodType, periodOffset }: { periodType:
         : null;
       const s = await getFinanceStats(records, budget);
       setStats(s);
+
+      const allGoals = await db.goals.where("type").equals("finance").toArray();
+      setGoals(allGoals.filter(g => g.status === "active" || g.status === "paused"));
     } catch (err) {
       console.error("Failed to load finance stats:", err);
     } finally {
@@ -100,6 +108,28 @@ export default function FinanceStats({ periodType, periodOffset }: { periodType:
           前往录入页 <ArrowRight className="w-3 h-3" />
         </Link>
       </div>
+
+      {/* 关联目标 */}
+      {goals.length > 0 && (
+        <div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-3 space-y-2">
+          <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+            <Target className="w-3.5 h-3.5" /> 关联财务目标
+          </p>
+          {goals.map(goal => (
+            <button
+              key={goal.id}
+              onClick={() => router.push(`/projects/${goal.projectId}/goals/${goal.id}`)}
+              className="w-full text-left flex items-center justify-between"
+            >
+              <span className="text-sm text-gray-700 dark:text-gray-300">{goal.name}</span>
+              <div className="flex items-center gap-2">
+                {goal.deadline && <span className="text-xs text-gray-400">截止 {new Date(goal.deadline).toLocaleDateString("zh-CN")}</span>}
+                <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">{goal.progress}%</span>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* 四宫格 */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">

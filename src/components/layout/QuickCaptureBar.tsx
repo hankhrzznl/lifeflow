@@ -3,11 +3,9 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Zap, Send, ChevronDown } from "lucide-react";
-import { createTask, getAllProjectsV2 } from "@/lib/db";
-import type { ProjectV2 } from "@/lib/types";
+import { createTask, getAllProjectsV2, getGoalsByProject, getPlansByGoal } from "@/lib/db";
+import type { ProjectV2, Goal, Plan } from "@/lib/types";
 import { showToast } from "@/components/ui/Toast";
-
-// ==================== 主组件 ====================
 
 export default function QuickCaptureBar({
   inboxExpanded,
@@ -21,35 +19,70 @@ export default function QuickCaptureBar({
   const [inputValue, setInputValue] = useState("");
   const [showTagSelector, setShowTagSelector] = useState(false);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [tags, setTags] = useState<ProjectV2[]>([]);
+  const [projects, setProjects] = useState<ProjectV2[]>([]);
+  const [goals, setGoals] = useState<Goal[]>([]);
+  const [plans, setPlans] = useState<Plan[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+  const [selectedGoalId, setSelectedGoalId] = useState<number | null>(null);
+  const [selectedPlanId, setSelectedPlanId] = useState<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // 加载项目
   useEffect(() => {
-    getAllProjectsV2().then((list) => setTags(list));
+    getAllProjectsV2().then((list) => setProjects(list));
   }, []);
 
-  // 发送
+  useEffect(() => {
+    if (selectedProjectId) {
+      getGoalsByProject(selectedProjectId).then((list) => setGoals(list));
+      setSelectedGoalId(null);
+      setSelectedPlanId(null);
+      setPlans([]);
+    } else {
+      setGoals([]);
+      setSelectedGoalId(null);
+      setSelectedPlanId(null);
+      setPlans([]);
+    }
+  }, [selectedProjectId]);
+
+  useEffect(() => {
+    if (selectedGoalId) {
+      getPlansByGoal(selectedGoalId).then((list) => setPlans(list));
+      setSelectedPlanId(null);
+    } else {
+      setPlans([]);
+      setSelectedPlanId(null);
+    }
+  }, [selectedGoalId]);
+
   const handleSend = async () => {
     if (!inputValue.trim()) return;
 
     try {
-      await createTask({
+      const taskData: any = {
         title: inputValue.trim(),
         type: "daily",
         status: "active",
         tags: [...selectedTags],
-        projectId: selectedProjectId ?? undefined,
-      } as any);
+      };
+
+      if (selectedProjectId) {
+        taskData.projectId = selectedProjectId;
+      }
+      if (selectedGoalId) {
+        taskData.goalId = selectedGoalId;
+      }
+      if (selectedPlanId) {
+        taskData.planId = selectedPlanId;
+      }
+
+      await createTask(taskData);
 
       showToast({ message: "想法已捕捉", type: "success" });
       setInputValue("");
       setSelectedTags([]);
       setShowTagSelector(false);
-      // 自动展开收件箱显示新捕捉的内容
       if (!inboxExpanded && onToggleInbox) onToggleInbox();
-      // 保留焦点，支持连续快速输入
       inputRef.current?.focus();
     } catch (err) {
       console.error("Failed to capture:", err);
@@ -57,7 +90,6 @@ export default function QuickCaptureBar({
     }
   };
 
-  // 标签点击
   const handleTagClick = (tagName: string) => {
     if (selectedTags.includes(tagName)) {
       setSelectedTags((prev) => prev.filter((t) => t !== tagName));
@@ -71,21 +103,17 @@ export default function QuickCaptureBar({
     inputRef.current?.focus();
   };
 
-  // 输入变化时检测 # 触发标签选择器
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInputValue(e.target.value);
-    // 检测输入 # 触发标签选择器
     if (e.target.value.endsWith("#")) {
       setShowTagSelector(true);
     }
   };
 
-  // 回车发送
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") handleSend();
   };
 
-  // 动画
   const tagContainerVariants = {
     hidden: { height: 0, opacity: 0, transition: { duration: 0.2 } },
     visible: {
@@ -125,26 +153,62 @@ export default function QuickCaptureBar({
       className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 
                  dark:border-gray-700 shadow-lg p-2.5 sm:p-3"
     >
-      {/* 主输入行 */}
-      <div className="flex items-center gap-2 sm:gap-3">
-        {/* 闪电图标 */}
+      <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
         <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-violet-600 flex items-center justify-center flex-shrink-0">
           <Zap size={20} className="text-white" strokeWidth={2} />
         </div>
 
-        {/* 项目选择 */}
         <select
           value={selectedProjectId ?? ""}
           onChange={(e) => setSelectedProjectId(e.target.value ? Number(e.target.value) : null)}
           className="h-10 sm:h-11 bg-gray-100 dark:bg-gray-800 rounded-xl px-2 text-xs text-gray-600 dark:text-gray-400 border-0 focus:outline-none focus:ring-2 focus:ring-violet-500 flex-shrink-0 max-w-[100px] sm:max-w-[120px] appearance-none cursor-pointer"
         >
-          <option value="">收件箱</option>
-          {tags.map((p) => (
+          <option value="">项目</option>
+          {projects.map((p) => (
             <option key={p.id} value={p.id}>{p.name}</option>
           ))}
         </select>
 
-        {/* 输入框 */}
+        <AnimatePresence mode="wait">
+          {selectedProjectId && (
+            <motion.select
+              key="goal-select"
+              initial={{ width: 0, opacity: 0 }}
+              animate={{ width: "auto", opacity: 1 }}
+              exit={{ width: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              value={selectedGoalId ?? ""}
+              onChange={(e) => setSelectedGoalId(e.target.value ? Number(e.target.value) : null)}
+              className="h-10 sm:h-11 bg-gray-100 dark:bg-gray-800 rounded-xl px-2 text-xs text-gray-600 dark:text-gray-400 border-0 focus:outline-none focus:ring-2 focus:ring-violet-500 flex-shrink-0 max-w-[100px] sm:max-w-[120px] appearance-none cursor-pointer"
+            >
+              <option value="">目标</option>
+              {goals.map((g) => (
+                <option key={g.id} value={g.id}>{g.name}</option>
+              ))}
+            </motion.select>
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence mode="wait">
+          {selectedGoalId && (
+            <motion.select
+              key="plan-select"
+              initial={{ width: 0, opacity: 0 }}
+              animate={{ width: "auto", opacity: 1 }}
+              exit={{ width: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              value={selectedPlanId ?? ""}
+              onChange={(e) => setSelectedPlanId(e.target.value ? Number(e.target.value) : null)}
+              className="h-10 sm:h-11 bg-gray-100 dark:bg-gray-800 rounded-xl px-2 text-xs text-gray-600 dark:text-gray-400 border-0 focus:outline-none focus:ring-2 focus:ring-violet-500 flex-shrink-0 max-w-[100px] sm:max-w-[120px] appearance-none cursor-pointer"
+            >
+              <option value="">计划</option>
+              {plans.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </motion.select>
+          )}
+        </AnimatePresence>
+
         <input
           ref={inputRef}
           type="text"
@@ -160,10 +224,9 @@ export default function QuickCaptureBar({
                      focus:outline-none focus:ring-2 focus:ring-violet-500 
                      focus:ring-offset-1 dark:focus:ring-offset-gray-900
                      focus:bg-white dark:focus:bg-gray-800
-                     transition-all duration-200"
+                     transition-all duration-200 min-w-[100px]"
         />
 
-        {/* 发送按钮 */}
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.9 }}
@@ -177,7 +240,6 @@ export default function QuickCaptureBar({
           <Send size={18} className="text-white" strokeWidth={2} />
         </motion.button>
 
-        {/* 展开/收起 */}
         <button
           onClick={onToggleInbox}
           className="text-sm text-gray-500 hover:text-gray-700
@@ -194,9 +256,8 @@ export default function QuickCaptureBar({
         </button>
       </div>
 
-      {/* 标签选择器（输入#或点击标签按钮时展开，聚焦时收起减少视觉干扰） */}
       <AnimatePresence>
-        {showTagSelector && tags.length > 0 && (
+        {showTagSelector && projects.length > 0 && (
           <motion.div
             variants={tagContainerVariants}
             initial="hidden"
@@ -208,7 +269,7 @@ export default function QuickCaptureBar({
               className="flex items-center gap-2 flex-wrap pt-2 mt-2 
                           border-t border-gray-100 dark:border-gray-800"
             >
-              {tags.map((tag) => (
+              {projects.map((tag) => (
                 <motion.button
                   key={tag.id}
                   variants={tagItemVariants}

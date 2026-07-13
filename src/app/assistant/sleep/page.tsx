@@ -6,8 +6,11 @@ import Link from "next/link";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
-import { getDaySchedule } from "@/lib/db";
+import { getDaySchedule, getAllProjectsV2, getGoalsByProject } from "@/lib/db";
 import { showToast } from "@/components/ui/Toast";
+import { useRouter } from "next/navigation";
+import { notifyGoalProgressUpdate } from "@/lib/linkage";
+import type { Goal } from "@/lib/types";
 
 function getLocalDate(d: Date = new Date()): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -38,6 +41,9 @@ export default function SleepPage() {
   const [calibrations, setCalibrations] = useState<Record<string, number>>({});
   const [logs, setLogs] = useState<SleepLog[]>([]);
   const [loading, setLoading] = useState(true);
+  const [goals, setGoals] = useState<Goal[]>([]);
+  const [selectedGoalId, setSelectedGoalId] = useState<number | null>(null);
+  const router = useRouter();
 
   // ---- 本地设置加载 ----
   useEffect(() => {
@@ -53,6 +59,21 @@ export default function SleepPage() {
     } catch { /* ignore parse errors */ }
   }, []);
 
+  useEffect(() => {
+    const loadGoals = async () => {
+      try {
+        const allProjects = await getAllProjectsV2();
+        const allGoals: Goal[] = [];
+        for (const p of allProjects) {
+          const g = await getGoalsByProject(p.id!);
+          allGoals.push(...g.filter(g => g.type === "sleep" && (g.status === "active" || g.status === "paused")));
+        }
+        setGoals(allGoals);
+      } catch {}
+    };
+    loadGoals();
+  }, []);
+
   const saveTarget = (val: string) => {
     setTargetTime(val);
     localStorage.setItem("sleep_target", val);
@@ -66,6 +87,7 @@ export default function SleepPage() {
   const saveCalibrations = (cal: Record<string, number>) => {
     setCalibrations(cal);
     localStorage.setItem("sleep_calibrations", JSON.stringify(cal));
+    if (selectedGoalId) { notifyGoalProgressUpdate(selectedGoalId); }
   };
 
   // ---- 定时提醒 ----
@@ -243,6 +265,42 @@ export default function SleepPage() {
             <p className="text-xs text-gray-400">基于日程校准的入睡时间</p>
           </div>
         </div>
+
+        {/* 关联睡眠目标 */}
+        {goals.length > 0 && (
+          <div className="mb-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl p-3 mx-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-medium text-indigo-700 dark:text-indigo-300 flex items-center gap-1">
+                <Moon className="w-3.5 h-3.5" /> 关联睡眠目标
+              </span>
+              <select
+                value={selectedGoalId ?? ""}
+                onChange={(e) => setSelectedGoalId(e.target.value ? Number(e.target.value) : null)}
+                className="text-xs bg-white dark:bg-gray-800 rounded-lg px-2 py-1 border-0"
+              >
+                <option value="">不关联</option>
+                {goals.map(g => (
+                  <option key={g.id} value={g.id}>{g.name} ({g.progress}%)</option>
+                ))}
+              </select>
+            </div>
+            {selectedGoalId && (() => {
+              const g = goals.find(g => g.id === selectedGoalId);
+              if (!g) return null;
+              return (
+                <button onClick={() => router.push(`/projects/${g.projectId}/goals/${g.id}`)} className="w-full text-left">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-700 dark:text-gray-300">{g.name}</span>
+                    <span className="font-medium">{g.progress}%</span>
+                  </div>
+                  <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full mt-1 overflow-hidden">
+                    <div className={`h-full rounded-full transition-all ${g.progress >= 100 ? "bg-emerald-500" : g.progress >= 50 ? "bg-blue-500" : "bg-red-500"}`} style={{ width: `${Math.min(g.progress, 100)}%` }} />
+                  </div>
+                </button>
+              );
+            })()}
+          </div>
+        )}
 
         {/* 今日达标进度 + 连续早睡徽章 */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">

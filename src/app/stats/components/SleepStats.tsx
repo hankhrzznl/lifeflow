@@ -11,11 +11,16 @@ import {
 } from "recharts";
 import { loadSleepLogs, getSleepStats, formatTime } from "@/lib/sleepStats";
 import type { SleepStats, SleepLog } from "@/lib/sleepStats";
+import { useRouter } from "next/navigation";
+import { db } from "@/lib/db";
+import type { Goal } from "@/lib/types";
 
 export default function SleepStats({ periodType, periodOffset }: { periodType: "week" | "month"; periodOffset: number }) {
   const [stats, setStats] = useState<SleepStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [targetTime, setTargetTime] = useState("23:30");
+  const [goals, setGoals] = useState<Goal[]>([]);
+  const router = useRouter();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -27,6 +32,9 @@ export default function SleepStats({ periodType, periodOffset }: { periodType: "
       const logs = await loadSleepLogs(30);
       const s = await getSleepStats(logs, target);
       setStats(s);
+
+      const allGoals = await db.goals.where("type").equals("sleep").toArray();
+      setGoals(allGoals.filter(g => g.status === "active" || g.status === "paused"));
     } catch (err) {
       console.error("Failed to load sleep stats:", err);
     } finally {
@@ -71,6 +79,28 @@ export default function SleepStats({ periodType, periodOffset }: { periodType: "
           前往录入页 <ArrowRight className="w-3 h-3" />
         </Link>
       </div>
+
+      {/* 关联目标 */}
+      {goals.length > 0 && (
+        <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-xl p-3 space-y-2">
+          <p className="text-xs font-medium text-indigo-600 dark:text-indigo-400 flex items-center gap-1">
+            <Target className="w-3.5 h-3.5" /> 关联睡眠目标
+          </p>
+          {goals.map(goal => (
+            <button
+              key={goal.id}
+              onClick={() => router.push(`/projects/${goal.projectId}/goals/${goal.id}`)}
+              className="w-full text-left flex items-center justify-between"
+            >
+              <span className="text-sm text-gray-700 dark:text-gray-300">{goal.name}</span>
+              <div className="flex items-center gap-2">
+                {goal.deadline && <span className="text-xs text-gray-400">截止 {new Date(goal.deadline).toLocaleDateString("zh-CN")}</span>}
+                <span className="text-xs font-medium text-indigo-600 dark:text-indigo-400">{goal.progress}%</span>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* 四宫格 */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">

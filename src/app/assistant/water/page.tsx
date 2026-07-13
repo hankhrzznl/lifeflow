@@ -9,10 +9,12 @@ import Link from "next/link";
 import {
   getUserSettings, saveUserSettings,
   getTodayWaterRecord, addWaterIntake, undoLastWaterIntake,
-  db,
+  db, getAllProjectsV2, getGoalsByProject,
 } from "@/lib/db";
 import { showToast } from "@/components/ui/Toast";
-import type { DailyWaterRecord, UserSettings } from "@/lib/types";
+import type { DailyWaterRecord, UserSettings, Goal } from "@/lib/types";
+import { notifyGoalProgressUpdate } from "@/lib/linkage";
+import { useRouter } from "next/navigation";
 
 function toMinSec(ms: number) {
   const m = Math.floor(ms / 60000);
@@ -57,6 +59,9 @@ export default function WaterPage() {
   // ---- 饮水目标 & 今日记录 ----
   const [waterTarget, setWaterTarget] = useState(2000);
   const [todayRecord, setTodayRecord] = useState<DailyWaterRecord | null>(null);
+  const [goals, setGoals] = useState<Goal[]>([]);
+  const [selectedGoalId, setSelectedGoalId] = useState<number | null>(null);
+  const router = useRouter();
 
   // ========== 加载设置 ==========
   useEffect(() => {
@@ -85,6 +90,21 @@ export default function WaterPage() {
     if (savedNext && savedEnabled === "true") {
       setNextReminder(Number(savedNext));
     }
+  }, []);
+
+  useEffect(() => {
+    const loadGoals = async () => {
+      try {
+        const allProjects = await getAllProjectsV2();
+        const allGoals: Goal[] = [];
+        for (const p of allProjects) {
+          const g = await getGoalsByProject(p.id!);
+          allGoals.push(...g.filter(g => g.type === "water" && (g.status === "active" || g.status === "paused")));
+        }
+        setGoals(allGoals);
+      } catch {}
+    };
+    loadGoals();
   }, []);
 
   const loadTodayRecord = useCallback(async () => {
@@ -176,7 +196,8 @@ export default function WaterPage() {
 
   // ========== 饮水记录 ==========
   const handleDrink = async (ml: number) => {
-    await addWaterIntake(ml);
+    await addWaterIntake(ml, selectedGoalId ?? undefined);
+    if (selectedGoalId) { notifyGoalProgressUpdate(selectedGoalId); }
     showToast({ message: `已记录喝水 ${ml}ml`, type: "success" });
     await loadTodayRecord();
   };
@@ -223,7 +244,7 @@ export default function WaterPage() {
   // ========== 目标保存 ==========
   const handleTargetSave = async () => {
     try {
-      await saveUserSettings({ waterTarget } as any);
+      await saveUserSettings({ waterTarget } as Partial<UserSettings>);
       showToast({ message: "饮水目标已保存", type: "success" });
     } catch {
       showToast({ message: "保存失败", type: "error" });
@@ -249,6 +270,45 @@ export default function WaterPage() {
             <p className="text-xs text-gray-400">定时推送 · 一键喝水</p>
           </div>
         </div>
+
+        {/* 关联饮水目标 */}
+        {goals.length > 0 && (
+          <div className="mb-4 bg-cyan-50 dark:bg-cyan-900/20 rounded-xl p-3 mx-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-medium text-cyan-700 dark:text-cyan-300 flex items-center gap-1">
+                <Droplets className="w-3.5 h-3.5" /> 关联饮水目标
+              </span>
+              <select
+                value={selectedGoalId ?? ""}
+                onChange={(e) => setSelectedGoalId(e.target.value ? Number(e.target.value) : null)}
+                className="text-xs bg-white dark:bg-gray-800 rounded-lg px-2 py-1 border-0"
+              >
+                <option value="">不关联</option>
+                {goals.map(g => (
+                  <option key={g.id} value={g.id}>{g.name} ({g.progress}%)</option>
+                ))}
+              </select>
+            </div>
+            {selectedGoalId && (() => {
+              const g = goals.find(g => g.id === selectedGoalId);
+              if (!g) return null;
+              return (
+                <button onClick={() => router.push(`/projects/${g.projectId}/goals/${g.id}`)} className="w-full text-left">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-700 dark:text-gray-300">{g.name}</span>
+                    <span className="font-medium">{g.progress}%</span>
+                  </div>
+                  <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full mt-1 overflow-hidden">
+                    <div className={`h-full rounded-full transition-all ${g.progress >= 100 ? "bg-emerald-500" : g.progress >= 50 ? "bg-blue-500" : "bg-red-500"}`} style={{ width: `${Math.min(g.progress, 100)}%` }} />
+                  </div>
+                </button>
+              );
+            })()}
+          </div>
+        )}
+        {goals.length === 0 && (
+          <p className="text-xs text-gray-400 text-center mb-3">暂无饮水目标，在项目中创建以追踪饮水进度</p>
+        )}
 
         {/* ---- 1. 今日饮水进度卡片 ---- */}
         <div

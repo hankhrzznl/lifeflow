@@ -4,11 +4,53 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Key, Download, Upload, Trash2, Eye, EyeOff, AlertTriangle,
+  Layers, RefreshCw, Calendar, Flag, Tag,
 } from "lucide-react";
-import { exportAllData, importAllData } from "@/lib/db";
+import { db, exportAllData, importAllData } from "@/lib/db";
 import { showToast } from "@/components/ui/Toast";
+import type { UserSettings, LinkageSettings } from "@/lib/types";
 
 const API_KEY_STORAGE_KEY = "lifeflow_api_key";
+
+function ToggleRow({
+  icon, label, description, enabled, onToggle,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  description: string;
+  enabled: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      onClick={onToggle}
+      className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left"
+    >
+      <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${
+        enabled ? "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400" : "bg-gray-100 dark:bg-gray-800 text-gray-400"
+      }`}>
+        {icon}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-gray-900 dark:text-white">{label}</p>
+        <p className="text-xs text-gray-500 dark:text-gray-400">{description}</p>
+      </div>
+      <motion.div
+        animate={{ scale: enabled ? 1 : 0.9 }}
+        className={`w-10 h-6 rounded-full flex items-center p-0.5 transition-colors ${
+          enabled ? "bg-blue-500" : "bg-gray-300 dark:bg-gray-700"
+        }`}
+      >
+        <motion.div
+          layout
+          transition={{ type: "spring", stiffness: 500, damping: 30 }}
+          className={`w-5 h-5 rounded-full bg-white shadow-sm`}
+          animate={{ x: enabled ? 16 : 0 }}
+        />
+      </motion.div>
+    </button>
+  );
+}
 
 export default function SettingsPage() {
   // ---- API Key ----
@@ -27,6 +69,52 @@ export default function SettingsPage() {
   const [showImportConfirm, setShowImportConfirm] = useState(false);
   const [importFile, setImportFile] = useState<{ name: string; data: string; exportedAt: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [linkageSettings, setLinkageSettings] = useState<LinkageSettings>({
+    autoSyncStatus: true,
+    autoSyncDate: true,
+    autoInheritPriority: true,
+    autoAppendTags: true,
+  });
+  const [linkageLoaded, setLinkageLoaded] = useState(false);
+
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const settings = await db.userSettings.toArray();
+        if (settings[0]?.linkageSettings) {
+          setLinkageSettings(settings[0].linkageSettings);
+        }
+      } catch {} finally {
+        setLinkageLoaded(true);
+      }
+    };
+    loadSettings();
+  }, []);
+
+  const handleToggleLinkage = async (key: keyof LinkageSettings) => {
+    const newSettings = { ...linkageSettings, [key]: !linkageSettings[key] };
+    setLinkageSettings(newSettings);
+    try {
+      const existing = await db.userSettings.toArray();
+      if (existing[0]) {
+        await db.userSettings.update(existing[0].id!, { linkageSettings: newSettings });
+      } else {
+        await db.userSettings.add({
+          sleepTarget: 8,
+          napTarget: 0.5,
+          weight: 60,
+          cupSizes: [200, 300, 500],
+          linkageSettings: newSettings,
+          createdAt: Date.now(),
+        });
+      }
+      showToast({ message: "联动设置已更新", type: "success", duration: 1500 });
+    } catch {
+      showToast({ message: "保存失败", type: "error", duration: 2000 });
+      setLinkageSettings(linkageSettings); // revert
+    }
+  };
 
   // ---- API Key handlers ----
   function handleSaveApiKey() {
@@ -52,8 +140,7 @@ export default function SettingsPage() {
   async function handleExport() {
     setIsExporting(true);
     try {
-      const data = await exportAllData();
-      const json = JSON.stringify(data, null, 2);
+      const json = await exportAllData();
       const blob = new Blob([json], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -88,11 +175,16 @@ export default function SettingsPage() {
       try {
         const text = ev.target?.result as string;
         const parsed = JSON.parse(text);
-        if (!parsed.data || !parsed.exportedAt) {
+        // Accept both new wrapper format {version, exportedAt, data} and old plain format {table: rows}
+        if (parsed.version && parsed.data) {
+          setImportFile({ name: file.name, data: text, exportedAt: parsed.exportedAt });
+        } else if (typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)) {
+          // Old format without wrapper — treat as valid
+          setImportFile({ name: file.name, data: text, exportedAt: "未知" });
+        } else {
           showToast({ message: "无效的备份文件格式", type: "error", duration: 3000 });
           return;
         }
-        setImportFile({ name: file.name, data: text, exportedAt: parsed.exportedAt });
         setShowImportConfirm(true);
       } catch {
         showToast({ message: "无法解析该文件，请检查是否为 JSON 格式", type: "error", duration: 3000 });
@@ -171,6 +263,53 @@ export default function SettingsPage() {
             )}
           </div>
         </div>
+
+        {/* === 层级联动设置 === */}
+        {linkageLoaded && (
+          <div className="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-100 dark:border-gray-800">
+            <div className="flex items-start gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
+                <Layers className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div>
+                <h3 className="text-base font-semibold text-gray-900 dark:text-white">层级联动设置</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                  控制目标、计划、任务之间的自动同步行为
+                </p>
+              </div>
+            </div>
+            <div className="space-y-3">
+              <ToggleRow
+                icon={<RefreshCw className="w-4 h-4" />}
+                label="自动同步状态"
+                description="下层全部完成后自动更新上层状态"
+                enabled={linkageSettings.autoSyncStatus}
+                onToggle={() => handleToggleLinkage("autoSyncStatus")}
+              />
+              <ToggleRow
+                icon={<Calendar className="w-4 h-4" />}
+                label="自动同步日期"
+                description="上层日期变更后自动偏移下层日期"
+                enabled={linkageSettings.autoSyncDate}
+                onToggle={() => handleToggleLinkage("autoSyncDate")}
+              />
+              <ToggleRow
+                icon={<Flag className="w-4 h-4" />}
+                label="优先级自动继承"
+                description="目标优先级默认同步给下属计划与任务"
+                enabled={linkageSettings.autoInheritPriority}
+                onToggle={() => handleToggleLinkage("autoInheritPriority")}
+              />
+              <ToggleRow
+                icon={<Tag className="w-4 h-4" />}
+                label="标签自动追加"
+                description="目标标签自动追加到下属计划与任务"
+                enabled={linkageSettings.autoAppendTags}
+                onToggle={() => handleToggleLinkage("autoAppendTags")}
+              />
+            </div>
+          </div>
+        )}
 
         {/* === 数据导出 === */}
         <div className="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-100 dark:border-gray-800">

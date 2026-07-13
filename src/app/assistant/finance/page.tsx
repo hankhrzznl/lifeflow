@@ -7,13 +7,17 @@ import {
   ArrowRightLeft, Download, Edit3, Target,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   addFinRecord, getFinRecordsByMonth, deleteFinRecord, updateFinRecord,
   getFinAccounts, createFinAccount, deleteFinAccount,
+  getGoalsByProject,
 } from "@/lib/db";
 import { showToast } from "@/components/ui/Toast";
 import { FIN_CATEGORIES } from "@/lib/types";
 import type { FinRecord, FinAccount } from "@/lib/types";
+import { notifyGoalProgressUpdate } from "@/lib/linkage";
+import type { Goal } from "@/lib/types";
 import { getMonthBudget, setMonthBudget } from "@/lib/financeStats";
 
 function getTodayStr(): string {
@@ -76,6 +80,9 @@ export default function FinancePage() {
   // 预算
   const [budgetAmount, setBudgetAmount] = useState<number | null>(null);
   const [budgetInput, setBudgetInput] = useState("");
+  const [goals, setGoals] = useState<Goal[]>([]);
+  const [selectedGoalId, setSelectedGoalId] = useState<number | null>(null);
+  const router = useRouter();
 
   const loadAccounts = useCallback(async () => {
     const list = await getFinAccounts();
@@ -101,6 +108,21 @@ export default function FinancePage() {
 
   useEffect(() => { loadAccounts(); }, []);
   useEffect(() => { loadRecords(); loadBudget(); }, [loadRecords, loadBudget]);
+
+  useEffect(() => {
+    const loadGoals = async () => {
+      try {
+        const allProjects = await (await import("@/lib/db")).getAllProjectsV2();
+        const allGoals: Goal[] = [];
+        for (const p of allProjects) {
+          const g = await getGoalsByProject(p.id!);
+          allGoals.push(...g.filter(g => g.type === "finance" && (g.status === "active" || g.status === "paused")));
+        }
+        setGoals(allGoals);
+      } catch {}
+    };
+    loadGoals();
+  }, []);
 
   const handlePrevMonth = () => {
     if (currentMonth === 1) { setCurrentYear((y) => y - 1); setCurrentMonth(12); }
@@ -161,15 +183,19 @@ export default function FinancePage() {
         date: formDate,
         note: formNote || undefined,
         tag: formTag || undefined,
+        goalId: selectedGoalId ?? undefined,
       });
       showToast({ message: "已修改", type: "success" });
+      if (selectedGoalId) { notifyGoalProgressUpdate(selectedGoalId); }
     } else {
       await addFinRecord({
         type: formType, amount, category: formCategory,
         date: formDate, note: formNote || undefined,
         tag: formTag || undefined, accountId: selectedAccountId,
+        goalId: selectedGoalId ?? undefined,
       });
       showToast({ message: "已记录", type: "success" });
+      if (selectedGoalId) { notifyGoalProgressUpdate(selectedGoalId); }
     }
     setShowForm(false);
     resetForm();
@@ -178,6 +204,7 @@ export default function FinancePage() {
 
   const handleDelete = async (id: number) => {
     await deleteFinRecord(id);
+    if (selectedGoalId) { notifyGoalProgressUpdate(selectedGoalId); }
     showToast({ message: "已删除", type: "info" });
     loadRecords();
   };
@@ -339,6 +366,51 @@ export default function FinancePage() {
                 <ChevronRight className="w-4 h-4 text-gray-400" />
               </button>
             </div>
+
+            {/* 关联财务目标 */}
+            {goals.length > 0 && (
+              <div className="mx-4 mb-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-medium text-emerald-700 dark:text-emerald-300">关联财务目标</span>
+                  <select
+                    value={selectedGoalId ?? ""}
+                    onChange={(e) => setSelectedGoalId(e.target.value ? Number(e.target.value) : null)}
+                    className="text-xs bg-white dark:bg-gray-800 rounded-lg px-2 py-1 border-0"
+                  >
+                    <option value="">不关联</option>
+                    {goals.map(g => (
+                      <option key={g.id} value={g.id}>{g.name} ({g.progress}%)</option>
+                    ))}
+                  </select>
+                </div>
+                {selectedGoalId && (() => {
+                  const g = goals.find(g => g.id === selectedGoalId);
+                  if (!g) return null;
+                  return (
+                    <button onClick={() => router.push(`/projects/${g.projectId}/goals/${g.id}`)} className="w-full text-left">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-700 dark:text-gray-300">{g.name}</span>
+                        <span className="font-medium">{g.progress}%</span>
+                      </div>
+                      <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full mt-1 overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all ${g.progress >= 100 ? "bg-emerald-500" : g.progress >= 50 ? "bg-blue-500" : "bg-red-500"}`}
+                          style={{ width: `${Math.min(g.progress, 100)}%` }}
+                        />
+                      </div>
+                      {g.deadline && (
+                        <p className="text-xs text-gray-400 mt-1">截止: {new Date(g.deadline).toLocaleDateString("zh-CN")}</p>
+                      )}
+                    </button>
+                  );
+                })()}
+              </div>
+            )}
+            {goals.length === 0 && (
+              <div className="mx-4 mb-4 bg-gray-50 dark:bg-gray-800 rounded-xl p-3 text-center">
+                <p className="text-xs text-gray-400">暂无财务目标，在项目中创建财务类目标以追踪支出预算</p>
+              </div>
+            )}
 
             {/* 预算进度条 */}
             <div className="mb-4 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-4">

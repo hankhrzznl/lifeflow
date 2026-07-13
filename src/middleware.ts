@@ -19,9 +19,33 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(url, redirect.permanent ? 308 : 307);
   }
 
+  // 旧版 board/section 路由重定向 → 新版项目页
+  const boardMatch = pathname.match(/^\/projects\/(\d+)\/boards\/(\d+)\/sections\/(\d+)$/);
+  if (boardMatch) {
+    const url = request.nextUrl.clone();
+    url.pathname = `/projects/${boardMatch[1]}`;
+    return NextResponse.redirect(url, 308);
+  }
+
+  const boardOnlyMatch = pathname.match(/^\/projects\/(\d+)\/boards\/(\d+)$/);
+  if (boardOnlyMatch) {
+    const url = request.nextUrl.clone();
+    url.pathname = `/projects/${boardOnlyMatch[1]}`;
+    return NextResponse.redirect(url, 308);
+  }
+
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ['/', '/focus', '/goals/long-term', '/goals/short-term', '/goals/daily-trivial', '/goals/habits'],
+  matcher: [
+    '/',
+    '/focus',
+    '/goals/long-term',
+    '/goals/short-term',
+    '/goals/daily-trivial',
+    '/goals/habits',
+    '/projects/:projectId/boards/:boardId',
+    '/projects/:projectId/boards/:boardId/sections/:sectionId',
+  ],
 };

@@ -7,7 +7,7 @@ import {
   CalendarCheck, LayoutDashboard, FolderKanban, ChevronRight, Inbox,
   Plus, X, ChevronDown, Target, CheckCircle, CalendarDays, ClipboardList,
   MoreHorizontal, Play, Pause, Archive, Trash2, Filter, ArrowUpDown, EyeOff, Eye,
-  GripVertical, ListTodo, Circle, ChevronLeft, CheckCircle2, CheckSquare, Square, Lock
+  GripVertical, ListTodo, Circle, ChevronLeft, CheckCircle2, CheckSquare, Square, Lock, AlertTriangle
 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import {
@@ -405,6 +405,8 @@ function GoalCard({
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <span className="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate">{goal.name}</span>
+              {goal.warningLevel === "danger" && <AlertTriangle className="w-3 h-3 text-red-500" />}
+              {goal.warningLevel === "warning" && <AlertTriangle className="w-3 h-3 text-amber-500" />}
               <span className={`text-[10px] px-1.5 py-0.5 rounded ${getStatusBadge(goal.status)}`}>
                 {getStatusLabel(goal.status)}
               </span>

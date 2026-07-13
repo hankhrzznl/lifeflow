@@ -8,7 +8,7 @@ import {
   CheckCheck, ListTodo, TrendingUp,
   AlertCircle, Target, Zap, BarChart3, Plus, Trash2,
   Save, Lightbulb, AlertTriangle, Rocket, ChevronLeft, ChevronRight,
-  X, Check, Sparkles, ArrowRight, Activity,
+  X, Check, Sparkles, ArrowRight, Activity, Bot,
 } from "lucide-react";
 import {
   getReviewRecordByPeriod, createOrUpdateReviewRecord,
@@ -18,6 +18,8 @@ import { showToast } from "@/components/ui/Toast";
 import type { ReviewRecord, Task, ProjectV2, HabitLog, Goal, Plan } from "@/lib/types";
 import { PRIORITY_CONFIG } from "@/lib/types";
 import { db } from "@/lib/db";
+import { isAIEnabled, isOnline } from "@/lib/aiClient";
+import { analyzeReview, adoptImprovements } from "@/lib/aiReviewAnalyzer";
 
 // ==================== 工具函数 ====================
 
@@ -260,6 +262,9 @@ export default function ReviewPage() {
   const [genTaskGoalId, setGenTaskGoalId] = useState<number | null>(null);
   const [genTaskPlanId, setGenTaskPlanId] = useState<number | null>(null);
   const router = useRouter();
+
+  const [aiAnalyzing, setAiAnalyzing] = useState(false);
+  const [aiResult, setAiResult] = useState<{ summary: string; problems: string[]; improvements: string[] } | null>(null);
 
   const range = getPeriodRange(periodType, periodOffset);
 
@@ -905,6 +910,67 @@ export default function ReviewPage() {
           <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
             周期回顾
           </h2>
+
+          {isAIEnabled() && isOnline() && !aiResult && (
+            <button
+              onClick={async () => {
+                setAiAnalyzing(true);
+                try {
+                  const result = await analyzeReview(range.start, range.end, highlights, problems);
+                  setAiResult(result);
+                  showToast({ message: "AI分析完成", type: "success" });
+                } catch (err: any) {
+                  showToast({ message: err.message || "AI分析失败", type: "error" });
+                } finally {
+                  setAiAnalyzing(false);
+                }
+              }}
+              disabled={aiAnalyzing}
+              className="flex items-center gap-2 px-4 py-2 text-xs font-medium text-violet-600 bg-violet-50 dark:bg-violet-900/20 rounded-xl hover:bg-violet-100 transition-colors"
+            >
+              <Sparkles className={`w-3.5 h-3.5 ${aiAnalyzing ? "animate-spin" : ""}`} />
+              {aiAnalyzing ? "AI分析中..." : "AI 智能分析"}
+            </button>
+          )}
+
+          {aiResult && (
+            <div className="bg-violet-50 dark:bg-violet-900/20 rounded-xl p-4 space-y-3 mt-3">
+              <div className="flex items-center gap-2">
+                <Bot className="w-4 h-4 text-violet-500" />
+                <span className="text-sm font-medium text-violet-700 dark:text-violet-300">AI分析结果</span>
+              </div>
+              <p className="text-sm text-gray-700 dark:text-gray-300">{aiResult.summary}</p>
+              {aiResult.problems.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium text-gray-500 mb-1">识别的问题</p>
+                  {aiResult.problems.map((p, i) => (
+                    <p key={i} className="text-xs text-gray-600 dark:text-gray-400">· {p}</p>
+                  ))}
+                </div>
+              )}
+              {aiResult.improvements.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium text-gray-500 mb-2">改进建议</p>
+                  {aiResult.improvements.map((imp, i) => (
+                    <div key={i} className="flex items-start gap-2 mb-1">
+                      <span className="text-xs text-gray-600 dark:text-gray-400 flex-1">· {imp}</span>
+                      <button
+                        onClick={async () => {
+                          try {
+                            await adoptImprovements([{ text: imp }]);
+                            showToast({ message: "已转为改进任务", type: "success" });
+                          } catch { showToast({ message: "创建失败", type: "error" }); }
+                        }}
+                        className="text-xs px-2 py-0.5 bg-violet-200 dark:bg-violet-800 text-violet-700 dark:text-violet-300 rounded-lg shrink-0"
+                      >
+                        采纳
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {renderEditableList(
             "亮点",

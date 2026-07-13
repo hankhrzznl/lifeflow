@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Key, Download, Upload, Trash2, Eye, EyeOff, AlertTriangle,
   Layers, RefreshCw, Calendar, Flag, Tag, Bookmark,
+  Bot, Sparkles, Brain, BellRing, CalendarCheck,
 } from "lucide-react";
 import { db, exportAllData, importAllData } from "@/lib/db";
 import { showToast } from "@/components/ui/Toast";
@@ -81,6 +82,10 @@ export default function SettingsPage() {
   const [showTemplateView, setShowTemplateView] = useState(false);
   const [viewingTemplate, setViewingTemplate] = useState<GoalTemplate | null>(null);
 
+  const [aiSettings, setAiSettings] = useState<{ aiEnabled: boolean; aiGoalDecompose: boolean; aiReviewAnalyze: boolean; aiProgressWarning: boolean; autoWeeklyReview: boolean }>({
+    aiEnabled: true, aiGoalDecompose: true, aiReviewAnalyze: true, aiProgressWarning: true, autoWeeklyReview: false,
+  });
+
   useEffect(() => {
     const loadSettings = async () => {
       try {
@@ -91,6 +96,12 @@ export default function SettingsPage() {
       } catch {} finally {
         setLinkageLoaded(true);
       }
+      const aiEnabled = localStorage.getItem("lifeflow_ai_enabled") !== "false";
+      const aiGoal = localStorage.getItem("lifeflow_ai_aiGoalDecompose") !== "false";
+      const aiReview = localStorage.getItem("lifeflow_ai_aiReviewAnalyze") !== "false";
+      const aiWarn = localStorage.getItem("lifeflow_ai_aiProgressWarning") !== "false";
+      const aiAuto = localStorage.getItem("lifeflow_ai_autoWeeklyReview") === "true";
+      setAiSettings({ aiEnabled, aiGoalDecompose: aiGoal, aiReviewAnalyze: aiReview, aiProgressWarning: aiWarn, autoWeeklyReview: aiAuto });
     };
     loadSettings();
   }, []);
@@ -127,6 +138,16 @@ export default function SettingsPage() {
       showToast({ message: "保存失败", type: "error", duration: 2000 });
       setLinkageSettings(linkageSettings); // revert
     }
+  };
+
+  const handleToggleAi = (key: string) => {
+    const newSettings = { ...aiSettings, [key]: !(aiSettings as any)[key] };
+    setAiSettings(newSettings);
+    localStorage.setItem(`lifeflow_ai_${key}`, String((newSettings as any)[key]));
+    if (key === "aiEnabled") {
+      localStorage.setItem("lifeflow_ai_enabled", String(newSettings.aiEnabled));
+    }
+    showToast({ message: "AI设置已更新", type: "success", duration: 1500 });
   };
 
   // ---- API Key handlers ----
@@ -440,6 +461,32 @@ export default function SettingsPage() {
             </div>
           ) : (
             <p className="text-xs text-gray-400 text-center py-4">暂无模板，从目标详情页可将目标保存为模板</p>
+          )}
+        </div>
+
+        {/* === AI 智能设置 === */}
+        <div className="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-100 dark:border-gray-800">
+          <div className="flex items-start gap-3 mb-4">
+            <div className="w-10 h-10 rounded-xl bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center flex-shrink-0">
+              <Bot className="w-5 h-5 text-violet-600 dark:text-violet-400" />
+            </div>
+            <div>
+              <h3 className="text-base font-semibold text-gray-900 dark:text-white">AI 智能功能</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">开启AI辅助，提升目标管理效率（需联网）</p>
+            </div>
+          </div>
+          
+          <div className="space-y-3 mb-4">
+            <ToggleRow icon={<Bot className="w-4 h-4" />} label="启用AI功能" description="总开关，关闭后所有AI入口隐藏" enabled={aiSettings.aiEnabled} onToggle={() => handleToggleAi("aiEnabled")} />
+          </div>
+          
+          {aiSettings.aiEnabled && (
+            <div className="space-y-3 pl-2 border-l-2 border-violet-200 dark:border-violet-800 ml-2">
+              <ToggleRow icon={<Sparkles className="w-4 h-4" />} label="目标智能拆解" description="AI自动将目标拆解为计划与任务" enabled={aiSettings.aiGoalDecompose} onToggle={() => handleToggleAi("aiGoalDecompose")} />
+              <ToggleRow icon={<Brain className="w-4 h-4" />} label="复盘智能分析" description="AI自动分析周期数据给出改进建议" enabled={aiSettings.aiReviewAnalyze} onToggle={() => handleToggleAi("aiReviewAnalyze")} />
+              <ToggleRow icon={<AlertTriangle className="w-4 h-4" />} label="进度智能预警" description="自动检测进度滞后并给出调整建议" enabled={aiSettings.aiProgressWarning} onToggle={() => handleToggleAi("aiProgressWarning")} />
+              <ToggleRow icon={<CalendarCheck className="w-4 h-4" />} label="自动周/月复盘" description="周期结束时自动生成AI分析" enabled={aiSettings.autoWeeklyReview} onToggle={() => handleToggleAi("autoWeeklyReview")} />
+            </div>
           )}
         </div>
 

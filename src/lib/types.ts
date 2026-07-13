@@ -115,6 +115,7 @@ export interface Task {
   isFocus?: boolean;
   createdAt: number;
   updatedAt: number;
+  isAiGenerated?: boolean;
   order?: number;
 }
 
@@ -243,6 +244,11 @@ export interface Goal {
   progress: number;
   progressLocked: boolean;
   targetValue?: number;
+  isAiGenerated?: boolean;
+  aiPrompt?: string;
+  warningLevel?: 'normal' | 'warning' | 'danger';
+  lastWarningCheck?: number;
+  predictedFinishDate?: number;
   tags?: string[];
   weight: number;
   createdAt: number;
@@ -262,6 +268,7 @@ export interface Plan {
   order: number;
   predecessorPlanIds?: number[];
   isUnlocked?: boolean;
+  isAiGenerated?: boolean;
   createdAt: number;
   updatedAt: number;
 }
@@ -424,6 +431,10 @@ export interface ReviewRecord {
   periodType?: 'week' | 'month';
   periodStart?: number;
   periodEnd?: number;
+  aiSummary?: string;
+  aiProblems?: string[];
+  aiImprovements?: string[];
+  isAiAnalyzed?: boolean;
   goalIds?: number[];
   createdAt: number;
   updatedAt?: number;
@@ -982,6 +993,7 @@ export interface UserSettings {
   cupSizes: number[];       // 水杯预设值（ml），默认 [200, 300, 500]
   avatarDataUrl?: string;   // 头像 Base64
   linkageSettings?: LinkageSettings;
+  aiSettings?: AiSettings;
   createdAt: number;
 }
 
@@ -1038,4 +1050,14 @@ export interface GoalTemplateTask {
   title: string;
   weight: number;
   type: Task['type'];
+}
+
+// ==================== AI 设置 ====================
+
+export interface AiSettings {
+  aiEnabled: boolean;
+  aiGoalDecompose: boolean;
+  aiReviewAnalyze: boolean;
+  aiProgressWarning: boolean;
+  autoWeeklyReview: boolean;
 }

@@ -6,12 +6,15 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft, CheckCircle, Clock, ArrowRight, ChevronRight, CalendarDays, ClipboardList,
   Target, Plus, MoreHorizontal, Edit2, Archive, Play, Pause, Lock, Unlock, AlertCircle, X,
-  Tag, Trash2, Bookmark,
+  Tag, Trash2, Bookmark, Sparkles, AlertTriangle,
 } from "lucide-react";
 import { getProjectV2, getGoal, getPlansByGoal, createPlan, updateGoal, deleteGoal, deletePlan, db } from "@/lib/db";
 import { recalculateGoalProgress } from "@/lib/linkage";
 import { showToast } from "@/components/ui/Toast";
 import type { ProjectV2, Goal, Plan, Priority, GoalStatus, GoalTemplate } from "@/lib/types";
+import { isAIEnabled, isOnline } from "@/lib/aiClient";
+import { checkGoalWarning, applySuggestion } from "@/lib/goalWarning";
+import type { WarningResult } from "@/lib/goalWarning";
 
 const PRIORITY_CONFIG = [
   { key: "urgent-important" as Priority, label: "重要紧急", color: "bg-red-100 text-red-600" },
@@ -114,6 +117,11 @@ export default function GoalDetailPage() {
   const [editingProgress, setEditingProgress] = useState(false);
   const [progressValue, setProgressValue] = useState(0);
 
+  const [warning, setWarning] = useState<WarningResult | null>(null);
+  const [showAiSheet, setShowAiSheet] = useState(false);
+  const [aiDescription, setAiDescription] = useState("");
+  const [aiGenerating, setAiGenerating] = useState(false);
+
   const loadData = useCallback(async () => {
     const [p, g] = await Promise.all([
       getProjectV2(projectId),
@@ -125,6 +133,11 @@ export default function GoalDetailPage() {
     const goalPlans = await getPlansByGoal(goalId);
     setPlans(goalPlans);
     setLoaded(true);
+    if (g && isAIEnabled() && isOnline()) {
+      checkGoalWarning(goalId).then(result => {
+        if (result.level !== "normal") setWarning(result);
+      }).catch(() => {});
+    }
   }, [projectId, goalId]);
 
   useEffect(() => {
@@ -438,6 +451,38 @@ export default function GoalDetailPage() {
           )}
         </motion.div>
 
+        {warning && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.08 }}
+            className={`p-3 rounded-xl mb-4 ${
+              warning.level === "danger" ? "bg-red-50 dark:bg-red-900/20" : "bg-amber-50 dark:bg-amber-900/20"
+            }`}
+          >
+            <div className="flex items-center gap-2 mb-1">
+              <AlertTriangle className={`w-4 h-4 ${warning.level === "danger" ? "text-red-500" : "text-amber-500"}`} />
+              <span className={`text-sm font-medium ${warning.level === "danger" ? "text-red-700 dark:text-red-400" : "text-amber-700 dark:text-amber-400"}`}>
+                {warning.level === "danger" ? "严重滞后预警" : "进度预警"}
+              </span>
+            </div>
+            <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">{warning.reason}</p>
+            {warning.suggestions.slice(0, 2).map((s, i) => (
+              <button
+                key={i}
+                onClick={() => {
+                  if (s.includes("延长截止日期")) applySuggestion(goalId, "extendDeadline", { days: 7 });
+                  else applySuggestion(goalId, "increasePace");
+                  checkGoalWarning(goalId).then(r => setWarning(r.level !== "normal" ? r : null));
+                }}
+                className="block w-full text-left text-xs text-indigo-600 dark:text-indigo-400 hover:underline mt-1"
+              >
+                ⚡ {s}
+              </button>
+            ))}
+          </motion.div>
+        )}
+
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
@@ -456,6 +501,15 @@ export default function GoalDetailPage() {
               <Plus className="w-3.5 h-3.5" />
               添加计划
             </button>
+            {isAIEnabled() && isOnline() && (
+              <button
+                onClick={() => setShowAiSheet(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-violet-600 bg-violet-50 dark:bg-violet-900/20 rounded-xl hover:bg-violet-100 transition-colors"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                AI 补充任务
+              </button>
+            )}
           </div>
 
           {plans.length > 0 ? (

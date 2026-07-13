@@ -48,6 +48,7 @@ import type {
   Goal,
   Plan,
   GoalTemplate,
+  AiSettings,
 } from "./types";
 import { recalculateAllProgress } from "./linkage";
 
@@ -728,6 +729,46 @@ export class LifeFlowDB extends Dexie {
           await tx.table("goalTemplates").add(t);
         }
         console.log(`[LifeFlowDB v27] Inserted ${builtInTemplates.length} built-in templates`);
+      }
+    });
+
+    this.version(28).stores({
+      goals: "++id, projectId, type, status, isAiGenerated, warningLevel",
+      plans: "++id, goalId, status, isAiGenerated",
+      tasks: "++id, planId, goalId, status, isAiGenerated",
+    }).upgrade(async (tx) => {
+      console.log("[LifeFlowDB v28] Adding AI fields...");
+      const allGoals = await tx.table("goals").toArray();
+      for (const goal of allGoals) {
+        await tx.table("goals").update(goal.id!, {
+          isAiGenerated: goal.isAiGenerated || false,
+          aiPrompt: goal.aiPrompt || null,
+          warningLevel: goal.warningLevel || "normal",
+          lastWarningCheck: goal.lastWarningCheck || 0,
+          predictedFinishDate: goal.predictedFinishDate || null,
+        });
+      }
+
+      const allPlans = await tx.table("plans").toArray();
+      for (const plan of allPlans) {
+        await tx.table("plans").update(plan.id!, {
+          isAiGenerated: plan.isAiGenerated || false,
+        });
+      }
+
+      const allTasks = await tx.table("tasks").toArray();
+      for (const task of allTasks) {
+        await tx.table("tasks").update(task.id!, {
+          isAiGenerated: task.isAiGenerated || false,
+        });
+      }
+
+      // Initialize AI settings
+      const existingSettings = await tx.table("userSettings").toArray();
+      for (const s of existingSettings) {
+        await tx.table("userSettings").update(s.id!, {
+          aiSettings: s.aiSettings || { aiEnabled: true, aiGoalDecompose: true, aiReviewAnalyze: true, aiProgressWarning: true, autoWeeklyReview: false },
+        } as any);
       }
     });
   }
@@ -1755,7 +1796,7 @@ export async function exportAllData(): Promise<string> {
   }
 
   return JSON.stringify({
-    version: 27,
+    version: 28,
     exportedAt: new Date().toISOString(),
     data,
   }, null, 2);

@@ -567,8 +567,8 @@ export class LifeFlowDB extends Dexie {
     });
 
     this.version(27).stores({
-      goals: "++id, projectId, type, status",
-      plans: "++id, goalId, status, predecessorPlanIds, isUnlocked",
+      goals: "++id, projectId, type, status, priority, createdAt, updatedAt",
+      plans: "++id, goalId, status, order, createdAt, updatedAt, predecessorPlanIds, isUnlocked",
       goalTemplates: "++id, category, type, isBuiltIn",
     }).upgrade(async (tx) => {
       console.log("[LifeFlowDB v27] Upgrading plans with dependency fields...");
@@ -737,9 +737,9 @@ export class LifeFlowDB extends Dexie {
     });
 
     this.version(28).stores({
-      goals: "++id, projectId, type, status, isAiGenerated, warningLevel",
-      plans: "++id, goalId, status, isAiGenerated",
-      tasks: "++id, planId, goalId, status, isAiGenerated",
+      goals: "++id, projectId, type, status, priority, createdAt, updatedAt, isAiGenerated, warningLevel",
+      plans: "++id, goalId, status, order, createdAt, updatedAt, predecessorPlanIds, isUnlocked, isAiGenerated",
+      tasks: "++id, type, status, parentTaskId, startTime, projectId, goalId, planId, createdAt, [type+status], *tags, dueDate, isAiGenerated",
     }).upgrade(async (tx) => {
       console.log("[LifeFlowDB v28] Adding AI fields...");
       const allGoals = await tx.table("goals").toArray();
@@ -817,6 +817,16 @@ export class LifeFlowDB extends Dexie {
           dangerThreshold: s.dangerThreshold || 30,
         } as any);
       }
+    });
+
+    // v30: 修复 v27/v28 中因索引被意外移除导致的 SchemaError
+    // "KeyPath type on object store tasks is not indexed"
+    this.version(30).stores({
+      goals: "++id, projectId, type, status, priority, createdAt, updatedAt, isAiGenerated, warningLevel",
+      plans: "++id, goalId, status, order, createdAt, updatedAt, predecessorPlanIds, isUnlocked, isAiGenerated",
+      tasks: "++id, type, status, parentTaskId, startTime, projectId, goalId, planId, createdAt, [type+status], *tags, dueDate, isAiGenerated",
+    }).upgrade(async () => {
+      console.log("[LifeFlowDB v30] Ensuring all indexes are present (schema recovery)");
     });
   }
 }

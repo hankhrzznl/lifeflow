@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, Suspense } from "react";
+import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -93,12 +93,12 @@ function getStatusLabel(status: GoalStatus): string {
 
 interface ProjectWithGoals {
   project: ProjectV2;
-  goals: Goal[];
+  goals: GoalWithPlans[];
 }
 
 interface GoalWithPlans {
   goal: Goal;
-  plans: Plan[];
+  plans: PlanWithTasks[];
 }
 
 interface PlanWithTasks {
@@ -358,6 +358,12 @@ function GoalCard({
   onArchive,
   isExpanded,
   onToggleExpand,
+  onEditPlan,
+  onDeletePlan,
+  onTogglePlanStatus,
+  onArchivePlan,
+  expandedPlanIds,
+  onTogglePlanExpand,
   batchMode,
   selectedTaskIds,
   onToggleTaskSelection,
@@ -383,6 +389,12 @@ function GoalCard({
   onExitBatchMode?: () => void;
   onBatchComplete?: () => void;
   onBatchDelete?: () => void;
+  onEditPlan: (plan: Plan) => void;
+  onDeletePlan: (planId: number) => void;
+  onTogglePlanStatus: (planId: number) => void;
+  onArchivePlan: (planId: number) => void;
+  expandedPlanIds: Set<number>;
+  onTogglePlanExpand: (planId: number) => void;
 }) {
   const { goal, plans } = goalWithPlans;
   const isPaused = goal.status === "paused";
@@ -484,19 +496,19 @@ function GoalCard({
           >
             <div className="p-4 pt-2 space-y-2">
               {plans.length > 0 ? (
-                plans.map(plan => (
+                plans.map(pwt => (
                   <PlanCard
-                    key={plan.id}
-                    planWithTasks={{ plan, tasks: [] }}
+                    key={pwt.plan.id}
+                    planWithTasks={pwt}
                     goalStatus={goal.status}
                     onToggleTask={onToggleTask}
                     onMoveTask={onMoveTask}
-                    onEdit={() => {}}
-                    onDelete={() => {}}
-                    onToggleStatus={() => {}}
-                    onArchive={() => {}}
-                    isExpanded={false}
-                    onToggleExpand={() => {}}
+                    onEdit={() => onEditPlan(pwt.plan)}
+                    onDelete={() => onDeletePlan(pwt.plan.id!)}
+                    onToggleStatus={() => onTogglePlanStatus(pwt.plan.id!)}
+                    onArchive={() => onArchivePlan(pwt.plan.id!)}
+                    isExpanded={expandedPlanIds.has(pwt.plan.id!)}
+                    onToggleExpand={() => onTogglePlanExpand(pwt.plan.id!)}
                     batchMode={batchMode}
                     selectedTaskIds={selectedTaskIds}
                     onToggleTaskSelection={onToggleTaskSelection}
@@ -531,6 +543,8 @@ function ProjectCard({
   onArchivePlan,
   isExpanded,
   onToggleExpand,
+  expandedPlanIds,
+  onTogglePlanExpand,
   batchMode,
   selectedTaskIds,
   onToggleTaskSelection,
@@ -552,6 +566,8 @@ function ProjectCard({
   onArchivePlan: (planId: number) => void;
   isExpanded: boolean;
   onToggleExpand: () => void;
+  expandedPlanIds: Set<number>;
+  onTogglePlanExpand: (planId: number) => void;
   batchMode?: boolean;
   selectedTaskIds?: Set<number>;
   onToggleTaskSelection?: (taskId: number) => void;
@@ -597,19 +613,25 @@ function ProjectCard({
           >
             <div className="bg-white dark:bg-gray-900 rounded-b-2xl border border-indigo-200 dark:border-indigo-800 border-t-0 p-4 space-y-3">
               {goals.length > 0 ? (
-                goals.map(goal => (
+                goals.map(gwp => (
                   <GoalCard
-                    key={goal.id}
-                    goalWithPlans={{ goal, plans: [] }}
+                    key={gwp.goal.id}
+                    goalWithPlans={gwp}
                     projectId={project.id!}
                     onToggleTask={onToggleTask}
                     onMoveTask={onMoveTask}
-                    onEdit={() => onEditGoal(goal)}
-                    onDelete={() => onDeleteGoal(goal.id!)}
-                    onToggleStatus={() => onToggleGoalStatus(goal.id!)}
-                    onArchive={() => onArchiveGoal(goal.id!)}
+                    onEdit={() => onEditGoal(gwp.goal)}
+                    onDelete={() => onDeleteGoal(gwp.goal.id!)}
+                    onToggleStatus={() => onToggleGoalStatus(gwp.goal.id!)}
+                    onArchive={() => onArchiveGoal(gwp.goal.id!)}
                     isExpanded={false}
                     onToggleExpand={() => {}}
+                    onEditPlan={onEditPlan}
+                    onDeletePlan={onDeletePlan}
+                    onTogglePlanStatus={onTogglePlanStatus}
+                    onArchivePlan={onArchivePlan}
+                    expandedPlanIds={expandedPlanIds}
+                    onTogglePlanExpand={onTogglePlanExpand}
                     batchMode={batchMode}
                     selectedTaskIds={selectedTaskIds}
                     onToggleTaskSelection={onToggleTaskSelection}
@@ -765,7 +787,8 @@ function GanttView({
                 <div className="w-[120px] shrink-0 p-2 text-xs font-medium text-gray-700 dark:text-gray-300 truncate">{project.project.name}</div>
                 <div style={{ width: dates.length * cellWidth }} />
               </div>
-              {project.goals.map(goal => {
+              {project.goals.map(gwp => {
+                const goal = gwp.goal;
                 const bar = getBarStyle(goal);
                 return (
                   <div key={goal.id} className="flex border-b border-gray-50 dark:border-gray-800/50 hover:bg-gray-50 dark:hover:bg-gray-800/30">
@@ -833,6 +856,10 @@ function PlannerPageInner() {
   const [showBatchActions, setShowBatchActions] = useState(false);
   const [viewMode, setViewMode] = useState<"list" | "gantt">("list");
   const [ganttPeriod, setGanttPeriod] = useState<"week" | "month">("week");
+  const [expandedPlanIds, setExpandedPlanIds] = useState<Set<number>>(new Set());
+  const allTasksRef = useRef<Task[]>([]);
+  const allPlansRef = useRef<Plan[]>([]);
+  const goalProjectMapRef = useRef<Map<number, number>>(new Map());
 
   const handleCreateProject = useCallback(async () => {
     if (!newProjectName.trim()) return;
@@ -845,6 +872,8 @@ function PlannerPageInner() {
   const loadData = useCallback(async () => {
     const allProjects = await getAllProjectsV2();
     const allGoals = await getAllGoals();
+    const allPlans = await getAllPlans();
+    allPlansRef.current = allPlans;
     const [shortterm, daily, longterm, habit] = await Promise.all([
       getTasksByType("shortterm"),
       getTasksByType("daily"),
@@ -852,31 +881,62 @@ function PlannerPageInner() {
       getTasksByType("habit"),
     ]);
     const allTasks = [...shortterm, ...daily, ...longterm, ...habit];
+    allTasksRef.current = allTasks;
 
+    // Build maps
+    const plansByGoal = new Map<number, Plan[]>();
+    allPlans.forEach(p => {
+      const list = plansByGoal.get(p.goalId) || [];
+      list.push(p);
+      plansByGoal.set(p.goalId, list);
+    });
+    const tasksByPlan = new Map<number, Task[]>();
+    allTasks.forEach(t => {
+      if (t.planId) {
+        const list = tasksByPlan.get(t.planId) || [];
+        list.push(t);
+        tasksByPlan.set(t.planId, list);
+      }
+    });
+    const gpm = new Map<number, number>();
+    allGoals.forEach(g => { if (g.id != null) gpm.set(g.id, g.projectId); });
+    goalProjectMapRef.current = gpm;
+
+    // Build GoalWithPlans[] per project
     const projectsWithGoals: ProjectWithGoals[] = allProjects.map(project => ({
       project,
-      goals: allGoals.filter(g => g.projectId === project.id),
+      goals: allGoals
+        .filter(g => g.projectId === project.id)
+        .map(g => ({
+          goal: g,
+          plans: (plansByGoal.get(g.id!) || []).map(p => ({
+            plan: p,
+            tasks: tasksByPlan.get(p.id!) || [],
+          })),
+        })),
     }));
 
+    // Filter
     let filtered = projectsWithGoals.map(p => ({
       ...p,
-      goals: p.goals.filter(g => {
-        if (statusFilter !== "all" && g.status !== statusFilter) return false;
-        if (priorityFilter !== "all" && g.priority !== priorityFilter) return false;
-        if (!showArchive && g.status === "archived") return false;
+      goals: p.goals.filter(gwp => {
+        if (statusFilter !== "all" && gwp.goal.status !== statusFilter) return false;
+        if (priorityFilter !== "all" && gwp.goal.priority !== priorityFilter) return false;
+        if (!showArchive && gwp.goal.status === "archived") return false;
         return true;
       }),
     })).filter(p => p.goals.length > 0);
 
+    // Sort
     if (sortBy === "deadline") {
       filtered = filtered.map(p => ({
         ...p,
-        goals: [...p.goals].sort((a, b) => (a.deadline || Infinity) - (b.deadline || Infinity)),
+        goals: [...p.goals].sort((a, b) => (a.goal.deadline || Infinity) - (b.goal.deadline || Infinity)),
       }));
     } else if (sortBy === "progress") {
       filtered = filtered.map(p => ({
         ...p,
-        goals: [...p.goals].sort((a, b) => a.progress - b.progress),
+        goals: [...p.goals].sort((a, b) => a.goal.progress - b.goal.progress),
       }));
     }
 
@@ -903,7 +963,7 @@ function PlannerPageInner() {
   };
 
   const handleToggleTask = async (taskId: number) => {
-    const task = unclassifiedTasks.find(t => t.id === taskId);
+    const task = allTasksRef.current.find(t => t.id === taskId);
     if (task) {
       if (task.status === "done") {
         await uncompleteTask(taskId);
@@ -928,9 +988,9 @@ function PlannerPageInner() {
   };
 
   const handleToggleGoalStatus = async (goalId: number) => {
-    const goal = projects.flatMap(p => p.goals).find(g => g.id === goalId);
-    if (goal) {
-      const newStatus: GoalStatus = goal.status === "active" ? "paused" : "active";
+    const gwp = projects.flatMap(p => p.goals).find(g => g.goal.id === goalId);
+    if (gwp) {
+      const newStatus: GoalStatus = gwp.goal.status === "active" ? "paused" : "active";
       await updateGoal(goalId, { status: newStatus });
       showToast({ message: newStatus === "paused" ? "目标已暂停" : "目标已恢复", type: "success" });
       await loadData();
@@ -959,6 +1019,32 @@ function PlannerPageInner() {
     await updatePlan(planId, { status: "archived" });
     showToast({ message: "计划已归档", type: "success" });
     await loadData();
+  };
+
+  const handleTogglePlanStatus = async (planId: number) => {
+    const plan = allPlansRef.current.find(p => p.id === planId);
+    if (plan) {
+      const newStatus: GoalStatus = plan.status === "active" ? "paused" : "active";
+      await updatePlan(planId, { status: newStatus });
+      showToast({ message: newStatus === "paused" ? "计划已暂停" : "计划已恢复", type: "success" });
+      await loadData();
+    }
+  };
+
+  const handleEditPlan = (plan: Plan) => {
+    const projectId = goalProjectMapRef.current.get(plan.goalId);
+    if (projectId) {
+      router.push(`/projects/${projectId}/goals/${plan.goalId}/plans/${plan.id}`);
+    }
+  };
+
+  const handleTogglePlanExpand = (planId: number) => {
+    setExpandedPlanIds(prev => {
+      const next = new Set(prev);
+      if (next.has(planId)) next.delete(planId);
+      else next.add(planId);
+      return next;
+    });
   };
 
   const handleAssignTask = (taskId: number) => {
@@ -1127,12 +1213,14 @@ function PlannerPageInner() {
                         onDeleteGoal={handleDeleteGoal}
                         onToggleGoalStatus={handleToggleGoalStatus}
                         onArchiveGoal={handleArchiveGoal}
-                        onEditPlan={() => {}}
+                        onEditPlan={handleEditPlan}
                         onDeletePlan={handleDeletePlan}
-                        onTogglePlanStatus={() => {}}
+                        onTogglePlanStatus={handleTogglePlanStatus}
                         onArchivePlan={handleArchivePlan}
                         isExpanded={expandedProjectIds.includes(project.project.id!)}
                         onToggleExpand={() => handleToggleProject(project.project.id!)}
+                        expandedPlanIds={expandedPlanIds}
+                        onTogglePlanExpand={handleTogglePlanExpand}
                         batchMode={batchMode}
                         selectedTaskIds={selectedTaskIds}
                         onToggleTaskSelection={toggleTaskSelection}

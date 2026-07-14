@@ -13,7 +13,7 @@ import { useSearchParams } from "next/navigation";
 import {
   getAllProjectsV2, createProjectV2, getGoalsByProject, getPlansByGoal,
   getTasksByType, deleteGoal, deletePlan, updateGoal, updatePlan, assignTasksToPlan,
-  getAllGoals, getAllPlans
+  getAllGoals, getAllPlans, createGoal, createPlan
 } from "@/lib/db";
 import { completeTask, uncompleteTask, moveTaskToPlan, batchCompleteTasks, batchDeleteTasks, batchMoveTasks } from "@/lib/linkage";
 import { showToast } from "@/components/ui/Toast";
@@ -364,6 +364,7 @@ function GoalCard({
   onArchivePlan,
   expandedPlanIds,
   onTogglePlanExpand,
+  onAddPlan,
   batchMode,
   selectedTaskIds,
   onToggleTaskSelection,
@@ -395,6 +396,7 @@ function GoalCard({
   onArchivePlan: (planId: number) => void;
   expandedPlanIds: Set<number>;
   onTogglePlanExpand: (planId: number) => void;
+  onAddPlan: (goalId: number) => void;
 }) {
   const { goal, plans } = goalWithPlans;
   const isPaused = goal.status === "paused";
@@ -521,6 +523,16 @@ function GoalCard({
               ) : (
                 <p className="text-xs text-gray-400 py-2 text-center">暂无计划</p>
               )}
+
+              {goal.status !== "paused" && goal.status !== "archived" && (
+                <button
+                  onClick={() => onAddPlan(goal.id!)}
+                  className="w-full flex items-center justify-center gap-1 py-2 text-xs text-indigo-500 hover:text-indigo-600 transition-colors"
+                >
+                  <Plus className="w-3 h-3" />
+                  快速添加计划
+                </button>
+              )}
             </div>
           </motion.div>
         )}
@@ -545,6 +557,8 @@ function ProjectCard({
   onToggleExpand,
   expandedPlanIds,
   onTogglePlanExpand,
+  onAddGoal,
+  onAddPlan,
   batchMode,
   selectedTaskIds,
   onToggleTaskSelection,
@@ -568,6 +582,8 @@ function ProjectCard({
   onToggleExpand: () => void;
   expandedPlanIds: Set<number>;
   onTogglePlanExpand: (planId: number) => void;
+  onAddGoal: (projectId: number) => void;
+  onAddPlan: (goalId: number) => void;
   batchMode?: boolean;
   selectedTaskIds?: Set<number>;
   onToggleTaskSelection?: (taskId: number) => void;
@@ -632,6 +648,7 @@ function ProjectCard({
                     onArchivePlan={onArchivePlan}
                     expandedPlanIds={expandedPlanIds}
                     onTogglePlanExpand={onTogglePlanExpand}
+                    onAddPlan={onAddPlan}
                     batchMode={batchMode}
                     selectedTaskIds={selectedTaskIds}
                     onToggleTaskSelection={onToggleTaskSelection}
@@ -644,6 +661,14 @@ function ProjectCard({
               ) : (
                 <p className="text-xs text-gray-400 py-4 text-center">暂无目标</p>
               )}
+
+              <button
+                onClick={() => onAddGoal(project.id!)}
+                className="w-full flex items-center justify-center gap-1 py-2 text-xs text-indigo-500 hover:text-indigo-600 transition-colors"
+              >
+                <Plus className="w-3 h-3" />
+                创建目标
+              </button>
             </div>
           </motion.div>
         )}
@@ -861,6 +886,17 @@ function PlannerPageInner() {
   const allPlansRef = useRef<Plan[]>([]);
   const goalProjectMapRef = useRef<Map<number, number>>(new Map());
 
+  // 创建目标
+  const [showNewGoal, setShowNewGoal] = useState(false);
+  const [newGoalProjectId, setNewGoalProjectId] = useState<number | null>(null);
+  const [newGoalName, setNewGoalName] = useState("");
+  const [newGoalPriority, setNewGoalPriority] = useState<Priority>("not-urgent-important");
+
+  // 快速创建计划
+  const [showNewPlan, setShowNewPlan] = useState(false);
+  const [newPlanGoalId, setNewPlanGoalId] = useState<number | null>(null);
+  const [newPlanName, setNewPlanName] = useState("");
+
   const handleCreateProject = useCallback(async () => {
     if (!newProjectName.trim()) return;
     await createProjectV2(newProjectName.trim(), COLORS[Math.floor(Math.random() * COLORS.length)]);
@@ -942,7 +978,7 @@ function PlannerPageInner() {
 
     setProjects(filtered);
 
-    const unclassified = allTasks.filter(t => t.status === "active" && (!t.projectId || !t.planId));
+    const unclassified = allTasks.filter(t => t.status === "active" && (!t.projectId && !t.planId));
     setUnclassifiedTasks(unclassified);
   }, [statusFilter, priorityFilter, sortBy, showArchive]);
 
@@ -1045,6 +1081,51 @@ function PlannerPageInner() {
       else next.add(planId);
       return next;
     });
+  };
+
+  const handleOpenNewGoal = (projectId: number) => {
+    setNewGoalProjectId(projectId);
+    setNewGoalName("");
+    setNewGoalPriority("not-urgent-important");
+    setShowNewGoal(true);
+  };
+
+  const handleCreateGoal = async () => {
+    if (!newGoalName.trim() || !newGoalProjectId) return;
+    await createGoal({
+      projectId: newGoalProjectId,
+      name: newGoalName.trim(),
+      type: "task",
+      priority: newGoalPriority,
+      status: "active",
+      progress: 0,
+      progressLocked: false,
+      weight: 1,
+    });
+    setShowNewGoal(false);
+    showToast({ message: "目标已创建", type: "success" });
+    await loadData();
+  };
+
+  const handleOpenNewPlan = (goalId: number) => {
+    setNewPlanGoalId(goalId);
+    setNewPlanName("");
+    setShowNewPlan(true);
+  };
+
+  const handleCreatePlan = async () => {
+    if (!newPlanName.trim() || !newPlanGoalId) return;
+    await createPlan({
+      goalId: newPlanGoalId,
+      name: newPlanName.trim(),
+      weight: 1,
+      status: "active",
+      progress: 0,
+      order: 0,
+    });
+    setShowNewPlan(false);
+    showToast({ message: "计划已创建", type: "success" });
+    await loadData();
   };
 
   const handleAssignTask = (taskId: number) => {
@@ -1221,6 +1302,8 @@ function PlannerPageInner() {
                         onToggleExpand={() => handleToggleProject(project.project.id!)}
                         expandedPlanIds={expandedPlanIds}
                         onTogglePlanExpand={handleTogglePlanExpand}
+                        onAddGoal={handleOpenNewGoal}
+                        onAddPlan={handleOpenNewPlan}
                         batchMode={batchMode}
                         selectedTaskIds={selectedTaskIds}
                         onToggleTaskSelection={toggleTaskSelection}
@@ -1310,6 +1393,83 @@ function PlannerPageInner() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <AnimatePresence>
+        {showNewGoal && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/40 flex items-end justify-center"
+            style={{ paddingBottom: "var(--bottom-nav-height)" }}
+            onClick={() => setShowNewGoal(false)}
+          >
+            <motion.div
+              initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
+              transition={{ type: "spring", stiffness: 400, damping: 40 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-lg bg-white dark:bg-gray-900 rounded-t-2xl p-6"
+            >
+              <div className="w-10 h-1 bg-gray-300 dark:bg-gray-700 rounded-full mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">创建目标</h3>
+              <input
+                type="text"
+                value={newGoalName}
+                onChange={(e) => setNewGoalName(e.target.value)}
+                placeholder="目标名称"
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-3"
+                autoFocus
+                onKeyDown={(e) => e.key === "Enter" && handleCreateGoal()}
+              />
+              <div className="flex gap-3">
+                <button onClick={() => setShowNewGoal(false)} className="flex-1 py-3 rounded-xl border border-gray-200 dark:border-gray-700 text-sm text-gray-500">
+                  取消
+                </button>
+                <button onClick={handleCreateGoal} disabled={!newGoalName.trim()} className="flex-1 py-3 rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 disabled:opacity-40">
+                  创建
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showNewPlan && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/40 flex items-end justify-center"
+            style={{ paddingBottom: "var(--bottom-nav-height)" }}
+            onClick={() => setShowNewPlan(false)}
+          >
+            <motion.div
+              initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
+              transition={{ type: "spring", stiffness: 400, damping: 40 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-lg bg-white dark:bg-gray-900 rounded-t-2xl p-6"
+            >
+              <div className="w-10 h-1 bg-gray-300 dark:bg-gray-700 rounded-full mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">快速添加计划</h3>
+              <input
+                type="text"
+                value={newPlanName}
+                onChange={(e) => setNewPlanName(e.target.value)}
+                placeholder="计划名称"
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-3"
+                autoFocus
+                onKeyDown={(e) => e.key === "Enter" && handleCreatePlan()}
+              />
+              <div className="flex gap-3">
+                <button onClick={() => setShowNewPlan(false)} className="flex-1 py-3 rounded-xl border border-gray-200 dark:border-gray-700 text-sm text-gray-500">
+                  取消
+                </button>
+                <button onClick={handleCreatePlan} disabled={!newPlanName.trim()} className="flex-1 py-3 rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 disabled:opacity-40">
+                  创建
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
     </div>
   );
 }

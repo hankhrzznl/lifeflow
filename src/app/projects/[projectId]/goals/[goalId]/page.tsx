@@ -124,6 +124,12 @@ export default function GoalDetailPage() {
   const [aiDescription, setAiDescription] = useState("");
   const [aiGenerating, setAiGenerating] = useState(false);
 
+  // 编辑信息表单
+  const [editName, setEditName] = useState("");
+  const [editPriority, setEditPriority] = useState<Priority>("not-urgent-important");
+  const [editDeadline, setEditDeadline] = useState("");
+  const [editWeight, setEditWeight] = useState(1);
+
   const loadData = useCallback(async () => {
     const [p, g] = await Promise.all([
       getProjectV2(projectId),
@@ -176,6 +182,28 @@ export default function GoalDetailPage() {
       type: "success" 
     });
   }, [goal]);
+
+  const handleOpenEdit = useCallback(() => {
+    if (!goal) return;
+    setEditName(goal.name);
+    setEditPriority(goal.priority || "not-urgent-important");
+    setEditDeadline(goal.deadline ? new Date(goal.deadline).toISOString().slice(0, 10) : "");
+    setEditWeight(goal.weight);
+    setShowEditModal(true);
+  }, [goal]);
+
+  const handleSaveEdit = useCallback(async () => {
+    if (!goal || !editName.trim()) return;
+    await updateGoal(goal.id!, {
+      name: editName.trim(),
+      priority: editPriority,
+      deadline: editDeadline ? new Date(editDeadline).getTime() : undefined,
+      weight: editWeight,
+    });
+    setShowEditModal(false);
+    showToast({ message: "目标信息已更新", type: "success" });
+    await loadData();
+  }, [goal, editName, editPriority, editDeadline, editWeight, loadData]);
 
   const handleStartEditProgress = useCallback(() => {
     if (!goal) return;
@@ -311,7 +339,7 @@ export default function GoalDetailPage() {
                     className="absolute right-0 top-full mt-1 w-36 bg-white dark:bg-gray-900 rounded-xl shadow-lg border border-gray-100 dark:border-gray-800 py-1 z-50"
                   >
                     <button
-                      onClick={() => setShowEditModal(true)}
+                      onClick={() => { setShowMoreMenu(false); handleOpenEdit(); }}
                       className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
                     >
                       <Edit2 className="w-4 h-4" /> 编辑信息
@@ -608,6 +636,99 @@ export default function GoalDetailPage() {
                   className="flex-1 py-3 rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 disabled:opacity-40"
                 >
                   创建
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showEditModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/40 flex items-end justify-center"
+            style={{ paddingBottom: "var(--bottom-nav-height)" }}
+            onClick={() => setShowEditModal(false)}
+          >
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", stiffness: 400, damping: 40 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-lg bg-white dark:bg-gray-900 rounded-t-2xl p-6 max-h-[80vh] overflow-y-auto"
+            >
+              <div className="w-10 h-1 bg-gray-300 dark:bg-gray-700 rounded-full mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">编辑目标信息</h3>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm text-gray-500 mb-1">目标名称</label>
+                  <input
+                    type="text"
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    autoFocus
+                    onKeyDown={(e) => e.key === "Enter" && handleSaveEdit()}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm text-gray-500 mb-1">优先级</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {PRIORITY_CONFIG.map(p => (
+                      <button
+                        key={p.key}
+                        onClick={() => setEditPriority(p.key)}
+                        className={`px-3 py-2 text-xs rounded-xl border transition-colors ${
+                          editPriority === p.key
+                            ? `${p.color} border-current font-medium`
+                            : "border-gray-200 dark:border-gray-700 text-gray-500"
+                        }`}
+                      >
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm text-gray-500 mb-1">截止日期</label>
+                  <input
+                    type="date"
+                    value={editDeadline}
+                    onChange={(e) => setEditDeadline(e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm text-gray-500 mb-1">权重 ({editWeight})</label>
+                  <input
+                    type="range"
+                    min="1"
+                    max="10"
+                    value={editWeight}
+                    onChange={(e) => setEditWeight(Number(e.target.value))}
+                    className="w-full accent-indigo-500"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 mt-6">
+                <button onClick={() => setShowEditModal(false)} className="flex-1 py-3 rounded-xl border border-gray-200 dark:border-gray-700 text-sm text-gray-500">
+                  取消
+                </button>
+                <button
+                  onClick={handleSaveEdit}
+                  disabled={!editName.trim()}
+                  className="flex-1 py-3 rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 disabled:opacity-40"
+                >
+                  保存
                 </button>
               </div>
             </motion.div>

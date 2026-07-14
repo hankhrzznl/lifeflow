@@ -229,6 +229,7 @@ export default function CaptureInbox({ visible, onRefresh }: { visible: boolean;
         classification: c as Task["classification"],
         status: "active",
         priority: taskDraft.priority,
+        projectId: taskDraft.projectId ?? undefined,
         sectionId: taskDraft.sectionId ?? undefined,
         goalId: taskDraft.goalId ?? undefined,
         planId: taskDraft.planId ?? undefined,

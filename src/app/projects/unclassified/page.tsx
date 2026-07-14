@@ -252,6 +252,7 @@ export default function UnclassifiedPage() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 bg-black/40 flex items-end justify-center"
+            style={{ paddingBottom: "var(--bottom-nav-height)" }}
             onClick={() => {
               setShowAssignModal(false);
               setSelectedProjectId(null);

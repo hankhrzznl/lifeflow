@@ -448,7 +448,7 @@ export default function CaptureInbox({ visible, onRefresh }: { visible: boolean;
       {/* Assign Goal Sheet */}
       <AnimatePresence>
         {assignTargetId !== null && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-end justify-center" onClick={() => setAssignTargetId(null)}>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-end justify-center" style={{ paddingBottom: "var(--bottom-nav-height)" }} onClick={() => setAssignTargetId(null)}>
             <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", stiffness: 400, damping: 40 }} onClick={(e) => e.stopPropagation()} className="w-full max-w-lg bg-white dark:bg-gray-900 rounded-t-2xl p-6">
               <div className="w-10 h-1 bg-gray-300 dark:bg-gray-700 rounded-full mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">分配目标</h3>
@@ -470,7 +470,7 @@ export default function CaptureInbox({ visible, onRefresh }: { visible: boolean;
       {/* Step 1 Sheet: Choose Type */}
       <AnimatePresence>
         {isChooseTypeOpen && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-end justify-center" onClick={closeFlow}>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-end justify-center" style={{ paddingBottom: "var(--bottom-nav-height)" }} onClick={closeFlow}>
             <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", stiffness: 400, damping: 40 }} onClick={(e) => e.stopPropagation()} className="w-full max-w-lg bg-white dark:bg-gray-900 rounded-t-2xl">
               <div className="w-10 h-1 bg-gray-300 dark:bg-gray-700 rounded-full mx-auto mt-3 mb-1" />
               <div className="px-6 pt-4 pb-6">
@@ -498,7 +498,7 @@ export default function CaptureInbox({ visible, onRefresh }: { visible: boolean;
       {/* Module Form: Long-term Goal */}
       <AnimatePresence>
         {isModuleFormOpen && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-end justify-center" onClick={closeFlow}>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-end justify-center" style={{ paddingBottom: "var(--bottom-nav-height)" }} onClick={closeFlow}>
             <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", stiffness: 400, damping: 40 }} onClick={(e) => e.stopPropagation()} className="w-full max-w-lg bg-white dark:bg-gray-900 rounded-t-2xl">
               <div className="w-10 h-1 bg-gray-300 dark:bg-gray-700 rounded-full mx-auto mt-3 mb-1" />
               <div className="px-6 pt-4 pb-6 space-y-4 max-h-[70vh] overflow-y-auto">
@@ -551,7 +551,7 @@ export default function CaptureInbox({ visible, onRefresh }: { visible: boolean;
       {/* Step 2 Sheet: Task Classification */}
       <AnimatePresence>
         {isTaskClassifyOpen && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-end justify-center" onClick={closeFlow}>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-end justify-center" style={{ paddingBottom: "var(--bottom-nav-height)" }} onClick={closeFlow}>
             <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", stiffness: 400, damping: 40 }} onClick={(e) => e.stopPropagation()} className="w-full max-w-lg bg-white dark:bg-gray-900 rounded-t-2xl">
               <div className="w-10 h-1 bg-gray-300 dark:bg-gray-700 rounded-full mx-auto mt-3 mb-1" />
               <div className="px-6 pt-4 pb-6">
@@ -578,7 +578,7 @@ export default function CaptureInbox({ visible, onRefresh }: { visible: boolean;
       {/* Task Create Sheet */}
       <AnimatePresence>
         {isTaskFormOpen && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-end justify-center" onClick={closeFlow}>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-end justify-center" style={{ paddingBottom: "var(--bottom-nav-height)" }} onClick={closeFlow}>
             <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", stiffness: 400, damping: 40 }} onClick={(e) => e.stopPropagation()} className="w-full max-w-lg bg-white dark:bg-gray-900 rounded-t-2xl">
               <div className="w-10 h-1 bg-gray-300 dark:bg-gray-700 rounded-full mx-auto mt-3 mb-1" />
               <div className="px-6 pt-4 pb-6 space-y-4 max-h-[70vh] overflow-y-auto">

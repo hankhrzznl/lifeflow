@@ -608,7 +608,7 @@ export default function ProjectsPage() {
       {/* Edit project modal */}
       <AnimatePresence>
         {editingProject && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/40 flex items-end justify-center" onClick={() => setEditingProject(null)}>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/40 flex items-end justify-center" style={{ paddingBottom: "var(--bottom-nav-height)" }} onClick={() => setEditingProject(null)}>
             <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", stiffness: 400, damping: 40 }} onClick={(e) => e.stopPropagation()} className="w-full max-w-lg bg-white dark:bg-gray-900 rounded-t-2xl p-6">
               <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">编辑项目</h3>
               <input value={editingProject.name} onChange={(e) => setEditingProject({ ...editingProject, name: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 mb-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
@@ -629,7 +629,7 @@ export default function ProjectsPage() {
       {/* Edit stage modal */}
       <AnimatePresence>
         {editingStage && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/40 flex items-end justify-center" onClick={() => setEditingStage(null)}>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/40 flex items-end justify-center" style={{ paddingBottom: "var(--bottom-nav-height)" }} onClick={() => setEditingStage(null)}>
             <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", stiffness: 400, damping: 40 }} onClick={(e) => e.stopPropagation()} className="w-full max-w-lg bg-white dark:bg-gray-900 rounded-t-2xl p-6 max-h-[80vh] overflow-y-auto">
               <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">编辑阶段</h3>
               <input value={editingStageName} onChange={(e) => setEditingStageName(e.target.value)} placeholder="阶段名称" className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 mb-3 focus:outline-none focus:ring-2 focus:ring-blue-500" />
@@ -657,7 +657,7 @@ export default function ProjectsPage() {
       {/* Batch stage edit modal */}
       <AnimatePresence>
         {batchStageSheet && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/40 flex items-end justify-center" onClick={() => setBatchStageSheet(null)}>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/40 flex items-end justify-center" style={{ paddingBottom: "var(--bottom-nav-height)" }} onClick={() => setBatchStageSheet(null)}>
             <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", stiffness: 400, damping: 40 }} onClick={(e) => e.stopPropagation()} className="w-full max-w-lg bg-white dark:bg-gray-900 rounded-t-2xl p-6 max-h-[85vh] overflow-y-auto">
               <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">编辑阶段 · {batchStageSheet.boardName}</h3>
               <div className="space-y-3 mb-4">

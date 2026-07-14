@@ -215,7 +215,7 @@ export default function TaskDetail({ taskId, onClose, onUpdate }: TaskDetailProp
 
   if (loading) {
     return (
-      <div className="fixed inset-0 z-50 bg-black/40 flex items-end justify-center" onClick={onClose}>
+      <div className="fixed inset-0 z-50 bg-black/40 flex items-end justify-center" style={{ paddingBottom: "var(--bottom-nav-height)" }} onClick={onClose}>
         <div className="w-full max-w-lg bg-white dark:bg-gray-900 rounded-t-2xl p-6 h-64 flex items-center justify-center">
           <div className="w-6 h-6 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin" />
         </div>
@@ -225,7 +225,7 @@ export default function TaskDetail({ taskId, onClose, onUpdate }: TaskDetailProp
 
   if (error || !task) {
     return (
-      <div className="fixed inset-0 z-50 bg-black/40 flex items-end justify-center" onClick={onClose}>
+      <div className="fixed inset-0 z-50 bg-black/40 flex items-end justify-center" style={{ paddingBottom: "var(--bottom-nav-height)" }} onClick={onClose}>
         <div className="w-full max-w-lg bg-white dark:bg-gray-900 rounded-t-2xl p-6">
           <p className="text-center text-gray-500 py-8">{error || "任务不存在"}</p>
         </div>
@@ -240,7 +240,7 @@ export default function TaskDetail({ taskId, onClose, onUpdate }: TaskDetailProp
 
   return (
     <AnimatePresence>
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-end justify-center" onClick={onClose}>
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-end justify-center" style={{ paddingBottom: "var(--bottom-nav-height)" }} onClick={onClose}>
         <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", stiffness: 400, damping: 40 }} onClick={(e) => e.stopPropagation()} className="w-full max-w-lg bg-white dark:bg-gray-900 rounded-t-2xl max-h-[85vh] overflow-y-auto">
           <div className="w-10 h-1 bg-gray-300 dark:bg-gray-700 rounded-full mx-auto mt-3 mb-1" />
           <div className="px-6 pt-4 pb-6">

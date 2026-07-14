@@ -492,6 +492,7 @@ export default function PlanDetailPage() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 bg-black/40 flex items-end justify-center"
+            style={{ paddingBottom: "var(--bottom-nav-height)" }}
             onClick={() => setShowAddTask(false)}
           >
             <motion.div
@@ -540,6 +541,7 @@ export default function PlanDetailPage() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 bg-black/40 flex items-end justify-center"
+            style={{ paddingBottom: "var(--bottom-nav-height)" }}
             onClick={() => setShowEditModal(false)}
           >
             <motion.div
@@ -583,6 +585,7 @@ export default function PlanDetailPage() {
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 bg-black/40 flex items-end justify-center"
+            style={{ paddingBottom: "var(--bottom-nav-height)" }}
             onClick={() => setShowDependencySheet(false)}
           >
             <motion.div

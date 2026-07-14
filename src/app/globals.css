@@ -95,6 +95,7 @@
   --text-primary: var(--foreground);
   --text-secondary: #64748b;
   --card-bg: #ffffff;
+  --bottom-nav-height: calc(64px + max(8px, env(safe-area-inset-bottom)));
   --card-border: #e2e8f0;
   --muted: #94a3b8;
   --muted-foreground: #64748b;

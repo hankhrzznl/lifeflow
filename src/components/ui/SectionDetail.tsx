@@ -80,7 +80,7 @@ export default function SectionDetail({ sectionId, onClose, onUpdate }: SectionD
   return (
     <AnimatePresence>
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-end justify-center" onClick={onClose}>
+        className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-end justify-center" style={{ paddingBottom: "var(--bottom-nav-height)" }} onClick={onClose}>
         <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
           transition={{ type: "spring", stiffness: 400, damping: 40 }}
           onClick={(e) => e.stopPropagation()}
@@ -176,7 +176,7 @@ export default function SectionDetail({ sectionId, onClose, onUpdate }: SectionD
 
 function LoadingSheet({ onClose }: { onClose: () => void }) {
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 flex items-end justify-center" onClick={onClose}>
+    <div className="fixed inset-0 z-50 bg-black/40 flex items-end justify-center" style={{ paddingBottom: "var(--bottom-nav-height)" }} onClick={onClose}>
       <div className="w-full max-w-lg bg-white dark:bg-gray-900 rounded-t-2xl p-6 h-64 flex items-center justify-center">
         <div className="w-6 h-6 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin" />
       </div>
@@ -186,7 +186,7 @@ function LoadingSheet({ onClose }: { onClose: () => void }) {
 
 function ErrorSheet({ onClose, isError }: { onClose: () => void; isError: boolean }) {
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 flex items-end justify-center" onClick={onClose}>
+    <div className="fixed inset-0 z-50 bg-black/40 flex items-end justify-center" style={{ paddingBottom: "var(--bottom-nav-height)" }} onClick={onClose}>
       <div className="w-full max-w-lg bg-white dark:bg-gray-900 rounded-t-2xl p-6">
         <p className="text-center text-gray-500 py-8">{isError ? "加载失败" : "子模块不存在"}</p>
       </div>

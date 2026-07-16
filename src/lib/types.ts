@@ -235,7 +235,8 @@ export const PRIORITY_CONFIG: { key: Priority; label: string; color: string; bg:
 
 export interface Goal {
   id?: number;
-  projectId: number;
+  /** 可选：项目已降级为目标上的可选标签，允许存在"无项目目标" */
+  projectId?: number;
   name: string;
   description?: string;
   type: GoalType;

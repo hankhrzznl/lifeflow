@@ -4,19 +4,20 @@ import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  CalendarCheck, LayoutDashboard, FolderKanban, ChevronRight, Inbox,
-  Plus, X, ChevronDown, Target, CheckCircle, CalendarDays, ClipboardList,
+  LayoutDashboard, FolderKanban, Inbox,
+  Plus, X, ChevronDown, Target, CalendarDays, ClipboardList,
   MoreHorizontal, Play, Pause, Archive, Trash2, Filter, ArrowUpDown, EyeOff, Eye,
-  GripVertical, ListTodo, Circle, ChevronLeft, CheckCircle2, CheckSquare, Square, Lock, AlertTriangle, CalendarRange
+  Circle, CheckCircle2, CheckSquare, Square, Lock, AlertTriangle
 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import {
-  getAllProjectsV2, createProjectV2, getGoalsByProject, getPlansByGoal,
+  getAllProjectsV2, createProjectV2, updateProjectV2, deleteProjectV2,
   getTasksByType, deleteGoal, deletePlan, updateGoal, updatePlan, assignTasksToPlan,
   getAllGoals, getAllPlans, createGoal, createPlan
 } from "@/lib/db";
-import { completeTask, uncompleteTask, moveTaskToPlan, batchCompleteTasks, batchDeleteTasks, batchMoveTasks } from "@/lib/linkage";
+import { completeTask, uncompleteTask, batchCompleteTasks, batchDeleteTasks } from "@/lib/linkage";
 import { showToast } from "@/components/ui/Toast";
+import ActionSheet from "@/components/ui/ActionSheet";
 import TodayTab from "./TodayTab";
 import type { ProjectV2, Goal, Plan, Task, GoalStatus, Priority } from "@/lib/types";
 import { PRIORITY_CONFIG } from "@/lib/types";
@@ -91,11 +92,6 @@ function getStatusLabel(status: GoalStatus): string {
   return map[status] || map.active;
 }
 
-interface ProjectWithGoals {
-  project: ProjectV2;
-  goals: GoalWithPlans[];
-}
-
 interface GoalWithPlans {
   goal: Goal;
   plans: PlanWithTasks[];
@@ -104,6 +100,65 @@ interface GoalWithPlans {
 interface PlanWithTasks {
   plan: Plan;
   tasks: Task[];
+}
+
+/** 移动端(粗指针)检测:触屏无 hover,⋯ 菜单需改用 ActionSheet */
+function useIsCoarsePointer(): boolean {
+  const [isCoarse, setIsCoarse] = useState(false);
+  useEffect(() => {
+    const mql = window.matchMedia("(pointer: coarse)");
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 订阅媒体查询前需先同步一次当前匹配值,属必要
+    setIsCoarse(mql.matches);
+    const handler = (e: MediaQueryListEvent) => setIsCoarse(e.matches);
+    mql.addEventListener("change", handler);
+    return () => mql.removeEventListener("change", handler);
+  }, []);
+  return isCoarse;
+}
+
+/** 项目筛选条 chip:颜色点 + 名称;桌面端悬浮 ⋯ / 右键打开操作,移动端小图标常驻 */
+function ProjectChip({
+  project,
+  active,
+  showMenuButton,
+  onClick,
+  onMenu,
+}: {
+  project: ProjectV2;
+  active: boolean;
+  showMenuButton: boolean;
+  onClick: () => void;
+  onMenu: () => void;
+}) {
+  return (
+    <div
+      onContextMenu={(e) => { e.preventDefault(); onMenu(); }}
+      className={`group flex items-center shrink-0 rounded-full border transition-colors ${
+        active
+          ? "border-indigo-300 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/20"
+          : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:border-gray-300 dark:hover:border-gray-600"
+      }`}
+    >
+      <button
+        onClick={onClick}
+        className={`flex items-center gap-1.5 pl-3 pr-1 py-1.5 text-xs ${
+          active ? "text-indigo-700 dark:text-indigo-300 font-medium" : "text-gray-700 dark:text-gray-300"
+        }`}
+      >
+        <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: project.color || "#9CA3AF" }} />
+        <span className="max-w-[120px] truncate">{project.name}</span>
+      </button>
+      <button
+        onClick={(e) => { e.stopPropagation(); onMenu(); }}
+        aria-label="项目操作"
+        className={`pr-2 py-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-opacity ${
+          showMenuButton ? "" : "opacity-0 group-hover:opacity-100"
+        }`}
+      >
+        <MoreHorizontal className="w-3.5 h-3.5" />
+      </button>
+    </div>
+  );
 }
 
 function TaskItem({
@@ -172,7 +227,6 @@ function PlanCard({
   planWithTasks,
   goalStatus,
   onToggleTask,
-  onMoveTask,
   onEdit,
   onDelete,
   onToggleStatus,
@@ -190,7 +244,6 @@ function PlanCard({
   planWithTasks: PlanWithTasks;
   goalStatus: GoalStatus;
   onToggleTask: (id: number) => void;
-  onMoveTask: (taskId: number, targetPlanId: number) => void;
   onEdit: () => void;
   onDelete: () => void;
   onToggleStatus: () => void;
@@ -209,7 +262,7 @@ function PlanCard({
   const isPaused = goalStatus === "paused" || plan.status === "paused";
   const doneCount = tasks.filter(t => t.status === "done").length;
   const progress = tasks.length > 0 ? Math.round((doneCount / tasks.length) * 100) : 0;
-  const isUnlocked = (plan as any).isUnlocked !== false;
+  const isUnlocked = plan.isUnlocked !== false;
 
   return (
     <motion.div
@@ -349,15 +402,16 @@ const EditIcon = ({ className }: { className?: string }) => (
 
 function GoalCard({
   goalWithPlans,
-  projectId,
+  project,
   onToggleTask,
-  onMoveTask,
   onEdit,
   onDelete,
   onToggleStatus,
   onArchive,
   isExpanded,
   onToggleExpand,
+  onTagClick,
+  onMoreClick,
   onEditPlan,
   onDeletePlan,
   onTogglePlanStatus,
@@ -374,15 +428,17 @@ function GoalCard({
   onBatchDelete,
 }: {
   goalWithPlans: GoalWithPlans;
-  projectId: number;
+  project?: ProjectV2;
   onToggleTask: (id: number) => void;
-  onMoveTask: (taskId: number, targetPlanId: number) => void;
   onEdit: () => void;
   onDelete: () => void;
   onToggleStatus: () => void;
   onArchive: () => void;
   isExpanded: boolean;
   onToggleExpand: () => void;
+  onTagClick: () => void;
+  /** 提供时 ⋯ 按钮改为点击回调(移动端 ActionSheet);缺省保持桌面下拉 */
+  onMoreClick?: () => void;
   batchMode?: boolean;
   selectedTaskIds?: Set<number>;
   onToggleTaskSelection?: (taskId: number) => void;
@@ -462,10 +518,27 @@ function GoalCard({
             </div>
 
             <div className="flex items-center gap-2 mt-2">
+              <button
+                onClick={(e) => { e.stopPropagation(); onTagClick(); }}
+                title="更换所属项目"
+                className="flex items-center gap-1.5 text-[10px] px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+              >
+                <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: project?.color || "#9CA3AF" }} />
+                {project?.name || "无项目"}
+              </button>
               <span className="text-xs text-gray-400">{plans.length} 个计划</span>
             </div>
           </div>
 
+          {onMoreClick ? (
+            <button
+              onClick={onMoreClick}
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
+              aria-label="更多操作"
+            >
+              <MoreHorizontal className="w-4 h-4 text-gray-400" />
+            </button>
+          ) : (
           <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg relative group">
             <MoreHorizontal className="w-4 h-4 text-gray-400" />
             <div className="absolute right-0 top-full mt-1 w-32 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-100 dark:border-gray-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
@@ -485,6 +558,7 @@ function GoalCard({
               </button>
             </div>
           </button>
+          )}
         </div>
       </div>
 
@@ -504,7 +578,6 @@ function GoalCard({
                     planWithTasks={pwt}
                     goalStatus={goal.status}
                     onToggleTask={onToggleTask}
-                    onMoveTask={onMoveTask}
                     onEdit={() => onEditPlan(pwt.plan)}
                     onDelete={() => onDeletePlan(pwt.plan.id!)}
                     onToggleStatus={() => onTogglePlanStatus(pwt.plan.id!)}
@@ -538,142 +611,6 @@ function GoalCard({
         )}
       </AnimatePresence>
     </motion.div>
-  );
-}
-
-function ProjectCard({
-  projectWithGoals,
-  onToggleTask,
-  onMoveTask,
-  onEditGoal,
-  onDeleteGoal,
-  onToggleGoalStatus,
-  onArchiveGoal,
-  onEditPlan,
-  onDeletePlan,
-  onTogglePlanStatus,
-  onArchivePlan,
-  isExpanded,
-  onToggleExpand,
-  expandedPlanIds,
-  onTogglePlanExpand,
-  onAddGoal,
-  onAddPlan,
-  batchMode,
-  selectedTaskIds,
-  onToggleTaskSelection,
-  onEnterBatchMode,
-  onExitBatchMode,
-  onBatchComplete,
-  onBatchDelete,
-}: {
-  projectWithGoals: ProjectWithGoals;
-  onToggleTask: (id: number) => void;
-  onMoveTask: (taskId: number, targetPlanId: number) => void;
-  onEditGoal: (goal: Goal) => void;
-  onDeleteGoal: (goalId: number) => void;
-  onToggleGoalStatus: (goalId: number) => void;
-  onArchiveGoal: (goalId: number) => void;
-  onEditPlan: (plan: Plan) => void;
-  onDeletePlan: (planId: number) => void;
-  onTogglePlanStatus: (planId: number) => void;
-  onArchivePlan: (planId: number) => void;
-  isExpanded: boolean;
-  onToggleExpand: () => void;
-  expandedPlanIds: Set<number>;
-  onTogglePlanExpand: (planId: number) => void;
-  onAddGoal: (projectId: number) => void;
-  onAddPlan: (goalId: number) => void;
-  batchMode?: boolean;
-  selectedTaskIds?: Set<number>;
-  onToggleTaskSelection?: (taskId: number) => void;
-  onEnterBatchMode?: () => void;
-  onExitBatchMode?: () => void;
-  onBatchComplete?: () => void;
-  onBatchDelete?: () => void;
-}) {
-  const { project, goals } = projectWithGoals;
-
-  return (
-    <div>
-      <button
-        onClick={onToggleExpand}
-        className={`w-full flex items-center gap-4 p-4 bg-white dark:bg-gray-900 border shadow-sm hover:shadow-md transition-all group rounded-2xl ${
-          isExpanded
-            ? "border-indigo-200 dark:border-indigo-800 rounded-b-none border-b-0"
-            : "border-gray-100 dark:border-gray-800"
-        }`}
-      >
-        <div
-          className="w-12 h-12 rounded-xl flex items-center justify-center text-xl"
-          style={{ backgroundColor: `${project.color}20`, color: project.color }}
-        >
-          <FolderKanban className="w-6 h-6" />
-        </div>
-        <div className="flex-1 text-left">
-          <p className="text-sm font-semibold text-gray-900 dark:text-white">{project.name}</p>
-          <p className="text-xs text-gray-400">{goals.length} 个目标</p>
-        </div>
-        <ChevronDown
-          className={`w-4 h-4 text-gray-300 group-hover:text-gray-500 transition-transform ${isExpanded ? "rotate-180" : ""}`}
-        />
-      </button>
-
-      <AnimatePresence>
-        {isExpanded && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="overflow-hidden"
-          >
-            <div className="bg-white dark:bg-gray-900 rounded-b-2xl border border-indigo-200 dark:border-indigo-800 border-t-0 p-4 space-y-3">
-              {goals.length > 0 ? (
-                goals.map(gwp => (
-                  <GoalCard
-                    key={gwp.goal.id}
-                    goalWithPlans={gwp}
-                    projectId={project.id!}
-                    onToggleTask={onToggleTask}
-                    onMoveTask={onMoveTask}
-                    onEdit={() => onEditGoal(gwp.goal)}
-                    onDelete={() => onDeleteGoal(gwp.goal.id!)}
-                    onToggleStatus={() => onToggleGoalStatus(gwp.goal.id!)}
-                    onArchive={() => onArchiveGoal(gwp.goal.id!)}
-                    isExpanded={false}
-                    onToggleExpand={() => {}}
-                    onEditPlan={onEditPlan}
-                    onDeletePlan={onDeletePlan}
-                    onTogglePlanStatus={onTogglePlanStatus}
-                    onArchivePlan={onArchivePlan}
-                    expandedPlanIds={expandedPlanIds}
-                    onTogglePlanExpand={onTogglePlanExpand}
-                    onAddPlan={onAddPlan}
-                    batchMode={batchMode}
-                    selectedTaskIds={selectedTaskIds}
-                    onToggleTaskSelection={onToggleTaskSelection}
-                    onEnterBatchMode={onEnterBatchMode}
-                    onExitBatchMode={onExitBatchMode}
-                    onBatchComplete={onBatchComplete}
-                    onBatchDelete={onBatchDelete}
-                  />
-                ))
-              ) : (
-                <p className="text-xs text-gray-400 py-4 text-center">暂无目标</p>
-              )}
-
-              <button
-                onClick={() => onAddGoal(project.id!)}
-                className="w-full flex items-center justify-center gap-1 py-2 text-xs text-indigo-500 hover:text-indigo-600 transition-colors"
-              >
-                <Plus className="w-3 h-3" />
-                创建目标
-              </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
   );
 }
 
@@ -755,9 +692,9 @@ function UnclassifiedPanel({
 }
 
 function GanttView({
-  projects, ganttPeriod, setGanttPeriod, loadData,
+  goals, projects, ganttPeriod, setGanttPeriod,
 }: {
-  projects: ProjectWithGoals[]; ganttPeriod: "week" | "month"; setGanttPeriod: (p: "week" | "month") => void; loadData: () => void;
+  goals: GoalWithPlans[]; projects: ProjectV2[]; ganttPeriod: "week" | "month"; setGanttPeriod: (p: "week" | "month") => void;
 }) {
   const daysToShow = ganttPeriod === "week" ? 7 : 30;
   const today = new Date();
@@ -783,13 +720,11 @@ function GanttView({
     return { startOffset, width, totalDays };
   };
 
-  const formatDate = (d: Date) => `${d.getMonth() + 1}/${d.getDate()}`;
-
   return (
     <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
       <div className="flex items-center justify-between p-3 border-b border-gray-100 dark:border-gray-800">
         <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">时间线视图</span>
-        <select value={ganttPeriod} onChange={(e) => setGanttPeriod(e.target.value as any)} className="text-xs bg-gray-100 dark:bg-gray-800 rounded-lg px-2 py-1">
+        <select value={ganttPeriod} onChange={(e) => setGanttPeriod(e.target.value as "week" | "month")} className="text-xs bg-gray-100 dark:bg-gray-800 rounded-lg px-2 py-1">
           <option value="week">周视图</option>
           <option value="month">月视图</option>
         </select>
@@ -805,14 +740,24 @@ function GanttView({
               </div>
             ))}
           </div>
-          {/* Project/Goal/Plan rows */}
-          {projects.map(project => (
-            <div key={project.project.id}>
+          {/* 按项目分组展示目标行(仅显示,分组来自平铺列表派生) */}
+          {([
+            ...projects
+              .map(p => ({ name: p.name, color: p.color, goals: goals.filter(g => g.goal.projectId === p.id) }))
+              .filter(g => g.goals.length > 0),
+            ...(goals.some(g => g.goal.projectId == null)
+              ? [{ name: "无项目", color: "#9CA3AF", goals: goals.filter(g => g.goal.projectId == null) }]
+              : []),
+          ]).map(group => (
+            <div key={group.name}>
               <div className="flex bg-gray-50 dark:bg-gray-800/50 border-b border-gray-100 dark:border-gray-800">
-                <div className="w-[120px] shrink-0 p-2 text-xs font-medium text-gray-700 dark:text-gray-300 truncate">{project.project.name}</div>
+                <div className="w-[120px] shrink-0 p-2 text-xs font-medium text-gray-700 dark:text-gray-300 truncate flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: group.color || "#9CA3AF" }} />
+                  {group.name}
+                </div>
                 <div style={{ width: dates.length * cellWidth }} />
               </div>
-              {project.goals.map(gwp => {
+              {group.goals.map(gwp => {
                 const goal = gwp.goal;
                 const bar = getBarStyle(goal);
                 return (
@@ -840,7 +785,7 @@ function GanttView({
               })}
             </div>
           ))}
-          {projects.length === 0 && (
+          {goals.length === 0 && (
             <div className="p-8 text-center text-xs text-gray-400">暂无目标数据</div>
           )}
         </div>
@@ -865,26 +810,38 @@ function FadeInUp({ children, delay = 0, className }: { children: React.ReactNod
 function PlannerPageInner() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const isCoarse = useIsCoarsePointer();
   const [activeTab, setActiveTab] = useState<PlannerTab>("pending");
   const [todayKey, setTodayKey] = useState(0);
-  const [projects, setProjects] = useState<ProjectWithGoals[]>([]);
+  const [projects, setProjects] = useState<ProjectV2[]>([]);
+  const [goalList, setGoalList] = useState<GoalWithPlans[]>([]);
   const [unclassifiedTasks, setUnclassifiedTasks] = useState<Task[]>([]);
+  // 渲染期安全副本:与 allPlansRef 同步,供 ActionSheet 等在 JSX 中读取
+  const [planList, setPlanList] = useState<Plan[]>([]);
   const [showNewProject, setShowNewProject] = useState(false);
   const [newProjectName, setNewProjectName] = useState("");
-  const [expandedProjectIds, setExpandedProjectIds] = useState<number[]>([]);
+  const [newProjectColor, setNewProjectColor] = useState(COLORS[0]);
+  const [editingProject, setEditingProject] = useState<ProjectV2 | null>(null);
+  const [editProjectName, setEditProjectName] = useState("");
+  const [editProjectColor, setEditProjectColor] = useState(COLORS[0]);
+  const [projectSheet, setProjectSheet] = useState<ProjectV2 | null>(null);
+  const [projectFilter, setProjectFilter] = useState<"all" | "none" | number>("all");
+  const [expandedGoalIds, setExpandedGoalIds] = useState<Set<number>>(new Set());
+  const [actionGoal, setActionGoal] = useState<GoalWithPlans | null>(null);
+  const [projectPickerGoal, setProjectPickerGoal] = useState<GoalWithPlans | null>(null);
+  const [assignTaskId, setAssignTaskId] = useState<number | null>(null);
   const [showArchive, setShowArchive] = useState(false);
   const [statusFilter, setStatusFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
-  const [sortBy, setSortBy] = useState("created");
+  const [sortBy, setSortBy] = useState("deadline");
   const [batchMode, setBatchMode] = useState(false);
   const [selectedTaskIds, setSelectedTaskIds] = useState<Set<number>>(new Set());
-  const [showBatchActions, setShowBatchActions] = useState(false);
   const [viewMode, setViewMode] = useState<"list" | "gantt">("list");
   const [ganttPeriod, setGanttPeriod] = useState<"week" | "month">("week");
   const [expandedPlanIds, setExpandedPlanIds] = useState<Set<number>>(new Set());
   const allTasksRef = useRef<Task[]>([]);
   const allPlansRef = useRef<Plan[]>([]);
-  const goalProjectMapRef = useRef<Map<number, number>>(new Map());
+  const allGoalsRef = useRef<Goal[]>([]);
 
   // 创建目标
   const [showNewGoal, setShowNewGoal] = useState(false);
@@ -897,19 +854,12 @@ function PlannerPageInner() {
   const [newPlanGoalId, setNewPlanGoalId] = useState<number | null>(null);
   const [newPlanName, setNewPlanName] = useState("");
 
-  const handleCreateProject = useCallback(async () => {
-    if (!newProjectName.trim()) return;
-    await createProjectV2(newProjectName.trim(), COLORS[Math.floor(Math.random() * COLORS.length)]);
-    setNewProjectName("");
-    setShowNewProject(false);
-    await loadData();
-  }, [newProjectName]);
-
   const loadData = useCallback(async () => {
     const allProjects = await getAllProjectsV2();
     const allGoals = await getAllGoals();
     const allPlans = await getAllPlans();
     allPlansRef.current = allPlans;
+    allGoalsRef.current = allGoals;
     const [shortterm, daily, longterm, habit] = await Promise.all([
       getTasksByType("shortterm"),
       getTasksByType("daily"),
@@ -934,68 +884,104 @@ function PlannerPageInner() {
         tasksByPlan.set(t.planId, list);
       }
     });
-    const gpm = new Map<number, number>();
-    allGoals.forEach(g => { if (g.id != null) gpm.set(g.id, g.projectId); });
-    goalProjectMapRef.current = gpm;
 
-    // Build GoalWithPlans[] per project
-    const projectsWithGoals: ProjectWithGoals[] = allProjects.map(project => ({
-      project,
-      goals: allGoals
-        .filter(g => g.projectId === project.id)
-        .map(g => ({
-          goal: g,
-          plans: (plansByGoal.get(g.id!) || []).map(p => ({
-            plan: p,
-            tasks: tasksByPlan.get(p.id!) || [],
-          })),
-        })),
+    // 目标平铺列表(含无项目目标)
+    let list: GoalWithPlans[] = allGoals.map(g => ({
+      goal: g,
+      plans: (plansByGoal.get(g.id!) || []).map(p => ({
+        plan: p,
+        tasks: tasksByPlan.get(p.id!) || [],
+      })),
     }));
 
     // Filter
-    let filtered = projectsWithGoals.map(p => ({
-      ...p,
-      goals: p.goals.filter(gwp => {
-        if (statusFilter !== "all" && gwp.goal.status !== statusFilter) return false;
-        if (priorityFilter !== "all" && gwp.goal.priority !== priorityFilter) return false;
-        if (!showArchive && gwp.goal.status === "archived") return false;
-        return true;
-      }),
-    })).filter(p => p.goals.length > 0);
+    list = list.filter(gwp => {
+      if (statusFilter !== "all" && gwp.goal.status !== statusFilter) return false;
+      if (priorityFilter !== "all" && gwp.goal.priority !== priorityFilter) return false;
+      if (!showArchive && gwp.goal.status === "archived") return false;
+      if (projectFilter === "none" && gwp.goal.projectId != null) return false;
+      if (typeof projectFilter === "number" && gwp.goal.projectId !== projectFilter) return false;
+      return true;
+    });
 
-    // Sort
+    // Sort(默认按截止日期,无截止日期排最后)
     if (sortBy === "deadline") {
-      filtered = filtered.map(p => ({
-        ...p,
-        goals: [...p.goals].sort((a, b) => (a.goal.deadline || Infinity) - (b.goal.deadline || Infinity)),
-      }));
+      list = [...list].sort((a, b) => (a.goal.deadline || Infinity) - (b.goal.deadline || Infinity));
     } else if (sortBy === "progress") {
-      filtered = filtered.map(p => ({
-        ...p,
-        goals: [...p.goals].sort((a, b) => a.goal.progress - b.goal.progress),
-      }));
+      list = [...list].sort((a, b) => a.goal.progress - b.goal.progress);
     }
 
-    setProjects(filtered);
+    setProjects(allProjects);
+    setPlanList(allPlans);
+    setGoalList(list);
 
     const unclassified = allTasks.filter(t => t.status === "active" && (!t.projectId && !t.planId));
     setUnclassifiedTasks(unclassified);
-  }, [statusFilter, priorityFilter, sortBy, showArchive]);
+  }, [statusFilter, priorityFilter, sortBy, showArchive, projectFilter]);
 
+  const handleCreateProject = useCallback(async () => {
+    if (!newProjectName.trim()) return;
+    await createProjectV2(newProjectName.trim(), newProjectColor);
+    setNewProjectName("");
+    setShowNewProject(false);
+    await loadData();
+  }, [newProjectName, newProjectColor, loadData]);
+
+  const handleOpenEditProject = useCallback((project: ProjectV2) => {
+    setEditingProject(project);
+    setEditProjectName(project.name);
+    setEditProjectColor(project.color || COLORS[0]);
+  }, []);
+
+  const handleUpdateProject = useCallback(async () => {
+    if (!editingProject?.id || !editProjectName.trim()) return;
+    await updateProjectV2(editingProject.id, { name: editProjectName.trim(), color: editProjectColor });
+    setEditingProject(null);
+    showToast({ message: "项目已更新", type: "success" });
+    await loadData();
+  }, [editingProject, editProjectName, editProjectColor, loadData]);
+
+  const handleDeleteProject = useCallback(async (project: ProjectV2) => {
+    const count = allGoalsRef.current.filter(g => g.projectId === project.id).length;
+    const confirmed = confirm(`删除项目「${project.name}」？删除后其下 ${count} 个目标将变为无项目。`);
+    if (!confirmed) return;
+    await deleteProjectV2(project.id!);
+    if (projectFilter === project.id) setProjectFilter("all");
+    showToast({ message: "项目已删除", type: "success" });
+    await loadData();
+  }, [projectFilter, loadData]);
+
+  const handleChangeGoalProject = useCallback(async (goalId: number, projectId?: number) => {
+    await updateGoal(goalId, { projectId });
+    showToast({ message: "已更新所属项目", type: "success" });
+    await loadData();
+  }, [loadData]);
+
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- 异步数据加载:从 Dexie 拉取规划页数据是外部系统同步,effect 中触发属必要
   useEffect(() => { loadData(); }, [loadData]);
 
   useEffect(() => {
     const tab = searchParams.get("tab");
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 将 URL 查询参数(?tab/?project)同步为初始 UI 状态,属外部系统同步
     if (tab === "today") setActiveTab("today");
     if (tab === "pending") setActiveTab("pending");
+    // 旧链接重定向携带 ?project=[id],作为初始项目筛选
+    const proj = searchParams.get("project");
+    if (proj) {
+      const n = Number(proj);
+      if (!Number.isNaN(n)) setProjectFilter(n);
+    }
   }, [searchParams]);
 
   const handleTodayUpdate = useCallback(() => setTodayKey((k) => k + 1), []);
 
-  const handleToggleProject = (id: number) => {
-    setExpandedProjectIds(prev =>
-      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
-    );
+  const handleToggleGoalExpand = (goalId: number) => {
+    setExpandedGoalIds(prev => {
+      const next = new Set(prev);
+      if (next.has(goalId)) next.delete(goalId);
+      else next.add(goalId);
+      return next;
+    });
   };
 
   const handleToggleTask = async (taskId: number) => {
@@ -1011,7 +997,7 @@ function PlannerPageInner() {
   };
 
   const handleEditGoal = (goal: Goal) => {
-    router.push(`/projects/${goal.projectId}/goals/${goal.id}`);
+    router.push(`/goals/${goal.id}`);
   };
 
   const handleDeleteGoal = async (goalId: number) => {
@@ -1024,9 +1010,9 @@ function PlannerPageInner() {
   };
 
   const handleToggleGoalStatus = async (goalId: number) => {
-    const gwp = projects.flatMap(p => p.goals).find(g => g.goal.id === goalId);
-    if (gwp) {
-      const newStatus: GoalStatus = gwp.goal.status === "active" ? "paused" : "active";
+    const goal = allGoalsRef.current.find(g => g.id === goalId);
+    if (goal) {
+      const newStatus: GoalStatus = goal.status === "active" ? "paused" : "active";
       await updateGoal(goalId, { status: newStatus });
       showToast({ message: newStatus === "paused" ? "目标已暂停" : "目标已恢复", type: "success" });
       await loadData();
@@ -1068,10 +1054,7 @@ function PlannerPageInner() {
   };
 
   const handleEditPlan = (plan: Plan) => {
-    const projectId = goalProjectMapRef.current.get(plan.goalId);
-    if (projectId) {
-      router.push(`/projects/${projectId}/goals/${plan.goalId}/plans/${plan.id}`);
-    }
+    router.push(`/plans/${plan.id}`);
   };
 
   const handleTogglePlanExpand = (planId: number) => {
@@ -1083,17 +1066,18 @@ function PlannerPageInner() {
     });
   };
 
-  const handleOpenNewGoal = (projectId: number) => {
-    setNewGoalProjectId(projectId);
+  const handleOpenNewGoal = () => {
+    // 项目筛选条选中具体项目时,新建目标默认挂在该项目下
+    setNewGoalProjectId(typeof projectFilter === "number" ? projectFilter : null);
     setNewGoalName("");
     setNewGoalPriority("not-urgent-important");
     setShowNewGoal(true);
   };
 
   const handleCreateGoal = async () => {
-    if (!newGoalName.trim() || !newGoalProjectId) return;
+    if (!newGoalName.trim()) return;
     await createGoal({
-      projectId: newGoalProjectId,
+      ...(newGoalProjectId != null ? { projectId: newGoalProjectId } : {}),
       name: newGoalName.trim(),
       type: "task",
       priority: newGoalPriority,
@@ -1129,7 +1113,14 @@ function PlannerPageInner() {
   };
 
   const handleAssignTask = (taskId: number) => {
-    router.push("/projects/unclassified");
+    setAssignTaskId(taskId);
+  };
+
+  const handleAssignToPlan = async (planId: number) => {
+    if (assignTaskId == null) return;
+    await assignTasksToPlan([assignTaskId], planId);
+    showToast({ message: "已分配到计划", type: "success" });
+    await loadData();
   };
 
   const toggleTaskSelection = (taskId: number) => {
@@ -1165,7 +1156,7 @@ function PlannerPageInner() {
         <FadeInUp delay={0} className="mb-5">
           <h1 className="text-xl font-bold text-gray-900 dark:text-white">规划</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            {activeTab === "pending" ? "选择项目，分类处理任务" : "今天要做的事"}
+            {activeTab === "pending" ? "所有目标，统一安排" : "今天要做的事"}
           </p>
         </FadeInUp>
 
@@ -1272,6 +1263,48 @@ function PlannerPageInner() {
                     </div>
                   </div>
 
+                  {/* 项目筛选条:全部 / 各项目(颜色点) / 无项目 / +新建 */}
+                  <div className="flex items-center gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+                    <button
+                      onClick={() => setProjectFilter("all")}
+                      className={`shrink-0 px-3 py-1.5 text-xs rounded-full border transition-colors ${
+                        projectFilter === "all"
+                          ? "border-indigo-300 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 font-medium"
+                          : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600"
+                      }`}
+                    >
+                      全部
+                    </button>
+                    {projects.map(p => (
+                      <ProjectChip
+                        key={p.id}
+                        project={p}
+                        active={projectFilter === p.id}
+                        showMenuButton={isCoarse}
+                        onClick={() => setProjectFilter(p.id!)}
+                        onMenu={() => setProjectSheet(p)}
+                      />
+                    ))}
+                    <button
+                      onClick={() => setProjectFilter("none")}
+                      className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-full border transition-colors ${
+                        projectFilter === "none"
+                          ? "border-indigo-300 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 font-medium"
+                          : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600"
+                      }`}
+                    >
+                      <span className="w-2 h-2 rounded-full bg-gray-300 dark:bg-gray-600" />
+                      无项目
+                    </button>
+                    <button
+                      onClick={() => { setNewProjectName(""); setNewProjectColor(COLORS[0]); setShowNewProject(true); }}
+                      className="shrink-0 flex items-center gap-1 px-3 py-1.5 text-xs rounded-full border border-dashed border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-indigo-300 hover:text-indigo-600 transition-colors"
+                    >
+                      <Plus className="w-3 h-3" />
+                      新建
+                    </button>
+                  </div>
+
                   <UnclassifiedPanel
                     tasks={unclassifiedTasks}
                     onToggleTask={handleToggleTask}
@@ -1281,28 +1314,39 @@ function PlannerPageInner() {
                   />
 
                   {viewMode === "gantt" ? (
-                    <GanttView projects={projects} ganttPeriod={ganttPeriod} setGanttPeriod={setGanttPeriod} loadData={loadData} />
+                    <GanttView goals={goalList} projects={projects} ganttPeriod={ganttPeriod} setGanttPeriod={setGanttPeriod} />
                   ) : (
                     <div className="space-y-3">
-                    {projects.map(project => (
-                      <ProjectCard
-                        key={project.project.id}
-                        projectWithGoals={project}
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-gray-400">{goalList.length} 个目标</span>
+                      <button
+                        onClick={handleOpenNewGoal}
+                        className="flex items-center gap-1 text-xs text-indigo-500 hover:text-indigo-600 transition-colors"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        新建目标
+                      </button>
+                    </div>
+                    {goalList.map(gwp => (
+                      <GoalCard
+                        key={gwp.goal.id}
+                        goalWithPlans={gwp}
+                        project={projects.find(p => p.id === gwp.goal.projectId)}
                         onToggleTask={handleToggleTask}
-                        onMoveTask={() => {}}
-                        onEditGoal={handleEditGoal}
-                        onDeleteGoal={handleDeleteGoal}
-                        onToggleGoalStatus={handleToggleGoalStatus}
-                        onArchiveGoal={handleArchiveGoal}
+                        onEdit={() => handleEditGoal(gwp.goal)}
+                        onDelete={() => handleDeleteGoal(gwp.goal.id!)}
+                        onToggleStatus={() => handleToggleGoalStatus(gwp.goal.id!)}
+                        onArchive={() => handleArchiveGoal(gwp.goal.id!)}
+                        isExpanded={expandedGoalIds.has(gwp.goal.id!)}
+                        onToggleExpand={() => handleToggleGoalExpand(gwp.goal.id!)}
+                        onTagClick={() => setProjectPickerGoal(gwp)}
+                        onMoreClick={isCoarse ? () => setActionGoal(gwp) : undefined}
                         onEditPlan={handleEditPlan}
                         onDeletePlan={handleDeletePlan}
                         onTogglePlanStatus={handleTogglePlanStatus}
                         onArchivePlan={handleArchivePlan}
-                        isExpanded={expandedProjectIds.includes(project.project.id!)}
-                        onToggleExpand={() => handleToggleProject(project.project.id!)}
                         expandedPlanIds={expandedPlanIds}
                         onTogglePlanExpand={handleTogglePlanExpand}
-                        onAddGoal={handleOpenNewGoal}
                         onAddPlan={handleOpenNewPlan}
                         batchMode={batchMode}
                         selectedTaskIds={selectedTaskIds}
@@ -1314,26 +1358,26 @@ function PlannerPageInner() {
                       />
                     ))}
 
-                    {projects.length === 0 && (
+                    {goalList.length === 0 && (
                       <div className="text-center py-12">
-                        <FolderKanban className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-                        <p className="text-sm text-gray-400">暂无项目</p>
+                        <Target className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+                        <p className="text-sm text-gray-400">暂无目标</p>
                         <button
-                          onClick={() => { setNewProjectName(""); setShowNewProject(true); }}
+                          onClick={handleOpenNewGoal}
                           className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-indigo-600 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl hover:bg-indigo-100 transition-colors"
                         >
                           <Plus className="w-3.5 h-3.5" />
-                          创建第一个项目
+                          创建第一个目标
                         </button>
                       </div>
                     )}
 
                     <button
-                      onClick={() => { setNewProjectName(""); setShowNewProject(true); }}
+                      onClick={handleOpenNewGoal}
                       className="w-full flex items-center justify-center gap-2 py-3 text-sm text-gray-500 hover:text-gray-700 bg-white dark:bg-gray-900 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 hover:border-gray-300 transition-colors"
                     >
                       <Plus className="w-4 h-4" />
-                      新建项目
+                      新建目标
                     </button>
                   </div>
                   )}
@@ -1377,6 +1421,18 @@ function PlannerPageInner() {
                 autoFocus
                 onKeyDown={(e) => e.key === "Enter" && handleCreateProject()}
               />
+              <p className="text-xs text-gray-400 mb-2">项目颜色</p>
+              <div className="flex items-center gap-2.5 mb-5">
+                {COLORS.map(c => (
+                  <button
+                    key={c}
+                    onClick={() => setNewProjectColor(c)}
+                    aria-label={`选择颜色 ${c}`}
+                    className={`w-7 h-7 rounded-full transition-transform ${newProjectColor === c ? "ring-2 ring-offset-2 ring-indigo-500 dark:ring-offset-gray-900 scale-110" : "hover:scale-105"}`}
+                    style={{ backgroundColor: c }}
+                  />
+                ))}
+              </div>
               <div className="flex gap-3">
                 <button onClick={() => setShowNewProject(false)} className="flex-1 py-3 rounded-xl border border-gray-200 dark:border-gray-700 text-sm text-gray-500">
                   取消
@@ -1387,6 +1443,65 @@ function PlannerPageInner() {
                   className="flex-1 py-3 rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 disabled:opacity-40"
                 >
                   创建
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {editingProject && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/40 flex items-end justify-center"
+            style={{ paddingBottom: "var(--bottom-nav-height)" }}
+            onClick={() => setEditingProject(null)}
+          >
+            <motion.div
+              initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
+              transition={{ type: "spring", stiffness: 400, damping: 40 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-lg bg-white dark:bg-gray-900 rounded-t-2xl p-6"
+            >
+              <div className="w-10 h-1 bg-gray-300 dark:bg-gray-700 rounded-full mx-auto mb-4" />
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">编辑项目</h3>
+                <button onClick={() => setEditingProject(null)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg">
+                  <X className="w-5 h-5 text-gray-400" />
+                </button>
+              </div>
+              <input
+                type="text"
+                value={editProjectName}
+                onChange={(e) => setEditProjectName(e.target.value)}
+                placeholder="项目名称"
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-4"
+                autoFocus
+                onKeyDown={(e) => e.key === "Enter" && handleUpdateProject()}
+              />
+              <p className="text-xs text-gray-400 mb-2">项目颜色</p>
+              <div className="flex items-center gap-2.5 mb-5">
+                {COLORS.map(c => (
+                  <button
+                    key={c}
+                    onClick={() => setEditProjectColor(c)}
+                    aria-label={`选择颜色 ${c}`}
+                    className={`w-7 h-7 rounded-full transition-transform ${editProjectColor === c ? "ring-2 ring-offset-2 ring-indigo-500 dark:ring-offset-gray-900 scale-110" : "hover:scale-105"}`}
+                    style={{ backgroundColor: c }}
+                  />
+                ))}
+              </div>
+              <div className="flex gap-3">
+                <button onClick={() => setEditingProject(null)} className="flex-1 py-3 rounded-xl border border-gray-200 dark:border-gray-700 text-sm text-gray-500">
+                  取消
+                </button>
+                <button
+                  onClick={handleUpdateProject}
+                  disabled={!editProjectName.trim()}
+                  className="flex-1 py-3 rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 disabled:opacity-40"
+                >
+                  保存
                 </button>
               </div>
             </motion.div>
@@ -1419,6 +1534,34 @@ function PlannerPageInner() {
                 autoFocus
                 onKeyDown={(e) => e.key === "Enter" && handleCreateGoal()}
               />
+              <p className="text-xs text-gray-400 mb-2">所属项目(可选)</p>
+              <div className="flex flex-wrap gap-2 mb-4">
+                <button
+                  onClick={() => setNewGoalProjectId(null)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-full border transition-colors ${
+                    newGoalProjectId === null
+                      ? "border-indigo-300 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 font-medium"
+                      : "border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-300"
+                  }`}
+                >
+                  <span className="w-2 h-2 rounded-full bg-gray-300 dark:bg-gray-600" />
+                  无项目
+                </button>
+                {projects.map(p => (
+                  <button
+                    key={p.id}
+                    onClick={() => setNewGoalProjectId(p.id!)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-full border transition-colors ${
+                      newGoalProjectId === p.id
+                        ? "border-indigo-300 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 font-medium"
+                        : "border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-300"
+                    }`}
+                  >
+                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: p.color || "#9CA3AF" }} />
+                    {p.name}
+                  </button>
+                ))}
+              </div>
               <div className="flex gap-3">
                 <button onClick={() => setShowNewGoal(false)} className="flex-1 py-3 rounded-xl border border-gray-200 dark:border-gray-700 text-sm text-gray-500">
                   取消
@@ -1469,6 +1612,67 @@ function PlannerPageInner() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* 移动端目标 ⋯ 更多菜单(桌面端为卡片内下拉) */}
+      <ActionSheet
+        open={actionGoal != null}
+        onClose={() => setActionGoal(null)}
+        title={actionGoal?.goal.name}
+        actions={actionGoal ? [
+          { label: "编辑", icon: <EditIcon className="w-4 h-4" />, onClick: () => handleEditGoal(actionGoal.goal) },
+          {
+            label: actionGoal.goal.status === "active" ? "暂停" : "恢复",
+            icon: actionGoal.goal.status === "active" ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />,
+            onClick: () => handleToggleGoalStatus(actionGoal.goal.id!),
+          },
+          { label: "归档", icon: <Archive className="w-4 h-4" />, onClick: () => handleArchiveGoal(actionGoal.goal.id!) },
+          { label: "删除", icon: <Trash2 className="w-4 h-4" />, danger: true, onClick: () => handleDeleteGoal(actionGoal.goal.id!) },
+        ] : []}
+      />
+
+      {/* 目标卡片项目标签:更换所属项目 */}
+      <ActionSheet
+        open={projectPickerGoal != null}
+        onClose={() => setProjectPickerGoal(null)}
+        title="选择所属项目"
+        actions={projectPickerGoal ? [
+          {
+            label: "无项目",
+            icon: <span className="w-2.5 h-2.5 rounded-full bg-gray-300 dark:bg-gray-600" />,
+            onClick: () => handleChangeGoalProject(projectPickerGoal.goal.id!, undefined),
+          },
+          ...projects.map(p => ({
+            label: p.name,
+            icon: <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: p.color || "#9CA3AF" }} />,
+            onClick: () => handleChangeGoalProject(projectPickerGoal.goal.id!, p.id),
+          })),
+        ] : []}
+      />
+
+      {/* 筛选条项目 chip 的编辑/删除入口 */}
+      <ActionSheet
+        open={projectSheet != null}
+        onClose={() => setProjectSheet(null)}
+        title={projectSheet?.name}
+        actions={projectSheet ? [
+          { label: "编辑", icon: <EditIcon className="w-4 h-4" />, onClick: () => handleOpenEditProject(projectSheet) },
+          { label: "删除", icon: <Trash2 className="w-4 h-4" />, danger: true, onClick: () => handleDeleteProject(projectSheet) },
+        ] : []}
+      />
+
+      {/* 未分类任务分配到计划 */}
+      <ActionSheet
+        open={assignTaskId != null}
+        onClose={() => setAssignTaskId(null)}
+        title="分配到计划"
+        actions={planList
+          .filter(p => p.status === "active")
+          .map(p => ({
+            label: p.name,
+            icon: <ClipboardList className="w-4 h-4" />,
+            onClick: () => handleAssignToPlan(p.id!),
+          }))}
+      />
 
     </div>
   );

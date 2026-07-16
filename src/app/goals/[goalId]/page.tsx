@@ -4,8 +4,8 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ArrowLeft, CheckCircle, Clock, ArrowRight, ChevronRight, CalendarDays, ClipboardList,
-  Target, Plus, MoreHorizontal, Edit2, Archive, Play, Pause, Lock, Unlock, AlertCircle, X,
+  ArrowLeft, ChevronRight, Target, Plus, MoreHorizontal, Edit2, Archive,
+  Play, Pause, Lock, Unlock, AlertCircle, X,
   Tag, Trash2, Bookmark, Sparkles, AlertTriangle,
 } from "lucide-react";
 import { getProjectV2, getGoal, getPlansByGoal, createPlan, updateGoal, deleteGoal, deletePlan, db } from "@/lib/db";
@@ -103,7 +103,6 @@ function PlanCard({
 export default function GoalDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const projectId = Number(params.projectId);
   const goalId = Number(params.goalId);
 
   const [project, setProject] = useState<ProjectV2 | null>(null);
@@ -120,9 +119,8 @@ export default function GoalDetailPage() {
   const [progressValue, setProgressValue] = useState(0);
 
   const [warning, setWarning] = useState<WarningResult | null>(null);
-  const [showAiSheet, setShowAiSheet] = useState(false);
-  const [aiDescription, setAiDescription] = useState("");
-  const [aiGenerating, setAiGenerating] = useState(false);
+  // AI 补充任务面板暂未实装,仅保留入口按钮,故不读取 showAiSheet
+  const [, setShowAiSheet] = useState(false);
 
   // 编辑信息表单
   const [editName, setEditName] = useState("");
@@ -131,12 +129,12 @@ export default function GoalDetailPage() {
   const [editWeight, setEditWeight] = useState(1);
 
   const loadData = useCallback(async () => {
-    const [p, g] = await Promise.all([
-      getProjectV2(projectId),
-      getGoal(goalId),
-    ]);
-    setProject(p || null);
+    const g = await getGoal(goalId);
     setGoal(g || null);
+
+    // 项目已降级为目标上的可选标签,以 goal.projectId 为准,兼容为空
+    const p = g?.projectId != null ? await getProjectV2(g.projectId) : undefined;
+    setProject(p || null);
 
     const goalPlans = await getPlansByGoal(goalId);
     setPlans(goalPlans);
@@ -149,9 +147,10 @@ export default function GoalDetailPage() {
         if (result.level !== "normal") setWarning(result);
       }).catch(() => {});
     }
-  }, [projectId, goalId]);
+  }, [goalId]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 异步数据加载:从 Dexie 拉取目标详情是外部系统同步,effect 中触发属必要
     loadData();
   }, [loadData]);
 
@@ -288,7 +287,22 @@ export default function GoalDetailPage() {
     }
   }, [goal]);
 
-  if (!loaded || !goal || !project) {
+  if (loaded && !goal) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex flex-col items-center justify-center gap-3">
+        <Target className="w-8 h-8 text-gray-300" />
+        <p className="text-sm text-gray-400">目标不存在或已删除</p>
+        <button
+          onClick={() => router.push("/planner")}
+          className="text-xs text-indigo-500 hover:text-indigo-600"
+        >
+          返回规划
+        </button>
+      </div>
+    );
+  }
+
+  if (!loaded || !goal) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin" />
@@ -313,7 +327,9 @@ export default function GoalDetailPage() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-xl font-bold text-gray-900 dark:text-white">{goal.name}</h1>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{project.name}</p>
+              {project && (
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{project.name}</p>
+              )}
             </div>
             <div className="flex items-center">
               <button
@@ -567,11 +583,11 @@ export default function GoalDetailPage() {
 
           {plans.length > 0 ? (
             <div className="space-y-3">
-              {plans.map((plan, index) => (
+              {plans.map((plan) => (
                 <PlanCard
                   key={plan.id}
                   plan={plan}
-                  onView={(id) => router.push(`/projects/${projectId}/goals/${goalId}/plans/${id}`)}
+                  onView={(id) => router.push(`/plans/${id}`)}
                   onEdit={() => {}}
                   onDelete={async (id) => {
                     await deletePlan(id, true);

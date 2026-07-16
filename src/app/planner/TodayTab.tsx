@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, Calendar, Inbox, Edit3, ChevronRight, X, Target } from "lucide-react";
+import { Check, Calendar, Inbox, Edit3, X, Target } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { db, updateTask, getTasksByType } from "@/lib/db";
 import { completeTask, uncompleteTask } from "@/lib/linkage";
@@ -124,6 +124,7 @@ export default function TodayTab({ onUpdate }: TodayTabProps) {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 异步数据加载:从 Dexie 拉取今日任务是外部系统同步,effect 中触发属必要
     loadData();
   }, [loadData]);
 
@@ -370,7 +371,7 @@ export default function TodayTab({ onUpdate }: TodayTabProps) {
                             <button
                               onMouseEnter={() => setHoveredGoalId(goal.id!)}
                               onMouseLeave={() => setHoveredGoalId(null)}
-                              onClick={() => router.push(`/projects/${goal.projectId}/goals/${goal.id}`)}
+                              onClick={() => router.push(`/goals/${goal.id}`)}
                               className="w-3 h-3 rounded-full flex-shrink-0"
                               style={{ backgroundColor: PRIORITY_CONFIG.find(p => p.key === goal.priority)?.hex || "#6B7280" }}
                             />

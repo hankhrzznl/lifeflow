@@ -387,7 +387,7 @@ export default function FinancePage() {
                   const g = goals.find(g => g.id === selectedGoalId);
                   if (!g) return null;
                   return (
-                    <button onClick={() => router.push(`/projects/${g.projectId}/goals/${g.id}`)} className="w-full text-left">
+                    <button onClick={() => router.push(`/goals/${g.id}`)} className="w-full text-left">
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-gray-700 dark:text-gray-300">{g.name}</span>
                         <span className="font-medium">{g.progress}%</span>

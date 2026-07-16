@@ -138,7 +138,7 @@ export default function FitnessStats({ periodType, periodOffset }: { periodType:
           {goals.map(goal => (
             <button
               key={goal.id}
-              onClick={() => router.push(`/projects/${goal.projectId}/goals/${goal.id}`)}
+              onClick={() => router.push(`/goals/${goal.id}`)}
               className="w-full text-left flex items-center justify-between"
             >
               <span className="text-sm text-gray-700 dark:text-gray-300">{goal.name}</span>

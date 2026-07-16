@@ -3,10 +3,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Target, TrendingUp, CheckCircle, Pause, Play,
-  ChevronRight, Plus, Edit3, Trash2, Layers,
+  TrendingUp, CheckCircle, Pause, Play,
+  Plus, Edit3, Trash2, Layers,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { goalService } from "@/lib/engine/GoalService";
 import type { EngineGoal, EngineGoalCategory, EngineGoalPriority, EngineGoalStatus } from "@/lib/engine/types";
 import { ENGINE_PRIORITY_LABELS } from "@/lib/engine/types";
@@ -23,14 +22,6 @@ import { showToast } from "@/components/ui/Toast";
 
 const categoryLabels: Record<string, string> = {
   exam: "学习中", fitness: "运动中", habit: "习惯中", finance: "理财中", custom: "自定义",
-};
-
-const categoryColors: Record<string, { text: string }> = {
-  exam: { text: "var(--info)" },
-  fitness: { text: "var(--success)" },
-  habit: { text: "var(--brand-primary)" },
-  finance: { text: "var(--warning)" },
-  custom: { text: "var(--brand-primary)" },
 };
 
 // ============================================================
@@ -146,6 +137,7 @@ export default function EngineGoalsView() {
     } finally { setLoading(false); }
   }, [filterCategory, filterStatus, sortField, sortDir]);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- 异步数据加载：从 Dexie 拉取目标列表是外部系统同步，effect 中触发属必要
   useEffect(() => { loadGoals(); }, [loadGoals]);
 
   const handleNewGoal = () => { setEditingGoal(null); setModalOpen(true); };

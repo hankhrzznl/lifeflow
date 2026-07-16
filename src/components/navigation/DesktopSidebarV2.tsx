@@ -10,7 +10,7 @@ import type { PluginMetadata, ProjectV2, Goal } from '@/lib/types';
 
 const planItems = [
   { label: '安排', href: '/pending', icon: List },
-  { label: '项目', href: '/projects', icon: Layers },
+  { label: '项目', href: '/planner', icon: Layers },
   { label: '目标', href: '/goals', icon: Target },
 ];
 
@@ -92,12 +92,12 @@ export default function DesktopSidebarV2() {
           <button
             onClick={() => setShowPlanMenu(true)}
             className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors ${
-              isActive('/pending') || isActive('/projects') || isActive('/goals')
+              isActive('/pending') || isActive('/planner') || isActive('/goals')
                 ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-medium'
                 : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
             }`}
           >
-            <Layers className={`w-5 h-5 ${isActive('/pending') || isActive('/projects') || isActive('/goals') ? 'fill-current text-blue-500' : 'text-gray-400'} stroke-[1.5]`} />
+            <Layers className={`w-5 h-5 ${isActive('/pending') || isActive('/planner') || isActive('/goals') ? 'fill-current text-blue-500' : 'text-gray-400'} stroke-[1.5]`} />
             <span className="text-sm flex-1 text-left">规划</span>
             <ChevronDown className="w-4 h-4" />
           </button>
@@ -208,7 +208,7 @@ export default function DesktopSidebarV2() {
                     return (
                       <Link
                         key={project.id}
-                        href={`/projects/${project.id}`}
+                        href={`/planner?project=${project.id}`}
                         onClick={() => setShowPlanMenu(false)}
                         className="flex items-center gap-3 px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                       >

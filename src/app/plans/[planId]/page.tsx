@@ -5,8 +5,8 @@ import { useRouter, useParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft, Plus, MoreHorizontal, CheckCircle, Circle, Calendar,
-  Clock, Trash2, Edit2, Archive, Play, Pause, Tag, AlertCircle, X,
-  ChevronDown, ChevronRight, Target, ListTodo, Lock, Unlock, Link2,
+  Clock, Trash2, Edit2, Archive, Play, Pause, Tag, X,
+  ListTodo, Lock, Unlock, Link2,
 } from "lucide-react";
 import { getPlan, getGoal, getProjectV2, updateTask, getTasksByType, createTask, updatePlan, getPlansByGoal } from "@/lib/db";
 import { completeTask, uncompleteTask, deleteTask, recalculatePlanProgress } from "@/lib/linkage";
@@ -104,8 +104,6 @@ function TaskItem({
 export default function PlanDetailPage() {
   const router = useRouter();
   const params = useParams();
-  const projectId = Number(params.projectId);
-  const goalId = Number(params.goalId);
   const planId = Number(params.planId);
 
   const [plan, setPlan] = useState<Plan | null>(null);
@@ -117,8 +115,6 @@ export default function PlanDetailPage() {
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [deletingTaskId, setDeletingTaskId] = useState<number | null>(null);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [editingProgress, setEditingProgress] = useState(false);
   const [progressValue, setProgressValue] = useState(0);
@@ -127,13 +123,14 @@ export default function PlanDetailPage() {
   const [availablePlans, setAvailablePlans] = useState<Plan[]>([]);
 
   const loadData = useCallback(async () => {
-    const [p, g, proj] = await Promise.all([
-      getPlan(planId),
-      getGoal(goalId),
-      getProjectV2(projectId),
-    ]);
+    // 只从 URL 读 planId,经由 plan → goal → project 逐级取关联信息(项目为可选标签,兼容为空)
+    const p = await getPlan(planId);
     setPlan(p || null);
+
+    const g = p ? await getGoal(p.goalId) : undefined;
     setGoal(g || null);
+
+    const proj = g?.projectId != null ? await getProjectV2(g.projectId) : undefined;
     setProject(proj || null);
 
     const [shortterm, daily, longterm, habit] = await Promise.all([
@@ -147,12 +144,13 @@ export default function PlanDetailPage() {
     setTasks(planTasks);
     const deps = await getPredecessorDetails(planId);
     setPredecessors(deps);
-    const allGoalPlans = await getPlansByGoal(goalId);
-    setAvailablePlans(allGoalPlans.filter(p => p.id !== planId && !deps.find(d => d.id === p.id)));
+    const allGoalPlans = p ? await getPlansByGoal(p.goalId) : [];
+    setAvailablePlans(allGoalPlans.filter(pl => pl.id !== planId && !deps.find(d => d.id === pl.id)));
     setLoaded(true);
-  }, [planId, goalId, projectId]);
+  }, [planId]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 异步数据加载:从 Dexie 拉取计划详情是外部系统同步,effect 中触发属必要
     loadData();
   }, [loadData]);
 
@@ -187,15 +185,15 @@ export default function PlanDetailPage() {
       type: "daily",
       status: "active",
       planId,
-      goalId,
-      projectId,
+      goalId: goal?.id,
+      projectId: goal?.projectId,
       weight: 1,
     });
 
     setNewTaskTitle("");
     setShowAddTask(false);
     await loadData();
-  }, [newTaskTitle, planId, goalId, projectId, loadData]);
+  }, [newTaskTitle, planId, goal, loadData]);
 
   const handleEditTask = useCallback(async () => {
     if (!editingTask) return;
@@ -240,8 +238,8 @@ export default function PlanDetailPage() {
       const deps = await getPredecessorDetails(planId);
       setPredecessors(deps);
       showToast({ message: "依赖已添加", type: "success" });
-    } catch (err: any) {
-      showToast({ message: err.message || "添加失败", type: "error" });
+    } catch (err: unknown) {
+      showToast({ message: err instanceof Error ? err.message : "添加失败", type: "error" });
     }
   }, [planId]);
 
@@ -252,7 +250,22 @@ export default function PlanDetailPage() {
     showToast({ message: "依赖已移除", type: "success" });
   }, [planId]);
 
-  if (!loaded || !plan || !goal || !project) {
+  if (loaded && !plan) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-gray-950 dark:to-gray-900 flex flex-col items-center justify-center gap-3">
+        <ListTodo className="w-8 h-8 text-gray-300" />
+        <p className="text-sm text-gray-400">计划不存在或已删除</p>
+        <button
+          onClick={() => router.push("/planner")}
+          className="text-xs text-indigo-500 hover:text-indigo-600"
+        >
+          返回规划
+        </button>
+      </div>
+    );
+  }
+
+  if (!loaded || !plan) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-gray-950 dark:to-gray-900 flex items-center justify-center">
         <div className="w-6 h-6 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin" />
@@ -261,23 +274,22 @@ export default function PlanDetailPage() {
   }
 
   const completedCount = tasks.filter(t => t.status === "done").length;
-  const progress = tasks.length > 0 ? Math.round((completedCount / tasks.length) * 100) : 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-gray-950 dark:to-gray-900">
       <div className="mx-auto max-w-3xl px-5 py-6 pb-24">
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
           <button
-            onClick={() => router.push(`/projects/${projectId}/goals/${goalId}`)}
+            onClick={() => (goal ? router.push(`/goals/${goal.id}`) : router.push("/planner"))}
             className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 mb-4"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>返回目标</span>
+            <span>{goal ? "返回目标" : "返回规划"}</span>
           </button>
 
           <h1 className="text-xl font-bold text-gray-900 dark:text-white">{plan.name}</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            {project.name} · {goal.name}
+            {[project?.name, goal?.name].filter(Boolean).join(" · ")}
           </p>
         </motion.div>
 
@@ -466,7 +478,7 @@ export default function PlanDetailPage() {
                   onToggle={handleToggleTask}
                   onDelete={handleDeleteTask}
                   onEdit={(t) => { setEditingTask(t); setShowEditModal(true); }}
-                  goal={goal}
+                  goal={goal ?? undefined}
                 />
               ))}
             </div>

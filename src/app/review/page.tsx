@@ -888,7 +888,7 @@ export default function ReviewPage() {
                             {pgoals.map(goal => (
                               <button
                                 key={goal.id}
-                                onClick={() => router.push(`/projects/${goal.projectId}/goals/${goal.id}`)}
+                                onClick={() => router.push(`/goals/${goal.id}`)}
                                 className="w-full text-left"
                               >
                                 <div className="space-y-1">

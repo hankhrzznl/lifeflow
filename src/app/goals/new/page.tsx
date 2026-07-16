@@ -5,10 +5,10 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   GraduationCap, Dumbbell, Repeat, PiggyBank,
-  ChevronRight, Play, Eye, Loader2, Check,
+  ChevronRight, Eye, Loader2, Check,
 } from "lucide-react";
 import { templateEngine } from "@/lib/engine/TemplateEngine";
-import type { TemplateDefinition, ParameterSchema, TemplateBlueprint } from "@/lib/engine/TemplateEngine";
+import type { ParameterSchema, TemplateBlueprint } from "@/lib/engine/TemplateEngine";
 
 // 确保模板已注册
 import "@/lib/engine/templates";
@@ -106,7 +106,7 @@ export default function NewGoalPage() {
     setError(null);
 
     try {
-      const result = await templateEngine.execute(selectedId, params);
+      await templateEngine.execute(selectedId, params);
       router.push(`/goals`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "创建失败");
@@ -296,7 +296,6 @@ function ParamInput({
         </select>
       ) : schema.type === "multi-select" ? (
         <MultiSelectInput
-          id={id}
           options={schema.options ?? []}
           value={(value as string[]) ?? (schema.defaultValue as string[]) ?? []}
           onChange={onChange}
@@ -348,9 +347,8 @@ function ParamInput({
 }
 
 function MultiSelectInput({
-  id, options, value, onChange,
+  options, value, onChange,
 }: {
-  id: string;
   options: { value: string; label: string }[];
   value: string[];
   onChange: (v: string[]) => void;

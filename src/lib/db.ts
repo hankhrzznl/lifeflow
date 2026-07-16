@@ -838,6 +838,21 @@ export class LifeFlowDB extends Dexie {
     }).upgrade(async () => {
       console.log("[LifeFlowDB v31] Added migrationMarkers table for engine migration tracking");
     });
+
+    // v32: Goal.projectId 变为可选（项目降级为目标上的可选标签）
+    // 索引保持不变：缺失 projectId 的记录自动不参与 projectId 索引，索引本身仍可正常工作
+    this.version(32).upgrade(async (tx) => {
+      // 规范化历史数据：v26 迁移曾用 0 作为占位 projectId，
+      // 而 projectV2s 为自增主键（从 1 开始），0 永远不是有效项目 id，统一置为 undefined
+      await tx.table("goals").toCollection().modify((goal) => {
+        if (goal.projectId === 0 || goal.projectId === null) {
+          delete goal.projectId;
+        }
+      });
+      if (typeof window !== "undefined" && window.location.hostname === "localhost") {
+        console.log("[LifeFlowDB v32] Goal.projectId is now optional (project as tag); normalized placeholder projectId=0 records");
+      }
+    });
   }
 }
 
@@ -1633,12 +1648,30 @@ export async function createProjectV2(
   return projectId;
 }
 
-export async function updateProjectV2(id: number, updates: Partial<ProjectV2>): Promise<void> {
-  await db.projectV2s.update(id, updates);
+export async function updateProjectV2(id: number, changes: { name?: string; color?: string }): Promise<number> {
+  return db.projectV2s.update(id, changes);
 }
 
 export async function deleteProjectToTrash(id: number): Promise<void> {
   await db.projectV2s.delete(id);
+}
+
+/**
+ * 删除项目（摘标签语义）：
+ * 事务内先把所有 projectId === id 的目标的 projectId 置为 undefined，再删除该项目本身。
+ * 目标、计划、任务数据均保留，仅解除与项目的关联。
+ */
+export async function deleteProjectV2(id: number): Promise<void> {
+  await db.transaction("rw", [db.goals, db.projectV2s], async (tx) => {
+    await tx
+      .table("goals")
+      .where("projectId")
+      .equals(id)
+      .modify((goal) => {
+        delete goal.projectId;
+      });
+    await tx.table("projectV2s").delete(id);
+  });
 }
 
 export async function createBoard(
@@ -1646,7 +1679,8 @@ export async function createBoard(
   projectId?: number
 ): Promise<number> {
   return db.goals.add({
-    projectId: projectId ?? 0,
+    // 项目已是可选标签：不传 projectId 时保持为 undefined（无项目目标）
+    projectId,
     name,
     description: "",
     type: "task" as const,

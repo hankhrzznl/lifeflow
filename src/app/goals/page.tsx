@@ -6,10 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   CalendarDays,
   ClipboardList,
-  Plus,
-  ChevronRight,
   Check,
-  Info,
   AlertCircle,
   Trash2,
   Clock,
@@ -20,11 +17,9 @@ import {
 import Link from "next/link";
 import {
   getTasksByType,
-  createTask,
   updateTask,
   deleteTask,
 } from "@/lib/db";
-import { showToast as globalShowToast } from "@/components/ui/Toast";
 import TaskDetail from "@/components/ui/TaskDetail";
 import { PRIORITY_CONFIG } from "@/lib/types";
 import type { Task } from "@/lib/types";
@@ -37,10 +32,6 @@ const TABS: { key: "short-term" | "daily-trivial"; label: string; icon: typeof C
 
 type ShortTermFilter = "全部" | "进行中" | "已完成" | "已逾期" | "本周" | "本月";
 type DailyFilter = "全部" | "未完成" | "已完成";
-
-function getLocalDateStr(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
 
 function formatDate(ts: number): string {
   const d = new Date(ts);
@@ -114,61 +105,6 @@ function ErrorStateView({ onRetry }: { onRetry: () => void }) {
   );
 }
 
-function AddTaskForm({
-  placeholder,
-  onSubmit,
-  onCancel,
-}: {
-  placeholder: string;
-  onSubmit: (title: string) => void;
-  onCancel: () => void;
-}) {
-  const [title, setTitle] = useState("");
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (title.trim()) {
-      onSubmit(title.trim());
-    }
-  };
-
-  return (
-    <motion.form
-      initial={{ opacity: 0, height: 0 }}
-      animate={{ opacity: 1, height: "auto" }}
-      exit={{ opacity: 0, height: 0 }}
-      className="overflow-hidden"
-      onSubmit={handleSubmit}
-    >
-      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 p-4 mb-3">
-        <input
-          type="text"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder={placeholder}
-          className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          autoFocus
-        />
-        <div className="flex gap-3 mt-3">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-          >
-            取消
-          </button>
-          <button
-            type="submit"
-            className="flex-1 py-2.5 rounded-xl bg-blue-500 text-white text-sm font-medium hover:bg-blue-600 transition-colors"
-          >
-            创建
-          </button>
-        </div>
-      </div>
-    </motion.form>
-  );
-}
-
 function ShortTermCard({
   task,
   onToggleDone,
@@ -183,14 +119,15 @@ function ShortTermCard({
   onDetailClick?: (taskId: number) => void;
 }) {
   const router = useRouter();
-  const [expanded, setExpanded] = useState(false);
   const isDone = task.status === "done";
   const isOverdue = useMemo(
+    // eslint-disable-next-line react-hooks/purity -- 渲染期取当前时间判断是否逾期，属预期的相对时间展示
     () => !isDone && task.endTime != null && task.endTime < Date.now(),
     [isDone, task.endTime]
   );
   const countdownDays = (() => {
     if (!task.dueDate) return null;
+    // eslint-disable-next-line react-hooks/purity -- 渲染期取当前时间计算倒计时天数，属预期的相对时间展示
     const diff = task.dueDate - Date.now();
     return Math.ceil(diff / (1000 * 60 * 60 * 24));
   })();
@@ -506,6 +443,7 @@ function GoalsContent() {
         filtered = filtered.filter((t) => t.status === "done");
         break;
       case "已逾期":
+        // eslint-disable-next-line react-hooks/purity -- 渲染期取当前时间过滤已逾期任务，属预期的相对时间筛选
         filtered = filtered.filter((t) => t.status === "active" && t.endTime != null && t.endTime < Date.now());
         break;
       case "本周": {

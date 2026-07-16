@@ -1,40 +1,75 @@
-import { LucideIcon } from "lucide-react";
-import { isValidElement } from "react";
+"use client";
+
 import type { ReactNode } from "react";
+import MascotIllustration from "./MascotIllustration";
+import type { MascotState } from "./MascotIllustration";
+
+// ============================================================
+// 类型
+// ============================================================
 
 interface EmptyStateProps {
-  icon: LucideIcon | ReactNode;
-  title: string;
-  description: string;
-  action?: {
-    label: string;
-    onClick: () => void;
-  };
+  state?: "waiting" | "completed" | "confused";
+  title?: string;
+  description?: string;
+  actionLabel?: string;
+  onAction?: () => void;
+  children?: ReactNode;
 }
 
-function isComponentIcon(icon: LucideIcon | ReactNode): icon is LucideIcon {
-  return !isValidElement(icon);
-}
+// ============================================================
+// 默认文案
+// ============================================================
 
-export default function EmptyState({ icon, title, description, action }: EmptyStateProps) {
-  const Icon = isComponentIcon(icon) ? icon : null;
+const defaults = {
+  waiting: { title: "还没开始织呢", desc: "点击下方的线团，开始你的第一块布料吧" },
+  completed: { title: "太棒了！", desc: "这块布料织完了，开始下一块吧" },
+  confused: { title: "线缠住了...", desc: "出了点小问题，刷新试试" },
+};
+
+// ============================================================
+// 组件
+// ============================================================
+
+export default function EmptyState({
+  state = "waiting",
+  title,
+  description,
+  actionLabel,
+  onAction,
+  children,
+}: EmptyStateProps) {
+  const d = defaults[state];
+  const t = title ?? d.title;
+  const desc = description ?? d.desc;
 
   return (
-    <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
-      <div className="w-16 h-16 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-4">
-        {Icon && <Icon className="w-8 h-8 text-gray-400" />}
-        {!Icon && (icon as ReactNode)}
+    <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
+      <div className="mb-4">
+        <MascotIllustration state={state} size={120} />
       </div>
-      <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-200 mb-1">{title}</h3>
-      <p className="text-sm text-gray-500 dark:text-gray-400 max-w-xs mb-6">{description}</p>
-      {action && (
+      <h3
+        className="text-lg font-bold mb-1.5"
+        style={{ fontFamily: "var(--font-display)", color: "var(--text-primary)" }}
+      >
+        {t}
+      </h3>
+      <p
+        className="text-sm max-w-xs mb-6 leading-relaxed"
+        style={{ color: "var(--text-secondary)" }}
+      >
+        {desc}
+      </p>
+      {actionLabel && onAction && (
         <button
-          onClick={action.onClick}
-          className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-medium hover:bg-indigo-700 transition-colors text-sm"
+          onClick={onAction}
+          className="px-6 py-2.5 rounded-md text-sm font-medium transition-all active:scale-[0.97]"
+          style={{ backgroundColor: "var(--brand-primary)", color: "var(--text-inverse)" }}
         >
-          {action.label}
+          {actionLabel}
         </button>
       )}
+      {children}
     </div>
   );
 }

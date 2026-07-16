@@ -27,7 +27,7 @@ function PeriodSwitcher({
 }) {
   return (
     <div className="flex items-center gap-3">
-      <div className="relative flex bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
+      <div className="relative flex rounded-xl p-1" style={{ backgroundColor: "var(--surface-fabric)" }}>
         <motion.div
           layoutId="stats-period-indicator"
           className="absolute top-1 bottom-1 rounded-lg bg-white dark:bg-gray-700 shadow-sm"
@@ -141,7 +141,7 @@ export default function StatsPage() {
   })();
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-gray-950 dark:to-gray-900 text-slate-900 dark:text-white">
+    <div className="min-h-screen pb-20" style={{ backgroundColor: "var(--surface-desk)", color: "var(--text-primary)" }}>
       <div className="mx-auto max-w-3xl px-5 pt-8 pb-24 md:px-8 md:pt-10 space-y-5">
         {/* 标题 */}
         <div className="flex items-center justify-between">

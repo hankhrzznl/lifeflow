@@ -115,8 +115,8 @@ export default function CaptureInbox({ visible, onRefresh }: { visible: boolean;
       const today = new Date();
       const start = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
       const end = start + 24 * 60 * 60 * 1000;
-      await captureToTask(id, { startTime: start, endTime: end });
-      showToast({ message: "已添加到今日", type: "success" });
+      await updateTask(id, { startTime: start, endTime: end });
+      showToast({ message: "已安排到今天", type: "success" });
       await loadItems();
     } catch { showToast({ message: "操作失败", type: "error" }); }
   }, [loadItems]);
@@ -128,7 +128,7 @@ export default function CaptureInbox({ visible, onRefresh }: { visible: boolean;
       tomorrow.setDate(tomorrow.getDate() + 1);
       const start = new Date(tomorrow.getFullYear(), tomorrow.getMonth(), tomorrow.getDate()).getTime();
       const end = start + 24 * 60 * 60 * 1000;
-      await captureToTask(id, { startTime: start, endTime: end });
+      await updateTask(id, { startTime: start, endTime: end });
       showToast({ message: "已添加到明天", type: "success" });
       await loadItems();
     } catch { showToast({ message: "操作失败", type: "error" }); }
@@ -144,7 +144,7 @@ export default function CaptureInbox({ visible, onRefresh }: { visible: boolean;
       endOfWeek.setDate(now.getDate() + daysUntilEndOfWeek);
       endOfWeek.setHours(23, 59, 59, 999);
       const start = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-      await captureToTask(id, { startTime: start, endTime: endOfWeek.getTime() });
+      await updateTask(id, { startTime: start, endTime: endOfWeek.getTime() });
       showToast({ message: "已添加到本周", type: "success" });
       await loadItems();
     } catch { showToast({ message: "操作失败", type: "error" }); }

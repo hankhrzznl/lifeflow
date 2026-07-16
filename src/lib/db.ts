@@ -105,6 +105,7 @@ export class LifeFlowDB extends Dexie {
   goalTemplates!: Table<GoalTemplate, number>;
   customGoalTypes!: Table<CustomGoalType, number>;
   correlationReports!: Table<CorrelationReport, number>;
+  migrationMarkers!: Table<{ id?: number; key: string; executedAt: number }, number>;
 
   constructor() {
     super("LifeFlowDB");
@@ -827,6 +828,15 @@ export class LifeFlowDB extends Dexie {
       tasks: "++id, type, status, parentTaskId, startTime, projectId, goalId, planId, createdAt, [type+status], *tags, dueDate, isAiGenerated",
     }).upgrade(async () => {
       console.log("[LifeFlowDB v30] Ensuring all indexes are present (schema recovery)");
+    });
+
+    // v31: 四级拆解引擎迁移标记
+    // 只增不改：新增 migrationMarkers 表记录迁移事件
+    // 不删除或修改任何现有表/索引
+    this.version(31).stores({
+      migrationMarkers: "++id, key, executedAt",
+    }).upgrade(async () => {
+      console.log("[LifeFlowDB v31] Added migrationMarkers table for engine migration tracking");
     });
   }
 }

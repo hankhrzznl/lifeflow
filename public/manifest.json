@@ -1,19 +1,30 @@
 {
-  "name": "LifeFlow",
+  "name": "LifeFlow - 人生管理系统",
   "short_name": "LifeFlow",
-  "description": "捕捉 · 规划 · 专注 · 回顾",
+  "description": "把模糊的人生愿望，拆解为今天可以执行的具体动作",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#6366f1",
+  "background_color": "#F5F0E8",
+  "theme_color": "#8B6F5E",
   "orientation": "portrait-primary",
-  "categories": ["productivity", "utilities"],
+  "scope": "/",
+  "lang": "zh-CN",
   "icons": [
-    {
-      "src": "/icons/icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
-    }
+    { "src": "/icons/icon-72x72.png", "sizes": "72x72", "type": "image/png" },
+    { "src": "/icons/icon-96x96.png", "sizes": "96x96", "type": "image/png" },
+    { "src": "/icons/icon-128x128.png", "sizes": "128x128", "type": "image/png" },
+    { "src": "/icons/icon-144x144.png", "sizes": "144x144", "type": "image/png" },
+    { "src": "/icons/icon-192x192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/icon-384x384.png", "sizes": "384x384", "type": "image/png" },
+    { "src": "/icons/icon-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "categories": ["productivity", "lifestyle"],
+  "screenshots": [
+    { "src": "/screenshots/goals.png", "sizes": "390x844", "type": "image/png", "form_factor": "narrow", "label": "目标管理" },
+    { "src": "/screenshots/today.png", "sizes": "390x844", "type": "image/png", "form_factor": "narrow", "label": "今日任务" }
+  ],
+  "shortcuts": [
+    { "name": "今日任务", "short_name": "今天", "description": "查看今日待办", "url": "/today", "icons": [{ "src": "/icons/shortcut-today.png", "sizes": "96x96" }] },
+    { "name": "目标列表", "short_name": "目标", "description": "查看所有目标", "url": "/goals", "icons": [{ "src": "/icons/shortcut-goals.png", "sizes": "96x96" }] }
   ]
 }

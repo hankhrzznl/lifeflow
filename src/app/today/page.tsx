@@ -6,6 +6,8 @@ import QuickCaptureBar from "@/components/layout/QuickCaptureBar";
 import CaptureInbox from "@/components/layout/CaptureInbox";
 import TodayTab from "@/app/planner/TodayTab";
 import TodayTimeline from "@/components/schedule/TodayTimeline";
+import GoalAtomsSection from "@/components/goal/GoalAtomsSection";
+import TodayEngineSection from "@/components/engine/TodayEngineSection";
 import { getTasksByType } from "@/lib/db";
 
 export default function TodayPage() {
@@ -23,7 +25,7 @@ export default function TodayPage() {
   useEffect(() => { if (!inboxExpanded) loadInboxCount(); }, [inboxExpanded]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-gray-950 dark:to-gray-900 text-slate-900 dark:text-white">
+    <div className="min-h-screen" style={{ backgroundColor: "var(--surface-desk)", color: "var(--text-primary)" }}>
       <div className="mx-auto max-w-5xl px-5 pt-8 pb-24 md:px-8 md:pt-10">
         <OverviewHeader />
 
@@ -35,6 +37,17 @@ export default function TodayPage() {
             inboxCount={inboxCount}
           />
           <CaptureInbox visible={inboxExpanded} onRefresh={loadInboxCount} />
+        </div>
+
+        {/* 新引擎：今日打卡 & 原子项 */}
+        <div className="mb-8">
+          <TodayEngineSection />
+        </div>
+
+        {/* 目标执行（GoalEngine 四级拆解） */}
+        <div className="mb-8">
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-3">目标执行</h2>
+          <GoalAtomsSection />
         </div>
 
         {/* 今日任务 */}

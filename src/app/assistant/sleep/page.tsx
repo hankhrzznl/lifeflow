@@ -6,11 +6,11 @@ import Link from "next/link";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
-import { getDaySchedule, getAllProjectsV2, getGoalsByProject } from "@/lib/db";
+import { getDaySchedule, getAllProjectsV2, getGoalsByProject, addSleepRecord, getRecentSleepRecords, updateSleepRecord } from "@/lib/db";
 import { showToast } from "@/components/ui/Toast";
 import { useRouter } from "next/navigation";
 import { notifyGoalProgressUpdate } from "@/lib/linkage";
-import type { Goal } from "@/lib/types";
+import type { Goal, SleepRecord } from "@/lib/types";
 
 function getLocalDate(d: Date = new Date()): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -36,9 +36,10 @@ interface SleepLog {
 
 export default function SleepPage() {
   const [targetTime, setTargetTime] = useState("23:30");
+  const [wakeTargetTime, setWakeTargetTime] = useState("07:00");
   const [reminderEnabled, setReminderEnabled] = useState(false);
   const [reminderAdvance, setReminderAdvance] = useState(15);
-  const [calibrations, setCalibrations] = useState<Record<string, number>>({});
+  const [sleepRecords, setSleepRecords] = useState<SleepRecord[]>([]);
   const [logs, setLogs] = useState<SleepLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [goals, setGoals] = useState<Goal[]>([]);
@@ -49,14 +50,12 @@ export default function SleepPage() {
   useEffect(() => {
     const saved = localStorage.getItem("sleep_target");
     if (saved) setTargetTime(saved);
+    const savedWake = localStorage.getItem("sleep_wake_target");
+    if (savedWake) setWakeTargetTime(savedWake);
     const savedRemind = localStorage.getItem("sleep_reminder_enabled");
     setReminderEnabled(savedRemind === "true");
     const savedAdvance = localStorage.getItem("sleep_reminder_advance");
     if (savedAdvance) setReminderAdvance(Number(savedAdvance));
-    try {
-      const savedCal = localStorage.getItem("sleep_calibrations");
-      if (savedCal) setCalibrations(JSON.parse(savedCal));
-    } catch { /* ignore parse errors */ }
   }, []);
 
   useEffect(() => {
@@ -79,15 +78,14 @@ export default function SleepPage() {
     localStorage.setItem("sleep_target", val);
   };
 
+  const saveWakeTarget = (val: string) => {
+    setWakeTargetTime(val);
+    localStorage.setItem("sleep_wake_target", val);
+  };
+
   const saveAdvance = (val: number) => {
     setReminderAdvance(val);
     localStorage.setItem("sleep_reminder_advance", String(val));
-  };
-
-  const saveCalibrations = (cal: Record<string, number>) => {
-    setCalibrations(cal);
-    localStorage.setItem("sleep_calibrations", JSON.stringify(cal));
-    if (selectedGoalId) { notifyGoalProgressUpdate(selectedGoalId); }
   };
 
   // ---- 定时提醒 ----
@@ -140,66 +138,32 @@ export default function SleepPage() {
     if (reminderEnabled) scheduleReminder(targetTime, reminderAdvance);
   }, [reminderAdvance, targetTime, reminderEnabled, scheduleReminder]);
 
-  // ---- 加载睡眠数据 + 覆盖手动校准 ----
-  useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      try {
-        const results: SleepLog[] = [];
-        const today = getLocalDate();
-        for (let i = 29; i >= 0; i--) {
-          const date = shiftDate(today, -i);
-          const ds = await getDaySchedule(date);
-          if (!ds?.events) continue;
+  // ---- 加载睡眠数据（从 Dexie sleepRecords 表） ----
+  const loadSleepData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const records = await getRecentSleepRecords(30);
+      setSleepRecords(records);
 
-          let sleepMinutes = 0;
-          let isNight = false;
-          for (const ev of ds.events) {
-            if (!ev.title?.includes("睡")) continue;
-            const start = ev.actualStartTime || ev.startTime;
-            if (!start) continue;
-            const [sh, sm] = start.split(":").map(Number);
-            const startMin = sh * 60 + sm;
-            if (startMin >= 18 * 60 || startMin < 6 * 60) {
-              sleepMinutes = startMin;
-              isNight = true;
-            }
-          }
-          if (isNight) {
-            const d = new Date(date + "T00:00:00");
-            const label = `${d.getMonth() + 1}/${d.getDate()}`;
-            results.push({ date, sleepTime: sleepMinutes, label });
-          }
-        }
-
-        // 覆盖手动校准数据
-        const calRaw = localStorage.getItem("sleep_calibrations");
-        if (calRaw) {
-          try {
-            const cal: Record<string, number> = JSON.parse(calRaw);
-            for (const [date, minutes] of Object.entries(cal)) {
-              const existing = results.find((r) => r.date === date);
-              if (existing) {
-                existing.sleepTime = minutes;
-              } else {
-                const d = new Date(date + "T00:00:00");
-                const label = `${d.getMonth() + 1}/${d.getDate()}`;
-                results.push({ date, sleepTime: minutes, label });
-              }
-            }
-          } catch { /* ignore */ }
-        }
-
-        results.sort((a, b) => a.date.localeCompare(b.date));
-        setLogs(results);
-      } catch (err) {
-        console.error("Failed to load sleep data:", err);
-      } finally {
-        setLoading(false);
+      // 转换为 SleepLog 格式供 UI 使用
+      const results: SleepLog[] = [];
+      for (const r of records) {
+        const [sh, sm] = r.sleepTime.split(":").map(Number);
+        const sleepMinutes = sh * 60 + sm;
+        const d = new Date(r.date + "T00:00:00");
+        const label = `${d.getMonth() + 1}/${d.getDate()}`;
+        results.push({ date: r.date, sleepTime: sleepMinutes, label });
       }
-    };
-    load();
-  }, [calibrations]);
+      results.sort((a, b) => a.date.localeCompare(b.date));
+      setLogs(results);
+    } catch (err) {
+      console.error("Failed to load sleep data:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadSleepData(); }, [loadSleepData]);
 
   // ---- 统计 ----
   const avgMin = logs.length > 0
@@ -233,23 +197,44 @@ export default function SleepPage() {
     timeLabel: formatTime(l.sleepTime),
   }));
 
-  // ---- 手动校准 ----
+  // ---- 手动记录睡眠（写入 Dexie） ----
   const [calDate, setCalDate] = useState(today);
-  const [calTime, setCalTime] = useState("23:00");
+  const [calSleepTime, setCalSleepTime] = useState("23:00");
+  const [calWakeTime, setCalWakeTime] = useState("07:00");
+  const [calQuality, setCalQuality] = useState(3);
+  const [calNote, setCalNote] = useState("");
 
-  const addCalibration = () => {
-    const [h, m] = calTime.split(":").map(Number);
-    const minutes = h * 60 + m;
-    const updated = { ...calibrations, [calDate]: minutes };
-    saveCalibrations(updated);
-    showToast({ message: `已校准 ${calDate} 入睡时间为 ${calTime}`, type: "success" });
+  const addSleepEntry = async () => {
+    const [sh, sm] = calSleepTime.split(":").map(Number);
+    const [wh, wm] = calWakeTime.split(":").map(Number);
+    const sleepMin = sh * 60 + sm;
+    const wakeMin = wh * 60 + wm;
+    const duration = wakeMin > sleepMin
+      ? (wakeMin - sleepMin) / 60
+      : (24 * 60 - sleepMin + wakeMin) / 60;
+
+    await addSleepRecord({
+      sleepDuration: Math.round(duration * 10) / 10,
+      sleepTime: calSleepTime,
+      wakeTime: calWakeTime,
+      sleepQuality: calQuality,
+      date: calDate,
+      timestamp: Date.now(),
+      notes: calNote || undefined,
+      goalId: selectedGoalId ?? undefined,
+    });
+
+    showToast({ message: `已记录 ${calDate} 睡眠`, type: "success" });
+    if (selectedGoalId) { notifyGoalProgressUpdate(selectedGoalId); }
+    loadSleepData();
   };
 
-  const removeCalibration = (date: string) => {
-    const updated = { ...calibrations };
-    delete updated[date];
-    saveCalibrations(updated);
-    showToast({ message: `已移除 ${date} 的校准数据`, type: "info" });
+  const deleteSleepEntry = async (recordId?: number) => {
+    if (!recordId) return;
+    const { deleteSleepRecord } = await import("@/lib/db");
+    await deleteSleepRecord(recordId);
+    showToast({ message: "已删除记录", type: "info" });
+    loadSleepData();
   };
 
   return (
@@ -372,11 +357,11 @@ export default function SleepPage() {
           </div>
         </div>
 
-        {/* 设定目标 + 提醒设置 */}
+        {/* 设定入睡目标 + 起床目标 */}
         <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-5 mb-4">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
-              <Moon className="w-4 h-4 text-indigo-500" /> 入睡目标
+              <Moon className="w-4 h-4 text-indigo-500" /> 睡眠目标
             </h3>
             <button
               onClick={toggleReminder}
@@ -390,24 +375,24 @@ export default function SleepPage() {
               {reminderEnabled ? "提醒已开" : "提醒已关"}
             </button>
           </div>
-          <div className="flex items-center gap-4">
-            <input
-              type="time"
-              value={targetTime}
-              onChange={(e) => { saveTarget(e.target.value); if (reminderEnabled) scheduleReminder(e.target.value, reminderAdvance); }}
-              className="px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm font-mono
-                focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-            <div className="text-xs text-gray-400">
-              <p>提前{reminderAdvance}分钟提醒</p>
-              <p className="text-indigo-500 font-medium mt-0.5">
-                {(() => {
-                  const [h, m] = targetTime.split(":").map(Number);
-                  let rm = (h * 60 + m) - reminderAdvance;
-                  if (rm < 0) rm += 24 * 60;
-                  return `提醒时间: ${formatTime(rm)}`;
-                })()}
-              </p>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs text-gray-400">入睡目标</label>
+              <input
+                type="time"
+                value={targetTime}
+                onChange={(e) => { saveTarget(e.target.value); if (reminderEnabled) scheduleReminder(e.target.value, reminderAdvance); }}
+                className="w-full mt-1 px-3 py-2 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-gray-400">起床目标</label>
+              <input
+                type="time"
+                value={wakeTargetTime}
+                onChange={(e) => saveWakeTarget(e.target.value)}
+                className="w-full mt-1 px-3 py-2 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
             </div>
           </div>
 
@@ -480,69 +465,68 @@ export default function SleepPage() {
           )}
         </div>
 
-        {/* 手动校准入睡时间 */}
+        {/* 手动记录睡眠（写入 Dexie sleepRecords） */}
         <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-5 mb-4">
-          <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-3">手动校准入睡时间</h3>
-          <p className="text-xs text-gray-400 mb-3">若某天日程未能准确反映实际入睡时间，可在此手动校准覆盖</p>
-
-          <div className="flex flex-wrap items-end gap-3 mb-3">
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] text-gray-400">日期</label>
-              <input
-                type="date"
-                value={calDate}
-                onChange={(e) => setCalDate(e.target.value)}
-                className="px-3 py-2 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-xs font-mono
-                  focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] text-gray-400">入睡时间</label>
-              <input
-                type="time"
-                value={calTime}
-                onChange={(e) => setCalTime(e.target.value)}
-                className="px-3 py-2 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-xs font-mono
-                  focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-            </div>
-            <button
-              onClick={addCalibration}
-              className="px-4 py-2 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white text-xs font-medium transition-colors"
-            >
-              保存校准
-            </button>
-          </div>
-
-          {/* 已有校准列表 */}
-          {Object.keys(calibrations).length > 0 && (
+          <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-3">记录睡眠</h3>
+          <div className="grid grid-cols-2 gap-3 mb-3">
             <div>
-              <p className="text-[10px] text-gray-400 mb-1.5">已有校准记录</p>
-              <div className="flex flex-wrap gap-1.5">
-                {Object.entries(calibrations)
-                  .sort(([a], [b]) => b.localeCompare(a))
-                  .map(([date, minutes]) => {
-                    const d = new Date(date + "T00:00:00");
-                    const label = `${d.getMonth() + 1}/${d.getDate()}`;
-                    return (
-                      <span
-                        key={date}
-                        className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 text-xs text-indigo-600 dark:text-indigo-400"
-                      >
-                        {label} → {formatTime(minutes)}
-                        <button
-                          onClick={() => removeCalibration(date)}
-                          className="ml-0.5 w-4 h-4 flex items-center justify-center rounded-full hover:bg-indigo-200 dark:hover:bg-indigo-800 text-indigo-400 hover:text-indigo-600 transition-colors"
-                        >
-                          ×
-                        </button>
-                      </span>
-                    );
-                  })}
+              <label className="text-[10px] text-gray-400">日期</label>
+              <input type="date" value={calDate} onChange={(e) => setCalDate(e.target.value)}
+                className="w-full mt-0.5 px-3 py-2 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            </div>
+            <div>
+              <label className="text-[10px] text-gray-400">入睡时间</label>
+              <input type="time" value={calSleepTime} onChange={(e) => setCalSleepTime(e.target.value)}
+                className="w-full mt-0.5 px-3 py-2 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            </div>
+            <div>
+              <label className="text-[10px] text-gray-400">起床时间</label>
+              <input type="time" value={calWakeTime} onChange={(e) => setCalWakeTime(e.target.value)}
+                className="w-full mt-0.5 px-3 py-2 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            </div>
+            <div>
+              <label className="text-[10px] text-gray-400">睡眠质量（1-5星）</label>
+              <div className="flex gap-0.5 mt-1">
+                {[1, 2, 3, 4, 5].map((s) => (
+                  <button key={s} onClick={() => setCalQuality(s)}
+                    className={`w-7 h-7 rounded text-xs ${s <= calQuality ? "text-amber-500" : "text-gray-300"}`}>
+                    ★
+                  </button>
+                ))}
               </div>
             </div>
-          )}
+          </div>
+          <input
+            type="text" value={calNote} onChange={(e) => setCalNote(e.target.value)}
+            placeholder="备注（可选）"
+            className="w-full px-3 py-2 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-3"
+          />
+          <button
+            onClick={addSleepEntry}
+            className="px-4 py-2 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white text-xs font-medium transition-colors"
+          >
+            保存记录
+          </button>
         </div>
+
+        {/* 最近记录列表 */}
+        {sleepRecords.length > 0 && (
+          <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-5 mb-4">
+            <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-2">最近记录</h3>
+            <div className="space-y-1.5">
+              {sleepRecords.slice(0, 10).map((r) => (
+                <div key={r.id} className="flex items-center gap-2 text-xs py-1">
+                  <span className="text-gray-400 w-14">{r.date.slice(5)}</span>
+                  <span className="text-gray-600 dark:text-gray-400">{r.sleepTime}→{r.wakeTime}</span>
+                  <span className="text-gray-400">{r.sleepDuration}h</span>
+                  <span className="text-amber-500">{'★'.repeat(r.sleepQuality)}</span>
+                  {r.isPersonalBest && <span className="text-[10px] px-1 rounded bg-amber-100 text-amber-600">PB</span>}
+                  <button onClick={() => deleteSleepEntry(r.id)} className="ml-auto text-gray-300 hover:text-red-500">×</button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* 底部跳转按钮 */}
         <Link

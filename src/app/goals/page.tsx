@@ -14,6 +14,8 @@ import {
   Trash2,
   Clock,
   RotateCcw,
+  Target,
+  Layers,
 } from "lucide-react";
 import Link from "next/link";
 import {
@@ -26,6 +28,7 @@ import { showToast as globalShowToast } from "@/components/ui/Toast";
 import TaskDetail from "@/components/ui/TaskDetail";
 import { PRIORITY_CONFIG } from "@/lib/types";
 import type { Task } from "@/lib/types";
+import EngineGoalsView from "./EngineGoalsView";
 
 const TABS: { key: "short-term" | "daily-trivial"; label: string; icon: typeof CalendarDays }[] = [
   { key: "short-term", label: "短期事件", icon: CalendarDays },
@@ -815,9 +818,67 @@ function GoalsContent() {
 }
 
 export default function GoalsPage() {
+  const [mode, setMode] = useState<"tasks" | "goals">("goals");
+
   return (
     <Suspense fallback={<div className="flex items-center justify-center h-64"><div className="w-6 h-6 border-2 border-gray-300 border-t-indigo-500 rounded-full animate-spin" /></div>}>
-      <GoalsContent />
+      {/* 顶层模式切换 */}
+      <div className="max-w-4xl mx-auto px-4 pt-4">
+        <div className="relative grid grid-cols-2 gap-1 rounded-xl p-1 mb-4"
+          style={{ backgroundColor: "var(--surface-fabric)" }}>
+          <motion.div
+            layoutId="goals-mode-indicator"
+            className="absolute top-1 bottom-1 rounded-lg bg-white dark:bg-gray-700 shadow-sm z-0"
+            style={{ width: "calc(50% - 4px)" }}
+            animate={{ left: mode === "goals" ? "4px" : "calc(50% + 0px)" }}
+            transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+          />
+          <button
+            onClick={() => setMode("goals")}
+            className={`relative z-10 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+              mode === "goals" ? "text-[var(--text-primary)] font-semibold" : "text-[var(--text-tertiary)]"
+            }`}
+            style={{ fontFamily: mode === "goals" ? "var(--font-display)" : undefined }}
+          >
+            <Target className="w-4 h-4" />
+            目标拆解
+          </button>
+          <button
+            onClick={() => setMode("tasks")}
+            className={`relative z-10 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+              mode === "tasks" ? "text-[var(--text-primary)] font-semibold" : "text-[var(--text-tertiary)]"
+            }`}
+            style={{ fontFamily: mode === "tasks" ? "var(--font-display)" : undefined }}
+          >
+            <Layers className="w-4 h-4" />
+            任务管理
+          </button>
+        </div>
+      </div>
+
+      <AnimatePresence mode="wait">
+        {mode === "goals" ? (
+          <motion.div
+            key="goals"
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 10 }}
+            transition={{ duration: 0.2 }}
+          >
+            <EngineGoalsView />
+          </motion.div>
+        ) : (
+          <motion.div
+            key="tasks"
+            initial={{ opacity: 0, x: 10 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -10 }}
+            transition={{ duration: 0.2 }}
+          >
+            <GoalsContent />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </Suspense>
   );
 }

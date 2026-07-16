@@ -1,125 +1,125 @@
 @import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&display=swap');
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* ============================================================ */
+/* 设计系统：织光者的工作台 */
+/* ============================================================ */
+
 @theme inline {
-  --color-primary-50: #eef2ff;
-  --color-primary-100: #e0e7ff;
-  --color-primary-200: #c7d2fe;
-  --color-primary-300: #a5b4fc;
-  --color-primary-400: #818cf8;
-  --color-primary-500: #6366f1;
-  --color-primary-600: #4f46e5;
-  --color-primary-700: #4338ca;
-  --color-primary-800: #3730a3;
-  --color-primary-900: #312e81;
-  --color-primary-950: #1e1b4b;
+  /* ── 品牌色 ── */
+  --color-brand-primary: #E88D67;
+  --color-brand-primary-hover: #D97A54;
+  --color-brand-primary-light: #FDE8E0;
+  --color-brand-secondary: #8B6F5E;
+  --color-brand-secondary-hover: #7A6050;
 
-  --color-secondary-50: #f5f3ff;
-  --color-secondary-100: #ede9fe;
-  --color-secondary-200: #ddd6fe;
-  --color-secondary-300: #c4b5fd;
-  --color-secondary-400: #a78bfa;
-  --color-secondary-500: #8b5cf6;
-  --color-secondary-600: #7c3aed;
-  --color-secondary-700: #6d28d9;
-  --color-secondary-800: #5b21b6;
-  --color-secondary-900: #4c1d95;
+  /* ── 表面/背景色 ── */
+  --color-surface-desk: #D4C5B5;
+  --color-surface-desk-light: #E8DDD4;
+  --color-surface-fabric: #F5F0E8;
+  --color-surface-fabric-hover: #EDE7DB;
 
-  --color-success-50: #ecfdf5;
-  --color-success-100: #d1fae5;
-  --color-success-500: #10b981;
-  --color-success-600: #059669;
+  /* ── 语义色 ── */
+  --color-success: #7CA982;
+  --color-success-light: #E8F0EA;
+  --color-warning: #D4736E;
+  --color-warning-light: #F9E5E3;
+  --color-info: #7BA3C7;
+  --color-info-light: #E3EDF5;
 
-  --color-warning-50: #fffbeb;
-  --color-warning-100: #fef3c7;
-  --color-warning-500: #f59e0b;
-  --color-warning-600: #d97706;
+  /* ── 文字色 ── */
+  --color-text-primary: #3D342E;
+  --color-text-secondary: #6B5E54;
+  --color-text-tertiary: #A39E99;
+  --color-text-inverse: #FAF6F0;
 
-  --color-danger-50: #fef2f2;
-  --color-danger-100: #fee2e2;
-  --color-danger-500: #ef4444;
-  --color-danger-600: #dc2626;
+  /* ── 边框色 ── */
+  --color-border: #D4C5B5;
+  --color-border-light: #E8DDD4;
+  --color-border-dashed: #C4B5A5;
 
-  --color-focus-bg: #0f0f1a;
-  --color-focus-surface: #1a1a2e;
-  --color-focus-ring: #6366f1;
-  --color-focus-text: #e2e8f0;
-  --color-focus-muted: #64748b;
+  /* ── 编织进度条色 ── */
+  --color-knit-thread: #E88D67;
+  --color-knit-done: #7CA982;
+  --color-knit-partial: #F5C542;
+  --color-knit-bg: #E8DDD4;
+  --color-knit-grid: #C4B5A5;
 
-  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "PingFang SC", "Microsoft YaHei", sans-serif;
-  --font-mono: "SF Mono", "JetBrains Mono", "Fira Code", ui-monospace, monospace;
+  /* ── 为兼容旧版保留 primary/secondary 映射 ── */
+  --color-primary: var(--color-brand-primary);
+  --color-primary-hover: var(--color-brand-primary-hover);
+  --color-secondary: var(--color-brand-secondary);
 
-  --spacing-0: 0px;
-  --spacing-px: 1px;
-  --spacing-0-5: 2px;
-  --spacing-1: 4px;
-  --spacing-1-5: 6px;
-  --spacing-2: 8px;
-  --spacing-3: 12px;
-  --spacing-4: 16px;
-  --spacing-5: 20px;
-  --spacing-6: 24px;
-  --spacing-8: 32px;
-  --spacing-10: 40px;
-  --spacing-12: 48px;
-  --spacing-16: 64px;
+  /* ── 字体 ── */
+  --font-display: "ZCOOL KuaiLe", "LXGW WenKai", cursive;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
 
-  --radius-sm: 6px;
+  /* ── 字号 ── */
+  --text-display: 2.25rem;
+  --text-display--line-height: 1.25;
+
+  /* ── 阴影 ── */
+  --shadow-knit: 0 2px 0 #C4B5A5;
+  --shadow-card: 0 4px 6px rgba(61, 52, 46, 0.08);
+  --shadow-modal: 0 8px 16px rgba(61, 52, 46, 0.12);
+  --shadow-subtle: 0 1px 2px rgba(61, 52, 46, 0.05);
+
+  /* ── 圆角 ── */
+  --radius-sm: 4px;
   --radius-md: 8px;
   --radius-lg: 12px;
   --radius-xl: 16px;
   --radius-2xl: 20px;
   --radius-full: 9999px;
 
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
-
+  /* ── 动画缓动 ── */
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
-  --ease-out-back: cubic-bezier(0.34, 1.56, 0.64, 1);
-  --ease-in-out-smooth: cubic-bezier(0.4, 0, 0.2, 1);
-  --ease-overshoot: cubic-bezier(0.34, 1.3, 0.64, 1);
-  --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  --ease-knit: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* ============================================================ */
+/* CSS 变量（供组件和旧代码使用） */
+/* ============================================================ */
+
 :root {
-  --background: #f8fafc;
-  --foreground: #0f172a;
+  --background: #D4C5B5;
+  --foreground: #3D342E;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --bg-primary: var(--background);
-  --bg-secondary: #ffffff;
-  --text-primary: var(--foreground);
-  --text-secondary: #64748b;
-  --card-bg: #ffffff;
+  --bg-secondary: #F5F0E8;
+  --text-primary: #3D342E;
+  --text-secondary: #6B5E54;
+  --card-bg: #F5F0E8;
+  --card-border: #E8DDD4;
+  --muted: #A39E99;
+  --muted-foreground: #6B5E54;
+  --border: #D4C5B5;
+  --ring: #E88D67;
+  --destructive: #D4736E;
+  --destructive-foreground: #FAF6F0;
   --bottom-nav-height: calc(64px + max(8px, env(safe-area-inset-bottom)));
-  --card-border: #e2e8f0;
-  --muted: #94a3b8;
-  --muted-foreground: #64748b;
-  --border: #e2e8f0;
-  --ring: #6366f1;
-  --destructive: #ef4444;
-  --destructive-foreground: #f8fafc;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0f172a;
-    --foreground: #e2e8f0;
+    --background: #2A2420;
+    --foreground: #EDE7DB;
     --color-background: var(--background);
     --color-foreground: var(--foreground);
     --bg-primary: var(--background);
-    --bg-secondary: #1e293b;
-    --text-primary: var(--foreground);
-    --text-secondary: #94a3b8;
-    --card-bg: #1e293b;
-    --card-border: #334155;
-    --muted: #64748b;
-    --muted-foreground: #94a3b8;
-    --border: #334155;
+    --bg-secondary: #3D342E;
+    --text-primary: #EDE7DB;
+    --text-secondary: #A39E99;
+    --card-bg: #3D342E;
+    --card-border: #5A4E44;
+    --muted: #6B5E54;
+    --muted-foreground: #A39E99;
+    --border: #5A4E44;
   }
 }
 
@@ -135,14 +135,55 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-@keyframes slide-in-from-top-full {
-  from { transform: translateY(-100%); }
-  to { transform: translateY(0); }
+/* ============================================================ */
+/* 工具类 */
+/* ============================================================ */
+
+.font-display {
+  font-family: var(--font-display);
 }
 
-@keyframes slide-out-to-top-full {
-  from { transform: translateY(0); }
-  to { transform: translateY(-100%); }
+.text-knit-shadow {
+  text-shadow: 0 1px 0 rgba(61, 52, 46, 0.1);
+}
+
+/* ── 编织纹理背景 ── */
+.bg-knit-texture {
+  background-color: var(--card-bg);
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 3px,
+      rgba(196, 181, 165, 0.15) 3px,
+      rgba(196, 181, 165, 0.15) 4px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 3px,
+      rgba(196, 181, 165, 0.1) 3px,
+      rgba(196, 181, 165, 0.1) 4px
+    );
+}
+
+/* ── 木桌渐变 ── */
+.bg-desk {
+  background: linear-gradient(
+    180deg,
+    #E8DDD4 0%,
+    #D4C5B5 50%,
+    #C4B5A5 100%
+  );
+}
+
+/* ============================================================ */
+/* 动画 */
+/* ============================================================ */
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }
 
 @keyframes slide-in-from-bottom {
@@ -175,46 +216,49 @@ body {
   to { opacity: 0; transform: scale(0.8); }
 }
 
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+@keyframes knit-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
 }
 
-@keyframes dot-bounce {
-  0%, 80%, 100% { transform: scale(0); }
-  40% { transform: scale(1); }
+@keyframes thread-move {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
 
-@keyframes fabAppear {
-  0% { transform: scale(0); opacity: 0; }
-  50% { transform: scale(1.1); opacity: 1; }
-  100% { transform: scale(1); opacity: 1; }
+@keyframes confetti-fall {
+  0% { transform: translateY(-100%) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
 }
 
+@keyframes tape-peel {
+  0% { transform: rotate(-3deg) scale(1); }
+  100% { transform: rotate(-1deg) scale(1.02); }
+}
+
+/* ── 工具类动画 ── */
 .animate-in {
   animation-duration: 200ms;
   animation-timing-function: var(--ease-out-expo);
   animation-fill-mode: both;
 }
 
-.slide-in-from-top-full {
-  animation-name: slide-in-from-top-full;
-}
+.slide-in-from-bottom { animation-name: slide-in-from-bottom; }
+.fade-in { animation-name: fade-in; }
+.scale-in { animation-name: scale-in; }
+.animate-knit-bounce { animation: knit-bounce 2s ease-in-out infinite; }
+.animate-thread-move { animation: thread-move 3s linear infinite; background-size: 200% 100%; }
+.animate-tape-peel { animation: tape-peel 0.3s ease-out; }
 
-.slide-in-from-bottom {
-  animation-name: slide-in-from-bottom;
-}
-
-.fade-in {
-  animation-name: fade-in;
-}
-
-.scale-in {
-  animation-name: scale-in;
-}
-
+/* ── Skeleton ── */
 .skeleton {
-  background: linear-gradient(90deg, var(--card-bg) 25%, #e2e8f0 50%, var(--card-bg) 75%);
+  background: linear-gradient(
+    90deg,
+    var(--card-bg) 25%,
+    #E8DDD4 50%,
+    var(--card-bg) 75%
+  );
   background-size: 200% 100%;
   animation: shimmer 1.5s ease-in-out infinite;
   border-radius: var(--radius-md);
@@ -222,32 +266,21 @@ body {
 
 @media (prefers-color-scheme: dark) {
   .skeleton {
-    background: linear-gradient(90deg, var(--card-bg) 25%, #334155 50%, var(--card-bg) 75%);
+    background: linear-gradient(
+      90deg,
+      var(--card-bg) 25%,
+      #5A4E44 50%,
+      var(--card-bg) 75%
+    );
     background-size: 200% 100%;
   }
 }
 
+/* ── Scrollbar ── */
 .scrollbar-hide {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
-
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
-}
-
-/* ==================== 涟漪动画 ==================== */
-@keyframes ripple {
-  0% {
-    transform: scale(0);
-    opacity: 0.6;
-  }
-  100% {
-    transform: scale(3);
-    opacity: 0;
-  }
-}
-
-.animate-ripple {
-  animation: ripple 0.4s ease-out forwards;
 }

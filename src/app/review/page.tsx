@@ -20,6 +20,8 @@ import { PRIORITY_CONFIG } from "@/lib/types";
 import { db } from "@/lib/db";
 import { isAIEnabled, isOnline } from "@/lib/aiClient";
 import { analyzeReview, adoptImprovements } from "@/lib/aiReviewAnalyzer";
+import EngineReviewEntry from "@/components/engine/EngineReviewEntry";
+import PDCAReviewFlow from "@/components/engine/PDCAReviewFlow";
 
 // ==================== 工具函数 ====================
 
@@ -241,6 +243,8 @@ function ProjectProgressBar({
 // ==================== 主页面 ====================
 
 export default function ReviewPage() {
+  const [mode, setMode] = useState<"engine" | "classic">("engine");
+  const [pdcaWeek, setPdcaWeek] = useState<{ start: string; end: string } | null>(null);
   const [periodType, setPeriodType] = useState<PeriodType>("week");
   const [periodOffset, setPeriodOffset] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -618,14 +622,48 @@ export default function ReviewPage() {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-gray-950 dark:to-gray-900 text-slate-900 dark:text-white">
+    <div className="min-h-screen pb-24" style={{ backgroundColor: "var(--surface-desk)", color: "var(--text-primary)" }}>
       <div className="mx-auto max-w-3xl px-5 pt-8 pb-24 md:px-8 md:pt-10 space-y-5">
         {/* 标题 */}
         <div>
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white">回顾</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">周期性复盘，持续改进</p>
+          <h1 className="font-hand font-bold" style={{ fontSize: "var(--text-display)", color: "var(--text-primary)" }}>编织日志</h1>
+          <p className="text-sm mt-1" style={{ color: "var(--text-secondary)" }}>周期性复盘，持续改进</p>
         </div>
 
+        {/* 模式切换 */}
+        <div className="relative grid grid-cols-2 gap-1 rounded-xl p-1"
+          style={{ backgroundColor: "var(--surface-fabric)" }}>
+          <motion.div
+            layoutId="review-mode-ind"
+            className="absolute top-1 bottom-1 rounded-lg bg-white dark:bg-gray-700 shadow-sm z-0"
+            style={{ width: "calc(50% - 4px)" }}
+            animate={{ left: mode === "engine" ? "4px" : "calc(50% + 0px)" }}
+            transition={{ duration: 0.25 }}
+            />
+            <button onClick={() => setMode("engine")}
+            className={`relative z-10 py-2 text-sm font-medium rounded-lg ${mode === "engine" ? "text-gray-900 dark:text-white" : "text-gray-500"}`}>
+            PDCA复盘
+          </button>
+          <button onClick={() => setMode("classic")}
+            className={`relative z-10 py-2 text-sm font-medium rounded-lg ${mode === "classic" ? "text-gray-900 dark:text-white" : "text-gray-500"}`}>
+            经典回顾
+          </button>
+        </div>
+
+        {mode === "engine" ? (
+          pdcaWeek ? (
+            <PDCAReviewFlow
+              weekStart={pdcaWeek.start}
+              weekEnd={pdcaWeek.end}
+              onComplete={() => setPdcaWeek(null)}
+              onExit={() => setPdcaWeek(null)}
+            />
+          ) : (
+            <EngineReviewEntry
+              onStartReview={(start, end) => setPdcaWeek({ start, end })}
+            />
+          )
+        ) : (<>
         {/* 周期切换 */}
         <PeriodSwitcher
           periodType={periodType}
@@ -1074,6 +1112,7 @@ export default function ReviewPage() {
             <ArrowRight className="w-4 h-4" />
           </Link>
         </section>
+      </>)}
       </div>
     </div>
   );

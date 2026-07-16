@@ -8,6 +8,7 @@ import CheckInModal from "@/components/engine/CheckInModal";
 import TodayHabitCard from "@/components/engine/TodayHabitCard";
 import { useCheckIn } from "@/components/engine/useCheckIn";
 import KnittingProgress from "@/components/ui/KnittingProgress";
+import MascotIllustration from "@/components/ui/MascotIllustration";
 import EmptyState from "@/components/ui/EmptyState";
 import type { EngineDailyAtom } from "@/lib/engine/types";
 
@@ -83,6 +84,10 @@ export default function TodayEngineSection() {
 
   const showConfetti = milestones.length > 0;
 
+  const mascotState = checkInLoading ? "knitting" as const
+    : allAtoms.length > 0 && allAtoms.every((a) => a.isCompleted) ? "celebrating" as const
+    : "waiting" as const;
+
   return (
     <div className="space-y-5">
       {/* 成就动画 */}
@@ -114,11 +119,16 @@ export default function TodayEngineSection() {
       </AnimatePresence>
 
       {/* 顶部概览 */}
-      <div>
-        <h1 className="font-hand font-bold" style={{ fontSize: "var(--text-display)", color: "var(--text-primary)" }}>
-          今日任务
-        </h1>
-        <p className="text-sm mt-0.5" style={{ color: "var(--text-secondary)" }}>{todayDisplay}</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="font-hand font-bold" style={{ fontSize: "var(--text-display)", color: "var(--text-primary)" }}>
+            今日任务
+          </h1>
+          <p className="text-sm mt-0.5" style={{ color: "var(--text-secondary)" }}>{todayDisplay}</p>
+        </div>
+        <div className="w-16 h-16 flex-shrink-0">
+          <MascotIllustration state={mascotState} size={64} />
+        </div>
       </div>
 
       {/* 完成度卡片 */}

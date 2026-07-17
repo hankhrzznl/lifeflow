@@ -11,6 +11,12 @@ import { getPluginsForNavbar } from "@/lib/db";
 import { getPluginConfig } from "@/lib/plugin-config";
 import type { PluginMetadata } from "@/lib/types";
 
+const ACTIVE_COLOR = "var(--color-sys-indigo)";
+const ACTIVE_COLOR_HEX = "#5856D6";
+const INACTIVE_COLOR = "var(--color-sys-gray)";
+const INACTIVE_COLOR_HEX = "#8E8E93";
+const FAB_GRADIENT = "linear-gradient(135deg, #5856D6, #7B79E0)";
+
 export default function BottomTabBar() {
   const pathname = usePathname();
   const [pinnedPlugins, setPinnedPlugins] = useState<PluginMetadata[]>([]);
@@ -67,11 +73,13 @@ export default function BottomTabBar() {
       <motion.nav
         initial={{ y: "100%" }}
         animate={entered ? { y: 0 } : { y: "100%" }}
-        transition={{ duration: 0.4, delay: 0.2, ease: [0.25, 0.46, 0.45, 0.94] }}
+        transition={{ type: "spring", stiffness: 300, damping: 30, delay: 0.2 }}
         className="fixed bottom-0 left-0 right-0 z-50 pb-[max(8px,env(safe-area-inset-bottom))]"
         style={{
-          backgroundColor: "var(--surface-desk-light)",
-          borderTop: "2px solid var(--color-knit-grid)",
+          background: "rgba(255,255,255,0.85)",
+          backdropFilter: "blur(20px)",
+          WebkitBackdropFilter: "blur(20px)",
+          borderTop: "0.5px solid rgba(0,0,0,0.1)",
         }}
       >
         <div className="flex items-center justify-around h-[60px]">
@@ -89,21 +97,19 @@ export default function BottomTabBar() {
                   <motion.div
                     whileHover={{ scale: 1.08 }}
                     whileTap={{ scale: 0.92 }}
-                    className="w-14 h-14 rounded-full flex items-center justify-center shadow-lg -mt-7 transition-colors"
+                    transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                    className="w-14 h-14 rounded-full flex items-center justify-center shadow-lg -mt-7"
                     style={{
-                      backgroundColor: active ? "var(--color-brand-primary-hover)" : "var(--color-brand-primary)",
-                      boxShadow: active
-                        ? "0 4px 12px rgba(217, 122, 84, 0.4)"
-                        : "0 4px 12px rgba(232, 141, 103, 0.3)",
+                      background: FAB_GRADIENT,
+                      boxShadow: "0 4px 16px rgba(88,86,214,0.3)",
                     }}
                   >
-                    <tab.icon className="w-7 h-7 text-[var(--color-text-inverse)]" strokeWidth={1.5} />
+                    <tab.icon className="w-7 h-7" strokeWidth={1.5} style={{ color: "#FFFFFF" }} />
                   </motion.div>
                   <span
                     className="text-[11px] font-medium mt-0.5"
                     style={{
-                      fontFamily: active ? "var(--font-display)" : undefined,
-                      color: active ? "var(--color-brand-primary)" : "var(--color-text-tertiary)",
+                      color: active ? ACTIVE_COLOR : INACTIVE_COLOR,
                     }}
                   >
                     {tab.label}
@@ -123,20 +129,19 @@ export default function BottomTabBar() {
                     <motion.span
                       layoutId="nav-dot"
                       className="w-1.5 h-1.5 rounded-full mb-0.5"
-                      style={{ backgroundColor: "var(--color-brand-primary)" }}
+                      style={{ backgroundColor: ACTIVE_COLOR_HEX }}
                       transition={{ type: "spring", stiffness: 500, damping: 30 }}
                     />
                   )}
                   <tab.icon
                     className="w-6 h-6"
                     strokeWidth={1.5}
-                    style={{ color: active ? "var(--color-brand-secondary)" : "var(--color-text-tertiary)" }}
+                    style={{ color: active ? ACTIVE_COLOR : INACTIVE_COLOR }}
                   />
                   <span
                     className="text-[11px] font-medium"
                     style={{
-                      fontFamily: active ? "var(--font-display)" : undefined,
-                      color: active ? "var(--color-brand-secondary)" : "var(--color-text-tertiary)",
+                      color: active ? ACTIVE_COLOR : INACTIVE_COLOR,
                     }}
                   >
                     {tab.label}

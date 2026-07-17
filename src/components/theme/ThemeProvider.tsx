@@ -21,53 +21,41 @@ const ThemeContext = createContext<ThemeContextType>({
 });
 
 // ============================================================
-// CSS 变量切换
+// CSS 变量切换（Apple System UI）
 // ============================================================
 
 function applyDarkTokens() {
   const root = document.documentElement;
-  root.style.setProperty("--surface-desk", "#2D2520");
-  root.style.setProperty("--surface-desk-light", "#3D342E");
-  root.style.setProperty("--surface-fabric", "#3A322C");
-  root.style.setProperty("--surface-fabric-hover", "#453D36");
-  root.style.setProperty("--brand-primary-light", "rgba(232,141,103,0.15)");
-  root.style.setProperty("--brand-secondary", "#A89080");
-  root.style.setProperty("--text-primary", "#F5F0E8");
-  root.style.setProperty("--text-secondary", "#C4B5A5");
-  root.style.setProperty("--text-tertiary", "#8B7D6B");
-  root.style.setProperty("--text-inverse", "#3D342E");
-  root.style.setProperty("--card-bg", "#3A322C");
-  root.style.setProperty("--card-border", "#5A4E44");
-  root.style.setProperty("--border", "#5A4E44");
-  root.style.setProperty("--border-light", "#4A423C");
-  root.style.setProperty("--knit-bg", "#4A423C");
-  root.style.setProperty("--knit-grid", "#5A524C");
-  root.style.setProperty("--background", "#2D2520");
-  root.style.setProperty("--foreground", "#F5F0E8");
+  root.style.setProperty("--bg-primary", "#000000");
+  root.style.setProperty("--bg-secondary", "#1C1C1E");
+  root.style.setProperty("--text-primary", "#FFFFFF");
+  root.style.setProperty("--text-secondary", "#EBEBF5");
+  root.style.setProperty("--text-tertiary", "#8E8E93");
+  root.style.setProperty("--text-inverse", "#000000");
+  root.style.setProperty("--card-bg", "#1C1C1E");
+  root.style.setProperty("--card-border", "#38383A");
+  root.style.setProperty("--border", "#38383A");
+  root.style.setProperty("--border-light", "#2C2C2E");
+  root.style.setProperty("--background", "#000000");
+  root.style.setProperty("--foreground", "#FFFFFF");
   root.classList.add("dark");
   root.classList.remove("light");
 }
 
 function applyLightTokens() {
   const root = document.documentElement;
-  root.style.setProperty("--surface-desk", "#D4C5B5");
-  root.style.setProperty("--surface-desk-light", "#E8DDD4");
-  root.style.setProperty("--surface-fabric", "#F5F0E8");
-  root.style.setProperty("--surface-fabric-hover", "#EDE7DB");
-  root.style.setProperty("--brand-primary-light", "#FDE8E0");
-  root.style.setProperty("--brand-secondary", "#8B6F5E");
-  root.style.setProperty("--text-primary", "#3D342E");
-  root.style.setProperty("--text-secondary", "#6B5E54");
-  root.style.setProperty("--text-tertiary", "#A39E99");
-  root.style.setProperty("--text-inverse", "#FAF6F0");
-  root.style.setProperty("--card-bg", "#F5F0E8");
-  root.style.setProperty("--card-border", "#E8DDD4");
-  root.style.setProperty("--border", "#D4C5B5");
-  root.style.setProperty("--border-light", "#E8DDD4");
-  root.style.setProperty("--knit-bg", "#E8DDD4");
-  root.style.setProperty("--knit-grid", "#C4B5A5");
-  root.style.setProperty("--background", "#D4C5B5");
-  root.style.setProperty("--foreground", "#3D342E");
+  root.style.setProperty("--bg-primary", "#FFFFFF");
+  root.style.setProperty("--bg-secondary", "#F5F5F7");
+  root.style.setProperty("--text-primary", "#000000");
+  root.style.setProperty("--text-secondary", "#3C3C43");
+  root.style.setProperty("--text-tertiary", "#8E8E93");
+  root.style.setProperty("--text-inverse", "#FFFFFF");
+  root.style.setProperty("--card-bg", "#FFFFFF");
+  root.style.setProperty("--card-border", "#E5E5EA");
+  root.style.setProperty("--border", "#E5E5EA");
+  root.style.setProperty("--border-light", "#F2F2F7");
+  root.style.setProperty("--background", "#F5F5F7");
+  root.style.setProperty("--foreground", "#000000");
   root.classList.add("light");
   root.classList.remove("dark");
 }

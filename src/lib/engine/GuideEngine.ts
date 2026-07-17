@@ -47,7 +47,7 @@ export const STEPS: GuideStep[] = [
   },
   {
     id: "checkin_tutorial", mascotState: "knitting", title: "每日打卡",
-    message: "目标创建后，每天打开「今天」页面，完成任务后点击编织checkbox打卡。进度会自动回算。",
+    message: "目标创建后，每天打开「今天」页面，完成任务后点击 checkbox 打卡。进度会自动回算。",
     actionType: "highlight_checkin", canSkip: true,
     condition: (ctx) => ctx.hasCreatedGoal && !ctx.hasCheckedIn,
   },

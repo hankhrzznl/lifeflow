@@ -59,7 +59,7 @@ function getPriorityConfig(priority: string) {
 }
 
 // ============================================================
-// L4 原子项节点 — 编织网格 checkbox
+// L4 原子项节点 — checkbox
 // ============================================================
 
 function DailyAtomNode({
@@ -89,7 +89,7 @@ function DailyAtomNode({
                               isPartial ? "rgba(245,197,66,0.06)" : "transparent",
             }}
           >
-            {/* 编织网格 checkbox */}
+            {/* checkbox */}
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -132,7 +132,7 @@ function DailyAtomNode({
                                  atom.status === "overdue" ? "var(--warning-light)" : "var(--knit-bg)",
               }}
             >
-              {atom.isCompleted ? "织完" : atom.status === "overdue" ? "逾期" : "待织"}
+              {atom.isCompleted ? "完成" : atom.status === "overdue" ? "逾期" : "待办"}
             </span>
           </div>
         </motion.div>
@@ -489,9 +489,9 @@ export default function GoalTree({
     return (
       <EmptyState
         state="waiting"
-        title="工作台上还没有布料"
-        description="点击下方的线团，开始编织你的第一块目标吧"
-        actionLabel="开始编织"
+        title="还没有目标"
+        description="开始创建你的第一个目标吧"
+        actionLabel="开始创建"
         onAction={() => window.location.href = "/goals/new"}
       />
     );

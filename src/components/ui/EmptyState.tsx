@@ -1,14 +1,14 @@
 "use client";
 
 import type { ReactNode } from "react";
-import MascotIllustration from "./MascotIllustration";
-import type { MascotState } from "./MascotIllustration";
+import { Inbox, CheckCircle, AlertCircle } from "lucide-react";
 
 // ============================================================
 // 类型
 // ============================================================
 
 interface EmptyStateProps {
+  icon?: React.ReactNode;
   state?: "waiting" | "completed" | "confused";
   title?: string;
   description?: string;
@@ -18,13 +18,30 @@ interface EmptyStateProps {
 }
 
 // ============================================================
+// 状态 → 默认图标映射
+// ============================================================
+
+function DefaultIcon({ state }: { state: "waiting" | "completed" | "confused" }) {
+  const cls = "w-12 h-12";
+  const c = "var(--color-text-quat, #C7C7CC)";
+  switch (state) {
+    case "waiting":
+      return <Inbox className={cls} style={{ color: c }} strokeWidth={1.5} />;
+    case "completed":
+      return <CheckCircle className={cls} style={{ color: c }} strokeWidth={1.5} />;
+    case "confused":
+      return <AlertCircle className={cls} style={{ color: c }} strokeWidth={1.5} />;
+  }
+}
+
+// ============================================================
 // 默认文案
 // ============================================================
 
 const defaults = {
-  waiting: { title: "还没开始织呢", desc: "点击下方的线团，开始你的第一块布料吧" },
-  completed: { title: "太棒了！", desc: "这块布料织完了，开始下一块吧" },
-  confused: { title: "线缠住了...", desc: "出了点小问题，刷新试试" },
+  waiting: { title: "暂无内容", desc: "点击下方按钮开始添加" },
+  completed: { title: "全部完成", desc: "太棒了，继续加油" },
+  confused: { title: "出了点问题", desc: "请刷新页面重试" },
 };
 
 // ============================================================
@@ -32,6 +49,7 @@ const defaults = {
 // ============================================================
 
 export default function EmptyState({
+  icon,
   state = "waiting",
   title,
   description,
@@ -45,12 +63,12 @@ export default function EmptyState({
 
   return (
     <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
-      <div className="mb-4">
-        <MascotIllustration state={state} size={120} />
+      <div className="mb-5">
+        {icon ?? <DefaultIcon state={state} />}
       </div>
       <h3
-        className="text-lg font-bold mb-1.5"
-        style={{ fontFamily: "var(--font-display)", color: "var(--text-primary)" }}
+        className="text-lg font-semibold mb-1.5"
+        style={{ color: "var(--text-primary)" }}
       >
         {t}
       </h3>
@@ -63,8 +81,8 @@ export default function EmptyState({
       {actionLabel && onAction && (
         <button
           onClick={onAction}
-          className="px-6 py-2.5 rounded-md text-sm font-medium transition-all active:scale-[0.97]"
-          style={{ backgroundColor: "var(--brand-primary)", color: "var(--text-inverse)" }}
+          className="rounded-full px-6 py-2.5 text-sm font-medium text-white transition-all active:scale-[0.97]"
+          style={{ backgroundColor: "var(--color-sys-indigo)" }}
         >
           {actionLabel}
         </button>

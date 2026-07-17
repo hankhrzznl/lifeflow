@@ -1,6 +1,20 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // ── 旧路由重定向到新子站架构 ──
+  async redirects() {
+    return [
+      { source: "/today", destination: "/efficiency/schedule", permanent: true },
+      { source: "/planner", destination: "/efficiency", permanent: true },
+      { source: "/goals", destination: "/efficiency", permanent: true },
+      { source: "/goals/:path*", destination: "/efficiency", permanent: true },
+      { source: "/review", destination: "/efficiency/review", permanent: true },
+      { source: "/stats", destination: "/efficiency", permanent: true },
+      { source: "/assistant", destination: "/", permanent: true },
+      { source: "/assistant/:path*", destination: "/", permanent: true },
+    ];
+  },
+
   images: {
     formats: ["image/avif", "image/webp"],
     deviceSizes: [640, 750, 828, 1080, 1200],

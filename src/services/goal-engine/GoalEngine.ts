@@ -9,7 +9,7 @@ import {
   rollupFromAtom,
   completeAtom,
   uncompleteAtom,
-  recalculateAllForGoal,
+  recalculateAllForGoal as recalcEngine,
   detectCycle,
   validateDependencies,
 } from './RecalculationService';
@@ -28,13 +28,12 @@ import {
   createAllSnapshots,
   getProgressTrend,
 } from './EvolutionService';
+import { getGoal as dbGetGoal, getAllGoals as dbGetAllGoals } from "@/lib/db";
+import { parseMainGoalId, mainGoalKey } from "@/lib/goalMapping";
 import type {
-  Goal,
   Milestone,
   WeeklyTask,
   DailyAtom,
-  GoalProgressSnapshot,
-  GoalTree,
   MilestoneWithChildren,
   WeeklyTaskWithChildren,
   TemplateParams,
@@ -65,68 +64,22 @@ export class GoalEngine {
     return clearGoalDB();
   }
 
-  // ==================== Goal CRUD ====================
+  // ==================== Goal 读取（主库） ====================
 
-  /** 创建目标 */
-  static async createGoal(data: Omit<Goal, 'id' | 'progress' | 'status' | 'healthStatus' | 'createdAt' | 'updatedAt'>): Promise<string> {
-    const now = new Date().toISOString();
-    const id = crypto.randomUUID();
-    await goalDB.goals.add({
-      ...data,
-      id,
-      progress: 0,
-      status: 'active',
-      healthStatus: undefined,
-      createdAt: now,
-      updatedAt: now,
+  /** 获取目标（从主库读取） */
+  static async getGoal(goalId: number): Promise<import("@/lib/types").Goal | undefined> {
+    return dbGetGoal(goalId);
+  }
+
+  /** 获取所有目标（从主库读取，内存筛选） */
+  static async getAllGoals(filter?: { status?: string; type?: string }): Promise<import("@/lib/types").Goal[]> {
+    const all = await dbGetAllGoals();
+    if (!filter) return all;
+    return all.filter((g) => {
+      if (filter.status !== undefined && g.status !== filter.status) return false;
+      if (filter.type !== undefined && g.type !== filter.type) return false;
+      return true;
     });
-    return id;
-  }
-
-  /** 获取目标 */
-  static async getGoal(goalId: string): Promise<Goal | undefined> {
-    return goalDB.goals.get(goalId);
-  }
-
-  /** 获取所有目标 */
-  static async getAllGoals(filter?: { status?: Goal['status']; category?: GoalCategory }): Promise<Goal[]> {
-    let collection = goalDB.goals.toCollection();
-    if (filter?.status) {
-      collection = collection.filter((g) => g.status === filter.status);
-    }
-    if (filter?.category) {
-      collection = collection.filter((g) => g.category === filter.category);
-    }
-    return collection.sortBy('createdAt');
-  }
-
-  /** 更新目标 */
-  static async updateGoal(goalId: string, updates: Partial<Pick<Goal, 'title' | 'description' | 'priority' | 'deadline' | 'successCriteria' | 'status'>>): Promise<void> {
-    await goalDB.goals.update(goalId, {
-      ...updates,
-      updatedAt: new Date().toISOString(),
-    });
-  }
-
-  /** 删除目标（级联删除所有里程碑、周任务、原子项、快照） */
-  static async deleteGoal(goalId: string): Promise<void> {
-    await goalDB.transaction(
-      'rw',
-      [goalDB.goals, goalDB.milestones, goalDB.weeklyTasks, goalDB.dailyAtoms, goalDB.progressSnapshots],
-      async () => {
-        const milestones = await goalDB.milestones.where('goalId').equals(goalId).toArray();
-        for (const ms of milestones) {
-          const tasks = await goalDB.weeklyTasks.where('milestoneId').equals(ms.id).toArray();
-          for (const task of tasks) {
-            await goalDB.dailyAtoms.where('weeklyTaskId').equals(task.id).delete();
-          }
-          await goalDB.weeklyTasks.where('milestoneId').equals(ms.id).delete();
-        }
-        await goalDB.milestones.where('goalId').equals(goalId).delete();
-        await goalDB.progressSnapshots.where('goalId').equals(goalId).delete();
-        await goalDB.goals.delete(goalId);
-      }
-    );
   }
 
   // ==================== Milestone CRUD ====================
@@ -248,7 +201,7 @@ export class GoalEngine {
    * 用于今日任务页的目标卡片 + 原子项列表展示
    */
   static async getTodayAtomsWithContext(): Promise<Array<{
-    goal: Goal;
+    goal: import("@/lib/types").Goal;
     milestone: Milestone;
     weeklyTask: WeeklyTask;
     atom: DailyAtom;
@@ -265,16 +218,29 @@ export class GoalEngine {
     const milestones = (await goalDB.milestones.bulkGet(msIds)).filter(Boolean) as Milestone[];
     const msMap = new Map(milestones.map((m) => [m.id, m]));
 
-    const goalIds = [...new Set(milestones.map((m) => m.goalId))];
-    const goals = (await goalDB.goals.bulkGet(goalIds)).filter(Boolean) as Goal[];
-    const goalMap = new Map(goals.map((g) => [g.id, g]));
+    // 从里程碑的 goalId 解析主库 goalId
+    const mainGoalIds: number[] = [];
+    for (const ms of milestones) {
+      const mgId = parseMainGoalId(ms.goalId);
+      if (mgId !== null) {
+        mainGoalIds.push(mgId);
+      } else {
+        console.warn(`[GoalEngine] 里程碑 ${ms.id} 的 goalId "${ms.goalId}" 不是纯数字，跳过`);
+      }
+    }
+
+    // 从主库读取 Goal
+    const { db } = await import("@/lib/db");
+    const mainGoals = await db.goals.bulkGet(mainGoalIds);
+    const mainGoalMap = new Map(mainGoals.filter(Boolean).map(g => [String(g!.id), g!]));
 
     return atoms
       .map((atom) => {
         const task = taskMap.get(atom.weeklyTaskId);
         const ms = task ? msMap.get(task.milestoneId) : undefined;
-        const goal = ms ? goalMap.get(ms.goalId) : undefined;
-        if (!goal || !ms || !task) return null;
+        if (!task || !ms) return null;
+        const goal = ms ? mainGoalMap.get(ms.goalId) : undefined;
+        if (!goal) return null;
         return { goal, milestone: ms, weeklyTask: task, atom };
       })
       .filter((item): item is NonNullable<typeof item> => item !== null);
@@ -303,14 +269,15 @@ export class GoalEngine {
 
   // ==================== 完整目标树查询 ====================
 
-  /** 获取完整的目标四级树 */
-  static async getGoalTree(goalId: string): Promise<GoalTree | null> {
-    const goal = await goalDB.goals.get(goalId);
+  /** 获取完整的目标四级树（从主库读 Goal，从引擎读执行树） */
+  static async getGoalTree(goalId: number): Promise<{ goal: import("@/lib/types").Goal; milestones: MilestoneWithChildren[] } | null> {
+    const goal = await dbGetGoal(goalId);
     if (!goal) return null;
 
+    const engineKey = mainGoalKey(goalId);
     const milestones = await goalDB.milestones
       .where('goalId')
-      .equals(goalId)
+      .equals(engineKey)
       .sortBy('sortOrder');
 
     const milestonesWithChildren: MilestoneWithChildren[] = [];
@@ -355,9 +322,11 @@ export class GoalEngine {
     return rollupFromAtom(atomId);
   }
 
-  /** 全量重算目标 */
-  static async recalculateAllForGoal(goalId: string): Promise<{ goalProgress: number; milestonesUpdated: number; tasksUpdated: number }> {
-    return recalculateAllForGoal(goalId);
+  /** 全量重算目标（engine goalId），返回主库 goalId 供回写 */
+  static async recalculateAllForGoal(goalId: string): Promise<{ goalProgress: number; mainGoalId: number | null; milestonesUpdated: number; tasksUpdated: number }> {
+    const result = await recalcEngine(goalId);
+    const mainGoalId = parseMainGoalId(goalId);
+    return { ...result, mainGoalId };
   }
 
   // ==================== 依赖管理 ====================
@@ -387,135 +356,6 @@ export class GoalEngine {
   /** 生成模板拆解结果（不写入DB） */
   static generateTemplate(category: GoalCategory, params: TemplateParams): TemplateResult {
     return generateTemplate(category, params);
-  }
-
-  /**
-   * 从模板创建目标（完整流程：生成 + 写入DB）
-   *
-   * @param category - 模板类别
-   * @param params - 模板参数
-   * @returns 创建的 goalId
-   */
-  static async createFromTemplate(category: GoalCategory, params: TemplateParams): Promise<string> {
-    const result = generateTemplate(category, params);
-    const now = new Date().toISOString();
-    const goalId = crypto.randomUUID();
-
-    // 建立 milestone ID 映射（模板使用的是 title，真实用 UUID）
-    const msIdMap = new Map<number, string>();
-    const wtIdMap = new Map<number, string>();
-
-    await goalDB.transaction(
-      'rw',
-      [goalDB.goals, goalDB.milestones, goalDB.weeklyTasks, goalDB.dailyAtoms],
-      async () => {
-        // 1. 创建 Goal
-        await goalDB.goals.add({
-          ...result.goal,
-          id: goalId,
-          progress: 0,
-          status: 'active',
-          healthStatus: undefined,
-          createdAt: now,
-          updatedAt: now,
-        } as Goal);
-
-        // 2. 创建 Milestones
-        for (let i = 0; i < result.milestones.length; i++) {
-          const msId = crypto.randomUUID();
-          msIdMap.set(i, msId);
-          await goalDB.milestones.add({
-            ...result.milestones[i],
-            id: msId,
-            goalId,
-            progress: 0,
-            status: 'pending',
-            createdAt: now,
-            updatedAt: now,
-          } as Milestone);
-        }
-
-        // 3. 创建 WeeklyTasks（需要建立 milestone 索引映射）
-        // 我们按里程碑顺序分配。简单方案：将 weeklyTasks 按 milestone 分组
-        const taskGroups: Array<Array<typeof result.weeklyTasks[number]>> = [];
-        let taskIdx = 0;
-        // 根据每阶段的周数分配任务
-        const weeksPerMS = result.milestones.map((_, i) => {
-          const msDays = Math.ceil(
-            (new Date(result.milestones[i].deadline!).getTime() -
-              new Date(result.milestones[i].startDate!).getTime()) /
-              (1000 * 60 * 60 * 24)
-          );
-          return Math.max(1, Math.ceil(msDays / 7));
-        });
-
-        for (let i = 0; i < result.milestones.length; i++) {
-          const group: Array<typeof result.weeklyTasks[number]> = [];
-          for (let w = 0; w < weeksPerMS[i]; w++) {
-            if (taskIdx < result.weeklyTasks.length) {
-              group.push(result.weeklyTasks[taskIdx]);
-              taskIdx++;
-            }
-          }
-          taskGroups.push(group);
-        }
-
-        let globalTaskIdx = 0;
-        for (let i = 0; i < result.milestones.length; i++) {
-          const msId = msIdMap.get(i)!;
-          for (let w = 0; w < taskGroups[i].length; w++) {
-            const wtId = crypto.randomUUID();
-            wtIdMap.set(globalTaskIdx, wtId);
-            await goalDB.weeklyTasks.add({
-              ...taskGroups[i][w],
-              id: wtId,
-              milestoneId: msId,
-              progress: 0,
-              status: 'pending',
-              createdAt: now,
-              updatedAt: now,
-            } as WeeklyTask);
-            globalTaskIdx++;
-          }
-        }
-
-        // 4. 创建 DailyAtoms（同样按周任务分组）
-        const atomGroups: Array<Array<typeof result.dailyAtoms[number]>> = [];
-        // 按计划开始时间分组
-        const sortedTasks = [...result.weeklyTasks].sort(
-          (a, b) => a.plannedStart!.localeCompare(b.plannedStart!)
-        );
-        for (let t = 0; t < sortedTasks.length; t++) {
-          const taskStart = sortedTasks[t].plannedStart!;
-          const taskEnd = sortedTasks[t].plannedEnd!;
-          const group: Array<typeof result.dailyAtoms[number]> = [];
-          for (const atom of result.dailyAtoms) {
-            if (atom.scheduledDate! >= taskStart && atom.scheduledDate! <= taskEnd) {
-              group.push(atom);
-            }
-          }
-          atomGroups.push(group);
-        }
-
-        for (let t = 0; t < Math.min(atomGroups.length, wtIdMap.size); t++) {
-          const wtId = wtIdMap.get(t)!;
-          for (const atom of atomGroups[t]) {
-            const isOverdue = atom.scheduledDate! < new Date().toISOString().slice(0, 10);
-            await goalDB.dailyAtoms.add({
-              ...atom,
-              id: crypto.randomUUID(),
-              weeklyTaskId: wtId,
-              isCompleted: false,
-              status: isOverdue ? 'overdue' : 'pending',
-              createdAt: now,
-              updatedAt: now,
-            } as DailyAtom);
-          }
-        }
-      }
-    );
-
-    return goalId;
   }
 
   /** 应用难度自适应 */

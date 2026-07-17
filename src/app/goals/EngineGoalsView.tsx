@@ -6,9 +6,12 @@ import {
   TrendingUp, CheckCircle, Pause, Play,
   Plus, Edit3, Trash2, Layers,
 } from "lucide-react";
-import { goalService } from "@/lib/engine/GoalService";
-import type { EngineGoal, EngineGoalCategory, EngineGoalPriority, EngineGoalStatus } from "@/lib/engine/types";
-import { ENGINE_PRIORITY_LABELS } from "@/lib/engine/types";
+import { goalDB } from "@/services/goal-engine";
+import { mainGoalKey } from "@/lib/goalMapping";
+import { createGoal, updateGoal, deleteGoal, getAllGoals } from "@/lib/db";
+import { syncMainGoalTreeToEngine } from "@/lib/goalBridge";
+import type { Goal, GoalStatus, GoalType } from "@/lib/types";
+import { PRIORITY_CONFIG } from "@/lib/types";
 import GoalTree from "@/components/engine/GoalTree";
 import GoalEditModal from "@/components/engine/GoalEditModal";
 import { StatCard } from "@/components/ui/woven/Card";
@@ -21,7 +24,7 @@ import { showToast } from "@/components/ui/Toast";
 // ============================================================
 
 const categoryLabels: Record<string, string> = {
-  exam: "学习中", fitness: "运动中", habit: "习惯中", finance: "理财中", custom: "自定义",
+  task: "任务", fitness: "运动", finance: "财务", sleep: "睡眠", water: "饮水",
 };
 
 // ============================================================
@@ -31,10 +34,10 @@ const categoryLabels: Record<string, string> = {
 function GoalCard({
   goal, onClick, onEdit, onDelete, onTogglePause,
 }: {
-  goal: EngineGoal; onClick: () => void;
+  goal: Goal; onClick: () => void;
   onEdit: () => void; onDelete: () => void; onTogglePause: () => void;
 }) {
-  const priorityCfg = ENGINE_PRIORITY_LABELS[goal.priority] ?? ENGINE_PRIORITY_LABELS.p4;
+  const priorityCfg = PRIORITY_CONFIG.find(p => p.key === goal.priority) ?? PRIORITY_CONFIG[3];
 
   return (
     <motion.div
@@ -49,18 +52,18 @@ function GoalCard({
             className="font-bold truncate mb-1.5"
             style={{ fontFamily: "var(--font-display)", color: "var(--text-primary)" }}
           >
-            {goal.title}
+            {goal.name}
           </h3>
           <div className="flex items-center gap-1.5 flex-wrap mb-2">
             <span
               className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
               style={{ backgroundColor: "var(--brand-primary-light)", color: "var(--brand-primary)" }}
             >
-              {categoryLabels[goal.category] ?? goal.category}
+              {categoryLabels[goal.type] ?? goal.type}
             </span>
             <span
               className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
-              style={{ color: priorityCfg.color, backgroundColor: priorityCfg.color + "14" }}
+              style={{ color: priorityCfg.hex, backgroundColor: priorityCfg.hex + "14" }}
             >
               {priorityCfg.label}
             </span>
@@ -106,34 +109,61 @@ function GoalCard({
 // ============================================================
 
 export default function EngineGoalsView() {
-  const [goals, setGoals] = useState<EngineGoal[]>([]);
+  const [goals, setGoals] = useState<Goal[]>([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ total: 0, active: 0, completed: 0, paused: 0 });
-  const [filterCategory, setFilterCategory] = useState<EngineGoalCategory | "all">("all");
-  const [filterStatus, setFilterStatus] = useState<EngineGoalStatus | "all">("all");
+  const [filterCategory, setFilterCategory] = useState<GoalType | "all">("all");
+  const [filterStatus, setFilterStatus] = useState<GoalStatus | "all">("all");
   const [sortField, setSortField] = useState<"deadline" | "priority" | "progress" | "createdAt">("createdAt");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
-  const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
+  const [selectedGoalId, setSelectedGoalId] = useState<number | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
-  const [editingGoal, setEditingGoal] = useState<EngineGoal | null>(null);
+  const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const [saving, setSaving] = useState(false);
 
   const loadGoals = useCallback(async () => {
     setLoading(true);
     try {
-      const [list, s] = await Promise.all([
-        goalService.list({
-          filter: {
-            category: filterCategory !== "all" ? filterCategory : undefined,
-            status: filterStatus !== "all" ? filterStatus : undefined,
-          },
-          sort: { field: sortField, direction: sortDir },
-        }),
-        goalService.getStats(),
-      ]);
-      setGoals(list); setStats(s);
+      const allGoals = await getAllGoals();
+
+      // 本地统计
+      setStats({
+        total: allGoals.length,
+        active: allGoals.filter(g => g.status === "active").length,
+        completed: allGoals.filter(g => g.status === "completed").length,
+        paused: allGoals.filter(g => g.status === "paused").length,
+      });
+
+      // 筛选
+      let filtered = allGoals;
+      if (filterCategory !== "all") {
+        filtered = filtered.filter(g => g.type === filterCategory);
+      }
+      if (filterStatus !== "all") {
+        filtered = filtered.filter(g => g.status === filterStatus);
+      }
+
+      // 客户端排序
+      const dir = sortDir === "asc" ? 1 : -1;
+      const prioOrder: Record<string, number> = {
+        "urgent-important": 0,
+        "not-urgent-important": 1,
+        "urgent-not-important": 2,
+        "not-urgent-not-important": 3,
+      };
+      filtered.sort((a, b) => {
+        switch (sortField) {
+          case "deadline": return ((a.deadline ?? 0) - (b.deadline ?? 0)) * dir;
+          case "priority": return ((prioOrder[a.priority ?? ""] ?? 4) - (prioOrder[b.priority ?? ""] ?? 4)) * dir;
+          case "progress": return (a.progress - b.progress) * dir;
+          case "createdAt": return (a.createdAt - b.createdAt) * dir;
+          default: return 0;
+        }
+      });
+
+      setGoals(filtered);
     } catch (err) {
-      console.error("[EngineGoals] 加载失败:", err);
+      console.error("[GoalsView] 加载失败:", err);
     } finally { setLoading(false); }
   }, [filterCategory, filterStatus, sortField, sortDir]);
 
@@ -141,57 +171,80 @@ export default function EngineGoalsView() {
   useEffect(() => { loadGoals(); }, [loadGoals]);
 
   const handleNewGoal = () => { setEditingGoal(null); setModalOpen(true); };
-  const handleEditGoal = (goal: EngineGoal) => { setEditingGoal(goal); setModalOpen(true); };
+  const handleEditGoal = (goal: Goal) => { setEditingGoal(goal); setModalOpen(true); };
 
   const handleSaveGoal = useCallback(async (data: {
-    title: string; description: string; category: EngineGoalCategory; priority: EngineGoalPriority; deadline: string;
+    name: string; description: string; type: GoalType; priority: string; deadline: string;
   }) => {
     setSaving(true);
     try {
       if (editingGoal) {
-        await goalService.update(editingGoal.id, data);
+        await updateGoal(editingGoal.id!, {
+          name: data.name,
+          description: data.description,
+          type: data.type,
+          priority: data.priority as Goal["priority"],
+          ...(data.deadline ? { deadline: new Date(data.deadline + "T23:59:59").getTime() } : {}),
+        });
         showToast({ message: "目标已更新", type: "success" });
       } else {
-        const id = await goalService.create(data);
+        const id = await createGoal({
+          name: data.name,
+          description: data.description,
+          type: data.type,
+          priority: data.priority as Goal["priority"],
+          status: "active",
+          progress: 0,
+          progressLocked: false,
+          weight: 1,
+          ...(data.deadline ? { deadline: new Date(data.deadline + "T23:59:59").getTime() } : {}),
+        });
+        await syncMainGoalTreeToEngine(id);
         showToast({ message: "目标已创建", type: "success" });
-        const { milestoneService: ms } = await import("@/lib/engine/MilestoneService");
-        const { weeklyTaskService: wts } = await import("@/lib/engine/WeeklyTaskService");
-        const { dailyAtomService: das } = await import("@/lib/engine/DailyAtomService");
-        const msId = await ms.create({ goalId: id, title: "第一阶段",
-          startDate: new Date().toISOString().slice(0, 10), deadline: data.deadline, weight: 100, sortOrder: 0 });
-        const today = new Date().toISOString().slice(0, 10);
-        const wtId = await wts.create({ milestoneId: msId, title: "本周任务",
-          plannedStart: today, plannedEnd: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10),
-          quantityTarget: 1, quantityUnit: "次", weight: 100, sortOrder: 0 });
-        await das.create({ weeklyTaskId: wtId, title: data.title, scheduledDate: today, quantity: 1, estimatedDuration: 30, sortOrder: 0 });
       }
       setModalOpen(false); await loadGoals();
     } catch (err) {
-      console.error("[EngineGoals] 保存失败:", err);
+      console.error("[GoalsView] 保存失败:", err);
       showToast({ message: "保存失败", type: "error" });
     } finally { setSaving(false); }
   }, [editingGoal, loadGoals]);
 
   const handleDeleteGoal = useCallback(async () => {
-    if (!editingGoal) return;
+    if (!editingGoal || editingGoal.id == null) return;
     try {
-      await goalService.delete(editingGoal.id);
+      // 主库删除
+      await deleteGoal(editingGoal.id, false);
+
+      // 清理引擎侧数据
+      try {
+        const engineGoalId = mainGoalKey(editingGoal.id);
+        const milestones = await goalDB.milestones.where("goalId").equals(engineGoalId).toArray();
+        for (const ms of milestones) {
+          const wts = await goalDB.weeklyTasks.where("milestoneId").equals(ms.id).toArray();
+          for (const wt of wts) {
+            await goalDB.dailyAtoms.where("weeklyTaskId").equals(wt.id).delete();
+          }
+          await goalDB.weeklyTasks.where("milestoneId").equals(ms.id).delete();
+        }
+        await goalDB.milestones.where("goalId").equals(engineGoalId).delete();
+      } catch { /* 引擎侧清理失败不影响主流程 */ }
+
       showToast({ message: "目标已删除", type: "success" });
       setModalOpen(false); setSelectedGoalId(null); await loadGoals();
     } catch (err) {
-      console.error("[EngineGoals] 删除失败:", err);
+      console.error("[GoalsView] 删除失败:", err);
       showToast({ message: "删除失败", type: "error" });
     }
   }, [editingGoal, loadGoals]);
 
-  const handleTogglePauseGoal = useCallback(async (goal: EngineGoal) => {
+  const handleTogglePauseGoal = useCallback(async (goal: Goal) => {
     try {
-      const ns: EngineGoalStatus = goal.status === "paused" ? "active" : "paused";
-      await goalService.update(goal.id, { status: ns });
+      const ns: GoalStatus = goal.status === "paused" ? "active" : "paused";
+      await updateGoal(goal.id!, { status: ns });
       showToast({ message: ns === "paused" ? "已暂停" : "已恢复", type: "success" });
       await loadGoals();
     } catch (err) {
-      console.error("[EngineGoals] 操作失败:", err);
+      console.error("[GoalsView] 操作失败:", err);
       showToast({ message: "操作失败", type: "error" });
     }
   }, [loadGoals]);
@@ -211,16 +264,16 @@ export default function EngineGoalsView() {
 
       {/* 筛选 & 排序 */}
       <div className="flex items-center gap-2 flex-wrap overflow-x-auto pb-1 scrollbar-hide">
-        <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value as EngineGoalCategory | "all")}
+        <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value as GoalType | "all")}
           className={selectStyle} style={selectVars}>
           <option value="all">全部分类</option>
-          <option value="exam">学习中</option>
-          <option value="fitness">运动中</option>
-          <option value="habit">习惯中</option>
-          <option value="finance">理财中</option>
-          <option value="custom">自定义</option>
+          <option value="task">任务</option>
+          <option value="fitness">运动</option>
+          <option value="finance">财务</option>
+          <option value="sleep">睡眠</option>
+          <option value="water">饮水</option>
         </select>
-        <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value as EngineGoalStatus | "all")}
+        <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value as GoalStatus | "all")}
           className={selectStyle} style={selectVars}>
           <option value="all">全部状态</option>
           <option value="active">进行中</option>
@@ -263,14 +316,14 @@ export default function EngineGoalsView() {
         <div className="space-y-3">
           {goals.map((goal) => (
             <div key={goal.id}>
-              <GoalCard {...{ goal }} onClick={() => setSelectedGoalId(selectedGoalId === goal.id ? null : goal.id)}
+              <GoalCard {...{ goal }} onClick={() => setSelectedGoalId(selectedGoalId === goal.id! ? null : goal.id!)}
                 onEdit={() => handleEditGoal(goal)}
                 onDelete={() => { setEditingGoal(goal); setModalOpen(true); }}
                 onTogglePause={() => handleTogglePauseGoal(goal)} />
               <AnimatePresence>
-                {selectedGoalId === goal.id && (
+                {selectedGoalId === goal.id! && (
                   <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
-                    <div className="pt-2 pb-1"><GoalTree goalId={goal.id} /></div>
+                    <div className="pt-2 pb-1"><GoalTree goalId={goal.id!} /></div>
                   </motion.div>
                 )}
               </AnimatePresence>

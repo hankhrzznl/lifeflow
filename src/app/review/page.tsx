@@ -22,6 +22,7 @@ import { isAIEnabled, isOnline } from "@/lib/aiClient";
 import { analyzeReview, adoptImprovements } from "@/lib/aiReviewAnalyzer";
 import EngineReviewEntry from "@/components/engine/EngineReviewEntry";
 import PDCAReviewFlow from "@/components/engine/PDCAReviewFlow";
+import { MemoryReportSection } from "@/components/engine/MemoryReportSection";
 
 // ==================== 工具函数 ====================
 
@@ -659,9 +660,12 @@ export default function ReviewPage() {
               onExit={() => setPdcaWeek(null)}
             />
           ) : (
-            <EngineReviewEntry
-              onStartReview={(start, end) => setPdcaWeek({ start, end })}
-            />
+            <>
+              <EngineReviewEntry
+                onStartReview={(start, end) => setPdcaWeek({ start, end })}
+              />
+              <MemoryReportSection />
+            </>
           )
         ) : (<>
         {/* 周期切换 */}

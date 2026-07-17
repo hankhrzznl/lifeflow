@@ -121,7 +121,7 @@ export function DataExport() {
         </button>
       </div>
       <p className="text-xs" style={{ color: "var(--text-tertiary)" }}>
-        JSON 包含全部数据，CSV 仅包含打卡记录
+        JSON 包含本地全部数据（三个数据库的所有表及设置项），CSV 仅包含打卡记录
       </p>
     </div>
   );

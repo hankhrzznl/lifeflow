@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { memoryEngine, type QuarterReport } from "@/lib/engine/MemoryEngine";
 import MascotIllustration from "@/components/ui/MascotIllustration";
 import { TrendingUp, TrendingDown, Minus, Star, AlertCircle } from "lucide-react";
-import type { EngineDailyAtom, EngineGoal } from "@/lib/engine/types";
+import type { DailyAtom } from "@/types/goal";
+import type { Goal } from "@/lib/types";
 
 interface WeekSummary {
   weekStart: string; completionRate: number; totalAtoms: number; completedAtoms: number;
@@ -12,8 +13,8 @@ interface WeekSummary {
 
 export function MemoryReport({ quarterData, atoms, goals }: {
   quarterData: WeekSummary[];
-  atoms: EngineDailyAtom[];
-  goals: EngineGoal[];
+  atoms: DailyAtom[];
+  goals: Goal[];
 }) {
   const [report, setReport] = useState<QuarterReport | null>(null);
 

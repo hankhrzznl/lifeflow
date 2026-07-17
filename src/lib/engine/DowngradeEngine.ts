@@ -3,7 +3,7 @@
  * 当完成率持续低迷时，主动建议暂停部分目标，聚焦最重要的
  */
 
-import type { EngineGoal, EngineDailyAtom } from "./types";
+import type { Goal, DailyAtom } from "@/types/goal";
 
 export interface DowngradeSuggestion {
   shouldDowngrade: boolean;
@@ -15,8 +15,8 @@ export interface DowngradeSuggestion {
 
 export class DowngradeEngine {
   analyze(
-    goals: EngineGoal[],
-    _recentAtoms: EngineDailyAtom[],
+    goals: Goal[],
+    _recentAtoms: DailyAtom[],
     history: { weekStart: string; completionRate: number }[]
   ): DowngradeSuggestion {
     const activeGoals = goals.filter((g) => g.status === "active");
@@ -49,9 +49,9 @@ export class DowngradeEngine {
     return { shouldDowngrade: false, reason: "", keepGoals: [], pauseGoals: [], suggestedAction: "" };
   }
 
-  private buildSuggestion(activeGoals: EngineGoal[], reason: string): DowngradeSuggestion {
+  private buildSuggestion(activeGoals: Goal[], reason: string): DowngradeSuggestion {
     const sorted = [...activeGoals].sort((a, b) => {
-      const po: Record<string, number> = { high: 3, medium: 2, low: 1 };
+      const po: Record<string, number> = { p1: 4, p2: 3, p3: 2, p4: 1 };
       const pa = po[a.priority] || 1;
       const pb = po[b.priority] || 1;
       if (pa !== pb) return pb - pa;

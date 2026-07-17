@@ -58,6 +58,7 @@ export interface Goal {
 export interface Milestone {
   id: string;
   goalId: string;
+  mainPlanId?: number;        // 对应主库 Plan.id（引擎定位落地阶段引入）
   title: string;
   description?: string;
   startDate: string;          // ISO date
@@ -102,6 +103,7 @@ export interface WeeklyTask {
 export interface DailyAtom {
   id: string;
   weeklyTaskId: string;
+  mainTaskId?: number;        // 对应主库 Task.id（引擎定位落地阶段引入）
   title: string;
   scheduledDate: string;      // ISO date YYYY-MM-DD
   quantity: number;           // 计划量（默认 1）
@@ -109,6 +111,8 @@ export interface DailyAtom {
   estimatedDuration?: number; // 预估耗时（分钟）
   isCompleted: boolean;
   completedAt?: string;       // ISO datetime
+  score?: number;             // 习惯评分 1-10（打卡时填写）
+  note?: string;              // 打卡备注
   checkInId?: string;         // 关联的打卡记录 ID
   status: AtomStatus;
   sortOrder: number;

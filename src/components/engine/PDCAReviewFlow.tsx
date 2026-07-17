@@ -7,12 +7,10 @@ import {
   Download, Save, Plus, X, Sparkles, Target, Clock, TrendingUp,
   Calendar, ArrowRight,
 } from "lucide-react";
-import { reviewDataService } from "@/lib/engine/ReviewDataService";
-import { snapshotService } from "@/lib/engine/SnapshotService";
-import { goalService } from "@/lib/engine/GoalService";
-import { weeklyTaskService } from "@/lib/engine/WeeklyTaskService";
-import type { ReviewData } from "@/lib/engine/ReviewDataService";
-import type { EngineGoal, EngineGoalCategory } from "@/lib/engine/types";
+import { reviewDataService } from "@/services/goal-engine/ReviewDataService";
+import { GoalEngine } from "@/services/goal-engine";
+import type { ReviewData } from "@/services/goal-engine/ReviewDataService";
+import type { Goal } from "@/lib/types";
 
 // ============================================================
 // 类型
@@ -20,7 +18,7 @@ import type { EngineGoal, EngineGoalCategory } from "@/lib/engine/types";
 
 interface Highlight {
   text: string;
-  goalId?: string;
+  goalId?: number;
 }
 interface Problem {
   text: string;
@@ -113,7 +111,7 @@ export default function PDCAReviewFlow({
       };
 
       // 保存到 progressSnapshots
-      await snapshotService.createWeeklySnapshot();
+      await GoalEngine.createAllSnapshots();
       onComplete();
     } catch (err) {
       console.error("[PDCA] 保存失败:", err);
@@ -307,14 +305,14 @@ function Step2Highlights({
   highlights, setHighlights, goals, completedTitles, onPrev, onNext, canNext,
 }: {
   highlights: Highlight[]; setHighlights: (h: Highlight[]) => void;
-  goals: EngineGoal[]; completedTitles: string[]; onPrev: () => void; onNext: () => void; canNext: boolean;
+  goals: Goal[]; completedTitles: string[]; onPrev: () => void; onNext: () => void; canNext: boolean;
 }) {
   const update = (idx: number, text: string) => {
     const newH = [...highlights];
     newH[idx] = { ...newH[idx], text };
     setHighlights(newH);
   };
-  const setGoal = (idx: number, goalId: string) => {
+  const setGoal = (idx: number, goalId: number) => {
     const newH = [...highlights];
     newH[idx] = { ...newH[idx], goalId };
     setHighlights(newH);
@@ -346,12 +344,12 @@ function Step2Highlights({
           />
           <select
             value={h.goalId ?? ""}
-            onChange={(e) => setGoal(i, e.target.value)}
+            onChange={(e) => setGoal(i, Number(e.target.value) || 0)}
             className="w-28 px-2 py-2 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-xs text-gray-500 focus:outline-none"
           >
             <option value="">关联目标</option>
             {goals.map((g) => (
-              <option key={g.id} value={g.id}>{g.title.slice(0, 6)}</option>
+              <option key={g.id} value={g.id}>{g.name.slice(0, 6)}</option>
             ))}
           </select>
         </div>
@@ -663,6 +661,21 @@ function Step5Report({
 }
 
 // ============================================================
+// 辅助
+// ============================================================
+
+function getISOWeekInfo(dateStr: string): { weekNumber: number; year: number } {
+  const d = new Date(dateStr + "T00:00:00");
+  const dayNum = (d.getDay() + 6) % 7;
+  d.setDate(d.getDate() + 3 - dayNum);
+  const jan4 = new Date(d.getFullYear(), 0, 4);
+  const jan4Day = (jan4.getDay() + 6) % 7;
+  jan4.setDate(jan4.getDate() + 3 - jan4Day);
+  const weekNumber = 1 + Math.round((d.getTime() - jan4.getTime()) / 604800000);
+  return { weekNumber, year: d.getFullYear() };
+}
+
+// ============================================================
 // Step 6: 应用调整
 // ============================================================
 
@@ -678,9 +691,12 @@ function Step6Apply({
     for (const imp of tasksToApply) {
       try {
         // 为目标创建一个简单的习惯计划（后续可扩展）
-        await weeklyTaskService.create({
+        const wi = getISOWeekInfo(weekStart);
+        await GoalEngine.createWeeklyTask({
           milestoneId: "", // TODO: 需要找到对应里程碑
           title: imp.text,
+          weekNumber: wi.weekNumber,
+          year: wi.year,
           plannedStart: weekStart,
           plannedEnd: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10),
           quantityTarget: 7,

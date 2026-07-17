@@ -31,7 +31,7 @@ export function DowngradeCard({
           {expanded && (
             <div className="rounded-lg p-3 mb-3" style={{ backgroundColor: "var(--surface-fabric)" }}>
               <p className="text-xs mb-2" style={{ color: "var(--text-primary)" }}>{suggestion.suggestedAction}</p>
-              <p className="text-xs" style={{ color: "var(--text-secondary)" }}>被暂停的目标可以随时在设置中恢复，数据不会丢失。</p>
+              <p className="text-xs" style={{ color: "var(--text-secondary)" }}>被暂停的目标不会丢失：去「规划」页把状态筛选切到「已暂停」，在目标卡片的 ... 菜单里点「恢复」即可。</p>
             </div>
           )}
 

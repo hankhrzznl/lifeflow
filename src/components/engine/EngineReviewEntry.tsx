@@ -7,10 +7,9 @@ import {
   ChevronLeft, ChevronRight, Play, BarChart3,
   CheckCircle, Target, Layers,
 } from "lucide-react";
-import { dailyAtomService } from "@/lib/engine/DailyAtomService";
-import { goalService } from "@/lib/engine/GoalService";
-import { engineDB } from "@/lib/engine/db";
-import type { EngineProgressSnapshot } from "@/lib/engine/types";
+import { GoalEngine } from "@/services/goal-engine";
+import { goalDB } from "@/services/goal-engine/schema";
+import type { GoalProgressSnapshot } from "@/types/goal";
 
 // ============================================================
 // 工具函数
@@ -98,7 +97,7 @@ export default function EngineReviewEntry({
   const loadStatus = useCallback(async () => {
     setLoading(true);
     try {
-      const atoms = await dailyAtomService.listByDateRange(periodRange.start, periodRange.end);
+      const atoms = await GoalEngine.getAtomsByDateRange(periodRange.start, periodRange.end);
       const completed = atoms.filter((a) => a.isCompleted).length;
       const total = atoms.length;
 
@@ -277,10 +276,10 @@ function StatusCard({
 }
 
 function PastReviewList({ limit }: { limit: number }) {
-  const [reviews, setReviews] = useState<EngineProgressSnapshot[]>([]);
+  const [reviews, setReviews] = useState<GoalProgressSnapshot[]>([]);
 
   useEffect(() => {
-    engineDB.progressSnapshots
+    goalDB.progressSnapshots
       .orderBy("snapshotDate")
       .reverse()
       .limit(limit)

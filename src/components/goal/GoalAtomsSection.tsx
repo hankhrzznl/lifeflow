@@ -7,10 +7,11 @@ import {
   Sparkles, BookOpen, Dumbbell, Sprout, PiggyBank, Flag,
 } from "lucide-react";
 import { GoalEngine } from "@/services/goal-engine";
-import { createCheckInForAtom, removeCheckInForAtom } from "@/lib/goalBridge";
+import { createCheckInForAtom, removeCheckInForAtom, writeBackGoalProgress, createMainGoalFromTemplate } from "@/lib/goalBridge";
 import type {
-  Goal, Milestone, WeeklyTask, DailyAtom,
+  GoalCategory, Milestone, WeeklyTask, DailyAtom,
 } from "@/types/goal";
+import type { Goal } from "@/lib/types";
 
 // ============================================================
 // 工具函数
@@ -27,6 +28,19 @@ const CATEGORY_CONFIG: Record<string, { icon: typeof Target; color: string; bg: 
 
 function getCategoryConfig(category: string) {
   return CATEGORY_CONFIG[category] ?? CATEGORY_CONFIG.custom;
+}
+
+/** 主库 GoalType → 图标映射 */
+const TYPE_CONFIG: Record<string, { icon: typeof Target; color: string; bg: string; label: string }> = {
+  task:    { icon: Target,     color: "text-indigo-600",  bg: "bg-indigo-100 dark:bg-indigo-900/30",  label: "任务" },
+  fitness: { icon: Dumbbell,   color: "text-pink-600",    bg: "bg-pink-100 dark:bg-pink-900/30",      label: "运动" },
+  finance: { icon: PiggyBank,  color: "text-amber-600",   bg: "bg-amber-100 dark:bg-amber-900/30",     label: "财务" },
+  sleep:   { icon: Sparkles,   color: "text-purple-600",  bg: "bg-purple-100 dark:bg-purple-900/30",   label: "睡眠" },
+  water:   { icon: Sprout,     color: "text-blue-600",    bg: "bg-blue-100 dark:bg-blue-900/30",       label: "饮水" },
+};
+
+function getTypeConfig(type: string) {
+  return TYPE_CONFIG[type] ?? TYPE_CONFIG.task;
 }
 
 interface AtomWithContext {
@@ -209,7 +223,7 @@ function GoalCard({
   defaultExpanded: boolean;
 }) {
   const [expanded, setExpanded] = useState(defaultExpanded);
-  const config = getCategoryConfig(goal.category);
+  const config = getTypeConfig(goal.type);
   const CategoryIcon = config.icon;
 
   const completedCount = atoms.filter((a) => a.atom.isCompleted).length;
@@ -235,7 +249,7 @@ function GoalCard({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <h3 className="text-sm font-semibold text-gray-900 dark:text-white truncate">
-              {goal.title}
+              {goal.name}
             </h3>
             <span className={`text-xs px-1.5 py-0.5 rounded-md font-medium flex-shrink-0 ${config.bg} ${config.color}`}>
               {config.label}
@@ -310,7 +324,7 @@ export default function GoalAtomsSection() {
   // 快速创建目标状态
   const [showQuickCreate, setShowQuickCreate] = useState(false);
   const [newGoalTitle, setNewGoalTitle] = useState("");
-  const [newGoalCategory, setNewGoalCategory] = useState<Goal["category"]>("exam");
+  const [newGoalCategory, setNewGoalCategory] = useState<GoalCategory>("exam");
   const [newGoalDeadline, setNewGoalDeadline] = useState(
     (() => { const d = new Date(); d.setDate(d.getDate() + 30); return d.toISOString().slice(0,10); })()
   );
@@ -335,6 +349,10 @@ export default function GoalAtomsSection() {
   }, [loadData]);
 
   const handleAtomToggle = useCallback(async (atom: DailyAtom) => {
+    // 找到对应的上下文以获取主库 goalId
+    const contextItem = items.find((item) => item.atom.id === atom.id);
+    const mainGoalId = contextItem?.goal.id;
+
     setRefreshing(true);
     try {
       if (atom.isCompleted) {
@@ -345,11 +363,14 @@ export default function GoalAtomsSection() {
         await createCheckInForAtom(atom.id);
       }
       await loadData();
+      if (mainGoalId != null) {
+        await writeBackGoalProgress(mainGoalId);
+      }
     } catch (err) {
       console.error("[GoalAtoms] 操作失败:", err);
       setRefreshing(false);
     }
-  }, [loadData]);
+  }, [loadData, items]);
 
   const handleAtomEdit = useCallback(async (
     atomId: string,
@@ -363,7 +384,7 @@ export default function GoalAtomsSection() {
     if (!newGoalTitle.trim()) return;
     setCreating(true);
     try {
-      await GoalEngine.createFromTemplate(newGoalCategory, {
+      await createMainGoalFromTemplate(newGoalCategory, {
         goalTitle: newGoalTitle.trim(),
         deadline: newGoalDeadline,
         priority: "p2",
@@ -379,11 +400,11 @@ export default function GoalAtomsSection() {
   };
 
   // 按目标分组
-  const grouped = new Map<string, AtomWithContext[]>();
+  const grouped = new Map<number, AtomWithContext[]>();
   for (const item of items) {
-    const list = grouped.get(item.goal.id) ?? [];
+    const list = grouped.get(item.goal.id!) ?? [];
     list.push(item);
-    grouped.set(item.goal.id, list);
+    grouped.set(item.goal.id!, list);
   }
 
   // 获取每个目标的第一个 item（用于卡片头部）
@@ -450,7 +471,7 @@ export default function GoalAtomsSection() {
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1">模板类别</label>
                 <div className="grid grid-cols-2 gap-2">
-                  {(["exam", "fitness", "habit", "finance"] as Goal["category"][]).map((cat) => {
+                  {(["exam", "fitness", "habit", "finance"] as GoalCategory[]).map((cat) => {
                     const cfg = getCategoryConfig(cat);
                     const CatIcon = cfg.icon;
                     return (

@@ -26,8 +26,8 @@ export function HealthGanttChart({ goalId, className = "" }: HealthGanttChartPro
     let cancelled = false;
     const load = async () => {
       try {
-        const { engineDB } = await import("@/lib/engine/db");
-        const { evolutionService } = await import("@/lib/engine/EvolutionService");
+        const { goalDB } = await import("@/services/goal-engine/schema");
+        const { GoalEngine } = await import("@/services/goal-engine");
         const now = new Date();
         const points: Array<{ week: string; rate: number; status: string }> = [];
 
@@ -43,12 +43,12 @@ export function HealthGanttChart({ goalId, className = "" }: HealthGanttChartPro
           const end = sunday.toISOString().slice(0, 10);
 
           // 计算该周完成率
-          const milestones = await engineDB.milestones.where('goalId').equals(goalId).toArray();
+          const milestones = await goalDB.milestones.where('goalId').equals(goalId).toArray();
           let total = 0, completed = 0;
           for (const ms of milestones) {
-            const tasks = await engineDB.weeklyTasks.where('milestoneId').equals(ms.id).toArray();
+            const tasks = await goalDB.weeklyTasks.where('milestoneId').equals(ms.id).toArray();
             for (const task of tasks) {
-              const atoms = await engineDB.dailyAtoms
+              const atoms = await goalDB.dailyAtoms
                 .where('weeklyTaskId').equals(task.id)
                 .filter((a) => a.scheduledDate >= start && a.scheduledDate <= end)
                 .toArray();
@@ -58,7 +58,7 @@ export function HealthGanttChart({ goalId, className = "" }: HealthGanttChartPro
           }
 
           const rate = total > 0 ? Math.round((completed / total) * 100) : 0;
-          const overdue = await engineDB.dailyAtoms
+          const overdue = await goalDB.dailyAtoms
             .filter((a) => {
               return a.status === 'overdue' && !a.isCompleted &&
                 a.scheduledDate >= start && a.scheduledDate <= end;

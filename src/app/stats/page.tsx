@@ -9,10 +9,10 @@ import WaterStats from "./components/WaterStats";
 import FinanceStats from "./components/FinanceStats";
 import FitnessStats from "./components/FitnessStats";
 import SleepStats from "./components/SleepStats";
-import { goalService } from "@/lib/engine/GoalService";
+import { getAllGoals } from "@/lib/db";
 import KnittingProgress from "@/components/ui/KnittingProgress";
 import MascotIllustration from "@/components/ui/MascotIllustration";
-import type { EngineGoal } from "@/lib/engine/types";
+import type { Goal } from "@/lib/types";
 
 // 动态导入图表
 const DynamicBarChart = dynamic(
@@ -104,7 +104,7 @@ function getPeriodLabel(periodType: PeriodType, offset: number): string {
 export default function StatsPage() {
   const [periodType, setPeriodType] = useState<PeriodType>("week");
   const [periodOffset, setPeriodOffset] = useState(0);
-  const [goals, setGoals] = useState<EngineGoal[]>([]);
+  const [goals, setGoals] = useState<Goal[]>([]);
   const [goalFilterCategory, setGoalFilterCategory] = useState<string>("all");
   const [loading, setLoading] = useState(true);
 
@@ -112,29 +112,29 @@ export default function StatsPage() {
 
   useEffect(() => {
     const load = async () => {
-      const allGoals = await goalService.list();
+      const allGoals = await getAllGoals();
       setGoals(allGoals.filter((g) => g.status !== "archived"));
       setLoading(false);
     }; load();
   }, []);
 
   const filteredGoals = goalFilterCategory === "all"
-    ? goals : goals.filter((g) => g.category === goalFilterCategory);
+    ? goals : goals.filter((g) => g.type === goalFilterCategory);
 
   const goalChartData = (() => {
     const map = new Map<string, { name: string; progress: number; project: string }>();
     for (const g of filteredGoals) {
-      const key = g.category || "未分类";
+      const key = g.type || "未分类";
       const existing = map.get(key);
       if (!existing || g.progress > existing.progress) {
-        map.set(key, { name: g.title, progress: g.progress, project: key });
+        map.set(key, { name: g.name, progress: g.progress, project: key });
       }
     }
     return Array.from(map.entries()).map(([project, val]) => ({
       project,
       name: val.name,
       progress: val.progress,
-      count: filteredGoals.filter((g) => (g.category || "未分类") === project).length,
+      count: filteredGoals.filter((g) => (g.type || "未分类") === project).length,
     }));
   })();
 
@@ -225,7 +225,7 @@ export default function StatsPage() {
               <h3 className="text-sm font-semibold" style={{ color: "var(--text-secondary)" }}>各目标进度</h3>
               {filteredGoals.slice(0, 6).map((goal) => (
                 <div key={goal.id} className="flex items-center gap-3">
-                  <span className="text-xs truncate flex-1" style={{ color: "var(--text-primary)" }}>{goal.title}</span>
+                  <span className="text-xs truncate flex-1" style={{ color: "var(--text-primary)" }}>{goal.name}</span>
                   <span className="text-xs flex-shrink-0" style={{ color: "var(--text-secondary)" }}>{goal.progress}%</span>
                   <div className="w-24 flex-shrink-0">
                     <KnittingProgress progress={goal.progress} size="sm" showPercentage={false} />

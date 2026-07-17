@@ -22,7 +22,7 @@ export interface GuideContext {
   currentPage: string;
 }
 
-const STEPS: GuideStep[] = [
+export const STEPS: GuideStep[] = [
   {
     id: "welcome", mascotState: "celebrating", title: "欢迎来到LifeFlow",
     message: "嗨！我是小织，你的人生管理搭档。我会帮你把大目标拆解成每天能做的小事。",
@@ -41,7 +41,7 @@ const STEPS: GuideStep[] = [
   },
   {
     id: "create_first", mascotState: "waiting", title: "创建第一个目标",
-    message: "或者点击右下角的「+」按钮，选择一个模板，小织会帮你自动生成完整的计划。",
+    message: "点击底部「规划」进入规划页，再点「新建目标」，填个名字就能开始。小织会帮你把它拆成每天能做的小事。",
     actionType: "highlight_fab", canSkip: false,
     condition: (ctx) => !ctx.hasCreatedGoal,
   },

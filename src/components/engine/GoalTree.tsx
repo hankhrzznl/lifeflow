@@ -3,17 +3,16 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronRight, Pencil, Pause, Trash2, Check } from "lucide-react";
-import { goalService } from "@/lib/engine/GoalService";
-import { milestoneService } from "@/lib/engine/MilestoneService";
-import { weeklyTaskService } from "@/lib/engine/WeeklyTaskService";
-import { dailyAtomService } from "@/lib/engine/DailyAtomService";
+import { GoalEngine } from "@/services/goal-engine";
 import type {
-  EngineGoal,
-  EngineMilestone,
-  EngineWeeklyTask,
-  EngineDailyAtom,
-} from "@/lib/engine/types";
-import { ENGINE_PRIORITY_LABELS } from "@/lib/engine/types";
+  DailyAtom,
+  Milestone,
+  WeeklyTask,
+} from "@/types/goal";
+import type { Goal } from "@/lib/types";
+import { PRIORITY_CONFIG } from "@/lib/types";
+import { PRIORITY_LABELS } from "@/types/goal";
+import { mainGoalKey } from "@/lib/goalMapping";
 import KnittingProgress from "@/components/ui/KnittingProgress";
 import EmptyState from "@/components/ui/EmptyState";
 
@@ -22,21 +21,21 @@ import EmptyState from "@/components/ui/EmptyState";
 // ============================================================
 
 interface GoalTreeProps {
-  goalId: string;
+  goalId: number;
   expandedByDefault?: boolean;
   showProgress?: boolean;
   onAtomCheck?: (atomId: string, checked: boolean) => void;
-  onEditGoal?: (goalId: string) => void;
-  onPauseGoal?: (goalId: string) => void;
-  onDeleteGoal?: (goalId: string) => void;
+  onEditGoal?: (goalId: number) => void;
+  onPauseGoal?: (goalId: number) => void;
+  onDeleteGoal?: (goalId: number) => void;
   onDragEnd?: (result: { sourceId: string; targetId: string }) => void;
 }
 
-interface TreeMilestone extends EngineMilestone {
+interface TreeMilestone extends Milestone {
   weeklyTasks: TreeWeeklyTask[];
 }
-interface TreeWeeklyTask extends EngineWeeklyTask {
-  dailyAtoms: EngineDailyAtom[];
+interface TreeWeeklyTask extends WeeklyTask {
+  dailyAtoms: DailyAtom[];
 }
 
 // ============================================================
@@ -56,7 +55,7 @@ const categoryColors: Record<string, { bg: string; text: string }> = {
 };
 
 function getPriorityConfig(priority: string) {
-  return ENGINE_PRIORITY_LABELS[priority as keyof typeof ENGINE_PRIORITY_LABELS] ?? ENGINE_PRIORITY_LABELS.p4;
+  return PRIORITY_LABELS[priority as keyof typeof PRIORITY_LABELS] ?? PRIORITY_LABELS.p4;
 }
 
 // ============================================================
@@ -66,7 +65,7 @@ function getPriorityConfig(priority: string) {
 function DailyAtomNode({
   atom, isExpanded, onCheck,
 }: {
-  atom: EngineDailyAtom;
+  atom: DailyAtom;
   isExpanded: boolean;
   onCheck?: (atomId: string, checked: boolean) => void;
 }) {
@@ -291,19 +290,20 @@ function MilestoneNode({
 function GoalNode({
   goal, milestones, onAtomCheck, onEditGoal, onPauseGoal, onDeleteGoal,
 }: {
-  goal: EngineGoal;
+  goal: Goal;
   milestones: TreeMilestone[];
   onAtomCheck?: (atomId: string, checked: boolean) => void;
-  onEditGoal?: (goalId: string) => void;
-  onPauseGoal?: (goalId: string) => void;
-  onDeleteGoal?: (goalId: string) => void;
+  onEditGoal?: (goalId: number) => void;
+  onPauseGoal?: (goalId: number) => void;
+  onDeleteGoal?: (goalId: number) => void;
 }) {
   const [expanded, setExpanded] = useState(true);
-  const priorityCfg = getPriorityConfig(goal.priority);
+  const priorityCfg = PRIORITY_CONFIG.find(p => p.key === goal.priority) ?? PRIORITY_CONFIG[3];
   const totalAtoms = milestones.reduce(
     (sum, ms) => sum + ms.weeklyTasks.reduce((s, wt) => s + wt.dailyAtoms.length, 0), 0
   );
-  const cat = categoryColors[goal.category] ?? categoryColors.custom;
+  const typeKey = goal.type as string;
+  const cat = categoryColors[typeKey] ?? categoryColors.custom;
 
   return (
     <div
@@ -331,14 +331,14 @@ function GoalNode({
               className="text-lg font-bold truncate"
               style={{ fontFamily: "var(--font-display)", color: "var(--text-primary)" }}
             >
-              {goal.title}
+              {goal.name}
             </h3>
             <div className="flex items-center gap-2 mt-1 flex-wrap">
               <span
                 className="text-[10px] px-2 py-0.5 rounded-full font-medium"
                 style={{ backgroundColor: cat.bg, color: cat.text }}
               >
-                {categoryLabels[goal.category] ?? goal.category}
+                {categoryLabels[typeKey] ?? typeKey}
               </span>
               <span
                 className="text-[10px] px-2 py-0.5 rounded-full font-medium"
@@ -351,7 +351,7 @@ function GoalNode({
               </span>
               {goal.deadline && (
                 <span className="text-[10px]" style={{ color: "var(--text-tertiary)" }}>
-                  ⏱ {goal.deadline}
+                  ⏱ {new Date(goal.deadline).toISOString().slice(0, 10)}
                 </span>
               )}
             </div>
@@ -369,21 +369,21 @@ function GoalNode({
         {/* 操作栏 */}
         <div className="flex items-center gap-1 border-t border-dashed border-knit-grid pt-2">
           <button
-            onClick={(e) => { e.stopPropagation(); onEditGoal?.(goal.id); }}
+            onClick={(e) => { e.stopPropagation(); onEditGoal?.(goal.id!); }}
             className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors hover:bg-surface-fabric-hover"
             style={{ color: "var(--text-tertiary)" }}
           >
             <Pencil className="w-3.5 h-3.5" />
           </button>
           <button
-            onClick={(e) => { e.stopPropagation(); onPauseGoal?.(goal.id); }}
+            onClick={(e) => { e.stopPropagation(); onPauseGoal?.(goal.id!); }}
             className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors hover:bg-surface-fabric-hover"
             style={{ color: "var(--text-tertiary)" }}
           >
             <Pause className="w-3.5 h-3.5" />
           </button>
           <button
-            onClick={(e) => { e.stopPropagation(); onDeleteGoal?.(goal.id); }}
+            onClick={(e) => { e.stopPropagation(); onDeleteGoal?.(goal.id!); }}
             className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors hover:bg-warning-light ml-auto"
             style={{ color: "var(--text-tertiary)" }}
           >
@@ -439,25 +439,27 @@ export default function GoalTree({
   onDeleteGoal,
   onDragEnd,
 }: GoalTreeProps) {
-  const [goal, setGoal] = useState<EngineGoal | null>(null);
+  const [goal, setGoal] = useState<Goal | null>(null);
   const [milestones, setMilestones] = useState<TreeMilestone[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const engineGoalId = useMemo(() => mainGoalKey(goalId), [goalId]);
+
   const loadTree = useCallback(async () => {
     setLoading(true);
     try {
-      const goalData = await goalService.getById(goalId);
+      const goalData = await GoalEngine.getGoal(goalId);
       if (!goalData) { setError("目标不存在"); return; }
       setGoal(goalData);
 
-      const msList = await milestoneService.listByGoal(goalId);
+      const msList = await GoalEngine.getMilestones(engineGoalId);
       const tree: TreeMilestone[] = [];
       for (const ms of msList) {
-        const tasks = await weeklyTaskService.listByMilestone(ms.id);
+        const tasks = await GoalEngine.getWeeklyTasks(ms.id);
         const tasksWithAtoms: TreeWeeklyTask[] = [];
         for (const task of tasks) {
-          const atoms = await dailyAtomService.listByWeeklyTask(task.id);
+          const atoms = await GoalEngine.getDailyAtoms(task.id);
           tasksWithAtoms.push({ ...task, dailyAtoms: atoms });
         }
         tree.push({ ...ms, weeklyTasks: tasksWithAtoms });
@@ -469,7 +471,7 @@ export default function GoalTree({
     } finally {
       setLoading(false);
     }
-  }, [goalId]);
+  }, [engineGoalId]);
 
   useEffect(() => { loadTree(); }, [loadTree]);
 

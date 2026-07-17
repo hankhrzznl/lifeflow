@@ -23,7 +23,7 @@ export function GoalTrendChart({ goalId, className = "" }: GoalTrendChartProps) 
     let cancelled = false;
     const load = async () => {
       try {
-        const { engineDB } = await import("@/lib/engine/db");
+        const { goalDB } = await import("@/services/goal-engine/schema");
         const now = new Date();
         const points: Array<{ week: string; rate: number }> = [];
 
@@ -39,7 +39,7 @@ export function GoalTrendChart({ goalId, className = "" }: GoalTrendChartProps) 
           const end = sunday.toISOString().slice(0, 10);
 
           // 从 progressSnapshots 获取该周快照
-          const snapshots = await engineDB.progressSnapshots
+          const snapshots = await goalDB.progressSnapshots
             .where('goalId').equals(goalId)
             .filter((s) => s.snapshotDate >= start && s.snapshotDate <= end)
             .toArray();

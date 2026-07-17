@@ -4,7 +4,8 @@
 // ============================================================
 
 import { db } from '@/lib/db';
-import { engineDB } from '@/lib/engine/db';
+import { getAllGoals } from '@/lib/db';
+import { goalDB } from '@/services/goal-engine/schema';
 import Dexie from 'dexie';
 
 // ============================================================
@@ -26,26 +27,29 @@ export class DataExportService {
    * 导出所有数据为 JSON
    */
   async exportAllJSON(): Promise<string> {
+    const dexieMap: Record<string, Dexie> = {
+      LifeFlowDB: db,
+      LifeFlowGoalEngine: goalDB,
+    };
+
+    const databases: Record<string, Record<string, unknown[]>> = {};
+    for (const [dbName, dexie] of Object.entries(dexieMap)) {
+      const tables: Record<string, unknown[]> = {};
+      for (const table of dexie.tables) {
+        tables[table.name] = await table.toArray();
+      }
+      databases[dbName] = tables;
+    }
+
+    // 旧格式兼容：将主库表也放在 mainDB/engineDB 下供旧版导入器读取
+    const mainDB = databases.LifeFlowDB ?? {};
+
     const data = {
       exportDate: new Date().toISOString(),
-      version: '2.2',
-      mainDB: {
-        goals: await db.goals.toArray(),
-        plans: await db.plans?.toArray() || [],
-        tasks: await db.tasks.toArray(),
-        finRecords: await db.finRecords?.toArray() || [],
-        finAccounts: await db.finAccounts?.toArray() || [],
-        sleepRecords: await db.sleepRecords?.toArray() || [],
-        dailyWaterRecords: await db.dailyWaterRecords?.toArray() || [],
-        muscleRecords: await db.muscleRecords?.toArray() || [],
-      },
-      engineDB: {
-        goals: await engineDB.goals.toArray(),
-        milestones: await engineDB.milestones.toArray(),
-        weeklyTasks: await engineDB.weeklyTasks.toArray(),
-        dailyAtoms: await engineDB.dailyAtoms.toArray(),
-        progressSnapshots: await engineDB.progressSnapshots.toArray(),
-      },
+      version: '3.0',
+      databases,
+      mainDB,       // 向后兼容旧导入器
+      engineDB: databases.LifeFlowGoalEngine ?? {}, // 向后兼容旧导入器
       settings: this.exportSettings(),
     };
 
@@ -56,11 +60,16 @@ export class DataExportService {
    * 导出目标列表为 CSV
    */
   async exportGoalsCSV(): Promise<string> {
-    const goals = await engineDB.goals.toArray();
+    const goals = await getAllGoals();
+    const typeLabel: Record<string, string> = { task: '任务', fitness: '运动', finance: '理财', sleep: '睡眠', water: '饮水' };
+    const priorityLabel: Record<string, string> = { 'urgent-important': '高', 'not-urgent-important': '中', 'urgent-not-important': '低', 'not-urgent-not-important': '极低' };
     const headers = ['ID', '标题', '分类', '优先级', '进度', '状态', '截止日期', '创建时间'];
     const rows = goals.map((g) => [
-      g.id, g.title, g.category, g.priority, String(g.progress),
-      g.status, g.deadline || '', g.createdAt.slice(0, 10),
+      String(g.id ?? ''), g.name, typeLabel[g.type] ?? g.type,
+      g.priority ? (priorityLabel[g.priority] ?? g.priority) : '',
+      String(g.progress), g.status,
+      g.deadline ? new Date(g.deadline).toISOString().slice(0, 10) : '',
+      g.createdAt ? new Date(g.createdAt).toISOString().slice(0, 10) : '',
     ]);
     return [headers, ...rows].map((row) => row.map(this.escapeCSV).join(',')).join('\n');
   }
@@ -69,7 +78,7 @@ export class DataExportService {
    * 导出打卡记录为 CSV
    */
   async exportCheckinsCSV(): Promise<string> {
-    const atoms = await engineDB.dailyAtoms.toArray();
+    const atoms = await goalDB.dailyAtoms.toArray();
     const headers = ['ID', '标题', '日期', '完成', '实际量', '评分', '完成时间'];
     const rows = atoms.map((a) => [
       a.id, a.title, a.scheduledDate,
@@ -106,63 +115,62 @@ export class DataExportService {
    */
   async importFromJSON(jsonString: string): Promise<ImportResult> {
     let data: Record<string, unknown>;
-    try {
-      data = JSON.parse(jsonString);
-    } catch {
+    try { data = JSON.parse(jsonString); } catch {
       throw new Error('无效的 JSON 文件');
     }
-
-    if (!data.version) {
-      throw new Error('无效的备份文件：缺少版本信息');
-    }
+    if (!data.version) throw new Error('无效的备份文件：缺少版本信息');
 
     const result: ImportResult = { imported: 0, skipped: 0, errors: [] };
 
-    // 导入主数据库
-    const mainDB = (data.mainDB as Record<string, unknown[]>) || {};
-    const mainTables: Array<{ name: string; table: Dexie.Table }> = [
-      { name: 'goals', table: db.goals },
-      { name: 'plans', table: db.plans },
-      { name: 'tasks', table: db.tasks },
-      { name: 'finRecords', table: db.finRecords },
-      { name: 'finAccounts', table: db.finAccounts },
-      { name: 'sleepRecords', table: db.sleepRecords },
-      { name: 'dailyWaterRecords', table: db.dailyWaterRecords },
-      { name: 'muscleRecords', table: db.muscleRecords },
-    ];
+    const dexieMap: Record<string, Dexie> = {
+      LifeFlowDB: db, LifeFlowGoalEngine: goalDB,
+    };
 
-    for (const { name, table } of mainTables) {
-      const records = mainDB[name];
-      if (!Array.isArray(records)) continue;
-      for (const record of records) {
-        try {
-          await table.put(record);
-          result.imported++;
-        } catch (e) {
-          result.errors.push(`主库.${name}: ${String(e)}`);
+    // 新格式：动态遍历 databases
+    if (data.databases) {
+      const databases = data.databases as Record<string, Record<string, unknown[]>>;
+      for (const [dbName, tables] of Object.entries(databases)) {
+        const dexie = dexieMap[dbName];
+        if (!dexie) { result.errors.push(`未知数据库: ${dbName}, 已跳过`); continue; }
+        for (const [tableName, records] of Object.entries(tables)) {
+          if (!Array.isArray(records)) continue;
+          // 确认表存在
+          const tableExists = dexie.tables.some((t) => t.name === tableName);
+          if (!tableExists) { result.errors.push(`${dbName}.${tableName}: 表不存在, 已跳过`); continue; }
+          const table = dexie.table(tableName);
+          for (const record of records) {
+            try { await table.put(record); result.imported++; } catch (e) {
+              result.errors.push(`${dbName}.${tableName}: ${String(e)}`);
+            }
+          }
         }
       }
-    }
+    } else {
+      // 向后兼容旧格式 (v2.2)
+      const mainDB = (data.mainDB as Record<string, unknown[]>) || {};
+      const mainTables = [
+        'goals','plans','tasks','finRecords','finAccounts',
+        'sleepRecords','dailyWaterRecords','muscleRecords',
+      ];
+      for (const name of mainTables) {
+        const records = mainDB[name];
+        if (!Array.isArray(records)) continue;
+        for (const record of records) {
+          try { await ((db as unknown) as Record<string, Dexie.Table>)[name]?.put(record); result.imported++; } catch (e) {
+            result.errors.push(`主库.${name}: ${String(e)}`);
+          }
+        }
+      }
 
-    // 导入引擎数据库
-    const engineData = (data.engineDB as Record<string, unknown[]>) || {};
-    const engineTables: Array<{ name: string; table: Dexie.Table }> = [
-      { name: 'goals', table: engineDB.goals },
-      { name: 'milestones', table: engineDB.milestones },
-      { name: 'weeklyTasks', table: engineDB.weeklyTasks },
-      { name: 'dailyAtoms', table: engineDB.dailyAtoms },
-      { name: 'progressSnapshots', table: engineDB.progressSnapshots },
-    ];
-
-    for (const { name, table } of engineTables) {
-      const records = engineData[name];
-      if (!Array.isArray(records)) continue;
-      for (const record of records) {
-        try {
-          await table.put(record);
-          result.imported++;
-        } catch (e) {
-          result.errors.push(`引擎.${name}: ${String(e)}`);
+      const engineData = (data.engineDB as Record<string, unknown[]>) || {};
+      const engineTables = ['goals','milestones','weeklyTasks','dailyAtoms','progressSnapshots'];
+      for (const name of engineTables) {
+        const records = engineData[name];
+        if (!Array.isArray(records)) continue;
+        for (const record of records) {
+          try { await ((goalDB as unknown) as Record<string, Dexie.Table>)[name]?.put(record); result.imported++; } catch (e) {
+            result.errors.push(`引擎.${name}: ${String(e)}`);
+          }
         }
       }
     }

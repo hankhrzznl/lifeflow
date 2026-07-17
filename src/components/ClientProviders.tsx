@@ -8,68 +8,31 @@ function GoalEngineInitializer({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
     GoalEngine.initialize().then((result) => {
+      if (cancelled) return;
       if (!result.success) {
         console.warn("[GoalEngine] 初始化失败:", result.error);
       }
       setReady(true);
+      // 延迟执行引擎退役迁移，不阻塞首屏
+      setTimeout(async () => {
+        if (cancelled) return;
+        try {
+          const { retireEngineGoals } = await import("@/lib/engineGoalsRetirement");
+          const stats = await retireEngineGoals();
+          if (stats && !stats.skipped) {
+            console.log("[Retirement] 引擎退役迁移完成:", stats);
+          }
+        } catch (e) {
+          console.warn("[Retirement] 退役迁移失败(已跳过):", e);
+        }
+      }, 500);
     });
+    return () => { cancelled = true; };
   }, []);
 
   if (!ready) return null;
-  return <>{children}</>;
-}
-
-// ============================================================
-// 引擎数据迁移（非阻塞，失败不阻塞应用启动）
-// ============================================================
-
-function EngineMigrationRunner({ children }: { children: React.ReactNode }) {
-  useEffect(() => {
-    let cancelled = false;
-
-    const run = async () => {
-      try {
-        // 动态导入，避免阻塞初始渲染
-        const { needMigration, runMigration } = await import(
-          "@/lib/engine/migrate"
-        );
-
-        const check = await needMigration();
-        if (!check.needed) {
-          console.log(`[Engine Migration] 跳过: ${check.reason}`);
-          return;
-        }
-
-        console.log(
-          `[Engine Migration] 检测到待迁移数据: ${check.mainGoalsCount} goals, ${check.mainPlansCount} plans, ${check.mainTasksCount} tasks`
-        );
-
-        if (cancelled) return;
-
-        const result = await runMigration();
-        if (result.success) {
-          const s = result.stats!;
-          console.log(
-            `[Engine Migration] 迁移成功: ${s.goals} goals → ${s.milestones} milestones → ${s.weeklyTasks} weeklyTasks → ${s.dailyAtoms} atoms`
-          );
-        } else {
-          console.warn("[Engine Migration] 迁移失败:", result.error);
-        }
-      } catch (err) {
-        console.warn("[Engine Migration] 迁移异常（已跳过）:", err);
-      }
-    };
-
-    // 延迟 500ms 执行，让 UI 先渲染
-    const timer = setTimeout(run, 500);
-
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
-  }, []);
-
   return <>{children}</>;
 }
 
@@ -80,9 +43,7 @@ export default function ClientProviders({
 }) {
   return (
     <AgentProvider>
-      <GoalEngineInitializer>
-        <EngineMigrationRunner>{children}</EngineMigrationRunner>
-      </GoalEngineInitializer>
+      <GoalEngineInitializer>{children}</GoalEngineInitializer>
     </AgentProvider>
   );
 }

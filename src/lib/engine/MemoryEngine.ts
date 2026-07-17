@@ -4,7 +4,8 @@
  * 统计学方法：相关性分析、周期性检测、趋势计算
  */
 
-import type { EngineDailyAtom, EngineGoal } from "./types";
+import type { DailyAtom } from "@/types/goal";
+import type { Goal } from "@/lib/types";
 
 export interface WeeklyPattern {
   type: "low_day" | "high_day" | "low_week" | "momentum";
@@ -38,11 +39,11 @@ interface WeekSummary {
 }
 
 export class MemoryEngine {
-  findPatterns(atoms: EngineDailyAtom[]): WeeklyPattern[] {
+  findPatterns(atoms: DailyAtom[]): WeeklyPattern[] {
     const patterns: WeeklyPattern[] = [];
     if (atoms.length < 21) return patterns;
 
-    const byDay: EngineDailyAtom[][] = Array(7)
+    const byDay: DailyAtom[][] = Array(7)
       .fill(null)
       .map(() => []);
     atoms.forEach((a) => {
@@ -55,9 +56,15 @@ export class MemoryEngine {
       const total = list.length;
       return total > 0 ? (list.filter((a) => a.isCompleted).length / total) * 100 : 0;
     });
-    const avgRate = rates.reduce((a, b) => a + b, 0) / 7;
+    // 只对数据的日子取平均，避免无任务日计0拉偏均值
+    const validRates = rates.filter((_, day) => byDay[day].length > 0);
+    const avgRate = validRates.length > 0
+      ? validRates.reduce((a, b) => a + b, 0) / validRates.length
+      : 0;
 
-    rates.forEach((rate, day) => {
+    // avgRate为0时全零数据不产出日模式
+    if (avgRate > 0) {
+      rates.forEach((rate, day) => {
       if (rate < avgRate * 0.75 && byDay[day].length >= 3) {
         patterns.push({
           type: "low_day", day,
@@ -73,6 +80,7 @@ export class MemoryEngine {
         });
       }
     });
+    }
 
     const momentum = this.calcMomentum(atoms);
     if (momentum.streakBoost > 20) {
@@ -106,7 +114,7 @@ export class MemoryEngine {
       }));
   }
 
-  generateQuarterReport(quarterData: WeekSummary[], atoms: EngineDailyAtom[], goals: EngineGoal[]): QuarterReport {
+  generateQuarterReport(quarterData: WeekSummary[], atoms: DailyAtom[], goals: Goal[]): QuarterReport {
     const completedGoals = goals.filter((g) => g.status === "completed").length;
     const avgRate =
       quarterData.length > 0
@@ -127,7 +135,7 @@ export class MemoryEngine {
         ? "整体呈上升趋势，你在变得越来越好。"
         : trend === "down"
           ? "近期有所回落，但每个低谷都是调整的契机。"
-          : "保持稳定的节奏，Consistency is key。",
+          : "保持稳定的节奏，坚持就是关键。",
       patterns.length > 0 ? `小织发现了${patterns.length}个有趣的模式：${patterns[0].description}` : "",
     ];
 
@@ -143,7 +151,7 @@ export class MemoryEngine {
     };
   }
 
-  private calcMomentum(atoms: EngineDailyAtom[]): { streakBoost: number } {
+  private calcMomentum(atoms: DailyAtom[]): { streakBoost: number } {
     const byDate = new Map<string, boolean>();
     atoms.forEach((a) => {
       byDate.set(a.scheduledDate, byDate.get(a.scheduledDate) || a.isCompleted);

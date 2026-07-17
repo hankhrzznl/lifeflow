@@ -13,6 +13,10 @@ import { PRIORITY_CONFIG } from "@/lib/types";
 import {
   createProjectV2, deleteProjectV2, getAllGoals, getAllProjectsV2, updateProjectV2,
 } from "@/lib/db";
+import { GuideModal } from "@/components/GuideModal";
+import type { GuideContext } from "@/lib/engine/GuideEngine";
+import { useAgent } from "@/components/agent/AgentProvider";
+import { GoalEngine } from "@/services/goal-engine";
 import { showToast } from "@/components/ui/Toast";
 import ActionSheet from "@/components/ui/ActionSheet";
 import Dialog from "@/components/ui/Dialog";
@@ -252,6 +256,11 @@ export default function HomePage() {
   const [goals, setGoals] = useState<Goal[]>([]);
   const [loading, setLoading] = useState(true);
   const [inboxExpanded, setInboxExpanded] = useState(false);
+  const { messages } = useAgent();
+
+  // 引导
+  const [guideCtx, setGuideCtx] = useState<GuideContext | null>(null);
+  const [guideVisible, setGuideVisible] = useState(false);
 
   // 目标筛选
   const [projectFilter, setProjectFilter] = useState<ProjectFilter>("all");
@@ -276,6 +285,34 @@ export default function HomePage() {
 
   // eslint-disable-next-line react-hooks/set-state-in-effect -- 异步数据加载:从 Dexie 拉取首页数据是外部系统同步,effect 中触发属必要
   useEffect(() => { loadData(); }, [loadData]);
+
+  // 引导上下文构建
+  useEffect(() => {
+    if (loading) return;
+    const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+    (async () => {
+      const hasCreatedGoal = goals.length > 0;
+      let hasCheckedIn = false;
+      try {
+        const start = fmt(new Date(Date.now() - 60 * 86400000));
+        const atoms = await GoalEngine.getAtomsByDateRange(start, fmt(new Date()));
+        hasCheckedIn = atoms.some((a) => a.isCompleted);
+      } catch { /* engineDB may not exist */ }
+      const assistantDialogUsed = messages.length > 1;
+      const ctx: GuideContext = { hasCreatedGoal, hasCheckedIn, assistantDialogUsed, currentPage: "/" };
+
+      const stored = localStorage.getItem("lifeflow_guide_progress");
+      if (stored) {
+        try {
+          const arr = JSON.parse(stored);
+          if (Array.isArray(arr) && arr.includes("complete")) return;
+          setGuideCtx(ctx); setGuideVisible(true);
+        } catch { return; }
+      } else {
+        if (goals.length === 0) { setGuideCtx(ctx); setGuideVisible(true); }
+      }
+    })();
+  }, [loading, goals, messages]);
 
   const projectMap = useMemo(() => {
     const map = new Map<number, ProjectV2>();
@@ -547,6 +584,10 @@ export default function HomePage() {
           onClose={() => setFormOpen(false)}
           onSaved={loadData}
         />
+
+        {guideVisible && guideCtx && (
+          <GuideModal context={guideCtx} onComplete={() => setGuideVisible(false)} />
+        )}
       </div>
     </div>
   );

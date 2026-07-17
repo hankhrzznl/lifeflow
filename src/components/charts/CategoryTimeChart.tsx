@@ -5,6 +5,8 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Legend,
 } from "recharts";
+import { getAllGoals } from "@/lib/db";
+import { parseMainGoalId } from "@/lib/goalMapping";
 
 // ============================================================
 // 按类别时间投入堆叠面积图
@@ -34,7 +36,15 @@ export function CategoryTimeChart({ className = "" }: CategoryTimeChartProps) {
     let cancelled = false;
     const load = async () => {
       try {
-        const { engineDB } = await import("@/lib/engine/db");
+        const { goalDB } = await import("@/services/goal-engine/schema");
+        const mainGoals = await getAllGoals();
+
+        // 构建 mainGoalId → type 映射
+        const goalTypeMap = new Map<number, string>();
+        for (const mg of mainGoals) {
+          if (mg.id !== undefined) goalTypeMap.set(mg.id, mg.type);
+        }
+
         const now = new Date();
         const points: Array<Record<string, number | string>> = [];
 
@@ -43,27 +53,33 @@ export function CategoryTimeChart({ className = "" }: CategoryTimeChartProps) {
           d.setDate(d.getDate() - i);
           const dateStr = d.toISOString().slice(0, 10);
 
-          const allGoals = await engineDB.goals.where('status').equals('active').toArray();
           const dayData: Record<string, number | string> = {
             date: `${d.getMonth() + 1}/${d.getDate()}`,
             exam: 0, fitness: 0, habit: 0, finance: 0, custom: 0,
           };
 
-          for (const goal of allGoals) {
-            const milestones = await engineDB.milestones.where('goalId').equals(goal.id).toArray();
+          const milestones = await goalDB.milestones.toArray();
+          for (const ms of milestones) {
+            const mainGoalId = parseMainGoalId(ms.goalId);
+            if (mainGoalId === null) continue;
+            const mainType = goalTypeMap.get(mainGoalId);
+            if (!mainType) continue;
+            // 映射主库 type 到引擎 category
+            const cat = mainType === 'fitness' ? 'fitness'
+              : mainType === 'finance' ? 'finance'
+              : 'custom';
+            if (dayData[cat] === undefined) continue;
+
+            const tasks = await goalDB.weeklyTasks.where('milestoneId').equals(ms.id).toArray();
             let mins = 0;
-            for (const ms of milestones) {
-              const tasks = await engineDB.weeklyTasks.where('milestoneId').equals(ms.id).toArray();
-              for (const task of tasks) {
-                const atoms = await engineDB.dailyAtoms
-                  .where('weeklyTaskId').equals(task.id)
-                  .filter((a) => a.scheduledDate === dateStr && a.isCompleted)
-                  .toArray();
-                mins += atoms.reduce((s, a) => s + (a.estimatedDuration ?? 0), 0);
-              }
+            for (const task of tasks) {
+              const atoms = await goalDB.dailyAtoms
+                .where('weeklyTaskId').equals(task.id)
+                .filter((a) => a.scheduledDate === dateStr && a.isCompleted)
+                .toArray();
+              mins += atoms.reduce((s, a) => s + (a.estimatedDuration ?? 0), 0);
             }
-            const cat = goal.category;
-            if (cat && dayData[cat] !== undefined && mins > 0) {
+            if (mins > 0) {
               dayData[cat] = (dayData[cat] as number) + Math.round(mins / 60 * 10) / 10;
             }
           }

@@ -7,7 +7,7 @@ import CaptureInbox from "@/components/layout/CaptureInbox";
 import TodayTab from "@/app/planner/TodayTab";
 import TodayTimeline from "@/components/schedule/TodayTimeline";
 import GoalAtomsSection from "@/components/goal/GoalAtomsSection";
-import TodayEngineSection from "@/components/engine/TodayEngineSection";
+import { DowngradeSection } from "@/components/engine/DowngradeSection";
 import { getTasksByType } from "@/lib/db";
 
 export default function TodayPage() {
@@ -39,10 +39,8 @@ export default function TodayPage() {
           <CaptureInbox visible={inboxExpanded} onRefresh={loadInboxCount} />
         </div>
 
-        {/* 新引擎：今日打卡 & 原子项 */}
-        <div className="mb-8">
-          <TodayEngineSection />
-        </div>
+        {/* 降级建议 */}
+        <DowngradeSection />
 
         {/* 目标执行（GoalEngine 四级拆解） */}
         <div className="mb-8">

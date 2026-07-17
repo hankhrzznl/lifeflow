@@ -1,18 +1,24 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { guideEngine, type GuideStep, type GuideContext } from "@/lib/engine/GuideEngine";
+import { guideEngine, type GuideStep, type GuideContext, STEPS } from "@/lib/engine/GuideEngine";
 import MascotIllustration from "@/components/ui/MascotIllustration";
+import { useAgent } from "@/components/agent/AgentProvider";
 import { X, ArrowRight, SkipForward } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 export function GuideModal({ context, onComplete }: { context: GuideContext; onComplete: () => void }) {
   const [step, setStep] = useState<GuideStep | null>(null);
   const [visible, setVisible] = useState(false);
+  const { openChat } = useAgent();
 
   useEffect(() => {
     const s = guideEngine.getCurrentStep(context);
-    if (s) { setStep(s); setTimeout(() => setVisible(true), 500); }
+    if (s) {
+      setStep(s);
+      setTimeout(() => setVisible(true), 500);
+      if (s.actionType === "auto_open_dialog") openChat();
+    }
   }, [context]);
 
   const handleNext = () => {
@@ -37,7 +43,7 @@ export function GuideModal({ context, onComplete }: { context: GuideContext; onC
           <motion.div
             initial={{ y: 100, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 100, opacity: 0 }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:w-[400px] p-6 shadow-2xl"
+            className="relative bg-white rounded-t-2xl sm:rounded-2xl w-full sm:w-[400px] p-6 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex justify-center mb-4">
@@ -69,16 +75,20 @@ export function GuideModal({ context, onComplete }: { context: GuideContext; onC
               </button>
             </div>
 
-            <button onClick={() => { setVisible(false); onComplete(); }}
+            <button onClick={() => {
+              guideEngine.markComplete("complete");
+              setVisible(false);
+              onComplete();
+            }}
               className="absolute top-4 right-4 p-2 rounded-lg transition-colors">
               <X className="w-4 h-4" style={{ color: "var(--text-tertiary)" }} />
             </button>
 
             <div className="flex justify-center gap-1.5 mt-4">
-              {["welcome","explain","demo_assistant","create_first","checkin_tutorial","complete"].map((id) => (
-                <div key={id}
+              {STEPS.map((s) => (
+                <div key={s.id}
                   className="w-1.5 h-1.5 rounded-full transition-colors"
-                  style={{ backgroundColor: id === step.id ? "var(--brand-primary)" : "var(--border)" }} />
+                  style={{ backgroundColor: s.id === step.id ? "var(--brand-primary)" : "var(--border)" }} />
               ))}
             </div>
           </motion.div>

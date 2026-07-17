@@ -5,6 +5,7 @@
 // ============================================================
 
 import { goalDB } from './schema';
+import { parseMainGoalId } from '@/lib/goalMapping';
 import type {
   DailyAtom,
   WeeklyTask,
@@ -185,7 +186,7 @@ export async function rollupFromAtom(atomId: string): Promise<RollupResult> {
   try {
     const result = await goalDB.transaction(
       'rw',
-      [goalDB.dailyAtoms, goalDB.weeklyTasks, goalDB.milestones, goalDB.goals],
+      [goalDB.dailyAtoms, goalDB.weeklyTasks, goalDB.milestones],
       async () => {
         // Step 1: 加载原子项
         const atom = await goalDB.dailyAtoms.get(atomId);
@@ -266,14 +267,6 @@ export async function rollupFromAtom(atomId: string): Promise<RollupResult> {
         );
 
         const goalProgress = calculateGoalProgress(updatedPeerMS);
-
-        const goalStatus = deriveGoalStatus(goalProgress);
-
-        await goalDB.goals.update(milestone.goalId, {
-          progress: goalProgress,
-          status: goalStatus,
-          updatedAt: new Date().toISOString(),
-        });
 
         return {
           goalId: milestone.goalId,
@@ -357,6 +350,7 @@ export async function uncompleteAtom(atomId: string): Promise<RollupResult> {
  */
 export async function recalculateAllForGoal(goalId: string): Promise<{
   goalProgress: number;
+  mainGoalId: number | null;
   milestonesUpdated: number;
   tasksUpdated: number;
 }> {
@@ -366,7 +360,7 @@ export async function recalculateAllForGoal(goalId: string): Promise<{
 
   await goalDB.transaction(
     'rw',
-    [goalDB.goals, goalDB.milestones, goalDB.weeklyTasks, goalDB.dailyAtoms],
+    [goalDB.milestones, goalDB.weeklyTasks, goalDB.dailyAtoms],
     async () => {
       const milestones = await goalDB.milestones
         .where('goalId')
@@ -426,16 +420,10 @@ export async function recalculateAllForGoal(goalId: string): Promise<{
         .toArray();
 
       goalProgress = calculateGoalProgress(refreshedMS);
-
-      await goalDB.goals.update(goalId, {
-        progress: goalProgress,
-        status: deriveGoalStatus(goalProgress),
-        updatedAt: new Date().toISOString(),
-      });
     }
   );
 
-  return { goalProgress, milestonesUpdated, tasksUpdated };
+  return { goalProgress, mainGoalId: parseMainGoalId(goalId), milestonesUpdated, tasksUpdated };
 }
 
 /**

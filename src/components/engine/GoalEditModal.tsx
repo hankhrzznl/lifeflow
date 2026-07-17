@@ -3,31 +3,28 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Save } from "lucide-react";
-import type {
-  EngineGoal,
-  EngineGoalCategory,
-  EngineGoalPriority,
-} from "@/lib/engine/types";
-import { ENGINE_PRIORITY_LABELS } from "@/lib/engine/types";
+import type { Goal, GoalType, Priority } from "@/lib/types";
+import { PRIORITY_CONFIG } from "@/lib/types";
+import { tsToLocalDateStr } from "@/lib/goalMapping";
 
 // ============================================================
 // 配置
 // ============================================================
 
-const CATEGORY_OPTIONS: { value: EngineGoalCategory; label: string }[] = [
-  { value: "exam", label: "备考" },
+const TYPE_OPTIONS: { value: GoalType; label: string }[] = [
+  { value: "task", label: "任务" },
   { value: "fitness", label: "运动" },
-  { value: "habit", label: "习惯" },
   { value: "finance", label: "财务" },
-  { value: "custom", label: "自定义" },
+  { value: "sleep", label: "睡眠" },
+  { value: "water", label: "饮水" },
 ];
 
-const PRIORITY_OPTIONS: { value: EngineGoalPriority; label: string; color: string; bg: string }[] = [
-  { value: "p1", label: "紧急重要", color: "#EF4444", bg: "rgba(239,68,68,0.1)" },
-  { value: "p2", label: "重要不紧急", color: "#3B82F6", bg: "rgba(59,130,246,0.1)" },
-  { value: "p3", label: "紧急不重要", color: "#F59E0B", bg: "rgba(245,158,11,0.1)" },
-  { value: "p4", label: "不紧急不重要", color: "#9CA3AF", bg: "rgba(156,163,175,0.1)" },
-];
+const PRIORITY_OPTIONS = PRIORITY_CONFIG.map((p) => ({
+  value: p.key,
+  label: p.label,
+  color: p.hex,
+  bg: p.bg,
+}));
 
 // ============================================================
 // 组件
@@ -35,12 +32,12 @@ const PRIORITY_OPTIONS: { value: EngineGoalPriority; label: string; color: strin
 
 interface GoalEditModalProps {
   open: boolean;
-  goal: EngineGoal | null; // null = 新建模式
+  goal: Goal | null; // null = 新建模式
   onSave: (data: {
-    title: string;
+    name: string;
     description: string;
-    category: EngineGoalCategory;
-    priority: EngineGoalPriority;
+    type: GoalType;
+    priority: Priority;
     deadline: string;
   }) => Promise<void>;
   onClose: () => void;
@@ -58,8 +55,8 @@ export default function GoalEditModal({
 }: GoalEditModalProps) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [category, setCategory] = useState<EngineGoalCategory>("custom");
-  const [priority, setPriority] = useState<EngineGoalPriority>("p2");
+  const [category, setCategory] = useState<GoalType>("task");
+  const [priority, setPriority] = useState<Priority>("not-urgent-important");
   const [deadline, setDeadline] = useState("");
   const [localSaving, setLocalSaving] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -69,16 +66,16 @@ export default function GoalEditModal({
     if (!open) return;
 
     if (goal) {
-      setTitle(goal.title);
-      setDescription(goal.description);
-      setCategory(goal.category);
-      setPriority(goal.priority);
-      setDeadline(goal.deadline);
+      setTitle(goal.name);
+      setDescription(goal.description ?? "");
+      setCategory(goal.type);
+      setPriority(goal.priority ?? "not-urgent-important");
+      setDeadline(tsToLocalDateStr(goal.deadline) ?? "");
     } else {
       setTitle("");
       setDescription("");
-      setCategory("custom");
-      setPriority("p2");
+      setCategory("task");
+      setPriority("not-urgent-important");
       const d = new Date();
       d.setDate(d.getDate() + 30);
       setDeadline(d.toISOString().slice(0, 10));
@@ -91,9 +88,9 @@ export default function GoalEditModal({
     setLocalSaving(true);
     try {
       await onSave({
-        title: title.trim(),
+        name: title.trim(),
         description: description.trim(),
-        category,
+        type: category,
         priority,
         deadline,
       });
@@ -174,7 +171,7 @@ export default function GoalEditModal({
                   分类
                 </label>
                 <div className="grid grid-cols-5 gap-2">
-                  {CATEGORY_OPTIONS.map((opt) => (
+                  {TYPE_OPTIONS.map((opt) => (
                     <button
                       key={opt.value}
                       onClick={() => setCategory(opt.value)}

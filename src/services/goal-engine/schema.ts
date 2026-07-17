@@ -45,7 +45,8 @@ export class GoalEngineDB extends Dexie {
       //   - 按类别筛选（exam/fitness/habit/finance）
       //   - 按优先级排序
       //   - 按截止日期排序（即将到期提醒）
-      //   - 按健康度筛选（需要关注的目标）
+      // 已退役，禁止应用代码读写
+      // - 按健康度筛选（需要关注的目标）
       goals: `
         id,
         status,
@@ -113,8 +114,34 @@ export class GoalEngineDB extends Dexie {
       `,
     });
 
+    // ============================================================
+    // v2: 引擎定位落地 — 增加 mainPlanId / mainTaskId 挂接字段
+    // 里程碑 ↔ 主库 Plan (1:1), 原子项 ↔ 主库 Task (1:1)
+    // ============================================================
+    this.version(2).stores({
+      milestones: `
+        id,
+        goalId,
+        status,
+        deadline,
+        mainPlanId,
+        [goalId+status],
+        [goalId+sortOrder]
+      `,
+      dailyAtoms: `
+        id,
+        weeklyTaskId,
+        scheduledDate,
+        isCompleted,
+        status,
+        mainTaskId,
+        [scheduledDate+isCompleted],
+        [weeklyTaskId+scheduledDate]
+      `,
+    });
+
     // 预留版本升级位置（后续可能需要的变更）：
-    // this.version(2).stores({
+    // this.version(3).stores({
     //   dailyAtoms: `..., estimatedDuration`,
     // }).upgrade(async (tx) => {
     //   await tx.table('dailyAtoms').toCollection().modify((atom) => {
@@ -169,12 +196,14 @@ export async function initializeGoalDB(): Promise<{
 export async function clearGoalDB(): Promise<void> {
   await goalDB.transaction(
     'rw',
+    // 已退役,禁止应用代码读写
     [goalDB.goals, goalDB.milestones, goalDB.weeklyTasks, goalDB.dailyAtoms, goalDB.progressSnapshots],
     async () => {
       await goalDB.dailyAtoms.clear();
       await goalDB.weeklyTasks.clear();
       await goalDB.milestones.clear();
       await goalDB.progressSnapshots.clear();
+      // 已退役,禁止应用代码读写
       await goalDB.goals.clear();
     }
   );

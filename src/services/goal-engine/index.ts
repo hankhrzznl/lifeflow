@@ -8,6 +8,8 @@
 
 export { GoalEngine } from './GoalEngine';
 export { goalDB, initializeGoalDB, clearGoalDB } from './schema';
+export { reviewDataService } from './ReviewDataService';
+export type { ReviewData } from './ReviewDataService';
 export {
   rollupFromAtom,
   completeAtom,

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { dailyAtomService } from "@/lib/engine/DailyAtomService";
+import { GoalEngine } from "@/services/goal-engine";
 import { Check } from "lucide-react";
 
 function getWeekStart(dateStr: string): string {
@@ -23,7 +23,7 @@ export function WidgetToday() {
 
   useEffect(() => {
     const today = new Date().toISOString().slice(0, 10);
-    dailyAtomService.listByDate(today).then((data) => { setAtoms(data); setLoading(false); });
+    GoalEngine.getTodayAtoms().then((data) => { setAtoms(data); setLoading(false); });
   }, []);
 
   if (loading) return <div className="flex justify-center py-8"><div className="w-5 h-5 border-2 border-[var(--border)] border-t-[var(--brand-primary)] rounded-full animate-spin" /></div>;
@@ -59,12 +59,12 @@ export function WidgetToday() {
 }
 
 export function WidgetGoals() {
-  const [goals, setGoals] = useState<Array<{ id: string; title: string; progress: number; category: string }>>([]);
+  const [goals, setGoals] = useState<Array<{ id: number; name: string; progress: number; type: string }>>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    import("@/lib/engine/GoalService").then(({ goalService: gs }) => {
-      gs.list({ filter: { status: "active" }, limit: 3 }).then((data) => { setGoals(data); setLoading(false); });
+    import("@/lib/db").then(({ getAllGoals }) => {
+      getAllGoals().then((data) => { setGoals(data.filter(g => g.status === "active" && g.id != null).slice(0, 3).map(g => ({ id: g.id!, name: g.name, progress: g.progress, type: g.type }))); setLoading(false); });
     });
   }, []);
 
@@ -80,7 +80,7 @@ export function WidgetGoals() {
           {goals.map((goal) => (
             <div key={goal.id}>
               <div className="flex justify-between items-center mb-1">
-                <span className="text-xs truncate flex-1 mr-2" style={{ color: "var(--text-primary)" }}>{goal.title}</span>
+                <span className="text-xs truncate flex-1 mr-2" style={{ color: "var(--text-primary)" }}>{goal.name}</span>
                 <span className="text-xs flex-shrink-0" style={{ color: "var(--text-secondary)" }}>{goal.progress}%</span>
               </div>
               <div className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: "var(--knit-bg)" }}>
@@ -102,7 +102,7 @@ export function WidgetHabits() {
   useEffect(() => {
     const today = new Date().toISOString().slice(0, 10);
     const weekStart = getWeekStart(today);
-    dailyAtomService.listByDateRange(weekStart, today).then((atoms) => {
+    GoalEngine.getAtomsByDateRange(weekStart, today).then((atoms) => {
       const taskMap = new Map<string, { title: string; days: boolean[] }>();
       atoms.forEach((atom) => {
         const entry = taskMap.get(atom.weeklyTaskId);

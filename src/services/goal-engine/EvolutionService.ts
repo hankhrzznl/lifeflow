@@ -4,6 +4,8 @@
 // ============================================================
 
 import { goalDB } from './schema';
+import { getGoal, getAllGoals } from '@/lib/db';
+import { parseMainGoalId } from '@/lib/goalMapping';
 import type {
   Goal,
   Milestone,
@@ -54,16 +56,30 @@ function addDays(dateStr: string, days: number): string {
  * @returns 健康度评分
  */
 export async function checkGoalHealth(goalId: string): Promise<HealthScore> {
-  const goal = await goalDB.goals.get(goalId);
-  if (!goal) {
-    throw new Error(`[Evolution] Goal ${goalId} not found`);
+  // 尝试从主库读取目标元数据，不可解析则回退到引擎库（兼容旧 uuid）
+  const mgId = parseMainGoalId(goalId);
+  let goalProgress: number;
+
+  if (mgId !== null) {
+    const mainGoal = await getGoal(mgId);
+    if (!mainGoal) {
+      throw new Error(`[Evolution] Goal ${goalId} (main ${mgId}) not found`);
+    }
+    goalProgress = safeNum(mainGoal.progress, 0);
+  } else {
+    console.warn(`[Evolution] Legacy uuid goalId "${goalId}" cannot be resolved to main DB, falling back to engine goals`);
+    const goal = await goalDB.goals.get(goalId);
+    if (!goal) {
+      throw new Error(`[Evolution] Goal ${goalId} not found`);
+    }
+    goalProgress = safeNum(goal.progress, 0);
   }
 
   const today = getToday();
   const sevenDaysAgo = addDays(today, -6);
 
   // 1. 完成率得分（40% 权重）
-  const completionScore = safeNum(goal.progress, 0);
+  const completionScore = goalProgress;
 
   // 2. 逾期率得分（35% 权重）
   const recentAtoms = await goalDB.dailyAtoms
@@ -112,12 +128,6 @@ export async function checkGoalHealth(goalId: string): Promise<HealthScore> {
   else if (finalScore >= 40) overallStatus = 'yellow';
   else overallStatus = 'red';
 
-  // 更新目标健康度
-  await goalDB.goals.update(goalId, {
-    healthStatus: overallStatus,
-    updatedAt: new Date().toISOString(),
-  });
-
   // 生成评分明细
   const details: string[] = [
     `完成率得分: ${completionScore.toFixed(0)}/100（权重40%）`,
@@ -148,12 +158,13 @@ export async function checkGoalHealth(goalId: string): Promise<HealthScore> {
  * @returns 各目标的健康度评分列表
  */
 export async function checkAllActiveGoalsHealth(): Promise<HealthScore[]> {
-  const activeGoals = await goalDB.goals.where('status').equals('active').toArray();
+  const allGoals = await getAllGoals();
+  const activeGoals = allGoals.filter((g) => g.status === 'active');
   const results: HealthScore[] = [];
 
   for (const goal of activeGoals) {
     try {
-      const score = await checkGoalHealth(goal.id);
+      const score = await checkGoalHealth(String(goal.id));
       results.push(score);
     } catch (err) {
       console.error(`[Evolution] Health check failed for goal ${goal.id}:`, err);
@@ -179,29 +190,46 @@ export async function checkAllActiveGoalsHealth(): Promise<HealthScore[]> {
  * @returns 调整建议列表（按紧急程度排序）
  */
 export async function generateSuggestions(goalId: string): Promise<AdjustmentSuggestion[]> {
-  const goal = await goalDB.goals.get(goalId);
-  if (!goal) return [];
+  const mgId = parseMainGoalId(goalId);
+  let deadline: string | number;
+  let createdAt: string | number;
+  let progress: number;
+
+  if (mgId !== null) {
+    const mainGoal = await getGoal(mgId);
+    if (!mainGoal) return [];
+    deadline = mainGoal.deadline ?? (Date.now() + 30 * 86400000);
+    createdAt = mainGoal.createdAt;
+    progress = mainGoal.progress;
+  } else {
+    console.warn(`[Evolution] Legacy uuid goalId "${goalId}" cannot be resolved to main DB, falling back to engine goals`);
+    const goal = await goalDB.goals.get(goalId);
+    if (!goal) return [];
+    deadline = goal.deadline;
+    createdAt = goal.createdAt;
+    progress = goal.progress;
+  }
 
   const suggestions: AdjustmentSuggestion[] = [];
   const today = getToday();
   const totalDays = Math.max(
     1,
     Math.ceil(
-      (new Date(goal.deadline).getTime() - new Date(goal.createdAt).getTime()) /
+      (new Date(deadline).getTime() - new Date(createdAt).getTime()) /
         (1000 * 60 * 60 * 24)
     )
   );
   const elapsedDays = Math.max(
     1,
     Math.ceil(
-      (new Date(today).getTime() - new Date(goal.createdAt).getTime()) /
+      (new Date(today).getTime() - new Date(createdAt).getTime()) /
         (1000 * 60 * 60 * 24)
     )
   );
 
   // 预期进度 = 已过天数 / 总天数 × 100
   const expectedProgress = Math.min(100, (elapsedDays / totalDays) * 100);
-  const lag = expectedProgress - goal.progress;
+  const lag = expectedProgress - progress;
 
   // 建议 1：进度落后 > 20%
   if (lag > 20) {
@@ -210,7 +238,7 @@ export async function generateSuggestions(goalId: string): Promise<AdjustmentSug
       goalId,
       type: 'milestone_extend',
       title: '进度严重落后',
-      description: `当前进度 ${goal.progress}%，预期进度 ${expectedProgress.toFixed(0)}%，落后 ${lag.toFixed(0)}%`,
+      description: `当前进度 ${progress}%，预期进度 ${expectedProgress.toFixed(0)}%，落后 ${lag.toFixed(0)}%`,
       urgency: Math.min(100, Math.round(lag * 2)),
       suggestedAction: '建议延后后续里程碑截止日期，或增加每日任务量',
       autoApplicable: false,
@@ -375,8 +403,19 @@ export async function detectConflicts(goalId: string): Promise<ConflictReport[]>
  * @param goalId - 目标 ID
  */
 export async function createProgressSnapshot(goalId: string): Promise<void> {
-  const goal = await goalDB.goals.get(goalId);
-  if (!goal) return;
+  const mgId = parseMainGoalId(goalId);
+  let goalProgress: number;
+
+  if (mgId !== null) {
+    const mainGoal = await getGoal(mgId);
+    if (!mainGoal) return;
+    goalProgress = mainGoal.progress;
+  } else {
+    console.warn(`[Evolution] Legacy uuid goalId "${goalId}" cannot be resolved to main DB, falling back to engine goals`);
+    const goal = await goalDB.goals.get(goalId);
+    if (!goal) return;
+    goalProgress = goal.progress;
+  }
 
   const today = getToday();
   const { year, week } = getISOWeekNumber(today);
@@ -396,7 +435,7 @@ export async function createProgressSnapshot(goalId: string): Promise<void> {
     goalId,
     year,
     weekNumber: week,
-    progress: goal.progress,
+    progress: goalProgress,
     totalAtoms: weekAtoms.length,
     completedAtoms,
     snapshotDate: new Date().toISOString(),
@@ -408,12 +447,13 @@ export async function createProgressSnapshot(goalId: string): Promise<void> {
  * 用于每周定时任务
  */
 export async function createAllSnapshots(): Promise<number> {
-  const activeGoals = await goalDB.goals.where('status').equals('active').toArray();
+  const allGoals = await getAllGoals();
+  const activeGoals = allGoals.filter((g) => g.status === 'active');
   let count = 0;
 
   for (const goal of activeGoals) {
     try {
-      await createProgressSnapshot(goal.id);
+      await createProgressSnapshot(String(goal.id));
       count++;
     } catch (err) {
       console.error(`[Evolution] Snapshot failed for goal ${goal.id}:`, err);

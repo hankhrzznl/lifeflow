@@ -1,84 +1,218 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Plus, Wallet, CreditCard, PiggyBank, Building2 } from "lucide-react";
+import { ChevronLeft, Plus, Smartphone, CreditCard, Banknote, Wallet } from "lucide-react";
+import { useLiveQuery } from "dexie-react-hooks";
+import { getAllAccounts } from "@/lib/db/accounting.db";
+import type { Account } from "@/lib/db/accounting.db";
+import { showToast } from "@/components/ui/Toast";
 
-const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
-  "wallet": Wallet,
-  "card": CreditCard,
-  "piggy": PiggyBank,
-  "building": Building2,
+// ============================================================
+// 设计稿基准: lifeflow-accounting/pages/assets.html
+// ============================================================
+
+const BRAND = "#34C759";
+const MUTED = "#8E8E93";
+const BORDER = "#E5E5EA";
+const SHADOW_CARD = "0 4px 16px rgba(0,0,0,0.08)";
+
+// ─── 格式化 ──────────────────────────────────────────────────
+
+function fmtCompact(fen: number): string {
+  const yuan = fen / 100;
+  return yuan.toLocaleString("zh-CN", {
+    minimumFractionDigits: fen % 100 === 0 ? 0 : 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+// ─── 账户图标映射 ────────────────────────────────────────────
+
+const ACCOUNT_ICON_MAP: Record<string, { icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>; color: string }> = {
+  "微信钱包": { icon: Smartphone, color: "#34C759" },
+  "支付宝": { icon: Smartphone, color: "#007AFF" },
+  "银行卡": { icon: CreditCard, color: "#5856D6" },
+  "现金": { icon: Banknote, color: "#FF9500" },
 };
 
-const stubAccounts = [
-  { id: "1", name: "现金", type: "wallet", balance: 2500.00, icon: "wallet" },
-  { id: "2", name: "招商银行储蓄卡", type: "card", balance: 52680.50, icon: "card" },
-  { id: "3", name: "支付宝余额宝", type: "piggy", balance: 15000.00, icon: "piggy" },
-];
+function getAccountIcon(name: string) {
+  return ACCOUNT_ICON_MAP[name] || { icon: Wallet, color: "#8E8E93" };
+}
 
-const totalNetWorth = stubAccounts.reduce((s, a) => s + a.balance, 0);
+/** 账户行图标（40px 圆底 + 白色 20px 图标，视觉同 CategoryIcon） */
+function AccountIcon({ name }: { name: string }) {
+  const { icon: IconComp, color } = getAccountIcon(name);
+  return (
+    <div
+      className="flex items-center justify-center rounded-full shrink-0"
+      style={{ width: 40, height: 40, background: color }}
+    >
+      <IconComp style={{ width: 20, height: 20, color: "#FFFFFF" }} />
+    </div>
+  );
+}
+
+// ============================================================
+// 页面
+// ============================================================
 
 export default function AssetsPage() {
+  const router = useRouter();
+
+  const accounts = useLiveQuery(() => getAllAccounts(), [], [] as Account[]);
+
+  // ─── 汇总 ──────────────────────────────────────────────────
+
+  const { totalAssets, totalLiabilities } = useMemo(() => {
+    let assets = 0;
+    let liabilities = 0;
+    for (const a of accounts ?? []) {
+      if (a.type === "liability") liabilities += a.balance;
+      else assets += a.balance;
+    }
+    return { totalAssets: assets, totalLiabilities: liabilities };
+  }, [accounts]);
+
+  const netWorth = totalAssets - totalLiabilities;
+  const hasAccounts = (accounts ?? []).length > 0;
+
+  // ─── 公共处理 ──────────────────────────────────────────────
+
+  const handleAdd = () => {
+    showToast({ type: "info", message: "功能开发中" });
+  };
+
+  const handleAccountTap = () => {
+    showToast({ type: "info", message: "功能开发中" });
+  };
+
+  // ============================================================
+  // 渲染
+  // ============================================================
+
   return (
-    <div className="min-h-screen bg-[#F5F5F7] pb-24">
-      <div className="max-w-2xl mx-auto px-5 pt-8">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">资产管理</h1>
-            <p className="text-sm text-gray-500 mt-0.5">你的净资产总览</p>
+    <div>
+      {/* ===== 导航条 44px ===== */}
+      <div className="h-[44px] flex items-center px-[16px] mt-3">
+        <button
+          type="button"
+          onClick={() => router.push("/accounting")}
+          className="inline-flex items-center justify-center w-[44px] h-[44px] -ml-[4px]"
+          aria-label="返回"
+        >
+          <ChevronLeft
+            className="w-[28px] h-[28px]"
+            style={{ color: "#000000", strokeWidth: 1.5 }}
+          />
+        </button>
+        <div className="flex-1 flex items-center justify-center">
+          <span
+            className="text-[17px] font-semibold truncate"
+            style={{ color: "#000000", wordBreak: "keep-all", overflowWrap: "break-word" }}
+          >
+            资产
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={handleAdd}
+          className="inline-flex items-center justify-center w-[44px] h-[44px] -mr-[4px]"
+          aria-label="新增"
+        >
+          <Plus
+            className="w-[24px] h-[24px]"
+            style={{ color: "#000000", strokeWidth: 1.5 }}
+          />
+        </button>
+      </div>
+
+      {/* ===== 净资产卡 150px ===== */}
+      <div className="mx-[16px] mt-[27px]">
+        <div
+          className="h-[150px] rounded-[24px] p-[20px]"
+          style={{ background: "#FFFFFF", boxShadow: SHADOW_CARD }}
+        >
+          <p className="text-[13px] leading-none" style={{ color: MUTED }}>
+            净资产
+          </p>
+          <p
+            className="text-[34px] font-bold leading-none mt-[8px]"
+            style={{ color: "#000000" }}
+          >
+            ¥{fmtCompact(netWorth)}
+          </p>
+          <div className="flex flex-row gap-[20px] mt-[58px]">
+            <p
+              className="text-[13px] leading-none truncate"
+              style={{ color: MUTED, flex: 1, minWidth: 0 }}
+            >
+              总资产：¥{fmtCompact(totalAssets)}
+            </p>
+            <p
+              className="text-[13px] leading-none truncate"
+              style={{ color: MUTED, flex: 1, minWidth: 0 }}
+            >
+              总负债：¥{fmtCompact(totalLiabilities)}
+            </p>
           </div>
         </div>
+      </div>
 
-        {/* Net Worth Card */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-gradient-to-br from-sys-blue to-sys-indigo rounded-2xl shadow-md p-5 mb-6 text-white"
+      {/* ===== 账户列表卡 ===== */}
+      {hasAccounts && (
+        <div
+          className="mx-[16px] mt-[16px] rounded-[16px] overflow-hidden"
+          style={{ background: "#FFFFFF", boxShadow: SHADOW_CARD }}
         >
-          <div className="text-sm opacity-80 mb-1">净资产</div>
-          <div className="text-3xl font-bold">￥{totalNetWorth.toLocaleString("zh-CN", { minimumFractionDigits: 2 })}</div>
-          <div className="text-xs opacity-60 mt-2">{stubAccounts.length} 个账户</div>
-        </motion.div>
-
-        {/* Account List */}
-        <div className="space-y-3">
-          {stubAccounts.map((acc, i) => {
-            const IconComp = iconMap[acc.icon] || Wallet;
+          {(accounts ?? []).map((acc, idx) => {
             return (
-              <motion.div
+              <motion.button
                 key={acc.id}
-                initial={{ opacity: 0, y: 12 }}
+                type="button"
+                onClick={handleAccountTap}
+                initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.08 + i * 0.06 }}
-                className="bg-white rounded-2xl shadow-sm p-4 flex items-center gap-4"
+                transition={{ delay: idx * 0.03, duration: 0.25 }}
+                className="flex items-center gap-3 px-4 h-[64px] w-full text-left"
+                style={{
+                  borderTop: idx === 0 ? "none" : "0.5px solid #E5E5EA",
+                }}
               >
-                <div className="w-11 h-11 rounded-xl bg-blue-50 flex items-center justify-center">
-                  <IconComp className="w-5 h-5 text-sys-blue" />
-                </div>
-                <div className="flex-1">
-                  <div className="text-sm font-semibold text-gray-900">{acc.name}</div>
-                  <div className="text-xs text-gray-400 mt-0.5">{acc.type === "card" ? "借记卡" : acc.type === "piggy" ? "理财" : "现金"}</div>
-                </div>
-                <div className="text-right">
-                  <div className="text-sm font-bold text-gray-900">￥{acc.balance.toLocaleString("zh-CN", { minimumFractionDigits: 2 })}</div>
-                </div>
-              </motion.div>
+                <AccountIcon name={acc.name} />
+                <span
+                  className="flex-1 text-[15px] truncate"
+                  style={{ color: "#000000" }}
+                >
+                  {acc.name}
+                </span>
+                <span
+                  className="text-[16px] font-semibold shrink-0"
+                  style={{ color: "#000000" }}
+                >
+                  ¥{fmtCompact(acc.balance)}
+                </span>
+              </motion.button>
             );
           })}
         </div>
+      )}
 
-        {/* Add Account Button */}
-        <motion.button
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="w-full mt-4 py-3 rounded-2xl border-2 border-dashed border-gray-300 text-gray-500 font-medium text-sm flex items-center justify-center gap-2 hover:border-sys-blue hover:text-sys-blue transition-colors"
+      {/* ===== + 新增钱包账户 ===== */}
+      <div
+        className="flex justify-center"
+        style={{ marginTop: hasAccounts ? 40 : 90 }}
+      >
+        <button
+          type="button"
+          onClick={handleAdd}
+          className="inline-flex items-center justify-center text-[16px] font-normal whitespace-nowrap px-[4px] py-[2px]"
+          style={{ color: BRAND }}
+          aria-label="新增钱包账户"
         >
-          <Plus className="w-4 h-4" />
-          添加账户
-        </motion.button>
+          + 新增钱包账户
+        </button>
       </div>
     </div>
   );

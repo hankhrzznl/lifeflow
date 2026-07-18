@@ -3,26 +3,23 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Search, X } from "lucide-react";
+import { Search, X, ChevronLeft } from "lucide-react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { getAllTransactions, getAllCategories } from "@/lib/db/accounting.db";
 import type { Transaction, Category } from "@/lib/db/accounting.db";
-import { CategoryIcon } from "@/components/accounting/CategoryIcon";
 
 // ============================================================
-// 设计稿基准: lifeflow-accounting/pages/search.html
+// 设计令牌（Apple 简约风）
 // ============================================================
+const INK = "#1D1D1F";
+const FAINT = "#AEAEB2";
+const FIELD_BG = "#F5F5F5";
+const DIVIDER = "#E5E5E5";
 
-const BRAND = "#34C759";
-const EXPENSE = "#FF3B30";
-const INCOME = "#007AFF";
-const MUTED = "#8E8E93";
-const BORDER = "#E5E5EA";
-const SURFACE = "#F2F2F7";
-const SHADOW_CARD = "0 4px 16px rgba(0,0,0,0.08)";
+// ─── 星期映射 ────────────────────────────────────────────────
+const DAY_NAMES = ["日", "一", "二", "三", "四", "五", "六"];
 
 // ─── 格式化 ──────────────────────────────────────────────────
-
 function fmtFull(fen: number): string {
   return (fen / 100).toLocaleString("zh-CN", {
     minimumFractionDigits: 2,
@@ -30,23 +27,23 @@ function fmtFull(fen: number): string {
   });
 }
 
-// ─── 日期标签 ────────────────────────────────────────────────
-
-function todayStr(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+function formatTime(ts?: number): string {
+  if (ts == null || isNaN(ts as number)) return "--";
+  const d = new Date(ts);
+  if (isNaN(d.getTime())) return "--";
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
-function yesterdayStr(): string {
-  const d = new Date();
-  d.setDate(d.getDate() - 1);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+function formatDateLabel(dateStr: string): string {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const date = new Date(y, m - 1, d);
+  const dayName = DAY_NAMES[date.getDay()];
+  return `${m}月${d}日 周${dayName}`;
 }
 
 // ============================================================
 // 页面
 // ============================================================
-
 export default function SearchPage() {
   const router = useRouter();
 
@@ -70,21 +67,16 @@ export default function SearchPage() {
 
     const matchAmount = (amount: number): boolean => {
       if (isNaN(numKw)) return false;
-      // 四舍五入到元后相等
       if (Math.round(amount / 100) === Math.round(numKw)) return true;
-      // 以关键词开头（如输入 "12" 命中 12.00 / 12.50）
       const yuanStr = (amount / 100).toFixed(2);
       return yuanStr.startsWith(kw);
     };
 
     return (allTxs ?? [])
       .filter((t) => {
-        // 备注匹配
         if (t.note?.toLowerCase().includes(kw)) return true;
-        // 分类名匹配
         const cat = t.categoryId ? categoryMap.get(t.categoryId) : undefined;
         if (cat?.name.toLowerCase().includes(kw)) return true;
-        // 金额匹配
         if (matchAmount(t.amount)) return true;
         return false;
       })
@@ -96,15 +88,12 @@ export default function SearchPage() {
   // 按日期分组
   const groups = useMemo(() => {
     const out: { date: string; label: string; items: Transaction[] }[] = [];
-    const today = todayStr();
-    const yesterday = yesterdayStr();
     for (const t of results) {
       let g = out.find((x) => x.date === t.date);
       if (!g) {
-        const [, m, d] = t.date.split("-").map(Number);
         g = {
           date: t.date,
-          label: t.date === today ? "今天" : t.date === yesterday ? "昨天" : `${m}月${d}日`,
+          label: formatDateLabel(t.date),
           items: [],
         };
         out.push(g);
@@ -119,140 +108,137 @@ export default function SearchPage() {
 
   return (
     <div className="min-h-screen" style={{ background: "#FFFFFF" }}>
-      <div className="mx-auto" style={{ maxWidth: 430 }}>
-        {/* ===== 顶部间距 ===== */}
-        <div className="h-[44px] mt-3" />
-
-        {/* ===== 搜索栏区 h-12 ===== */}
-        <div className="h-12 flex items-center px-5" style={{ marginTop: 12 }}>
-          {/* 输入框容器 */}
-          <div
-            className="flex items-center px-3 shrink-0"
-            style={{
-              width: 360,
-              height: 36,
-              background: SURFACE,
-              borderRadius: 10,
-            }}
-          >
-            <Search className="w-5 h-5 shrink-0" style={{ color: MUTED }} />
-            <input
-              type="text"
-              value={keyword}
-              onChange={(e) => setKeyword(e.target.value)}
-              placeholder="搜索备注，分类或金额"
-              autoFocus
-              className="flex-1 bg-transparent outline-none border-none ml-2 text-[17px]"
-              style={{
-                color: "#000000",
-                fontFamily: "inherit",
-              }}
-              // placeholder 样式用内联
-            />
-          </div>
-          {/* 关闭按钮 */}
+      {/* ===== 页头 ===== */}
+      <div className="pt-4">
+        <div
+          className="h-11 flex items-center relative px-4"
+          style={{ borderBottom: `1px solid ${DIVIDER}` }}
+        >
           <button
             type="button"
             onClick={() => router.back()}
-            className="w-5 h-5 shrink-0 flex items-center justify-center ml-2 active:opacity-50"
-            aria-label="关闭"
+            className="w-10 h-10 -ml-2 grid place-items-center active:opacity-50"
+            aria-label="返回"
           >
-            <X className="w-5 h-5" style={{ color: MUTED }} />
+            <ChevronLeft className="w-6 h-6" style={{ color: INK }} />
           </button>
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <span className="text-[17px] font-semibold" style={{ color: INK }}>
+              搜索
+            </span>
+          </div>
         </div>
+      </div>
 
-        {/* placeholder 样式注入 */}
-        <style>{`
-          input::placeholder {
-            color: #8E8E93;
-            font-size: 17px;
-            opacity: 1;
-          }
-        `}</style>
-
-        {/* ===== 空态 / 无结果 / 结果列表 ===== */}
-        {!hasKeyword ? (
-          /* 初始空态 */
-          <div className="flex justify-center pt-[281px]">
-            <p
-              className="text-center px-8 text-[17px] leading-6"
-              style={{ color: MUTED, maxWidth: 340 }}
-            >
-              搜索备注，分类或者金额的结果会显示在这里
-            </p>
-          </div>
-        ) : !hasResults ? (
-          /* 有关键词但无结果 */
-          <div className="flex justify-center pt-[120px]">
-            <p
-              className="text-center px-8 text-[17px] leading-6"
-              style={{ color: MUTED, maxWidth: 340 }}
-            >
-              没有找到相关的记账记录
-            </p>
-          </div>
-        ) : (
-          /* 结果列表 */
-          <div className="px-5 mt-6 flex flex-col gap-5">
-            {groups.map((g) => (
-              <div key={g.date}>
-                <p className="text-[13px] mb-2" style={{ color: MUTED }}>
-                  {g.label}
-                </p>
-                <div
-                  className="rounded-[16px] bg-white overflow-hidden"
-                  style={{ boxShadow: SHADOW_CARD }}
-                >
-                  {g.items.map((t, idx) => {
-                    const cat = t.categoryId
-                      ? categoryMap.get(t.categoryId)
-                      : undefined;
-                    const isExpense = t.type === "expense";
-                    return (
-                      <motion.div
-                        key={t.id}
-                        initial={{ opacity: 0, y: 8 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: idx * 0.03, duration: 0.25 }}
-                        className="flex items-center gap-3 px-4 h-[64px]"
-                        style={{
-                          borderTop: idx === 0 ? "none" : "0.5px solid #E5E5EA",
-                        }}
-                      >
-                        <CategoryIcon
-                          icon={cat?.icon ?? "help-circle"}
-                          color={cat?.color ?? "#8E8E93"}
-                          size={40}
-                          iconSize={20}
-                        />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[15px] text-black truncate">
-                            {cat?.name ?? "未分类"}
-                          </p>
-                          {t.note && (
-                            <p
-                              className="text-[13px] truncate"
-                              style={{ color: MUTED }}
-                            >
-                              {t.note}
-                            </p>
-                          )}
-                        </div>
-                        <span
-                          className="text-[16px] font-semibold shrink-0"
-                          style={{ color: isExpense ? EXPENSE : INCOME }}
-                        >
-                          {isExpense ? "-" : "+"}¥{fmtFull(t.amount)}
-                        </span>
-                      </motion.div>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
-          </div>
+      {/* ===== 搜索框 ===== */}
+      <div
+        className="mx-4 mt-3 h-11 rounded-[12px] flex items-center px-3 gap-2"
+        style={{ background: FIELD_BG }}
+      >
+        <Search className="w-5 h-5 shrink-0" style={{ color: FAINT }} />
+        <input
+          type="text"
+          value={keyword}
+          onChange={(e) => setKeyword(e.target.value)}
+          placeholder="搜索备注，分类或金额"
+          autoFocus
+          className="flex-1 bg-transparent outline-none text-[17px] placeholder:text-[#AEAEB2] placeholder:text-[17px]"
+          style={{ color: INK }}
+        />
+        {hasKeyword && (
+          <button
+            type="button"
+            onClick={() => setKeyword("")}
+            className="w-8 h-8 -mr-1 grid place-items-center active:opacity-50"
+            aria-label="清空"
+          >
+            <X className="w-[18px] h-[18px]" style={{ color: FAINT }} />
+          </button>
         )}
       </div>
+
+      {/* ===== 内容区 ===== */}
+      {!hasKeyword ? (
+        /* 初始空态 */
+        <div className="flex justify-center pt-[160px]">
+          <p className="text-center px-8 text-[15px]" style={{ color: FAINT }}>
+            搜索备注，分类或者金额的结果会显示在这里
+          </p>
+        </div>
+      ) : !hasResults ? (
+        /* 无结果态 */
+        <div className="flex justify-center pt-[120px]">
+          <p className="text-center px-8 text-[15px]" style={{ color: FAINT }}>
+            没有找到相关的记账记录
+          </p>
+        </div>
+      ) : (
+        /* 结果列表 */
+        <div className="px-4 mt-6 flex flex-col">
+          {groups.map((g, gi) => (
+            <div key={g.date} className={gi > 0 ? "mt-6" : ""}>
+              {/* 分组日期标题 */}
+              <p className="text-[13px] mb-2" style={{ color: FAINT }}>
+                {g.label}
+              </p>
+
+              {/* 列表行（无卡片） */}
+              {g.items.map((t, i) => {
+                const cat = t.categoryId ? categoryMap.get(t.categoryId) : undefined;
+                const catName = cat?.name ?? "未分类";
+                const isExpense = t.type === "expense";
+                const note = t.note;
+                const primaryText = note || catName;
+                const showSecondary = !!note;
+
+                return (
+                  <motion.div
+                    key={t.id}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.03, duration: 0.25 }}
+                    className="flex items-center gap-3 py-3.5"
+                    style={{
+                      borderTop: i === 0 ? "none" : `1px solid ${DIVIDER}`,
+                    }}
+                  >
+                    {/* 分类圆点 */}
+                    <div
+                      className="w-2 h-2 rounded-full shrink-0"
+                      style={{ background: cat?.color ?? FAINT }}
+                    />
+
+                    {/* 文字列 */}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[17px] font-medium truncate" style={{ color: INK }}>
+                        {primaryText}
+                      </p>
+                      {showSecondary && (
+                        <p className="text-[13px] mt-0.5 truncate" style={{ color: FAINT }}>
+                          {catName}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* 金额列 */}
+                    <div className="shrink-0 flex flex-col items-end">
+                      <span
+                        className="text-[17px] font-semibold tabular-nums"
+                        style={{ color: INK }}
+                      >
+                        {isExpense ? "-" : "+"}¥{fmtFull(t.amount)}
+                      </span>
+                      <span className="text-[13px] mt-0.5" style={{ color: FAINT }}>
+                        {formatTime(t.createdAt)}
+                      </span>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

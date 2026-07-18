@@ -2,101 +2,79 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Layers, BarChart2, Bot, TrendingUp } from "lucide-react";
+import { motion } from "framer-motion";
 import { showToast } from "@/components/ui/Toast";
 
 // ============================================================
-// 设计稿基准: lifeflow-health/pages/dashboard.html (底部导航契约)
-// 品牌橙 #FF9500
+// 健康子站骨架 + 5 pill 二级导航（仅总览页渲染）
 // ============================================================
 
-const BRAND = "#FF9500";
-const INACTIVE = "#8E8E93";
-const BG = "#F2F2F7";
-
-interface TabItem {
-  key: string;
-  label: string;
-  path: string;
-  icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
-}
-
-const tabs: TabItem[] = [
-  { key: "home", label: "主页", path: "/health", icon: Home },
-  { key: "plan", label: "规划", path: "", icon: Layers },
-  { key: "review", label: "回顾", path: "", icon: BarChart2 },
-  { key: "assistant", label: "助手", path: "", icon: Bot },
-  { key: "stats", label: "统计", path: "", icon: TrendingUp },
+const pills = [
+  { label: "总览", path: "/health" },
+  { label: "规划", path: "" },
+  { label: "回顾", path: "" },
+  { label: "助手", path: "" },
+  { label: "统计", path: "" },
 ];
 
-function HealthTabBar() {
+function PillNav() {
   const pathname = usePathname();
-  const isHome = pathname === "/health";
-
   return (
-    <nav
-      data-mobile-nav="health"
-      className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-[#E5E5EA]"
-      style={{ height: 83, paddingBottom: "max(20px, env(safe-area-inset-bottom))" }}
-    >
-      <div className="w-full max-w-[430px] mx-auto grid grid-cols-5" style={{ height: 63, paddingTop: 4 }}>
-        {tabs.map((tab) => {
-          const active = tab.key === "home" && isHome;
-          const content = (
-            <div
-              key={tab.key}
-              className="flex flex-col items-center justify-center gap-0.5"
+    <nav className="mt-4 flex gap-2 overflow-x-auto scrollbar-hide">
+      {pills.map((p) => {
+        const isActive = p.path === "/health" && pathname === "/health";
+        const isPlaceholder = p.path === "";
+        return isPlaceholder ? (
+          <motion.button
+            key={p.label}
+            type="button"
+            whileTap={{ scale: 0.95 }}
+            onClick={() => showToast({ type: "info", message: "功能开发中" })}
+            className="h-8 px-4 rounded-full text-[13px] bg-[#F5F5F5] text-[#86868B] opacity-50 flex-shrink-0"
+          >
+            {p.label}
+          </motion.button>
+        ) : (
+          <Link key={p.label} href={p.path}>
+            <motion.span
+              whileTap={{ scale: 0.95 }}
+              className={`h-8 px-4 rounded-full text-[13px] flex-shrink-0 inline-flex items-center ${
+                isActive
+                  ? "bg-[#5865F2] text-white font-semibold"
+                  : "bg-[#F5F5F5] text-[#86868B]"
+              }`}
             >
-              <tab.icon
-                className="w-6 h-6"
-                style={{ color: active ? BRAND : INACTIVE }}
-              />
-              <span
-                className="text-[10px] leading-none whitespace-nowrap"
-                style={{ color: active ? BRAND : INACTIVE, fontWeight: active ? 500 : 400 }}
-              >
-                {tab.label}
-              </span>
-            </div>
-          );
-
-          if (tab.key === "home") {
-            return (
-              <Link
-                key={tab.key}
-                href="/health"
-                data-nav-key={tab.key}
-                data-active={active || undefined}
-                className="min-w-0 flex flex-col items-center justify-center gap-0.5 px-1"
-              >
-                {content}
-              </Link>
-            );
-          }
-          return (
-            <button
-              key={tab.key}
-              type="button"
-              data-nav-key={tab.key}
-              onClick={() => showToast({ type: "info", message: "功能开发中" })}
-              className="min-w-0 flex flex-col items-center justify-center gap-0.5 px-1"
-            >
-              {content}
-            </button>
-          );
-        })}
-      </div>
+              {p.label}
+            </motion.span>
+          </Link>
+        );
+      })}
     </nav>
   );
 }
 
 export default function HealthLayout({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const isHome = pathname === "/health";
+
   return (
-    <div className="min-h-screen" style={{ background: BG }}>
-      <main className="w-full max-w-[430px] mx-auto pb-[95px]">
-        {children}
-      </main>
-      <HealthTabBar />
+    <div className="min-h-screen bg-[#FAFAFA]">
+      {/* 页头 + pill 导航仅总览页渲染 */}
+      {isHome && (
+        <header className="px-4 pt-9 pb-0">
+          <div className="flex items-end justify-between">
+            <h1 className="text-[32px] font-bold tracking-[-0.02em] text-[#1D1D1F]">健康</h1>
+            <span className="text-[15px] text-[#86868B]">
+              {(() => {
+                const d = new Date();
+                return `${d.getMonth() + 1}月${d.getDate()}日`;
+              })()}
+            </span>
+          </div>
+          <PillNav />
+        </header>
+      )}
+      <main className="w-full max-w-[430px] mx-auto pb-[100px]">{children}</main>
     </div>
   );
 }

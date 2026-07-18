@@ -11,7 +11,7 @@ import { showToast } from "@/components/ui/Toast";
 import {
   ChevronLeft, Plus, Activity, PlusSquare, Flame, Dumbbell, Users, Trophy,
   ChevronRight, Pencil, Clock, Trash2, Sparkles, BarChart3, Calendar,
-  Search, X, PenTool, History, HelpCircle, Check, Footprints, ArrowLeft, Target, TrendingUp, ArrowUp,
+  Search, X, PenTool, History, HelpCircle, Check, Footprints, ArrowLeft, Target, TrendingUp, TrendingDown, ArrowUp,
 } from "lucide-react";
 
 // ============================================================
@@ -53,6 +53,11 @@ const MUSCLE_ICONS: Record<string, React.ComponentType<{ className?: string; sty
   "核心": Target,
 };
 
+// ─── 记录视图本地类型（completed 仅本地 UI 状态，不落库，决策 5） ──
+
+type RecordSet = ExerciseSet & { completed: boolean };
+type RecordExercise = Omit<WorkoutExercise, "sets"> & { sets: RecordSet[] };
+
 // ─── 日期工具 ────────────────────────────────────────────────
 
 function localTodayStr(): string {
@@ -81,7 +86,7 @@ export default function FitnessPage() {
   // Sheet
   const [sheetOpen, setSheetOpen] = useState(false);
   const [sheetStep, setSheetStep] = useState<"select" | "record">("select");
-  const [currentExercises, setCurrentExercises] = useState<WorkoutExercise[]>([]);
+  const [currentExercises, setCurrentExercises] = useState<RecordExercise[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
 
   // 自定义动作
@@ -102,7 +107,21 @@ export default function FitnessPage() {
   );
   const hasRecent = recentSessions.length > 0;
 
+  // B5. 历史对比：每个 exerciseId 最近一次含该动作的 session（按日期倒序取首次出现）
+  const lastSessionByExercise = useMemo(() => {
+    const map = new Map<string, { date: string; ex: WorkoutExercise }>();
+    const sorted = [...workoutSessions].sort((a, b) => b.date.localeCompare(a.date) || b.createdAt - a.createdAt);
+    for (const s of sorted) {
+      for (const ex of s.exercises) {
+        if (ex.sets.length > 0 && !map.has(ex.exerciseId)) map.set(ex.exerciseId, { date: s.date, ex });
+      }
+    }
+    return map;
+  }, [workoutSessions]);
+
   const fmtVolume = (v: number) => v >= 1000 ? `${(v / 1000).toFixed(1)}t` : `${v}`;
+  // 均值显示：整数不带小数，否则保留 1 位（82.5 / 7.5）
+  const fmtAvg = (n: number) => Number.isInteger(n) ? `${n}` : n.toFixed(1);
 
   // ─── 动作添加 ──────────────────────────────────────────────
 
@@ -123,11 +142,11 @@ export default function FitnessPage() {
       if (i !== exIdx) return e;
       const sn = e.sets.length + 1;
       const last = e.sets[e.sets.length - 1];
-      return { ...e, sets: [...e.sets, { id: crypto.randomUUID(), setNumber: sn, reps: last?.reps ?? 10, weight: last?.weight ?? 20, rpe: last?.rpe ?? 7, isPR: false }] };
+      return { ...e, sets: [...e.sets, { id: crypto.randomUUID(), setNumber: sn, reps: last?.reps ?? 10, weight: last?.weight ?? 20, rpe: last?.rpe ?? 7, isPR: false, completed: true }] };
     }));
   }, []);
 
-  const updateSet = useCallback((exIdx: number, sid: string, field: keyof ExerciseSet, value: number | boolean) => {
+  const updateSet = useCallback((exIdx: number, sid: string, field: keyof RecordSet, value: number | boolean) => {
     setCurrentExercises((prev) => prev.map((e, i) => {
       if (i !== exIdx) return e;
       return { ...e, sets: e.sets.map((s) => s.id === sid ? { ...s, [field]: value } : s) };
@@ -147,19 +166,34 @@ export default function FitnessPage() {
     updateSet(exIdx, sid, "rpe", next);
   }, [updateSet]);
 
+  // 完成勾选切换（决策 5：仅本地 UI 状态，不落库）
+  const toggleCompleted = useCallback((exIdx: number, sid: string) => {
+    setCurrentExercises((prev) => prev.map((e, i) => {
+      if (i !== exIdx) return e;
+      return { ...e, sets: e.sets.map((s) => s.id === sid ? { ...s, completed: !s.completed } : s) };
+    }));
+  }, []);
+
   // ─── 保存/删除 ────────────────────────────────────────────
 
   const handleSave = useCallback(async () => {
     const valid = currentExercises.filter((e) => e.sets.length > 0);
     if (valid.length === 0) { showToast({ type: "warning", message: "请至少添加一组训练" }); return; }
-    // isPR判定
+    // 剥离本地 completed 字段，落库为纯净 ExerciseSet
+    const payload: WorkoutExercise[] = valid.map((e) => ({
+      exerciseId: e.exerciseId,
+      exerciseName: e.exerciseName,
+      sets: e.sets.map((s) => ({ id: s.id, setNumber: s.setNumber, reps: s.reps, weight: s.weight, rpe: s.rpe, isPR: s.isPR })),
+    }));
+    // isPR判定（决策 7：无历史则全部 false）
     const allSessions = workoutSessions;
-    for (const we of valid) {
+    for (const we of payload) {
       const history = allSessions.flatMap((s) => s.exercises.filter((e) => e.exerciseId === we.exerciseId));
-      const maxHist = history.length > 0 ? Math.max(...history.flatMap((e) => e.sets.map((s) => s.weight))) : 0;
+      if (history.length === 0) continue;
+      const maxHist = Math.max(...history.flatMap((e) => e.sets.map((s) => s.weight)));
       for (const s of we.sets) { if (s.weight > maxHist) s.isPR = true; }
     }
-    await addWorkoutSessionV2({ date: localTodayStr(), exercises: valid, notes: "" });
+    await addWorkoutSessionV2({ date: localTodayStr(), exercises: payload, notes: "" });
     showToast({ type: "success", message: "训练已保存" });
     setSheetOpen(false);
     setCurrentExercises([]);
@@ -357,7 +391,15 @@ export default function FitnessPage() {
       </button>
 
       {/* ═══════════════════════════════════════ 记录训练 Sheet ═══ */}
-      <BottomSheet open={sheetOpen} onClose={closeSheet} title={sheetStep === "select" ? "记录训练" : "记录训练"}>
+      <BottomSheet open={sheetOpen} onClose={closeSheet}>
+        {/* B1. Sheet 头部：取消 / 记录训练 / 保存 */}
+        <div className="flex items-center justify-between h-14">
+          <button type="button" onClick={closeSheet}
+            className="text-[15px] font-normal whitespace-nowrap" style={{ color: MUTED }}>取消</button>
+          <span className="text-xl font-semibold truncate text-black">记录训练</span>
+          <button type="button" onClick={handleSave}
+            className="text-base font-semibold whitespace-nowrap" style={{ color: BRAND }}>保存</button>
+        </div>
         {sheetStep === "select" ? (
           /* 选择动作 */
           <div className="flex flex-col" style={{ minHeight: "50vh" }}>
@@ -412,13 +454,51 @@ export default function FitnessPage() {
         ) : (
           /* 记录训练 */
           <div className="flex flex-col" style={{ minHeight: "50vh" }}>
-            {/* 日期条 */}
-            <div className="flex items-center gap-2 h-11 px-3 mb-4 rounded-[10px]" style={{ background: BG }}>
+            {/* B2. 日期条（决策 6：点击 toast 占位，保存恒写今天） */}
+            <button type="button" onClick={() => showToast({ type: "info", message: "功能开发中" })}
+              className="flex items-center gap-2 h-11 px-3 mb-4 rounded-[10px] w-full" style={{ background: BG }}>
               <Calendar className="w-4 h-4 shrink-0" style={{ color: BRAND }} />
               <span className="text-[17px] font-normal" style={{ color: "#000" }}>{formatDateCn(new Date())}</span>
+            </button>
+            {/* B3. 动作区（标题 → 添加动作 → 自定义动作 → 动作卡片） */}
+            <div className="mb-3">
+              <h3 className="text-[17px] font-semibold mb-3 text-black">动作</h3>
+              <button type="button" onClick={() => setSheetStep("select")}
+                className="w-full h-11 flex items-center justify-center gap-1.5 rounded-[10px] border mb-2 text-[17px]"
+                style={{ borderColor: BRAND, color: BRAND }}>
+                <Plus className="w-[18px] h-[18px] shrink-0" />添加动作
+              </button>
+              <button type="button" onClick={() => { setCustomGroupId(muscleGroupsV2[0]?.id || ""); setCustomOpen(true); }}
+                className="flex items-center gap-1" style={{ color: MUTED }}>
+                <PenTool className="w-3.5 h-3.5 shrink-0" /><span className="text-[13px]">创建自定义动作</span>
+              </button>
             </div>
-            {/* 动作列表 */}
-            {currentExercises.map((we, exIdx) => (
+            {/* B4. 动作卡片列表 */}
+            {currentExercises.map((we, exIdx) => {
+              // B5. 历史对比数据：最近一次含该动作的 session 均值 vs 本次均值
+              const hist = lastSessionByExercise.get(we.exerciseId);
+              let comp: { date: string; prevStr: string; curStr: string; pct: number; width: number; up: boolean } | null = null;
+              if (hist && we.sets.length > 0) {
+                const avgOf = (sets: { weight: number; reps: number; rpe: number }[]) => ({
+                  w: sets.reduce((a, s) => a + s.weight, 0) / sets.length,
+                  r: sets.reduce((a, s) => a + s.reps, 0) / sets.length,
+                  p: sets.reduce((a, s) => a + s.rpe, 0) / sets.length,
+                });
+                const prev = avgOf(hist.ex.sets);
+                const cur = avgOf(we.sets);
+                if (prev.w > 0) {
+                  const pct = (cur.w / prev.w - 1) * 100;
+                  comp = {
+                    date: hist.date,
+                    prevStr: `${fmtAvg(prev.w)}kg x ${fmtAvg(prev.r)} @RPE${fmtAvg(prev.p)}`,
+                    curStr: `${fmtAvg(cur.w)}kg x ${fmtAvg(cur.r)} @RPE${fmtAvg(cur.p)}`,
+                    pct,
+                    width: Math.min(100, (cur.w / prev.w) * 50),
+                    up: pct >= 0,
+                  };
+                }
+              }
+              return (
               <div key={exIdx} className="rounded-[12px] p-4 mb-3" style={{ background: CARD, boxShadow: SHADOW_CARD }}>
                 <div className="flex items-center justify-between h-11">
                   <span className="text-[17px] font-semibold text-black truncate">{we.exerciseName}</span>
@@ -445,7 +525,11 @@ export default function FitnessPage() {
                   <div className="w-20 text-center text-xs" style={{ color: MUTED }}>重量</div>
                   <div className="w-[60px] text-center text-xs" style={{ color: MUTED }}>次数</div>
                   <div className="w-20 text-center text-xs flex items-center justify-center gap-0.5" style={{ color: MUTED }}>
-                    RPE<HelpCircle className="w-3 h-3" style={{ color: MUTED }} />
+                    RPE
+                    <button type="button" onClick={() => showToast({ type: "info", message: "功能开发中" })}
+                      className="flex items-center justify-center" aria-label="RPE 说明">
+                      <HelpCircle className="w-3 h-3" style={{ color: MUTED }} />
+                    </button>
                   </div>
                   <div className="w-10 text-center text-xs" style={{ color: MUTED }}>完成</div>
                 </div>
@@ -469,9 +553,12 @@ export default function FitnessPage() {
                         className="text-[17px] font-normal" style={{ color: "#000" }}>{s.rpe}</button>
                     </div>
                     <div className="w-10 flex justify-center">
-                      <span className="inline-flex items-center justify-center w-5 h-5 rounded-full" style={{ background: BRAND }}>
-                        <Check className="w-3.5 h-3.5 text-white" />
-                      </span>
+                      <button type="button" onClick={() => toggleCompleted(exIdx, s.id)}
+                        className="inline-flex items-center justify-center w-5 h-5 rounded-full"
+                        style={s.completed ? { background: BRAND } : { background: CARD, border: `1px solid ${BORDER}` }}
+                        aria-label={s.completed ? "标记未完成" : "标记完成"}>
+                        {s.completed && <Check className="w-3.5 h-3.5 text-white" />}
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -480,27 +567,33 @@ export default function FitnessPage() {
                   className="w-full flex items-center justify-center gap-1 h-10 border-t" style={{ borderColor: BORDER, color: BRAND }}>
                   <Plus className="w-3.5 h-3.5" /><span className="text-sm font-medium">添加组</span>
                 </button>
+                {/* B5. 历史对比卡（无历史记录时整卡不渲染） */}
+                {comp && (
+                  <div className="rounded-[8px] p-3 mt-3" style={{ background: TINT }}>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs truncate min-w-0" style={{ color: MUTED }}>与上次对比 ({comp.date})</span>
+                      <div className="flex items-center gap-0.5 shrink-0">
+                        {comp.up
+                          ? <TrendingUp className="w-3.5 h-3.5 shrink-0" style={{ color: SUCCESS }} />
+                          : <TrendingDown className="w-3.5 h-3.5 shrink-0" style={{ color: ERROR }} />}
+                        <span className="text-sm font-medium whitespace-nowrap" style={{ color: comp.up ? SUCCESS : ERROR }}>
+                          {comp.up ? "+" : ""}{Math.round(comp.pct)}%
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-xs mb-2" style={{ color: MUTED }}>
+                      <span className="line-through truncate">{comp.prevStr}</span>
+                      <span className="shrink-0">→</span>
+                      <span className="truncate" style={{ color: BRAND }}>{comp.curStr}</span>
+                    </div>
+                    <div className="h-1.5 rounded-full overflow-hidden" style={{ background: BORDER }}>
+                      <div className="h-full rounded-full" style={{ width: `${comp.width}%`, background: BRAND }} />
+                    </div>
+                  </div>
+                )}
               </div>
-            ))}
-
-            {/* 添加动作按钮 */}
-            <button type="button" onClick={() => setSheetStep("select")}
-              className="w-full h-11 flex items-center justify-center gap-1.5 rounded-[10px] border mb-2 text-[17px]"
-              style={{ borderColor: BRAND, color: BRAND }}>
-              <Plus className="w-[18px] h-[18px]" />添加动作
-            </button>
-
-            {/* 自定义动作 */}
-            <button type="button" onClick={() => { setCustomGroupId(muscleGroupsV2[0]?.id || ""); setCustomOpen(true); }}
-              className="flex items-center gap-1 mb-2" style={{ color: MUTED }}>
-              <PenTool className="w-3.5 h-3.5" /><span className="text-[13px]">创建自定义动作</span>
-            </button>
-
-            {/* 保存 */}
-            <button type="button" onClick={handleSave}
-              className="w-full h-11 rounded-[22px] text-[17px] font-semibold text-white" style={{ background: BRAND }}>
-              保存
-            </button>
+              );
+            })}
           </div>
         )}
       </BottomSheet>

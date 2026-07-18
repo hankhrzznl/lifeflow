@@ -47,7 +47,11 @@ import {
 
 // ─── Helpers ─────────────────────────────────────────────────
 
-const todayStr = () => new Date().toISOString().slice(0, 10);
+/** 本地时区日期键（YYYY-MM-DD），严禁用 toISOString（UTC 口径会错位一天） */
+const formatLocalDate = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+const todayStr = () => formatLocalDate(new Date());
 
 const defaultWaterGoal: WaterGoal = {
   dailyTarget: 2000,
@@ -267,7 +271,7 @@ export const useHealthStore = create<HealthState>()((set, get) => ({
     for (let i = 0; i < sorted.length; i++) {
       const expected = new Date(startDate);
       expected.setDate(expected.getDate() - i);
-      const expectedDate = expected.toISOString().slice(0, 10);
+      const expectedDate = formatLocalDate(expected);
       const log = sorted.find((l) => l.date === expectedDate);
       if (log && log.isOnTime) {
         consecutive++;

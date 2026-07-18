@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useHealthStore } from "@/lib/store/healthStore";
-import { getSleepLogs } from "@/lib/db/health.db";
+import { getSleepLogs, getSleepLogByDate } from "@/lib/db/health.db";
 import type { SleepLog, SleepGoalV2 } from "@/lib/db/health.db";
 import { showToast } from "@/components/ui/Toast";
 
@@ -70,9 +70,10 @@ function diffToHM(diff: number): string {
   return `${sign}${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
 
-/** 目标时间减去提前量 */
+/** 目标时间减去提前量（跨午夜回绕到前一天） */
 function subtractMinutes(time: string, mins: number): string {
-  return minutesToTime(timeToMinutes(time) - mins);
+  const wrapped = ((timeToMinutes(time) - mins) % 1440 + 1440) % 1440;
+  return minutesToTime(wrapped);
 }
 
 // ─── 日期列表工具 ────────────────────────────────────────────
@@ -152,8 +153,8 @@ export default function SleepPage() {
 
   const todayStatusText = todayData
     ? todayData.diff <= 0
-      ? `已达标  比目标早 ${denormalizeDisplay(targetNorm + todayData.diff)}`
-    : `比目标晚 ${diffToHM(todayData.diff).replace("+", "")}`
+      ? `已达标  比目标早 ${diffToHM(todayData.diff).replace(/^[-+]/, "")}`
+      : `比目标晚 ${diffToHM(todayData.diff).replace("+", "")}`
     : "暂无今日记录";
 
   const todayProgressWidth = todayData
@@ -258,7 +259,10 @@ export default function SleepPage() {
 
     setIsSaving(true);
     try {
+      // 防御：今天已有记录则走更新，避免同一天重复行
+      const existing = await getSleepLogByDate(localTodayStr());
       await saveSleepLog({
+        ...(existing ? { id: existing.id } : {}),
         date: localTodayStr(),
         targetTime,
         actualTime,
@@ -280,7 +284,10 @@ export default function SleepPage() {
 
     setIsSaving(true);
     try {
+      // 校准同一天已有记录时走更新，避免重复行污染统计
+      const existing = await getSleepLogByDate(calDate);
       await saveSleepLog({
+        ...(existing ? { id: existing.id } : {}),
         date: calDate,
         targetTime,
         actualTime: calTime,

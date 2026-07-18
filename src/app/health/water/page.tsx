@@ -353,7 +353,12 @@ export default function WaterPage() {
             borderWidth: 1,
           }}
         >
-          <div className="flex items-center gap-2">
+          <div
+            className="flex items-center gap-2 cursor-pointer"
+            onClick={handleNightMode}
+            role="button"
+            aria-pressed={nightMode}
+          >
             <Moon className="w-5 h-5 shrink-0" style={{ color: NIGHT_INDIGO }} />
             <h2 className="text-[17px] font-semibold truncate flex-1" style={{ color: "#000000" }}>
               夜间免打扰
@@ -364,7 +369,9 @@ export default function WaterPage() {
             >
               {nightMode ? "已开启" : "已关闭"}
             </span>
-            <ToggleSwitch checked={nightMode} onChange={handleNightMode} />
+            <span onClick={(e) => e.stopPropagation()} className="shrink-0 inline-flex">
+              <ToggleSwitch checked={nightMode} onChange={handleNightMode} />
+            </span>
           </div>
           <p className="text-[13px]" style={{ color: MUTED }}>
             {nightMode ? "22:00–08:00 不推送提醒" : "已关闭"}

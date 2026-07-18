@@ -203,6 +203,11 @@ export class HealthDB extends Dexie {
 
 export const healthDB = new HealthDB();
 
+/** 本地时区日期键（YYYY-MM-DD），严禁用 toISOString（UTC 口径会错位一天） */
+function localDateStr(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 export async function initializeHealthDB(): Promise<{ success: boolean; error?: string }> {
   try {
     await healthDB.open();
@@ -376,7 +381,7 @@ export async function getSleepLogs(days: number): Promise<SleepLog[]> {
   for (let i = 0; i < days; i++) {
     const d = new Date();
     d.setDate(d.getDate() - i);
-    dates.push(d.toISOString().slice(0, 10));
+    dates.push(localDateStr(d));
   }
   // Reverse so newest is first
   dates.reverse();
@@ -458,7 +463,7 @@ export async function getWorkoutSessions(days?: number): Promise<WorkoutSession[
   for (let i = 0; i < days; i++) {
     const d = new Date();
     d.setDate(d.getDate() - i);
-    dates.push(d.toISOString().slice(0, 10));
+    dates.push(localDateStr(d));
   }
   return healthDB.workoutSessions.where('date').anyOf(dates).toArray();
 }

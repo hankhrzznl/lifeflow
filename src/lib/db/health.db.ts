@@ -23,6 +23,7 @@ export interface WaterGoal {
   dailyTarget: number;       // 每日目标ml (default 2000)
   reminderInterval: number;  // 提醒间隔分钟 (30/60/90/120, 0=关闭)
   nightMode: boolean;        // 夜间免打扰
+  cupSize?: number;          // 杯量 ml (default 200)
   createdAt: number;
   updatedAt: number;
 }
@@ -257,6 +258,7 @@ const DEFAULT_WATER_GOAL: Omit<WaterGoal, 'id'> = {
   dailyTarget: 2000,
   reminderInterval: 0,
   nightMode: false,
+  cupSize: 200,
   createdAt: Date.now(),
   updatedAt: Date.now(),
 };

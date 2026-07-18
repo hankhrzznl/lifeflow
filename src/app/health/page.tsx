@@ -6,9 +6,10 @@ import { motion } from "framer-motion";
 import { useLiveQuery } from "dexie-react-hooks";
 import { Droplets, Moon, Activity } from "lucide-react";
 import {
-  getWaterLogsByDate, getWaterGoal, addWaterLog,
-  getSleepLogByDate, getSleepLogs, getSleepGoal,
+  getWaterLogsByDate, addWaterLog,
+  getSleepLogByDate, getSleepLogs,
   getWorkoutSessionByDate,
+  healthDB,
 } from "@/lib/db/health.db";
 import type { WaterLog } from "@/lib/db/health.db";
 
@@ -57,10 +58,24 @@ export default function HealthPage() {
 
   // ─── 今日数据 ────────────────────────────────────────────
   const todayWaterLogs = useLiveQuery(() => getWaterLogsByDate(today), [today], [] as WaterLog[]);
-  const waterGoal = useLiveQuery(() => getWaterGoal(), [], { dailyTarget: 2000 });
+  const waterGoal = useLiveQuery(
+    async () => {
+      const goals = await healthDB.waterGoals.toArray();
+      return goals.length > 0 ? goals[0] : { dailyTarget: 2000, cupSize: 200 };
+    },
+    [],
+    { dailyTarget: 2000, cupSize: 200 },
+  );
   const todaySleepLog = useLiveQuery(() => getSleepLogByDate(today), [today], undefined);
   const todayWorkout = useLiveQuery(() => getWorkoutSessionByDate(today), [today], undefined);
-  const sleepGoal = useLiveQuery(() => getSleepGoal(), [], { targetTime: "23:30" });
+  const sleepGoal = useLiveQuery(
+    async () => {
+      const goals = await healthDB.sleepGoals.toArray();
+      return goals.length > 0 ? goals[0] : { targetTime: "23:30" };
+    },
+    [],
+    { targetTime: "23:30" },
+  );
 
   // 本周饮水
   const weekWater = useLiveQuery(

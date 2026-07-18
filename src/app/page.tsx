@@ -12,7 +12,7 @@ import { efficiencyDB } from "@/lib/db/efficiency.db";
 import type { Goal, ScheduleTask } from "@/lib/db/efficiency.db";
 import { accountingDB } from "@/lib/db/accounting.db";
 import type { Transaction, Category } from "@/lib/db/accounting.db";
-import { healthDB, getWaterGoal } from "@/lib/db/health.db";
+import { healthDB } from "@/lib/db/health.db";
 import type { WaterLog, SleepRecord } from "@/lib/db/health.db";
 
 // ============================================================
@@ -232,16 +232,17 @@ export default function DashboardPage() {
   // ─── 健康数据 ────────────────────────────────────────────
 
   const healthData = useLiveQuery(async () => {
-    const [waterLogs, sleepRecords, waterGoal] = await Promise.all([
+    const [waterLogs, sleepRecords, waterGoals] = await Promise.all([
       healthDB.waterLogs.toArray(),
       healthDB.sleepRecords.toArray(),
-      getWaterGoal(),
+      healthDB.waterGoals.toArray(),
     ]);
+    const waterGoal = waterGoals.length > 0 ? waterGoals[0] : { dailyTarget: 2000, cupSize: 200 };
     return { waterLogs, sleepRecords, waterGoal };
   }, [], {
     waterLogs: [] as WaterLog[],
     sleepRecords: [] as SleepRecord[],
-    waterGoal: { dailyTarget: 2000 } as { dailyTarget: number },
+    waterGoal: { dailyTarget: 2000, cupSize: 200 },
   });
 
   const {

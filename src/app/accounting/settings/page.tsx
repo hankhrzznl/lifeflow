@@ -149,8 +149,9 @@ export default function SettingsPage() {
         {/* ===== 2. 会员横幅 48px ===== */}
         {showBanner && (
           <div
-            className="h-[48px] flex items-center px-4"
+            className="h-[48px] flex items-center px-4 cursor-pointer"
             style={{ background: "linear-gradient(90deg, #F5D76E 0%, #F8C471 100%)" }}
+            onClick={toastDev}
           >
             <Crown className="w-5 h-5 flex-shrink-0" style={{ color: "#000000" }} />
             <span className="ml-2 text-[15px] font-semibold whitespace-nowrap" style={{ color: "#000000" }}>
@@ -159,7 +160,10 @@ export default function SettingsPage() {
             <div className="flex-1 min-w-0" />
             <button
               type="button"
-              onClick={() => setShowBanner(false)}
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowBanner(false);
+              }}
               className="inline-flex items-center justify-center w-5 h-5 flex-shrink-0"
               aria-label="关闭"
             >

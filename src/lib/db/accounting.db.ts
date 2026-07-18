@@ -198,6 +198,13 @@ export async function getTransactionsByMonth(year: number, month: number): Promi
     .toArray();
 }
 
+export async function getTransactionsByYear(year: number): Promise<Transaction[]> {
+  const prefix = `${year}-`;
+  return accountingDB.transactions
+    .filter((tx) => tx.date.startsWith(prefix))
+    .toArray();
+}
+
 // ─── Categories CRUD ─────────────────────────────────────────
 
 export async function addCategory(category: Omit<Category, 'id'>): Promise<string> {

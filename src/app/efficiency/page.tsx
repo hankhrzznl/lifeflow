@@ -1,353 +1,503 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Plus, Target, TrendingUp, CheckCircle2, PauseCircle,
-  Inbox, MoreHorizontal, Check, Pause, Play, Edit3, Copy, Trash2,
+  MoreHorizontal, Star, Trash2, Home, Trophy, Quote, Circle, Plus,
+  CheckCircle2, Pause, Play, SquarePen, Copy,
 } from "lucide-react";
+import { useLiveQuery } from "dexie-react-hooks";
 import { useEfficiencyStore } from "@/lib/store/efficiencyStore";
+import { efficiencyDB, type Goal } from "@/lib/db/efficiency.db";
 import { showToast } from "@/components/ui/Toast";
-import BottomSheet from "@/components/common/BottomSheet";
-import type { Goal } from "@/lib/db/efficiency.db";
 
-// ─── 常量 ────────────────────────────────────────────────────
+// ─── 设计稿基准: lifeflow-goals/pages/goal-list.html ─────────
+// Apple HIG Light / 品牌色 #5856D6 / 430px 居中 / pt 单位
 
-type FilterKey = "全部" | "进行中" | "已完成" | "已暂停";
-const FILTERS: FilterKey[] = ["全部", "进行中", "已完成", "已暂停"];
-const STATUS_MAP: Record<FilterKey, Goal["status"] | null> = {
-  全部: null, 进行中: "active", 已完成: "completed", 已暂停: "paused",
-};
+const FONT =
+  "-apple-system,BlinkMacSystemFont,'SF Pro Display','SF Pro Text','Segoe UI',sans-serif";
+const BRAND = "#5856D6";
+const MUTED = "#8E8E93";
+const BORDER = "#E5E5EA";
+const DANGER = "#FF3B30";
+const CARD_SHADOW = "0 1px 2px rgba(0,0,0,0.04), 0 4px 8px rgba(0,0,0,0.02)";
+const SPRING = "cubic-bezier(0.32,0.72,0,1)";
 
-const STATUS_LABEL: Record<string, string> = {
-  active: "进行中", completed: "已完成", paused: "已暂停", archived: "已归档",
-};
+// ─── 工具 ────────────────────────────────────────────────────
 
-// ─── 骨架屏 ──────────────────────────────────────────────────
-
-function SkeletonCard() {
-  return (
-    <div className="bg-white rounded-2xl shadow-sm p-4 animate-pulse">
-      <div className="flex gap-3">
-        <div className="w-1 flex-shrink-0 rounded-full bg-gray-200" />
-        <div className="flex-1 space-y-2">
-          <div className="h-5 bg-gray-200 rounded w-3/5" />
-          <div className="h-2 bg-gray-100 rounded-full" />
-          <div className="h-4 bg-gray-100 rounded w-2/5" />
-        </div>
-      </div>
-    </div>
-  );
+function deadlineBadge(goal: Goal): string {
+  if (goal.status === "completed") return "已完成";
+  if (goal.status === "paused") return "已暂停";
+  if (!goal.deadline) return "无截止";
+  const end = new Date(`${goal.deadline}T23:59:59`).getTime();
+  const days = Math.ceil((end - Date.now()) / 86400000);
+  if (days > 0) return `剩余 ${days}d`;
+  if (days === 0) return "今天到期";
+  return `已逾期 ${-days}d`;
 }
+
+const STATUS_ORDER: Record<Goal["status"], number> = {
+  active: 0,
+  paused: 1,
+  completed: 2,
+  archived: 3,
+};
 
 // ─── 主组件 ──────────────────────────────────────────────────
 
 export default function EfficiencyPage() {
   const router = useRouter();
-  const { goals, loading, loadGoals, addGoal, updateGoalStatus, deleteGoal } = useEfficiencyStore();
+  const { goals, loading, loadGoals, addGoal, updateGoalStatus, deleteGoal } =
+    useEfficiencyStore();
 
-  const [filter, setFilter] = useState<FilterKey>("全部");
-  const [sheetOpen, setSheetOpen] = useState(false);
-  const [selectedGoal, setSelectedGoal] = useState<Goal | null>(null);
+  const [showCompletedOnly, setShowCompletedOnly] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [sheetGoal, setSheetGoal] = useState<Goal | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
-
-  // ─── 加载 ──────────────────────────────────────────────────
 
   useEffect(() => { loadGoals(); }, [loadGoals]);
 
-  // ─── 过滤与统计 ────────────────────────────────────────────
+  // 每个目标关联的日程任务统计（x/y 任务已完成）
+  const scheduleTasks = useLiveQuery(
+    () => efficiencyDB.scheduleTasks.toArray(),
+    [],
+  );
 
-  const filteredGoals = (() => {
-    const s = STATUS_MAP[filter];
-    return s === null ? goals : goals.filter((g) => g.status === s);
-  })();
+  const taskStats = useMemo(() => {
+    const map = new Map<string, { done: number; total: number }>();
+    for (const t of scheduleTasks ?? []) {
+      if (!t.goalId) continue;
+      const s = map.get(t.goalId) ?? { done: 0, total: 0 };
+      s.total += 1;
+      if (t.isCompleted) s.done += 1;
+      map.set(t.goalId, s);
+    }
+    return map;
+  }, [scheduleTasks]);
 
-  const activeCount = goals.filter((g) => g.status === "active").length;
-  const completedCount = goals.filter((g) => g.status === "completed").length;
-  const pausedCount = goals.filter((g) => g.status === "paused").length;
-
-  const summaryCards = [
-    { label: "总数", value: goals.length, icon: Target, color: "text-indigo-500", bg: "bg-indigo-50" },
-    { label: "进行中", value: activeCount, icon: TrendingUp, color: "text-sky-500", bg: "bg-sky-50" },
-    { label: "已完成", value: completedCount, icon: CheckCircle2, color: "text-emerald-500", bg: "bg-emerald-50" },
-    { label: "已暂停", value: pausedCount, icon: PauseCircle, color: "text-orange-500", bg: "bg-orange-50" },
-  ];
+  const visibleGoals = useMemo(() => {
+    const list = goals.filter((g) => g.status !== "archived");
+    const filtered = showCompletedOnly
+      ? list.filter((g) => g.status === "completed")
+      : list;
+    return [...filtered].sort(
+      (a, b) =>
+        STATUS_ORDER[a.status] - STATUS_ORDER[b.status] ||
+        b.createdAt - a.createdAt,
+    );
+  }, [goals, showCompletedOnly]);
 
   // ─── 操作 ──────────────────────────────────────────────────
 
   const openSheet = useCallback((goal: Goal) => {
-    setSelectedGoal(goal);
+    setSheetGoal(goal);
     setConfirmDelete(false);
-    setSheetOpen(true);
   }, []);
 
   const closeSheet = useCallback(() => {
-    setSheetOpen(false);
-    setSelectedGoal(null);
+    setSheetGoal(null);
     setConfirmDelete(false);
   }, []);
 
-  const handleAction = useCallback(async (action: string) => {
-    if (!selectedGoal?.id) return;
-
-    switch (action) {
-      case "complete":
-        await updateGoalStatus(selectedGoal.id, "completed");
-        showToast({ message: "已标记完成", type: "success" });
-        break;
-      case "pause":
-        await updateGoalStatus(selectedGoal.id, "paused");
-        showToast({ message: "已暂停", type: "info" });
-        break;
-      case "resume":
-        await updateGoalStatus(selectedGoal.id, "active");
-        showToast({ message: "已恢复", type: "success" });
-        break;
-      case "edit":
-        router.push(`/efficiency/create?id=${selectedGoal.id}`);
-        closeSheet();
-        return;
-      case "copy": {
-        const { id, createdAt, ...rest } = selectedGoal;
-        await addGoal({ ...rest, title: `${rest.title} (副本)`, status: "active" });
-        showToast({ message: "已复制", type: "success" });
-        break;
+  const handleAction = useCallback(
+    async (action: string) => {
+      if (!sheetGoal) return;
+      switch (action) {
+        case "complete":
+          await updateGoalStatus(sheetGoal.id, "completed");
+          showToast({ message: "已标记完成", type: "success" });
+          break;
+        case "pause":
+          await updateGoalStatus(sheetGoal.id, "paused");
+          showToast({ message: "已暂停", type: "info" });
+          break;
+        case "resume":
+          await updateGoalStatus(sheetGoal.id, "active");
+          showToast({ message: "已恢复", type: "success" });
+          break;
+        case "edit":
+          router.push(`/efficiency/create?id=${sheetGoal.id}`);
+          closeSheet();
+          return;
+        case "copy": {
+          const { id, createdAt, ...rest } = sheetGoal;
+          await addGoal({ ...rest, title: `${rest.title} (副本)`, status: "active" });
+          showToast({ message: "已复制", type: "success" });
+          break;
+        }
+        case "delete":
+          if (!confirmDelete) { setConfirmDelete(true); return; }
+          await deleteGoal(sheetGoal.id);
+          showToast({ message: "已删除", type: "success" });
+          break;
       }
-      case "delete":
-        if (!confirmDelete) { setConfirmDelete(true); return; }
-        await deleteGoal(selectedGoal.id);
-        showToast({ message: "已删除", type: "success" });
-        break;
-    }
-    await loadGoals();
-    closeSheet();
-  }, [selectedGoal, confirmDelete, loadGoals, closeSheet, router, addGoal, updateGoalStatus, deleteGoal]);
-
-  const handleMenuAction = useCallback((action: string) => {
-    setMenuOpen(false);
-    if (action === "completed") setFilter("已完成");
-    else if (action === "deleted") showToast({ message: "功能开发中", type: "info" });
-  }, []);
+      closeSheet();
+    },
+    [sheetGoal, confirmDelete, router, addGoal, updateGoalStatus, deleteGoal, closeSheet],
+  );
 
   // ─── 渲染 ──────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen bg-[#F5F5F7] pb-24">
-      <div className="max-w-2xl mx-auto px-5 pt-8">
+    <div style={{ fontFamily: FONT }}>
+      {/* ===== Header（设计稿: 60pt 高 / 22pt 大标题） ===== */}
+      <header className="relative flex items-center justify-between h-[60pt] px-[16pt] pt-[10pt]">
+        <h1 className="text-[22pt] font-bold leading-[28pt] tracking-[0.35pt] text-black">
+          {showCompletedOnly ? "已达成目标" : "我的目标"}
+        </h1>
+        <button
+          onClick={() => setMenuOpen((p) => !p)}
+          className="w-[44pt] h-[44pt] flex items-center justify-center rounded-full"
+          aria-label="菜单"
+        >
+          <MoreHorizontal
+            className="w-[24pt] h-[24pt]"
+            style={{ color: menuOpen ? BRAND : MUTED }}
+          />
+        </button>
 
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">我的目标</h1>
-            <p className="text-sm text-gray-500 mt-0.5">追踪你的每一个进步</p>
-          </div>
-          <div className="relative">
-            <button onClick={() => setMenuOpen((p) => !p)}
-              className="w-10 h-10 rounded-full hover:bg-gray-200/60 flex items-center justify-center transition-colors">
-              <MoreHorizontal className="w-5 h-5 text-gray-700" />
-            </button>
-            <AnimatePresence>
-              {menuOpen && (
-                <>
-                  <div className="fixed inset-0 z-30" onClick={() => setMenuOpen(false)} />
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.9, y: -4 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.9, y: -4 }}
-                    className="absolute right-0 top-12 z-40 w-40 bg-white rounded-xl shadow-lg border border-gray-100 py-1.5"
-                  >
-                    <button onClick={() => handleMenuAction("completed")}
-                      className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-500" />已达成目标
-                    </button>
-                    <button onClick={() => handleMenuAction("deleted")}
-                      className="w-full text-left px-4 py-2.5 text-sm text-gray-500 hover:bg-gray-50 flex items-center gap-2">
-                      <Trash2 className="w-4 h-4" />最近删除
-                    </button>
-                  </motion.div>
-                </>
-              )}
-            </AnimatePresence>
-          </div>
-        </div>
-
-        {/* Summary Cards */}
-        {loading ? (
-          <div className="grid grid-cols-4 gap-3 mb-6">
-            {[0, 1, 2, 3].map((i) => (
-              <div key={i} className="bg-white rounded-2xl shadow-sm p-3 animate-pulse">
-                <div className="w-8 h-8 rounded-xl bg-gray-200 mx-auto mb-1.5" />
-                <div className="h-5 bg-gray-200 rounded w-6 mx-auto mb-1" />
-                <div className="h-3 bg-gray-100 rounded w-10 mx-auto" />
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="grid grid-cols-4 gap-3 mb-6">
-            {summaryCards.map((card, i) => (
-              <motion.div key={card.label} initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }}
-                className="bg-white rounded-2xl shadow-sm p-3 text-center">
-                <div className={`w-8 h-8 rounded-xl ${card.bg} flex items-center justify-center mx-auto mb-1.5`}>
-                  <card.icon className={`w-4 h-4 ${card.color}`} />
-                </div>
-                <div className="text-lg font-bold text-gray-900">{card.value}</div>
-                <div className="text-xs text-gray-500">{card.label}</div>
+        {/* 下拉菜单（设计稿 dropdown-menu.html） */}
+        <AnimatePresence>
+          {menuOpen && (
+            <>
+              <div
+                className="fixed inset-0 z-40"
+                onClick={() => setMenuOpen(false)}
+              />
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+                className="absolute right-[16pt] top-[54pt] z-50 w-[180pt] bg-white overflow-hidden origin-top-right flex flex-col"
+                style={{
+                  borderRadius: "12pt",
+                  boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+                }}
+              >
+                <MenuItem
+                  icon={Star}
+                  label={showCompletedOnly ? "显示全部目标" : "已达成目标"}
+                  onClick={() => {
+                    setShowCompletedOnly((p) => !p);
+                    setMenuOpen(false);
+                  }}
+                />
+                <Divider />
+                <MenuItem
+                  icon={Trash2}
+                  label="最近删除"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    showToast({ message: "功能开发中", type: "info" });
+                  }}
+                />
+                <Divider />
+                <MenuItem
+                  icon={Home}
+                  label="返回主页"
+                  onClick={() => router.push("/")}
+                />
               </motion.div>
-            ))}
-          </div>
-        )}
+            </>
+          )}
+        </AnimatePresence>
+      </header>
 
-        {/* Filter Chips */}
-        <div className="flex gap-2 mb-5 overflow-x-auto pb-1">
-          {FILTERS.map((f) => (
-            <button key={f} onClick={() => setFilter(f)}
-              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors flex-shrink-0 ${
-                filter === f ? "bg-indigo-500 text-white" : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"
-              }`}>{f}</button>
-          ))}
+      {/* ===== 内容区 ===== */}
+      <div className="px-[16pt] flex flex-col gap-[16pt]">
+        {/* 引言卡（设计稿固定文案） */}
+        <div
+          className="bg-white rounded-[16pt] h-[56pt] px-[16pt] flex items-center"
+          style={{ boxShadow: CARD_SHADOW }}
+        >
+          <Trophy className="w-[24pt] h-[24pt] shrink-0 mr-[8pt]" style={{ color: BRAND }} />
+          <span className="flex-1 text-[16pt] font-medium leading-[22pt] truncate" style={{ color: BRAND }}>
+            是时候点燃自己的宇宙了！
+          </span>
+          <Quote className="w-[20pt] h-[20pt] shrink-0 ml-[8pt]" style={{ color: "#C7C7CC", opacity: 0.3 }} />
         </div>
 
-        {/* Goal Cards */}
+        {/* 目标卡列表 */}
         {loading ? (
-          <div className="space-y-3">{[0, 1, 2].map((i) => <SkeletonCard key={i} />)}</div>
-        ) : filteredGoals.length === 0 ? (
-          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
-            className="flex flex-col items-center justify-center py-20">
-            <div className="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center mb-5">
-              <Inbox className="w-9 h-9 text-gray-400" />
-            </div>
-            <p className="text-gray-500 text-base mb-6">还没有目标，开始创建吧！</p>
-            <button onClick={() => router.push("/efficiency/create")}
-              className="px-6 py-2.5 bg-indigo-500 text-white rounded-full text-sm font-medium shadow-lg shadow-indigo-500/20 hover:bg-indigo-600 transition-colors">
-              创建目标
-            </button>
-          </motion.div>
+          <>
+            <SkeletonCard />
+            <SkeletonCard />
+          </>
+        ) : visibleGoals.length === 0 ? (
+          <EmptyState
+            hasAnyGoal={goals.length > 0}
+            showCompletedOnly={showCompletedOnly}
+            onCreate={() => router.push("/efficiency/create")}
+          />
         ) : (
-          <div className="space-y-3">
-            {filteredGoals.map((goal, i) => {
-              const colorHex = goal.color || "#5856D6";
-              return (
-                <motion.div key={goal.id}
-                  initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.06, duration: 0.3 }}
-                  className="bg-white rounded-2xl shadow-sm overflow-hidden cursor-pointer active:scale-[0.98] transition-transform"
-                  onClick={() => openSheet(goal)}>
-                  <div className="flex">
-                    {/* 左侧颜色条 */}
-                    <div className="w-1 flex-shrink-0" style={{ backgroundColor: colorHex }} />
-                    <div className="flex-1 p-4">
-                      <div className="flex items-start justify-between mb-2">
-                        <h3 className="font-semibold text-gray-900 pr-2 leading-snug">{goal.title}</h3>
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${
-                          goal.status === "active" ? "bg-emerald-50 text-emerald-600"
-                          : goal.status === "completed" ? "bg-indigo-50 text-indigo-600"
-                          : goal.status === "paused" ? "bg-orange-50 text-orange-600"
-                          : "bg-gray-100 text-gray-500"
-                        }`}>{STATUS_LABEL[goal.status]}</span>
-                      </div>
-                      {/* 进度条 */}
-                      <div className="flex items-center gap-3 mb-1.5">
-                        <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
-                          <motion.div
-                            className="h-2 bg-gradient-to-r from-indigo-500 to-violet-500 rounded-full"
-                            initial={{ width: 0 }}
-                            animate={{ width: `${goal.progress}%` }}
-                            transition={{ delay: 0.2 + i * 0.06, duration: 0.6, ease: "easeOut" }}
-                          />
-                        </div>
-                        <span className="text-sm font-medium text-gray-500 w-9 text-right">{goal.progress}%</span>
-                      </div>
-                      <div className="text-xs text-gray-400 mt-1">
-                        截止: {goal.deadline || "无截止日期"}
-                      </div>
-                    </div>
+          visibleGoals.map((goal, i) => {
+            const stats = taskStats.get(goal.id) ?? { done: 0, total: 0 };
+            const pct =
+              stats.total > 0
+                ? (stats.done / stats.total) * 100
+                : Math.min(100, Math.max(0, goal.progress));
+            const color = goal.color || BRAND;
+            return (
+              <motion.div
+                key={goal.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.05, duration: 0.4, ease: [0.32, 0.72, 0, 1] }}
+                onClick={() => openSheet(goal)}
+                className="bg-white rounded-[16pt] p-[16pt] cursor-pointer"
+                style={{ boxShadow: CARD_SHADOW, transitionTimingFunction: SPRING }}
+              >
+                {/* Row 1: 标题 + 徽章 */}
+                <div className="flex items-center justify-between">
+                  <h2 className="text-[17pt] font-bold text-black leading-[22pt] truncate pr-2">
+                    {goal.title}
+                  </h2>
+                  <span className="text-[13pt] font-medium bg-[#F5F5F7] rounded-[8pt] px-[8pt] py-[4pt] leading-[18pt] shrink-0" style={{ color: MUTED }}>
+                    {deadlineBadge(goal)}
+                  </span>
+                </div>
+
+                {/* Row 2: 任务状态 */}
+                <div className="flex items-center gap-[6pt] mt-[8pt]">
+                  {stats.done === stats.total && stats.total > 0 ? (
+                    <CheckCircle2 className="w-[20pt] h-[20pt] shrink-0" style={{ color }} />
+                  ) : (
+                    <Circle className="w-[20pt] h-[20pt] shrink-0" style={{ color: MUTED }} />
+                  )}
+                  <span className="text-[13pt] leading-[18pt]" style={{ color: MUTED }}>
+                    {stats.done}/{stats.total} 任务已完成
+                  </span>
+                </div>
+
+                {/* Row 3: 进度条 */}
+                <div className="mt-[8pt]">
+                  <div className="w-full h-[6pt] bg-[#F5F5F7] rounded-[3pt] overflow-hidden">
+                    <motion.div
+                      className="h-full rounded-[3pt]"
+                      initial={{ width: 0 }}
+                      animate={{ width: `${pct}%` }}
+                      transition={{ duration: 0.4, ease: [0.32, 0.72, 0, 1] }}
+                      style={{ backgroundColor: color }}
+                    />
                   </div>
-                </motion.div>
-              );
-            })}
-          </div>
+                  <p className="text-[12pt] leading-[16pt] mt-[4pt]" style={{ color: MUTED }}>
+                    {pct.toFixed(1)}%
+                  </p>
+                </div>
+              </motion.div>
+            );
+          })
         )}
       </div>
 
-      {/* FAB */}
-      <motion.button onClick={() => router.push("/efficiency/create")}
-        className="fixed bottom-24 right-5 w-14 h-14 rounded-2xl shadow-lg flex items-center justify-center text-white z-40"
-        style={{ background: "linear-gradient(135deg, #5856D6, #7B79E0)" }}
-        whileTap={{ scale: 0.9 }}
-        whileHover={{ scale: 1.05, boxShadow: "0 8px 30px rgba(88, 86, 214, 0.4)" }}>
-        <Plus className="w-6 h-6" />
-      </motion.button>
+      {/* ===== FAB（设计稿: 56pt 渐变圆，bottom 100pt） ===== */}
+      <button
+        onClick={() => router.push("/efficiency/create")}
+        aria-label="创建目标"
+        className="fixed w-[56pt] h-[56pt] rounded-[28pt] flex items-center justify-center z-40"
+        style={{
+          right: "calc(50% - 215px + 16pt)",
+          bottom: "100pt",
+          background: "linear-gradient(135deg,#5856D6,#AF52DE)",
+          boxShadow: "0 4px 16px rgba(88,86,214,0.35)",
+        }}
+      >
+        <Plus className="w-[24pt] h-[24pt]" style={{ color: "#FFFFFF" }} />
+      </button>
 
-      {/* BottomSheet */}
-      <BottomSheet open={sheetOpen} onClose={closeSheet} title={selectedGoal?.title ?? ""}>
-        <div className="flex flex-col gap-1">
-          {selectedGoal?.status === "active" && (
-            <SheetAction icon={Check} color="emerald" label="标记完成" desc="将此目标设为已完成"
-              onClick={() => handleAction("complete")} />
-          )}
-          {selectedGoal?.status === "active" && (
-            <SheetAction icon={Pause} color="orange" label="暂停" desc="暂时暂停此目标的追踪"
-              onClick={() => handleAction("pause")} />
-          )}
-          {selectedGoal?.status === "paused" && (
-            <SheetAction icon={Play} color="blue" label="恢复" desc="重新开始追踪此目标"
-              onClick={() => handleAction("resume")} />
-          )}
-          <SheetAction icon={Edit3} color="gray" label="编辑" desc="修改目标名称和详情"
-            onClick={() => handleAction("edit")} />
-          <SheetAction icon={Copy} color="gray" label="复制" desc="创建一个副本目标"
-            onClick={() => handleAction("copy")} />
-          <button onClick={() => handleAction("delete")}
-            className={`flex items-center gap-3 px-3 py-3 rounded-xl transition-colors w-full text-left ${
-              confirmDelete ? "bg-red-50 hover:bg-red-100" : "hover:bg-gray-50"
-            }`}>
-            <div className="w-9 h-9 rounded-full bg-red-100 flex items-center justify-center">
-              <Trash2 className="w-5 h-5 text-red-500" />
-            </div>
-            <div>
-              <div className={`text-sm font-medium ${confirmDelete ? "text-red-600" : "text-gray-900"}`}>
-                {confirmDelete ? "确认删除？" : "删除"}
+      {/* ===== 目标操作弹层（设计稿 goal-action-sheet.html） ===== */}
+      <AnimatePresence>
+        {sheetGoal && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={closeSheet}
+              className="fixed inset-0 z-50"
+              style={{ background: "rgba(0,0,0,0.4)" }}
+            />
+            <motion.div
+              initial={{ y: "100%", x: "-50%" }}
+              animate={{ y: 0, x: "-50%" }}
+              exit={{ y: "100%", x: "-50%" }}
+              transition={{ duration: 0.4, ease: [0.32, 0.72, 0, 1] }}
+              className="fixed left-1/2 bottom-0 w-full max-w-[430px] bg-white z-[60]"
+              style={{
+                borderRadius: "32pt 32pt 0 0",
+                boxShadow: "0 -4px 20px rgba(0,0,0,0.1)",
+                paddingBottom: "max(16pt, env(safe-area-inset-bottom))",
+              }}
+            >
+              {/* 拖拽把手 */}
+              <div className="flex justify-center pt-[8pt] pb-[8pt]">
+                <div className="w-[36pt] h-[4pt] bg-[#C7C7CC] rounded-[2pt]" />
               </div>
-              <div className="text-xs text-gray-400">
-                {confirmDelete ? "再次点击确认删除" : "永久删除此目标"}
+
+              {/* 目标名 */}
+              <div className="px-[16pt] pb-[8pt]">
+                <p className="text-[13pt] leading-[18pt] truncate" style={{ color: MUTED }}>
+                  {sheetGoal.title}
+                </p>
               </div>
-            </div>
-          </button>
-        </div>
-      </BottomSheet>
+              <Divider />
+
+              {sheetGoal.status === "active" && (
+                <>
+                  <SheetItem icon={CheckCircle2} label="完成目标" onClick={() => handleAction("complete")} />
+                  <Divider />
+                  <SheetItem icon={Pause} label="暂停目标" onClick={() => handleAction("pause")} />
+                  <Divider />
+                </>
+              )}
+              {sheetGoal.status === "paused" && (
+                <>
+                  <SheetItem icon={Play} label="恢复目标" onClick={() => handleAction("resume")} />
+                  <Divider />
+                </>
+              )}
+              {sheetGoal.status === "completed" && (
+                <>
+                  <SheetItem icon={Play} label="重新激活" onClick={() => handleAction("resume")} />
+                  <Divider />
+                </>
+              )}
+              <SheetItem icon={SquarePen} label="编辑" onClick={() => handleAction("edit")} />
+              <Divider />
+              <SheetItem icon={Copy} label="复制目标" onClick={() => handleAction("copy")} />
+              <Divider />
+              <SheetItem
+                icon={Trash2}
+                label={confirmDelete ? "确认删除？" : "删除"}
+                danger
+                onClick={() => handleAction("delete")}
+              />
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
 
-// ─── Sheet 操作按钮 ──────────────────────────────────────────
+// ─── 下拉菜单项（设计稿: 48pt 高 / 17pt 文字） ───────────────
 
-const ACTION_COLORS: Record<string, string> = {
-  emerald: "bg-emerald-100 text-emerald-600",
-  orange: "bg-orange-100 text-orange-600",
-  blue: "bg-blue-100 text-blue-600",
-  gray: "bg-gray-100 text-gray-600",
-};
-
-function SheetAction({ icon: Icon, color, label, desc, onClick }: {
-  icon: React.ComponentType<{ className?: string }>;
-  color: string;
+function MenuItem({
+  icon: Icon,
+  label,
+  onClick,
+}: {
+  icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
   label: string;
-  desc: string;
   onClick: () => void;
 }) {
   return (
-    <button onClick={onClick}
-      className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-gray-50 transition-colors w-full text-left">
-      <div className={`w-9 h-9 rounded-full flex items-center justify-center ${ACTION_COLORS[color] ?? ""}`}>
-        <Icon className="w-5 h-5" />
-      </div>
-      <div>
-        <div className="text-sm font-medium text-gray-900">{label}</div>
-        <div className="text-xs text-gray-400">{desc}</div>
-      </div>
+    <button
+      onClick={onClick}
+      className="flex items-center justify-between shrink-0 h-[48pt] px-[16pt] w-full text-left active:bg-black/5"
+    >
+      <span className="text-[17pt] font-normal leading-[22pt] text-black">{label}</span>
+      <Icon className="w-[20pt] h-[20pt]" style={{ color: "#000000" }} />
     </button>
+  );
+}
+
+// ─── 分隔线（设计稿: 0.5pt #E5E5EA） ─────────────────────────
+
+function Divider() {
+  return <div className="shrink-0 h-0 mx-[16pt]" style={{ borderBottom: `0.5pt solid ${BORDER}` }} />;
+}
+
+// ─── 操作弹层菜单项（设计稿: 56pt 高） ───────────────────────
+
+function SheetItem({
+  icon: Icon,
+  label,
+  danger,
+  onClick,
+}: {
+  icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
+  label: string;
+  danger?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="flex items-center h-[56pt] px-[16pt] w-full text-left active:bg-black/5"
+    >
+      <Icon
+        className="w-[24pt] h-[24pt] mr-[12pt] shrink-0"
+        style={{ color: danger ? DANGER : MUTED }}
+      />
+      <span
+        className="text-[17pt] leading-[22pt]"
+        style={{ color: danger ? DANGER : "#000000", fontWeight: danger ? 500 : 400 }}
+      >
+        {label}
+      </span>
+    </button>
+  );
+}
+
+// ─── 骨架屏（卡片轮廓一致） ──────────────────────────────────
+
+function SkeletonCard() {
+  return (
+    <div className="bg-white rounded-[16pt] p-[16pt] animate-pulse" style={{ boxShadow: CARD_SHADOW }}>
+      <div className="flex items-center justify-between">
+        <div className="h-[22pt] w-2/5 bg-[#F5F5F7] rounded-[8pt]" />
+        <div className="h-[18pt] w-[64pt] bg-[#F5F5F7] rounded-[8pt]" />
+      </div>
+      <div className="h-[18pt] w-1/2 bg-[#F5F5F7] rounded-[8pt] mt-[8pt]" />
+      <div className="w-full h-[6pt] bg-[#F5F5F7] rounded-[3pt] mt-[12pt]" />
+    </div>
+  );
+}
+
+// ─── 空状态（设计稿 empty-state.html） ───────────────────────
+
+function EmptyState({
+  hasAnyGoal,
+  showCompletedOnly,
+  onCreate,
+}: {
+  hasAnyGoal: boolean;
+  showCompletedOnly: boolean;
+  onCreate: () => void;
+}) {
+  if (hasAnyGoal && showCompletedOnly) {
+    return (
+      <div className="flex flex-col items-center justify-center py-[60pt]">
+        <p className="text-[17pt] leading-[22pt]" style={{ color: MUTED }}>
+          还没有已达成的目标
+        </p>
+      </div>
+    );
+  }
+  return (
+    <div className="flex flex-col items-center justify-center pt-[40pt]">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/assets/empty-state-illustration.jpg"
+        alt="空状态插图"
+        className="w-[200pt] h-[180pt] object-contain"
+      />
+      <p className="mt-[24pt] text-[17pt] leading-[22pt] tracking-[-0.41pt]" style={{ color: MUTED }}>
+        开始创建一个目标吧！
+      </p>
+      <button
+        onClick={onCreate}
+        className="mt-[24pt] w-full h-[48pt] rounded-[12pt] text-white text-[17pt] font-medium leading-[22pt]"
+        style={{
+          background: "linear-gradient(to right, #5856D6, #AF52DE)",
+          boxShadow: "0 4px 16px rgba(88,86,214,0.3)",
+        }}
+      >
+        创建目标
+      </button>
+    </div>
   );
 }

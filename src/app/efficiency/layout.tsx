@@ -2,55 +2,54 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { motion } from "framer-motion";
-import { ArrowLeft, Target, CalendarDays, BarChart3, Bot, Settings } from "lucide-react";
+import { Flag, Calendar, BarChart3, Settings } from "lucide-react";
+
+// ─── 效率子站布局（按 lifeflow-goals 设计稿 1:1）─────────────
+// 设计稿: lifeflow-goals/pages/goal-list.html
+// 导航: 目标 / 日程 / 分析 / 设置（4-tab，430px 居中，白底 85% 毛玻璃）
 
 const BRAND = "#5856D6";
 const INACTIVE = "#8E8E93";
 
-interface Tab {
-  label: string;
-  path: string;
-  icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
-}
-
-const tabs: Tab[] = [
-  { label: "目标", path: "/efficiency", icon: Target },
-  { label: "日程", path: "/efficiency/schedule", icon: CalendarDays },
-  { label: "回顾", path: "/efficiency/review", icon: BarChart3 },
-  { label: "助手", path: "/assistant", icon: Bot },
-  { label: "设置", path: "/efficiency/settings", icon: Settings },
+const tabs = [
+  { key: "goals", label: "目标", path: "/efficiency", icon: Flag },
+  { key: "schedule", label: "日程", path: "/efficiency/schedule", icon: Calendar },
+  { key: "analytics", label: "分析", path: "/efficiency/review", icon: BarChart3 },
+  { key: "settings", label: "设置", path: "/efficiency/settings", icon: Settings },
 ];
 
-function StationTabBar({ tabs, brandColor }: { tabs: Tab[]; brandColor: string }) {
+function EfficiencyTabBar() {
   const pathname = usePathname();
 
+  const isActive = (path: string) => {
+    if (path === "/efficiency") {
+      // 目标 tab: 列表页 + 创建/编辑页
+      return pathname === "/efficiency" || pathname === "/efficiency/create";
+    }
+    return pathname.startsWith(path);
+  };
+
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white/85 backdrop-blur-xl border-t border-black/5 pb-[max(8px,env(safe-area-inset-bottom))]">
-      <div className="flex justify-around items-center h-14">
+    <nav
+      data-mobile-nav="efficiency"
+      className="fixed bottom-0 left-0 right-0 z-50 bg-white/85 backdrop-blur-[12px] border-t border-[#E5E5EA]"
+    >
+      <div className="w-full max-w-[430px] mx-auto grid grid-cols-4 h-[49pt]">
         {tabs.map((tab) => {
-          const isActive = pathname === tab.path || (tab.path !== "/efficiency" && pathname.startsWith(tab.path));
+          const active = isActive(tab.path);
+          const color = active ? BRAND : INACTIVE;
           return (
             <Link
-              key={tab.path}
+              key={tab.key}
               href={tab.path}
-              className="relative flex flex-col items-center gap-0.5 min-w-[44px]"
+              data-nav-key={tab.key}
+              data-active={active || undefined}
+              className="min-w-0 flex flex-col items-center justify-center gap-1 px-1 h-full"
             >
-              {isActive && (
-                <motion.span
-                  layoutId="efficiency-nav-indicator"
-                  className="absolute -top-1 w-1 h-1 rounded-full"
-                  style={{ backgroundColor: brandColor }}
-                  transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                />
-              )}
-              <tab.icon
-                className="w-6 h-6"
-                style={{ color: isActive ? brandColor : INACTIVE }}
-              />
+              <tab.icon className="w-6 h-6 shrink-0" style={{ color }} strokeWidth={1.5} />
               <span
-                className="text-[10px]"
-                style={{ color: isActive ? brandColor : INACTIVE, fontWeight: isActive ? 500 : 400 }}
+                className="text-[10pt] font-medium leading-none whitespace-nowrap max-w-full truncate"
+                style={{ color }}
               >
                 {tab.label}
               </span>
@@ -58,30 +57,17 @@ function StationTabBar({ tabs, brandColor }: { tabs: Tab[]; brandColor: string }
           );
         })}
       </div>
+      {/* 底部安全区（设计稿总高 83px ≈ 49pt 内容 + 18px 安全区） */}
+      <div className="h-[max(18px,env(safe-area-inset-bottom))]" />
     </nav>
   );
 }
 
 export default function EfficiencyLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-[var(--bg-secondary)]" style={{ paddingBottom: "calc(56px + max(8px, env(safe-area-inset-bottom)))" }}>
-      {/* Top Header */}
-      <header className="sticky top-0 z-40 bg-white/85 backdrop-blur-xl border-b border-black/5">
-        <div className="flex items-center h-12 px-4">
-          <Link href="/" className="flex items-center gap-1 pr-3 -ml-1">
-            <ArrowLeft className="w-5 h-5" style={{ color: BRAND }} />
-          </Link>
-          <h1 className="text-base font-semibold flex-1" style={{ color: BRAND }}>效率</h1>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="pb-20">
-        {children}
-      </main>
-
-      {/* Bottom TabBar */}
-      <StationTabBar tabs={tabs} brandColor={BRAND} />
+    <div className="min-h-screen bg-[#F5F5F7]">
+      <main className="w-full max-w-[430px] mx-auto pb-[99pt]">{children}</main>
+      <EfficiencyTabBar />
     </div>
   );
 }

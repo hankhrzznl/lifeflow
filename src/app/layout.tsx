@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import BottomTabBar from "@/components/navigation/BottomTabBar";
 import { ToastContainer } from "@/components/ui/Toast";
-import FAB from "@/components/ui/FAB";
 import ClientProviders from "@/components/ClientProviders";
 import SWProvider from "@/components/pwa/SWProvider";
 import SWUpdateBanner from "@/components/pwa/SWUpdateBanner";
@@ -45,7 +44,6 @@ export default function RootLayout({
               {children}
             </main>
             <BottomTabBar />
-            <FAB />
             <ToastContainer />
             <SWUpdateBanner />
             <StorageMonitor />

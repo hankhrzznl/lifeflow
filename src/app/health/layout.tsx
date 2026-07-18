@@ -2,59 +2,87 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { motion } from "framer-motion";
-import { ArrowLeft, Heart, Droplets, Moon, Dumbbell, Settings } from "lucide-react";
+import { Home, Layers, BarChart2, Bot, TrendingUp } from "lucide-react";
+import { showToast } from "@/components/ui/Toast";
+
+// ============================================================
+// 设计稿基准: lifeflow-health/pages/dashboard.html (底部导航契约)
+// 品牌橙 #FF9500
+// ============================================================
 
 const BRAND = "#FF9500";
 const INACTIVE = "#8E8E93";
+const BG = "#F2F2F7";
 
-interface Tab {
+interface TabItem {
+  key: string;
   label: string;
   path: string;
   icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
 }
 
-const tabs: Tab[] = [
-  { label: "首页", path: "/health", icon: Heart },
-  { label: "饮水", path: "/health/water", icon: Droplets },
-  { label: "睡眠", path: "/health/sleep", icon: Moon },
-  { label: "运动", path: "/health/fitness", icon: Dumbbell },
-  { label: "设置", path: "/health/settings", icon: Settings },
+const tabs: TabItem[] = [
+  { key: "home", label: "主页", path: "/health", icon: Home },
+  { key: "plan", label: "规划", path: "", icon: Layers },
+  { key: "review", label: "回顾", path: "", icon: BarChart2 },
+  { key: "assistant", label: "助手", path: "", icon: Bot },
+  { key: "stats", label: "统计", path: "", icon: TrendingUp },
 ];
 
-function StationTabBar({ tabs, brandColor }: { tabs: Tab[]; brandColor: string }) {
+function HealthTabBar() {
   const pathname = usePathname();
+  const isHome = pathname === "/health";
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white/85 backdrop-blur-xl border-t border-black/5 pb-[max(8px,env(safe-area-inset-bottom))]">
-      <div className="flex justify-around items-center h-14">
+    <nav
+      data-mobile-nav="health"
+      className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-[#E5E5EA]"
+      style={{ height: 83, paddingBottom: "max(20px, env(safe-area-inset-bottom))" }}
+    >
+      <div className="w-full max-w-[430px] mx-auto grid grid-cols-5" style={{ height: 63, paddingTop: 4 }}>
         {tabs.map((tab) => {
-          const isActive = pathname === tab.path || (tab.path !== "/health" && pathname.startsWith(tab.path));
-          return (
-            <Link
-              key={tab.path}
-              href={tab.path}
-              className="relative flex flex-col items-center gap-0.5 min-w-[44px]"
+          const active = tab.key === "home" && isHome;
+          const content = (
+            <div
+              key={tab.key}
+              className="flex flex-col items-center justify-center gap-0.5"
             >
-              {isActive && (
-                <motion.span
-                  layoutId="health-nav-indicator"
-                  className="absolute -top-1 w-1 h-1 rounded-full"
-                  style={{ backgroundColor: brandColor }}
-                  transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                />
-              )}
               <tab.icon
                 className="w-6 h-6"
-                style={{ color: isActive ? brandColor : INACTIVE }}
+                style={{ color: active ? BRAND : INACTIVE }}
               />
               <span
-                className="text-[10px]"
-                style={{ color: isActive ? brandColor : INACTIVE, fontWeight: isActive ? 500 : 400 }}
+                className="text-[10px] leading-none whitespace-nowrap"
+                style={{ color: active ? BRAND : INACTIVE, fontWeight: active ? 500 : 400 }}
               >
                 {tab.label}
               </span>
-            </Link>
+            </div>
+          );
+
+          if (tab.key === "home") {
+            return (
+              <Link
+                key={tab.key}
+                href="/health"
+                data-nav-key={tab.key}
+                data-active={active || undefined}
+                className="min-w-0 flex flex-col items-center justify-center gap-0.5 px-1"
+              >
+                {content}
+              </Link>
+            );
+          }
+          return (
+            <button
+              key={tab.key}
+              type="button"
+              data-nav-key={tab.key}
+              onClick={() => showToast({ type: "info", message: "功能开发中" })}
+              className="min-w-0 flex flex-col items-center justify-center gap-0.5 px-1"
+            >
+              {content}
+            </button>
           );
         })}
       </div>
@@ -64,24 +92,11 @@ function StationTabBar({ tabs, brandColor }: { tabs: Tab[]; brandColor: string }
 
 export default function HealthLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-[var(--bg-secondary)]" style={{ paddingBottom: "calc(56px + max(8px, env(safe-area-inset-bottom)))" }}>
-      {/* Top Header */}
-      <header className="sticky top-0 z-40 bg-white/85 backdrop-blur-xl border-b border-black/5">
-        <div className="flex items-center h-12 px-4">
-          <Link href="/" className="flex items-center gap-1 pr-3 -ml-1">
-            <ArrowLeft className="w-5 h-5" style={{ color: BRAND }} />
-          </Link>
-          <h1 className="text-base font-semibold flex-1" style={{ color: BRAND }}>健康</h1>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="pb-20">
+    <div className="min-h-screen" style={{ background: BG }}>
+      <main className="w-full max-w-[430px] mx-auto pb-[95px]">
         {children}
       </main>
-
-      {/* Bottom TabBar */}
-      <StationTabBar tabs={tabs} brandColor={BRAND} />
+      <HealthTabBar />
     </div>
   );
 }

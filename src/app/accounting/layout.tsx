@@ -82,7 +82,7 @@ function AccountingTabBar() {
 export default function AccountingLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   // 记账页是全屏流程页，不显示底部导航
-  const hideTabBar = pathname.startsWith("/accounting/record") || pathname.startsWith("/accounting/ledgers");
+  const hideTabBar = pathname.startsWith("/accounting/record") || pathname.startsWith("/accounting/ledgers") || pathname.startsWith("/accounting/search");
 
   return (
     <div className="min-h-screen bg-white">

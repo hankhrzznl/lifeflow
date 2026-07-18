@@ -142,7 +142,7 @@ export default function AccountingPage() {
         </button>
         <button
           type="button"
-          onClick={() => showToast({ type: "info", message: "搜索功能开发中" })}
+          onClick={() => router.push("/accounting/search")}
           aria-label="搜索"
           className="w-8 h-8 flex items-center justify-center rounded-lg active:opacity-50"
         >

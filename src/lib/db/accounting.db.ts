@@ -226,3 +226,17 @@ export async function deleteCategory(id: string): Promise<void> {
 export async function getAllCategories(): Promise<Category[]> {
   return accountingDB.categories.toArray();
 }
+
+// ─── 清空所有记账数据 ────────────────────────────────────────
+export async function clearAllAccountingData(): Promise<void> {
+  await accountingDB.transaction(
+    "rw",
+    [accountingDB.ledgers, accountingDB.accounts, accountingDB.transactions, accountingDB.categories],
+    async () => {
+      await accountingDB.ledgers.clear();
+      await accountingDB.accounts.clear();
+      await accountingDB.transactions.clear();
+      await accountingDB.categories.clear();
+    },
+  );
+}

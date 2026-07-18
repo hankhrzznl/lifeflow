@@ -1,43 +1,43 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import {
-  ChevronLeft, Crown, X, Lock, Bell, Coins, Cloud, HardDrive,
-  ChevronRight, Paintbrush, Image, LayoutGrid, Table, Download,
-  CircleDollarSign, MessageCircle,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { getAllTransactions } from "@/lib/db/accounting.db";
+import { getAllTransactions, getDefaultLedger, clearAllAccountingData } from "@/lib/db/accounting.db";
 import type { Transaction } from "@/lib/db/accounting.db";
 import { showToast } from "@/components/ui/Toast";
+import Dialog from "@/components/ui/Dialog";
 
 // ============================================================
-// 设计稿基准: lifeflow-accounting/pages/settings.html
+// 设计令牌（Apple 简约风）
 // ============================================================
+const ACCENT = "#5865F2";
+const INK = "#1D1D1F";
+const MUTED = "#86868B";
+const CHEVRON = "#C7C7CC";
+const DANGER = "#FF3B30";
+const BORDER_CARD = "#EBEBEB";
+const BORDER_HEADER = "#E6E6E6";
+const TOGGLE_OFF = "#EBEBEB";
+const SKELETON = "#F5F5F5";
 
-const BRAND = "#34C759";
-const EXPENSE = "#FF3B30";
-const INCOME = "#007AFF";
-const MUTED = "#8E8E93";
-const DISABLED = "#C7C7CC";
-const BORDER = "#E5E5EA";
-const BG = "#F2F2F7";
-const SHADOW_CARD = "0 4px 16px rgba(0,0,0,0.08)";
+// ─── 货币映射 ────────────────────────────────────────────────
+const CURRENCY_DISPLAY: Record<string, string> = {
+  CNY: "CNY (¥)",
+  USD: "USD ($)",
+  EUR: "EUR (€)",
+  JPY: "JPY (¥)",
+};
 
-// ─── 格式化 ──────────────────────────────────────────────────
-
-function fmtCompact(fen: number): string {
-  const yuan = fen / 100;
-  return yuan.toLocaleString("zh-CN", {
-    minimumFractionDigits: fen % 100 === 0 ? 0 : 2,
-    maximumFractionDigits: 2,
-  });
+function getCurrencyDisplay(code: string): string {
+  return CURRENCY_DISPLAY[code] || code;
 }
 
-// ─── iOS 开关组件 ────────────────────────────────────────────
-
+// ============================================================
+// iOS 开关
+// ============================================================
 function ToggleSwitch({
   checked,
   onChange,
@@ -54,11 +54,11 @@ function ToggleSwitch({
       aria-checked={checked}
       aria-label={label}
       onClick={onChange}
-      className="relative flex-shrink-0 rounded-full cursor-pointer"
+      className="relative shrink-0 rounded-full cursor-pointer"
       style={{
         width: 51,
         height: 31,
-        background: checked ? BRAND : BORDER,
+        background: checked ? ACCENT : TOGGLE_OFF,
         transition: "background 0.2s",
       }}
     >
@@ -77,287 +77,258 @@ function ToggleSwitch({
   );
 }
 
-// ─── 分隔线 ──────────────────────────────────────────────────
-
-function RowDivider() {
-  return (
-    <div
-      style={{ borderTop: "0.5px solid #E5E5EA", marginLeft: 56 }}
-    />
-  );
-}
-
 // ============================================================
 // 页面
 // ============================================================
-
 export default function SettingsPage() {
   const router = useRouter();
 
-  const [showBanner, setShowBanner] = useState(true);
-  const [passwordOn, setPasswordOn] = useState(false);
-  const [reminderOn, setReminderOn] = useState(false);
+  const [hideZeroOn, setHideZeroOn] = useState(false);
+  const [weeklyOn, setWeeklyOn] = useState(true);
+  const [showClearDialog, setShowClearDialog] = useState(false);
 
-  const allTxs = useLiveQuery(() => getAllTransactions(), [], [] as Transaction[]);
+  const allTxs = useLiveQuery(() => getAllTransactions(), []);
+  const defaultLedger = useLiveQuery(() => getDefaultLedger(), []);
 
-  const { totalExpense, totalIncome, balance, totalCount } = useMemo(() => {
-    let exp = 0;
-    let inc = 0;
-    for (const t of allTxs ?? []) {
-      if (t.type === "expense") exp += t.amount;
-      else inc += t.amount;
-    }
-    return { totalExpense: exp, totalIncome: inc, balance: inc - exp, totalCount: (allTxs ?? []).length };
+  const loaded = allTxs !== undefined;
+
+  // ─── 统计数据 ──────────────────────────────────────────────
+  const { totalCount, uniqueDays } = useMemo(() => {
+    if (!allTxs) return { totalCount: 0, uniqueDays: 0 };
+    const days = new Set(allTxs.map((t: Transaction) => t.date));
+    return { totalCount: allTxs.length, uniqueDays: days.size };
   }, [allTxs]);
+
+  const ledgerName = defaultLedger?.name ?? "日常账本";
+
+  // ─── 开关处理 ──────────────────────────────────────────────
+  const toggleHideZero = () => {
+    setHideZeroOn((p) => !p);
+    showToast({ type: "info", message: "功能开发中" });
+  };
+
+  const toggleWeekly = () => {
+    setWeeklyOn((p) => !p);
+    showToast({ type: "info", message: "功能开发中" });
+  };
 
   const toastDev = () => showToast({ type: "info", message: "功能开发中" });
 
-  const togglePassword = () => {
-    setPasswordOn((p) => !p);
-    showToast({ type: "info", message: "功能开发中" });
+  // ─── 清除数据 ──────────────────────────────────────────────
+  const handleClearData = async () => {
+    try {
+      await clearAllAccountingData();
+      showToast({ type: "success", message: "已清除所有数据" });
+    } catch {
+      showToast({ type: "error", message: "清除失败，请重试" });
+    }
+    setShowClearDialog(false);
   };
 
-  const toggleReminder = () => {
-    setReminderOn((p) => !p);
-    showToast({ type: "info", message: "功能开发中" });
-  };
-
-  // ════════════════════════════════════════════════════════════
-
+  // ============================================================
+  // 渲染
+  // ============================================================
   return (
-    <div style={{ background: BG, minHeight: "100vh" }}>
-      <div className="mx-auto" style={{ maxWidth: 430 }}>
-        {/* ===== 1. 导航条 52px ===== */}
-        <div className="h-[52px] flex items-center px-4">
+    <div className="min-h-screen bg-[#FAFAFA]">
+      {/* ===== 页头 ===== */}
+      <div
+        className="h-[56px] flex items-center relative px-4"
+        style={{ background: "#FFFFFF", borderBottom: `1px solid ${BORDER_HEADER}` }}
+      >
+        <button
+          type="button"
+          onClick={() => router.back()}
+          className="w-11 h-11 -ml-1 flex items-center justify-center active:opacity-50"
+          aria-label="返回"
+        >
+          <ChevronLeft className="w-6 h-6" style={{ color: INK }} />
+        </button>
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <span className="text-[17px] font-semibold" style={{ color: INK }}>设置</span>
+        </div>
+        {/* 右侧占位保证标题居中 */}
+        <div className="w-11 h-11" />
+      </div>
+
+      {/* ===== 统计双卡 ===== */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25 }}
+        className="px-4 mt-4 flex gap-3"
+      >
+        {/* 左卡：总交易 */}
+        <div
+          className="flex-1 h-[104px] rounded-[20px] border p-4 flex flex-col justify-between"
+          style={{ background: "#FFFFFF", borderColor: BORDER_CARD }}
+        >
+          <span className="text-[13px]" style={{ color: MUTED }}>总交易</span>
+          <div className="flex items-baseline gap-1">
+            {loaded ? (
+              <>
+                <span className="text-[34px] font-bold leading-none" style={{ color: INK }}>
+                  {totalCount.toLocaleString("zh-CN")}
+                </span>
+                <span className="text-[17px] font-semibold" style={{ color: INK }}>笔</span>
+              </>
+            ) : (
+              <div className="h-[34px] w-[80px] rounded-md animate-pulse" style={{ background: SKELETON }} />
+            )}
+          </div>
+        </div>
+        {/* 右卡：记账天数 */}
+        <div
+          className="flex-1 h-[104px] rounded-[20px] border p-4 flex flex-col justify-between"
+          style={{ background: "#FFFFFF", borderColor: BORDER_CARD }}
+        >
+          <span className="text-[13px]" style={{ color: MUTED }}>记账天数</span>
+          <div className="flex items-baseline gap-1">
+            {loaded ? (
+              <>
+                <span className="text-[34px] font-bold leading-none" style={{ color: INK }}>
+                  {uniqueDays.toLocaleString("zh-CN")}
+                </span>
+                <span className="text-[17px] font-semibold" style={{ color: INK }}>天</span>
+              </>
+            ) : (
+              <div className="h-[34px] w-[80px] rounded-md animate-pulse" style={{ background: SKELETON }} />
+            )}
+          </div>
+        </div>
+      </motion.div>
+
+      {/* ===== 通用分组卡 ===== */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25, delay: 0.05 }}
+        className="mx-4 mt-4"
+      >
+        <div
+          className="rounded-[20px] border overflow-hidden"
+          style={{ background: "#FFFFFF", borderColor: BORDER_CARD }}
+        >
+          {/* 组标签 */}
+          <div className="px-4 pt-4 pb-1">
+            <span className="text-[13px]" style={{ color: MUTED }}>通用</span>
+          </div>
+
+          {/* 默认账本 */}
+          <button type="button" onClick={toastDev} className="h-[56px] flex items-center justify-between px-4 w-full active:opacity-50">
+            <span className="text-[17px]" style={{ color: INK }}>默认账本</span>
+            <div className="flex items-center gap-1">
+              <span className="text-[15px]" style={{ color: MUTED }}>{ledgerName}</span>
+              <ChevronRight className="w-5 h-5" style={{ color: CHEVRON }} />
+            </div>
+          </button>
+
+          <div style={{ borderTop: `0.5px solid ${BORDER_CARD}` }} />
+
+          {/* 货币单位 */}
+          <button type="button" onClick={toastDev} className="h-[56px] flex items-center justify-between px-4 w-full active:opacity-50">
+            <span className="text-[17px]" style={{ color: INK }}>货币单位</span>
+            <div className="flex items-center gap-1">
+              <span className="text-[15px]" style={{ color: MUTED }}>
+                {getCurrencyDisplay(defaultLedger?.currency ?? "CNY")}
+              </span>
+              <ChevronRight className="w-5 h-5" style={{ color: CHEVRON }} />
+            </div>
+          </button>
+
+          <div style={{ borderTop: `0.5px solid ${BORDER_CARD}` }} />
+
+          {/* 分类管理 */}
+          <button type="button" onClick={toastDev} className="h-[56px] flex items-center justify-between px-4 w-full active:opacity-50">
+            <span className="text-[17px]" style={{ color: INK }}>分类管理</span>
+            <ChevronRight className="w-5 h-5" style={{ color: CHEVRON }} />
+          </button>
+        </div>
+      </motion.div>
+
+      {/* ===== 显示分组卡 ===== */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25, delay: 0.1 }}
+        className="mx-4 mt-4"
+      >
+        <div
+          className="rounded-[20px] border overflow-hidden"
+          style={{ background: "#FFFFFF", borderColor: BORDER_CARD }}
+        >
+          {/* 组标签 */}
+          <div className="px-4 pt-4 pb-1">
+            <span className="text-[13px]" style={{ color: MUTED }}>显示</span>
+          </div>
+
+          {/* 隐藏零交易分类 */}
+          <button type="button" onClick={toggleHideZero} className="h-[56px] flex items-center justify-between px-4 w-full active:opacity-50">
+            <span className="text-[17px]" style={{ color: INK }}>隐藏零交易分类</span>
+            <ToggleSwitch checked={hideZeroOn} onChange={toggleHideZero} label="隐藏零交易分类" />
+          </button>
+
+          <div style={{ borderTop: `0.5px solid ${BORDER_CARD}` }} />
+
+          {/* 按周统计 */}
+          <button type="button" onClick={toggleWeekly} className="h-[56px] flex items-center justify-between px-4 w-full active:opacity-50">
+            <span className="text-[17px]" style={{ color: INK }}>按周统计</span>
+            <ToggleSwitch checked={weeklyOn} onChange={toggleWeekly} label="按周统计" />
+          </button>
+        </div>
+      </motion.div>
+
+      {/* ===== 数据分组卡 ===== */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25, delay: 0.15 }}
+        className="mx-4 mt-4"
+      >
+        <div
+          className="rounded-[20px] border overflow-hidden"
+          style={{ background: "#FFFFFF", borderColor: BORDER_CARD }}
+        >
+          {/* 组标签 */}
+          <div className="px-4 pt-4 pb-1">
+            <span className="text-[13px]" style={{ color: MUTED }}>数据</span>
+          </div>
+
+          {/* 导出数据 */}
+          <button type="button" onClick={toastDev} className="h-[56px] flex items-center justify-between px-4 w-full active:opacity-50">
+            <span className="text-[17px]" style={{ color: INK }}>导出数据</span>
+            <ChevronRight className="w-5 h-5" style={{ color: CHEVRON }} />
+          </button>
+
+          <div style={{ borderTop: `0.5px solid ${BORDER_CARD}` }} />
+
+          {/* 清除所有数据 */}
           <button
             type="button"
-            onClick={() => router.back()}
-            className="flex items-center justify-center w-11 h-11 -ml-1"
-            aria-label="返回"
+            onClick={() => setShowClearDialog(true)}
+            className="h-[56px] flex items-center justify-between px-4 w-full active:opacity-50"
           >
-            <ChevronLeft className="w-6 h-6" style={{ color: "#000000" }} />
+            <span className="text-[17px]" style={{ color: DANGER }}>清除所有数据</span>
+            <ChevronRight className="w-5 h-5" style={{ color: CHEVRON }} />
           </button>
-          <div className="flex-1 text-center text-[17px] font-semibold" style={{ color: "#000000" }}>
-            设置
-          </div>
-          <div
-            className="w-[36px] h-[36px] rounded-full flex items-center justify-center"
-            style={{ backgroundColor: BG }}
-          />
         </div>
+      </motion.div>
 
-        {/* ===== 2. 会员横幅 48px ===== */}
-        {showBanner && (
-          <div
-            className="h-[48px] flex items-center px-4 cursor-pointer"
-            style={{ background: "linear-gradient(90deg, #F5D76E 0%, #F8C471 100%)" }}
-            onClick={toastDev}
-          >
-            <Crown className="w-5 h-5 flex-shrink-0" style={{ color: "#000000" }} />
-            <span className="ml-2 text-[15px] font-semibold whitespace-nowrap" style={{ color: "#000000" }}>
-              永久会员 限时折扣
-            </span>
-            <div className="flex-1 min-w-0" />
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowBanner(false);
-              }}
-              className="inline-flex items-center justify-center w-5 h-5 flex-shrink-0"
-              aria-label="关闭"
-            >
-              <X className="w-5 h-5" style={{ color: "#000000" }} />
-            </button>
-          </div>
-        )}
+      {/* ===== 底部版本号 ===== */}
+      <p className="text-center mt-8 text-[13px] pb-10" style={{ color: MUTED }}>
+        LifeFlow v1.0.0
+      </p>
 
-        {/* ===== 3. 统计双卡 80px ===== */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.25 }}
-          className="px-4 mt-3 flex gap-3"
-        >
-          {/* 左卡 */}
-          <div
-            className="flex-1 h-[80px] rounded-[16px] flex items-center"
-            style={{ background: "#FFFFFF", boxShadow: SHADOW_CARD }}
-          >
-            <div className="w-full px-4 flex justify-between items-center">
-              <div className="flex flex-col items-start">
-                <span className="text-[13px]" style={{ color: MUTED }}>总支出</span>
-                <span className="text-[20px] font-bold mt-0.5" style={{ color: EXPENSE }}>
-                  ¥{fmtCompact(totalExpense)}
-                </span>
-              </div>
-              <div className="flex flex-col items-start">
-                <span className="text-[13px]" style={{ color: MUTED }}>总收入</span>
-                <span className="text-[20px] font-bold mt-0.5" style={{ color: INCOME }}>
-                  ¥{fmtCompact(totalIncome)}
-                </span>
-              </div>
-            </div>
-          </div>
-          {/* 右卡 */}
-          <div
-            className="flex-1 h-[80px] rounded-[16px] flex items-center"
-            style={{ background: "#FFFFFF", boxShadow: SHADOW_CARD }}
-          >
-            <div className="w-full px-4">
-              <div className="flex items-baseline gap-1">
-                <span className="text-[13px]" style={{ color: MUTED }}>结余：</span>
-                <span className="text-[20px] font-bold" style={{ color: "#000000" }}>
-                  ¥{fmtCompact(balance)}
-                </span>
-              </div>
-              <div className="text-[13px] mt-2" style={{ color: MUTED }}>
-                总记账次数：{totalCount}
-              </div>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* ===== 4. 设置分组 1 ===== */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.05, duration: 0.25 }}
-          className="mx-4 mt-4 rounded-[16px] overflow-hidden"
-          style={{ background: "#FFFFFF", boxShadow: SHADOW_CARD }}
-        >
-          {/* 密码 */}
-          <div className="h-[56px] flex items-center px-4">
-            <Lock className="w-6 h-6 flex-shrink-0" style={{ color: "#000000" }} />
-            <span className="ml-4 flex-1 min-w-0 text-[17px] truncate" style={{ color: "#000000" }}>
-              密码
-            </span>
-            <ToggleSwitch checked={passwordOn} onChange={togglePassword} label="密码" />
-          </div>
-          <RowDivider />
-          {/* 每日提醒 */}
-          <div className="h-[56px] flex items-center px-4">
-            <Bell className="w-6 h-6 flex-shrink-0" style={{ color: "#000000" }} />
-            <span className="ml-4 flex-1 min-w-0 text-[17px] truncate" style={{ color: "#000000" }}>
-              每日提醒
-            </span>
-            <ToggleSwitch checked={reminderOn} onChange={toggleReminder} label="每日提醒" />
-          </div>
-          <RowDivider />
-          {/* 我的黄金 */}
-          <button type="button" onClick={toastDev} className="h-[56px] flex items-center px-4 w-full active:opacity-50">
-            <Coins className="w-6 h-6 flex-shrink-0" style={{ color: "#000000" }} />
-            <span className="ml-4 flex-1 min-w-0 text-[17px] truncate text-left" style={{ color: "#000000" }}>
-              我的黄金
-            </span>
-            <ChevronRight className="w-5 h-5 flex-shrink-0" style={{ color: MUTED }} />
-          </button>
-          <RowDivider />
-          {/* iCloud */}
-          <button type="button" onClick={toastDev} className="h-[56px] flex items-center px-4 w-full active:opacity-50">
-            <Cloud className="w-6 h-6 flex-shrink-0" style={{ color: "#000000" }} />
-            <span className="ml-4 text-[17px] truncate flex-shrink-0" style={{ color: "#000000" }}>
-              iCloud
-            </span>
-            <div className="flex-1 min-w-0" />
-            <span className="text-[13px] flex-shrink-0" style={{ color: MUTED }}>遇到问题</span>
-            <ChevronRight className="w-5 h-5 flex-shrink-0 ml-1" style={{ color: MUTED }} />
-          </button>
-          <RowDivider />
-          {/* 数据备份和恢复 */}
-          <button type="button" onClick={toastDev} className="h-[56px] flex items-center px-4 w-full active:opacity-50">
-            <HardDrive className="w-6 h-6 flex-shrink-0" style={{ color: "#000000" }} />
-            <span className="ml-4 flex-1 min-w-0 text-[17px] truncate text-left" style={{ color: "#000000" }}>
-              数据备份和恢复
-            </span>
-            <ChevronRight className="w-5 h-5 flex-shrink-0" style={{ color: MUTED }} />
-          </button>
-        </motion.div>
-
-        {/* ===== 5. 设置分组 2 ===== */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1, duration: 0.25 }}
-          className="mx-4 mt-4 rounded-[16px] overflow-hidden"
-          style={{ background: "#FFFFFF", boxShadow: SHADOW_CARD }}
-        >
-          {/* 偏好设置 */}
-          <button type="button" onClick={toastDev} className="h-[56px] flex items-center px-4 w-full active:opacity-50">
-            <Paintbrush className="w-6 h-6 flex-shrink-0" style={{ color: "#000000" }} />
-            <span className="ml-4 flex-1 min-w-0 text-[17px] truncate text-left" style={{ color: "#000000" }}>
-              偏好设置
-            </span>
-            <ChevronRight className="w-5 h-5 flex-shrink-0" style={{ color: MUTED }} />
-          </button>
-          <RowDivider />
-          {/* 背景样式 */}
-          <button type="button" onClick={toastDev} className="h-[56px] flex items-center px-4 w-full active:opacity-50">
-            <Image className="w-6 h-6 flex-shrink-0" style={{ color: "#000000" }} />
-            <span className="ml-4 flex-1 min-w-0 text-[17px] truncate text-left" style={{ color: "#000000" }}>
-              背景样式
-            </span>
-            <ChevronRight className="w-5 h-5 flex-shrink-0" style={{ color: MUTED }} />
-          </button>
-          <RowDivider />
-          {/* 桌面小组件 */}
-          <button type="button" onClick={toastDev} className="h-[56px] flex items-center px-4 w-full active:opacity-50">
-            <LayoutGrid className="w-6 h-6 flex-shrink-0" style={{ color: "#000000" }} />
-            <span className="ml-4 flex-1 min-w-0 text-[17px] truncate text-left" style={{ color: "#000000" }}>
-              桌面小组件
-            </span>
-            <ChevronRight className="w-5 h-5 flex-shrink-0" style={{ color: MUTED }} />
-          </button>
-          <RowDivider />
-          {/* 导出 CSV */}
-          <button type="button" onClick={toastDev} className="h-[56px] flex items-center px-4 w-full active:opacity-50">
-            <Table className="w-6 h-6 flex-shrink-0" style={{ color: "#000000" }} />
-            <span className="ml-4 flex-1 min-w-0 text-[17px] truncate text-left" style={{ color: "#000000" }}>
-              导出 CSV
-            </span>
-            <ChevronRight className="w-5 h-5 flex-shrink-0" style={{ color: MUTED }} />
-          </button>
-          <RowDivider />
-          {/* 导入账单 */}
-          <button type="button" onClick={toastDev} className="h-[56px] flex items-center px-4 w-full active:opacity-50">
-            <Download className="w-6 h-6 flex-shrink-0" style={{ color: "#000000" }} />
-            <span className="ml-4 flex-1 min-w-0 text-[17px] truncate text-left" style={{ color: "#000000" }}>
-              导入账单
-            </span>
-            <ChevronRight className="w-5 h-5 flex-shrink-0" style={{ color: MUTED }} />
-          </button>
-          <RowDivider />
-          {/* 默认货币 */}
-          <button type="button" onClick={toastDev} className="h-[56px] flex items-center px-4 w-full active:opacity-50">
-            <CircleDollarSign className="w-6 h-6 flex-shrink-0" style={{ color: "#000000" }} />
-            <span className="ml-4 flex-1 min-w-0 text-[17px] truncate text-left" style={{ color: "#000000" }}>
-              默认货币
-            </span>
-            <span className="text-[17px] flex-shrink-0" style={{ color: MUTED }}>¥</span>
-            <ChevronRight className="w-5 h-5 flex-shrink-0 ml-1" style={{ color: MUTED }} />
-          </button>
-        </motion.div>
-
-        {/* ===== 6. 设置分组 3 ===== */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15, duration: 0.25 }}
-          className="mx-4 mt-4 rounded-[16px] overflow-hidden"
-          style={{ background: "#FFFFFF", boxShadow: SHADOW_CARD }}
-        >
-          <button type="button" onClick={toastDev} className="h-[56px] flex items-center px-4 w-full active:opacity-50">
-            <MessageCircle className="w-6 h-6 flex-shrink-0" style={{ color: "#000000" }} />
-            <span className="ml-4 flex-1 min-w-0 text-[17px] truncate text-left" style={{ color: "#000000" }}>
-              交换意见（关注私信）
-            </span>
-            <ChevronRight className="w-5 h-5 flex-shrink-0" style={{ color: MUTED }} />
-          </button>
-        </motion.div>
-
-        {/* ===== 底部留白 ===== */}
-        <div className="h-[34px]" />
-      </div>
+      {/* ===== 清除确认弹窗 ===== */}
+      <Dialog
+        open={showClearDialog}
+        onClose={() => setShowClearDialog(false)}
+        type="confirm"
+        variant="danger"
+        title="清除所有数据"
+        description="将删除全部账本、账户、交易记录与分类，此操作无法恢复。"
+        confirmLabel="确认清除"
+        onConfirm={handleClearData}
+      />
     </div>
   );
 }

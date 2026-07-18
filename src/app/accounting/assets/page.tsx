@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { ChevronLeft, Plus, TrendingUp, TrendingDown } from "lucide-react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { getAllAccounts, getTransactionsByMonth, addAccount, updateAccount, deleteAccount } from "@/lib/db/accounting.db";
+import { getAllAccounts, getTransactionsByMonth, addAccount, updateAccount, deleteAccount, getDefaultLedger } from "@/lib/db/accounting.db";
 import type { Account, Transaction } from "@/lib/db/accounting.db";
 import { showToast } from "@/components/ui/Toast";
 import Dialog from "@/components/ui/Dialog";
@@ -125,11 +125,13 @@ export default function AssetsPage() {
     const finalBalance = formType === "liability" ? -Math.abs(balanceFen) : balanceFen;
 
     try {
+      const ledger = await getDefaultLedger();
+      const ledgerId = ledger?.id ?? "default";
       if (editingAccount) {
         await updateAccount(editingAccount.id, { name, type: formType, balance: finalBalance });
         showToast({ type: "success", message: "已更新" });
       } else {
-        await addAccount({ name, ledgerId: "default", type: formType, balance: finalBalance, currency: "CNY" });
+        await addAccount({ name, ledgerId, type: formType, balance: finalBalance, currency: "CNY" });
         showToast({ type: "success", message: "已添加" });
       }
       setShowAddSheet(false);

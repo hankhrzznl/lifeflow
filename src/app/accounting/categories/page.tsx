@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { ChevronLeft, Plus } from "lucide-react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { getAllCategories, addCategory, updateCategory, deleteCategory } from "@/lib/db/accounting.db";
+import { getAllCategories, addCategory, updateCategory, deleteCategory, getDefaultLedger } from "@/lib/db/accounting.db";
 import type { Category } from "@/lib/db/accounting.db";
 import { showToast } from "@/components/ui/Toast";
 import Dialog from "@/components/ui/Dialog";
@@ -95,7 +95,8 @@ export default function CategoriesPage() {
         await updateCategory(editingCat.id, { name, type: formType, color: formColor, icon: formIcon });
         showToast({ type: "success", message: "已更新" });
       } else {
-        await addCategory({ name, type: formType, color: formColor, icon: formIcon, ledgerId: "default" });
+        const ledger = await getDefaultLedger();
+        await addCategory({ name, type: formType, color: formColor, icon: formIcon, ledgerId: ledger?.id ?? "default" });
         showToast({ type: "success", message: "已添加" });
       }
       setShowSheet(false);

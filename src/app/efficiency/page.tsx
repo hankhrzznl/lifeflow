@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   MoreHorizontal, Star, Trash2, Home, Trophy, Quote, Circle, Plus,
-  CheckCircle2, Pause, Play, SquarePen, Copy,
+  CheckCircle2, Pause, Play, SquarePen, Copy, Pencil,
 } from "lucide-react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { useEfficiencyStore } from "@/lib/store/efficiencyStore";
@@ -22,7 +22,6 @@ const MUTED = "#8E8E93";
 const BORDER = "#E5E5EA";
 const DANGER = "#FF3B30";
 const CARD_SHADOW = "0 1px 2px rgba(0,0,0,0.04), 0 4px 8px rgba(0,0,0,0.02)";
-const SPRING = "cubic-bezier(0.32,0.72,0,1)";
 
 // ─── 工具 ────────────────────────────────────────────────────
 
@@ -55,6 +54,52 @@ export default function EfficiencyPage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [sheetGoal, setSheetGoal] = useState<Goal | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+
+  // ─── 长按快捷操作（设计稿 goal-quick-actions.html） ───
+  const [quickGoalId, setQuickGoalId] = useState<string | null>(null);
+  const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressed = useRef(false);
+
+  const startPress = useCallback((goal: Goal) => {
+    longPressed.current = false;
+    if (pressTimer.current) clearTimeout(pressTimer.current);
+    pressTimer.current = setTimeout(() => {
+      longPressed.current = true;
+      setQuickGoalId(goal.id);
+    }, 500);
+  }, []);
+
+  const cancelPress = useCallback(() => {
+    if (pressTimer.current) clearTimeout(pressTimer.current);
+  }, []);
+
+  const handleCardClick = useCallback(
+    (goal: Goal) => {
+      if (longPressed.current) { longPressed.current = false; return; }
+      if (quickGoalId) { setQuickGoalId(null); return; }
+      setSheetGoal(goal);
+      setConfirmDelete(false);
+    },
+    [quickGoalId],
+  );
+
+  const handleQuickAction = useCallback(
+    async (goal: Goal, action: "pause" | "edit") => {
+      setQuickGoalId(null);
+      if (action === "edit") {
+        router.push(`/efficiency/create?id=${goal.id}`);
+        return;
+      }
+      if (goal.status === "paused") {
+        await updateGoalStatus(goal.id, "active");
+        showToast({ message: "已恢复", type: "success" });
+      } else {
+        await updateGoalStatus(goal.id, "paused");
+        showToast({ message: "已暂停", type: "info" });
+      }
+    },
+    [router, updateGoalStatus],
+  );
 
   useEffect(() => { loadGoals(); }, [loadGoals]);
 
@@ -89,11 +134,6 @@ export default function EfficiencyPage() {
   }, [goals, showCompletedOnly]);
 
   // ─── 操作 ──────────────────────────────────────────────────
-
-  const openSheet = useCallback((goal: Goal) => {
-    setSheetGoal(goal);
-    setConfirmDelete(false);
-  }, []);
 
   const closeSheet = useCallback(() => {
     setSheetGoal(null);
@@ -239,16 +279,84 @@ export default function EfficiencyPage() {
                 ? (stats.done / stats.total) * 100
                 : Math.min(100, Math.max(0, goal.progress));
             const color = goal.color || BRAND;
+            const quickActive = quickGoalId === goal.id;
             return (
               <motion.div
                 key={goal.id}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.05, duration: 0.4, ease: [0.32, 0.72, 0, 1] }}
-                onClick={() => openSheet(goal)}
-                className="bg-white rounded-[16pt] p-[16pt] cursor-pointer"
-                style={{ boxShadow: CARD_SHADOW, transitionTimingFunction: SPRING }}
+                className="relative"
+                style={{ zIndex: quickActive ? 40 : undefined }}
               >
+                {/* 快捷操作按钮（设计稿 goal-quick-actions.html: 44pt 圆形按钮组） */}
+                <AnimatePresence>
+                  {quickActive && (
+                    <div className="absolute flex flex-col items-center" style={{ right: "8pt", top: "50%", transform: "translateY(-50%)" }}>
+                      {(goal.status === "active" || goal.status === "paused") && (
+                        <>
+                          <motion.button
+                            type="button"
+                            initial={{ opacity: 0, x: 12 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: 12 }}
+                            transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
+                            onClick={(e) => { e.stopPropagation(); handleQuickAction(goal, "pause"); }}
+                            aria-label={goal.status === "paused" ? "恢复" : "暂停"}
+                            className="flex items-center justify-center"
+                            style={{
+                              width: "44pt", height: "44pt", borderRadius: "22pt",
+                              background: "#F5F5F7", boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+                            }}
+                          >
+                            {goal.status === "paused" ? (
+                              <Play className="w-[20pt] h-[20pt]" style={{ color: "#000" }} />
+                            ) : (
+                              <Pause className="w-[20pt] h-[20pt]" style={{ color: "#000" }} />
+                            )}
+                          </motion.button>
+                          <span className="text-[10pt] leading-[12pt] mt-[4pt]" style={{ color: MUTED }}>
+                            {goal.status === "paused" ? "恢复" : "暂停"}
+                          </span>
+                        </>
+                      )}
+                      <motion.button
+                        type="button"
+                        initial={{ opacity: 0, x: 12 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: 12 }}
+                        transition={{ duration: 0.2, delay: 0.05, ease: [0.32, 0.72, 0, 1] }}
+                        onClick={(e) => { e.stopPropagation(); handleQuickAction(goal, "edit"); }}
+                        aria-label="编辑"
+                        className="flex items-center justify-center"
+                        style={{
+                          width: "44pt", height: "44pt", borderRadius: "22pt",
+                          background: "#FF9500", boxShadow: "0 2px 8px rgba(255,149,0,0.3)",
+                          marginTop: goal.status === "active" || goal.status === "paused" ? "8pt" : 0,
+                        }}
+                      >
+                        <Pencil className="w-[20pt] h-[20pt]" style={{ color: "#FFF" }} />
+                      </motion.button>
+                      <span className="text-[10pt] leading-[12pt] mt-[4pt]" style={{ color: MUTED }}>编辑</span>
+                    </div>
+                  )}
+                </AnimatePresence>
+
+                {/* 目标卡本体（快捷模式下左移+缩小，设计稿 scale 0.98 / opacity 0.9） */}
+                <motion.div
+                  animate={{
+                    scale: quickActive ? 0.98 : 1,
+                    opacity: quickActive ? 0.9 : 1,
+                    x: quickActive ? "-70pt" : 0,
+                  }}
+                  transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
+                  onPointerDown={() => startPress(goal)}
+                  onPointerUp={cancelPress}
+                  onPointerLeave={cancelPress}
+                  onClick={() => handleCardClick(goal)}
+                  className="bg-white rounded-[16pt] p-[16pt] cursor-pointer select-none"
+                  style={{ boxShadow: CARD_SHADOW }}
+                >
                 {/* Row 1: 标题 + 徽章 */}
                 <div className="flex items-center justify-between">
                   <h2 className="text-[17pt] font-bold text-black leading-[22pt] truncate pr-2">
@@ -286,11 +394,17 @@ export default function EfficiencyPage() {
                     {pct.toFixed(1)}%
                   </p>
                 </div>
+                </motion.div>
               </motion.div>
             );
           })
         )}
       </div>
+
+      {/* 快捷操作模式下的点击关闭层 */}
+      {quickGoalId && (
+        <div className="fixed inset-0 z-30" onClick={() => setQuickGoalId(null)} />
+      )}
 
       {/* ===== FAB（设计稿: 56pt 渐变圆，bottom 100pt） ===== */}
       <button

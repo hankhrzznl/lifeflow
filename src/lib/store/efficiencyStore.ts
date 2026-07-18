@@ -69,7 +69,11 @@ export const useEfficiencyStore = create<EfficiencyState>()((set, get) => ({
   },
 
   updateGoalStatus: async (id, status) => {
-    await db.updateGoal(id, { status });
+    const updates: Partial<Goal> = { status };
+    if (status === "completed") {
+      updates.completedAt = Date.now();
+    }
+    await db.updateGoal(id, updates);
     const goals = await db.getAllGoalsV2();
     set({ goals });
   },

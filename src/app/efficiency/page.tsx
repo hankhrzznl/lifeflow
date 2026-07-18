@@ -4,44 +4,51 @@ import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  MoreHorizontal, Star, Trash2, Home, Trophy, Quote, Circle, Plus,
-  CheckCircle2, Pause, Play, SquarePen, Copy, Pencil,
+  Plus, CheckCircle2, Pause, Play, SquarePen, Copy, Trash2, Pencil,
 } from "lucide-react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { useEfficiencyStore } from "@/lib/store/efficiencyStore";
 import { efficiencyDB, type Goal } from "@/lib/db/efficiency.db";
 import { showToast } from "@/components/ui/Toast";
 
-// ─── 设计稿基准: lifeflow-goals/pages/goal-list.html ─────────
-// Apple HIG Light / 品牌色 #5856D6 / 430px 居中 / pt 单位
-
-const FONT =
-  "-apple-system,BlinkMacSystemFont,'SF Pro Display','SF Pro Text','Segoe UI',sans-serif";
-const BRAND = "#5856D6";
-const MUTED = "#8E8E93";
-const BORDER = "#E5E5EA";
+// ─── 设计令牌 ────────────────────────────────────────────────
+const ACCENT = "#5865F2";
 const DANGER = "#FF3B30";
-const CARD_SHADOW = "0 1px 2px rgba(0,0,0,0.04), 0 4px 8px rgba(0,0,0,0.02)";
+const GREEN = "#34C759";
 
-// ─── 工具 ────────────────────────────────────────────────────
-
-function deadlineBadge(goal: Goal): string {
-  if (goal.status === "completed") return "已完成";
-  if (goal.status === "paused") return "已暂停";
-  if (!goal.deadline) return "无截止";
-  const end = new Date(`${goal.deadline}T23:59:59`).getTime();
-  const days = Math.ceil((end - Date.now()) / 86400000);
-  if (days > 0) return `剩余 ${days}d`;
-  if (days === 0) return "今天到期";
-  return `已逾期 ${-days}d`;
+function todayStr(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-const STATUS_ORDER: Record<Goal["status"], number> = {
-  active: 0,
-  paused: 1,
-  completed: 2,
-  archived: 3,
-};
+// ─── 迷你进度环（24px 外径，3px stroke） ────────────────────
+function MiniRing({ pct }: { pct: number }) {
+  const clamped = Math.min(100, Math.max(0, pct));
+  const size = 24;
+  const sw = 3;
+  const r = (size - sw) / 2;
+  const circ = 2 * Math.PI * r;
+
+  return (
+    <svg width={size} height={size} className="flex-shrink-0">
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#E5E5E5" strokeWidth={sw} />
+      <motion.circle
+        cx={size / 2} cy={size / 2} r={r}
+        fill="none" stroke={ACCENT} strokeWidth={sw} strokeLinecap="round"
+        strokeDasharray={circ}
+        initial={{ strokeDashoffset: circ }}
+        animate={{ strokeDashoffset: circ - (circ * clamped) / 100 }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
+        style={{ transform: "rotate(-90deg)", transformOrigin: "center" }}
+      />
+    </svg>
+  );
+}
+
+// ─── 分隔线 ──────────────────────────────────────────────────
+function Divider() {
+  return <div className="mx-4" style={{ borderBottom: "0.5px solid #F5F5F5" }} />;
+}
 
 // ─── 主组件 ──────────────────────────────────────────────────
 
@@ -50,12 +57,10 @@ export default function EfficiencyPage() {
   const { goals, loading, loadGoals, addGoal, updateGoalStatus, deleteGoal } =
     useEfficiencyStore();
 
-  const [showCompletedOnly, setShowCompletedOnly] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
   const [sheetGoal, setSheetGoal] = useState<Goal | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  // ─── 长按快捷操作（设计稿 goal-quick-actions.html） ───
+  // ─── 长按快捷操作 ──────────────────────────────────────────
   const [quickGoalId, setQuickGoalId] = useState<string | null>(null);
   const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressed = useRef(false);
@@ -103,16 +108,21 @@ export default function EfficiencyPage() {
 
   useEffect(() => { loadGoals(); }, [loadGoals]);
 
-  // 每个目标关联的日程任务统计（x/y 任务已完成）
+  // ─── 日程任务统计（仅今日任务） ────────────────────────────
   const scheduleTasks = useLiveQuery(
     () => efficiencyDB.scheduleTasks.toArray(),
     [],
   );
 
-  const taskStats = useMemo(() => {
+  const todayTaskStats = useMemo(() => {
+    const today = todayStr();
     const map = new Map<string, { done: number; total: number }>();
     for (const t of scheduleTasks ?? []) {
       if (!t.goalId) continue;
+      const isToday =
+        t.date === today ||
+        (t.type === "multi_day" && t.startDate && t.endDate && t.startDate <= today && t.endDate >= today);
+      if (!isToday) continue;
       const s = map.get(t.goalId) ?? { done: 0, total: 0 };
       s.total += 1;
       if (t.isCompleted) s.done += 1;
@@ -121,20 +131,32 @@ export default function EfficiencyPage() {
     return map;
   }, [scheduleTasks]);
 
-  const visibleGoals = useMemo(() => {
-    const list = goals.filter((g) => g.status !== "archived");
-    const filtered = showCompletedOnly
-      ? list.filter((g) => g.status === "completed")
-      : list;
-    return [...filtered].sort(
-      (a, b) =>
-        STATUS_ORDER[a.status] - STATUS_ORDER[b.status] ||
-        b.createdAt - a.createdAt,
-    );
-  }, [goals, showCompletedOnly]);
+  // ─── 分组 ──────────────────────────────────────────────────
+  const { activeGoals, completedGoals, monthCompletedCount } = useMemo(() => {
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
 
-  // ─── 操作 ──────────────────────────────────────────────────
+    const active = goals
+      .filter((g) => g.status === "active" || g.status === "paused")
+      .sort((a, b) => b.createdAt - a.createdAt);
 
+    const completed = goals
+      .filter((g) => g.status === "completed")
+      .sort((a, b) => {
+        const aTime = a.completedAt ?? 0;
+        const bTime = b.completedAt ?? 0;
+        if (bTime !== aTime) return bTime - aTime;
+        return b.createdAt - a.createdAt;
+      });
+
+    const monthCount = goals.filter(
+      (g) => g.status === "completed" && g.completedAt && g.completedAt >= monthStart,
+    ).length;
+
+    return { activeGoals: active, completedGoals: completed, monthCompletedCount: monthCount };
+  }, [goals]);
+
+  // ─── 操作弹层 ──────────────────────────────────────────────
   const closeSheet = useCallback(() => {
     setSheetGoal(null);
     setConfirmDelete(false);
@@ -161,7 +183,7 @@ export default function EfficiencyPage() {
           closeSheet();
           return;
         case "copy": {
-          const { id, createdAt, ...rest } = sheetGoal;
+          const { id, createdAt, completedAt, ...rest } = sheetGoal;
           await addGoal({ ...rest, title: `${rest.title} (副本)`, status: "active" });
           showToast({ message: "已复制", type: "success" });
           break;
@@ -179,249 +201,219 @@ export default function EfficiencyPage() {
 
   // ─── 渲染 ──────────────────────────────────────────────────
 
+  // 空态
+  const showEmpty = !loading && activeGoals.length === 0 && completedGoals.length === 0;
+
   return (
-    <div style={{ fontFamily: FONT }}>
-      {/* ===== Header（设计稿: 60pt 高 / 22pt 大标题） ===== */}
-      <header className="relative flex items-center justify-between h-[60pt] px-[16pt] pt-[10pt]">
-        <h1 className="text-[22pt] font-bold leading-[28pt] tracking-[0.35pt] text-black">
-          {showCompletedOnly ? "已达成目标" : "我的目标"}
-        </h1>
-        <button
-          onClick={() => setMenuOpen((p) => !p)}
-          className="w-[44pt] h-[44pt] flex items-center justify-center rounded-full"
-          aria-label="菜单"
-        >
-          <MoreHorizontal
-            className="w-[24pt] h-[24pt]"
-            style={{ color: menuOpen ? BRAND : MUTED }}
-          />
-        </button>
+    <div>
+      {/* ===== Header ===== */}
+      <div className="px-4 pt-[56px]">
+        <h1 className="text-[34px] font-bold text-[#1D1D1F]">效率</h1>
+      </div>
 
-        {/* 下拉菜单（设计稿 dropdown-menu.html） */}
-        <AnimatePresence>
-          {menuOpen && (
-            <>
-              <div
-                className="fixed inset-0 z-40"
-                onClick={() => setMenuOpen(false)}
-              />
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.2, ease: "easeOut" }}
-                className="absolute right-[16pt] top-[54pt] z-50 w-[180pt] bg-white overflow-hidden origin-top-right flex flex-col"
-                style={{
-                  borderRadius: "12pt",
-                  boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
-                }}
-              >
-                <MenuItem
-                  icon={Star}
-                  label={showCompletedOnly ? "显示全部目标" : "已达成目标"}
-                  onClick={() => {
-                    setShowCompletedOnly((p) => !p);
-                    setMenuOpen(false);
-                  }}
-                />
-                <Divider />
-                <MenuItem
-                  icon={Trash2}
-                  label="最近删除"
-                  onClick={() => {
-                    setMenuOpen(false);
-                    showToast({ message: "功能开发中", type: "info" });
-                  }}
-                />
-                <Divider />
-                <MenuItem
-                  icon={Home}
-                  label="返回主页"
-                  onClick={() => router.push("/")}
-                />
-              </motion.div>
-            </>
-          )}
-        </AnimatePresence>
-      </header>
-
-      {/* ===== 内容区 ===== */}
-      <div className="px-[16pt] flex flex-col gap-[16pt]">
-        {/* 引言卡（设计稿固定文案） */}
-        <div
-          className="bg-white rounded-[16pt] h-[56pt] px-[16pt] flex items-center"
-          style={{ boxShadow: CARD_SHADOW }}
-        >
-          <Trophy className="w-[24pt] h-[24pt] shrink-0 mr-[8pt]" style={{ color: BRAND }} />
-          <span className="flex-1 text-[16pt] font-medium leading-[22pt] truncate" style={{ color: BRAND }}>
-            是时候点燃自己的宇宙了！
-          </span>
-          <Quote className="w-[20pt] h-[20pt] shrink-0 ml-[8pt]" style={{ color: "#C7C7CC", opacity: 0.3 }} />
+      {/* ===== 主操作行 ===== */}
+      <div className="px-4 mt-[24px] flex items-center justify-between">
+        <div className="text-[15px] text-[#86868B]">
+          本月完成{" "}
+          <span className="text-[17px] font-bold text-[#1D1D1F] tabular-nums">
+            {monthCompletedCount}
+          </span>{" "}
+          个目标
         </div>
+        <motion.button
+          whileTap={{ scale: 0.95 }}
+          onClick={() => router.push("/efficiency/create")}
+          className="h-[40px] px-5 rounded-full bg-[#5865F2] text-white text-[15px] font-semibold flex items-center gap-1"
+        >
+          <Plus className="w-4 h-4" />
+          新建目标
+        </motion.button>
+      </div>
 
-        {/* 目标卡列表 */}
-        {loading ? (
-          <>
-            <SkeletonCard />
-            <SkeletonCard />
-          </>
-        ) : visibleGoals.length === 0 ? (
-          <EmptyState
-            hasAnyGoal={goals.length > 0}
-            showCompletedOnly={showCompletedOnly}
-            onCreate={() => router.push("/efficiency/create")}
-          />
-        ) : (
-          visibleGoals.map((goal, i) => {
-            const stats = taskStats.get(goal.id) ?? { done: 0, total: 0 };
-            const pct =
-              stats.total > 0
-                ? (stats.done / stats.total) * 100
-                : Math.min(100, Math.max(0, goal.progress));
-            const color = goal.color || BRAND;
-            const quickActive = quickGoalId === goal.id;
-            return (
-              <motion.div
-                key={goal.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.05, duration: 0.4, ease: [0.32, 0.72, 0, 1] }}
-                className="relative"
-                style={{ zIndex: quickActive ? 40 : undefined }}
-              >
-                {/* 快捷操作按钮（设计稿 goal-quick-actions.html: 44pt 圆形按钮组） */}
-                <AnimatePresence>
-                  {quickActive && (
-                    <div className="absolute flex flex-col items-center" style={{ right: "8pt", top: "50%", transform: "translateY(-50%)" }}>
-                      {(goal.status === "active" || goal.status === "paused") && (
-                        <>
-                          <motion.button
-                            type="button"
-                            initial={{ opacity: 0, x: 12 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: 12 }}
-                            transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
-                            onClick={(e) => { e.stopPropagation(); handleQuickAction(goal, "pause"); }}
-                            aria-label={goal.status === "paused" ? "恢复" : "暂停"}
-                            className="flex items-center justify-center"
-                            style={{
-                              width: "44pt", height: "44pt", borderRadius: "22pt",
-                              background: "#F5F5F7", boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
-                            }}
-                          >
-                            {goal.status === "paused" ? (
-                              <Play className="w-[20pt] h-[20pt]" style={{ color: "#000" }} />
-                            ) : (
-                              <Pause className="w-[20pt] h-[20pt]" style={{ color: "#000" }} />
-                            )}
-                          </motion.button>
-                          <span className="text-[10pt] leading-[12pt] mt-[4pt]" style={{ color: MUTED }}>
-                            {goal.status === "paused" ? "恢复" : "暂停"}
-                          </span>
-                        </>
-                      )}
-                      <motion.button
-                        type="button"
-                        initial={{ opacity: 0, x: 12 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: 12 }}
-                        transition={{ duration: 0.2, delay: 0.05, ease: [0.32, 0.72, 0, 1] }}
-                        onClick={(e) => { e.stopPropagation(); handleQuickAction(goal, "edit"); }}
-                        aria-label="编辑"
-                        className="flex items-center justify-center"
-                        style={{
-                          width: "44pt", height: "44pt", borderRadius: "22pt",
-                          background: "#FF9500", boxShadow: "0 2px 8px rgba(255,149,0,0.3)",
-                          marginTop: goal.status === "active" || goal.status === "paused" ? "8pt" : 0,
-                        }}
-                      >
-                        <Pencil className="w-[20pt] h-[20pt]" style={{ color: "#FFF" }} />
-                      </motion.button>
-                      <span className="text-[10pt] leading-[12pt] mt-[4pt]" style={{ color: MUTED }}>编辑</span>
-                    </div>
-                  )}
-                </AnimatePresence>
+      {/* ===== 骨架屏 ===== */}
+      {loading && (
+        <div className="px-4 mt-[32px] flex flex-col gap-3">
+          <div className="h-8 w-20 bg-[#F5F5F5] rounded animate-pulse mb-1" />
+          {[1, 2].map((i) => (
+            <div
+              key={i}
+              className="bg-white rounded-[16px] border border-[#E5E5E5] p-4 flex items-center gap-3 animate-pulse"
+            >
+              <div className="w-2 h-2 rounded-full bg-[#F5F5F5]" />
+              <div className="flex-1 flex flex-col gap-1">
+                <div className="h-5 w-1/2 bg-[#F5F5F5] rounded" />
+                <div className="h-[14px] w-1/3 bg-[#F5F5F5] rounded" />
+              </div>
+              <div className="w-6 h-6 rounded-full bg-[#F5F5F5]" />
+            </div>
+          ))}
+        </div>
+      )}
 
-                {/* 目标卡本体（快捷模式下左移+缩小，设计稿 scale 0.98 / opacity 0.9） */}
+      {/* ===== 空态 ===== */}
+      {showEmpty && (
+        <div className="flex flex-col items-center pt-[80px]">
+          <p className="text-[15px] text-[#AEAEB2]">开始创建一个目标吧！</p>
+          <motion.button
+            whileTap={{ scale: 0.95 }}
+            onClick={() => router.push("/efficiency/create")}
+            className="mt-[24px] h-[40px] px-5 rounded-full bg-[#5865F2] text-white text-[15px] font-semibold flex items-center gap-1"
+          >
+            <Plus className="w-4 h-4" />
+            新建目标
+          </motion.button>
+        </div>
+      )}
+
+      {/* ===== 进行中分组 ===== */}
+      {activeGoals.length > 0 && (
+        <>
+          <h2 className="px-4 mt-[32px] mb-[12px] text-[20px] font-bold text-[#1D1D1F]">进行中</h2>
+          <div className="px-4 flex flex-col gap-3">
+            {activeGoals.map((goal, i) => {
+              const stats = todayTaskStats.get(goal.id) ?? { done: 0, total: 0 };
+              const pct =
+                stats.total > 0
+                  ? Math.round((stats.done / stats.total) * 100)
+                  : Math.min(100, Math.max(0, goal.progress));
+              const color = goal.color || ACCENT;
+              const quickActive = quickGoalId === goal.id;
+
+              return (
                 <motion.div
-                  animate={{
-                    scale: quickActive ? 0.98 : 1,
-                    opacity: quickActive ? 0.9 : 1,
-                    x: quickActive ? "-70pt" : 0,
-                  }}
-                  transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
-                  onPointerDown={() => startPress(goal)}
-                  onPointerUp={cancelPress}
-                  onPointerLeave={cancelPress}
-                  onClick={() => handleCardClick(goal)}
-                  className="bg-white rounded-[16pt] p-[16pt] cursor-pointer select-none"
-                  style={{ boxShadow: CARD_SHADOW }}
+                  key={goal.id}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.05, duration: 0.35, ease: "easeOut" }}
+                  className="relative"
+                  style={{ zIndex: quickActive ? 40 : undefined }}
                 >
-                {/* Row 1: 标题 + 徽章 */}
-                <div className="flex items-center justify-between">
-                  <h2 className="text-[17pt] font-bold text-black leading-[22pt] truncate pr-2">
-                    {goal.title}
-                  </h2>
-                  <span className="text-[13pt] font-medium bg-[#F5F5F7] rounded-[8pt] px-[8pt] py-[4pt] leading-[18pt] shrink-0" style={{ color: MUTED }}>
-                    {deadlineBadge(goal)}
-                  </span>
-                </div>
+                  {/* 快捷操作按钮 */}
+                  <AnimatePresence>
+                    {quickActive && (
+                      <div
+                        className="absolute flex flex-col items-center"
+                        style={{ right: 8, top: "50%", transform: "translateY(-50%)" }}
+                      >
+                        {(goal.status === "active" || goal.status === "paused") && (
+                          <>
+                            <motion.button
+                              type="button"
+                              initial={{ opacity: 0, x: 12 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              exit={{ opacity: 0, x: 12 }}
+                              transition={{ duration: 0.2, ease: "easeOut" }}
+                              onClick={(e) => { e.stopPropagation(); handleQuickAction(goal, "pause"); }}
+                              aria-label={goal.status === "paused" ? "恢复" : "暂停"}
+                              className="w-[44px] h-[44px] rounded-full bg-white border border-[#E5E5E5] flex items-center justify-center"
+                            >
+                              {goal.status === "paused" ? (
+                                <Play className="w-5 h-5 text-[#1D1D1F]" />
+                              ) : (
+                                <Pause className="w-5 h-5 text-[#1D1D1F]" />
+                              )}
+                            </motion.button>
+                            <span className="text-[11px] text-[#86868B] mt-1">
+                              {goal.status === "paused" ? "恢复" : "暂停"}
+                            </span>
+                          </>
+                        )}
+                        <motion.button
+                          type="button"
+                          initial={{ opacity: 0, x: 12 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: 12 }}
+                          transition={{ duration: 0.2, delay: 0.05, ease: "easeOut" }}
+                          onClick={(e) => { e.stopPropagation(); handleQuickAction(goal, "edit"); }}
+                          aria-label="编辑"
+                          className="w-[44px] h-[44px] rounded-full bg-[#5865F2] flex items-center justify-center"
+                          style={{ marginTop: goal.status === "active" || goal.status === "paused" ? 8 : 0 }}
+                        >
+                          <Pencil className="w-5 h-5 text-white" />
+                        </motion.button>
+                        <span className="text-[11px] text-[#86868B] mt-1">编辑</span>
+                      </div>
+                    )}
+                  </AnimatePresence>
 
-                {/* Row 2: 任务状态 */}
-                <div className="flex items-center gap-[6pt] mt-[8pt]">
-                  {stats.done === stats.total && stats.total > 0 ? (
-                    <CheckCircle2 className="w-[20pt] h-[20pt] shrink-0" style={{ color }} />
-                  ) : (
-                    <Circle className="w-[20pt] h-[20pt] shrink-0" style={{ color: MUTED }} />
-                  )}
-                  <span className="text-[13pt] leading-[18pt]" style={{ color: MUTED }}>
-                    {stats.done}/{stats.total} 任务已完成
-                  </span>
-                </div>
-
-                {/* Row 3: 进度条 */}
-                <div className="mt-[8pt]">
-                  <div className="w-full h-[6pt] bg-[#F5F5F7] rounded-[3pt] overflow-hidden">
-                    <motion.div
-                      className="h-full rounded-[3pt]"
-                      initial={{ width: 0 }}
-                      animate={{ width: `${pct}%` }}
-                      transition={{ duration: 0.4, ease: [0.32, 0.72, 0, 1] }}
+                  {/* 卡片本体 */}
+                  <motion.div
+                    animate={{
+                      scale: quickActive ? 0.98 : 1,
+                      opacity: quickActive ? 0.9 : 1,
+                      x: quickActive ? -70 : 0,
+                    }}
+                    transition={{ duration: 0.2, ease: "easeOut" }}
+                    onPointerDown={() => startPress(goal)}
+                    onPointerUp={cancelPress}
+                    onPointerLeave={cancelPress}
+                    onClick={() => handleCardClick(goal)}
+                    className="bg-white rounded-[16px] border border-[#E5E5E5] p-4 flex items-center gap-3 cursor-pointer select-none"
+                  >
+                    <div
+                      className="w-2 h-2 rounded-full flex-shrink-0"
                       style={{ backgroundColor: color }}
                     />
-                  </div>
-                  <p className="text-[12pt] leading-[16pt] mt-[4pt]" style={{ color: MUTED }}>
-                    {pct.toFixed(1)}%
-                  </p>
-                </div>
+                    <div className="flex-1 min-w-0 flex flex-col gap-1">
+                      <span className="text-[17px] font-semibold text-[#1D1D1F] truncate">{goal.title}</span>
+                      <span className="text-[13px] text-[#86868B]">
+                        {stats.total > 0
+                          ? `今日任务 · ${stats.done}/${stats.total} 项`
+                          : "今日无任务"}
+                      </span>
+                    </div>
+                    <MiniRing pct={pct} />
+                  </motion.div>
                 </motion.div>
-              </motion.div>
-            );
-          })
-        )}
-      </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+
+      {/* ===== 已完成分组 ===== */}
+      {completedGoals.length > 0 && (
+        <>
+          <h2 className="px-4 mt-[32px] mb-[12px] text-[20px] font-bold text-[#1D1D1F]">已完成</h2>
+          <div className="px-4 flex flex-col gap-3">
+            {completedGoals.map((goal, i) => {
+              const completeLabel = goal.completedAt
+                ? (() => {
+                    const d = new Date(goal.completedAt);
+                    return `${d.getMonth() + 1} 月 ${d.getDate()} 日完成`;
+                  })()
+                : "已完成";
+
+              return (
+                <motion.div
+                  key={goal.id}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.05, duration: 0.35, ease: "easeOut" }}
+                  className="bg-white rounded-[16px] border border-[#E5E5E5] p-4 flex items-center gap-3 cursor-pointer select-none"
+                  onClick={() => { setSheetGoal(goal); setConfirmDelete(false); }}
+                >
+                  <div className="w-2 h-2 rounded-full flex-shrink-0 bg-[#AEAEB2]" />
+                  <div className="flex-1 min-w-0 flex flex-col gap-1">
+                    <span className="text-[17px] font-medium text-[#AEAEB2] line-through truncate">
+                      {goal.title}
+                    </span>
+                    <span className="text-[13px] text-[#AEAEB2]">{completeLabel}</span>
+                  </div>
+                  <CheckCircle2 className="w-6 h-6 flex-shrink-0 text-[#34C759]" strokeWidth={2} />
+                </motion.div>
+              );
+            })}
+          </div>
+        </>
+      )}
 
       {/* 快捷操作模式下的点击关闭层 */}
       {quickGoalId && (
         <div className="fixed inset-0 z-30" onClick={() => setQuickGoalId(null)} />
       )}
 
-      {/* ===== FAB（设计稿: 56pt 渐变圆，bottom 100pt） ===== */}
-      <button
-        onClick={() => router.push("/efficiency/create")}
-        aria-label="创建目标"
-        className="fixed w-[56pt] h-[56pt] rounded-[28pt] flex items-center justify-center z-40"
-        style={{
-          right: "calc(50% - 215px + 16pt)",
-          bottom: "100pt",
-          background: "linear-gradient(135deg,#5856D6,#AF52DE)",
-          boxShadow: "0 4px 16px rgba(88,86,214,0.35)",
-        }}
-      >
-        <Plus className="w-[24pt] h-[24pt]" style={{ color: "#FFFFFF" }} />
-      </button>
-
-      {/* ===== 目标操作弹层（设计稿 goal-action-sheet.html） ===== */}
+      {/* ===== 目标操作弹层 ===== */}
       <AnimatePresence>
         {sheetGoal && (
           <>
@@ -430,8 +422,7 @@ export default function EfficiencyPage() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={closeSheet}
-              className="fixed inset-0 z-50"
-              style={{ background: "rgba(0,0,0,0.4)" }}
+              className="fixed inset-0 z-50 bg-black/40"
             />
             <motion.div
               initial={{ y: "100%", x: "-50%" }}
@@ -440,49 +431,46 @@ export default function EfficiencyPage() {
               transition={{ duration: 0.4, ease: [0.32, 0.72, 0, 1] }}
               className="fixed left-1/2 bottom-0 w-full max-w-[430px] bg-white z-[60]"
               style={{
-                borderRadius: "32pt 32pt 0 0",
-                boxShadow: "0 -4px 20px rgba(0,0,0,0.1)",
-                paddingBottom: "max(16pt, env(safe-area-inset-bottom))",
+                borderRadius: "24px 24px 0 0",
+                paddingBottom: "env(safe-area-inset-bottom)",
               }}
             >
               {/* 拖拽把手 */}
-              <div className="flex justify-center pt-[8pt] pb-[8pt]">
-                <div className="w-[36pt] h-[4pt] bg-[#C7C7CC] rounded-[2pt]" />
+              <div className="flex justify-center pt-2 pb-2">
+                <div className="w-9 h-1 rounded-full bg-[#D4D4D4]" />
               </div>
 
               {/* 目标名 */}
-              <div className="px-[16pt] pb-[8pt]">
-                <p className="text-[13pt] leading-[18pt] truncate" style={{ color: MUTED }}>
-                  {sheetGoal.title}
-                </p>
+              <div className="px-4 pb-2">
+                <p className="text-[13px] text-[#86868B] truncate">{sheetGoal.title}</p>
               </div>
               <Divider />
 
               {sheetGoal.status === "active" && (
                 <>
-                  <SheetItem icon={CheckCircle2} label="完成目标" onClick={() => handleAction("complete")} />
+                  <ActionSheetItem icon={CheckCircle2} label="完成目标" onClick={() => handleAction("complete")} />
                   <Divider />
-                  <SheetItem icon={Pause} label="暂停目标" onClick={() => handleAction("pause")} />
+                  <ActionSheetItem icon={Pause} label="暂停目标" onClick={() => handleAction("pause")} />
                   <Divider />
                 </>
               )}
               {sheetGoal.status === "paused" && (
                 <>
-                  <SheetItem icon={Play} label="恢复目标" onClick={() => handleAction("resume")} />
+                  <ActionSheetItem icon={Play} label="恢复目标" onClick={() => handleAction("resume")} />
                   <Divider />
                 </>
               )}
               {sheetGoal.status === "completed" && (
                 <>
-                  <SheetItem icon={Play} label="重新激活" onClick={() => handleAction("resume")} />
+                  <ActionSheetItem icon={Play} label="重新激活" onClick={() => handleAction("resume")} />
                   <Divider />
                 </>
               )}
-              <SheetItem icon={SquarePen} label="编辑" onClick={() => handleAction("edit")} />
+              <ActionSheetItem icon={SquarePen} label="编辑" onClick={() => handleAction("edit")} />
               <Divider />
-              <SheetItem icon={Copy} label="复制目标" onClick={() => handleAction("copy")} />
+              <ActionSheetItem icon={Copy} label="复制目标" onClick={() => handleAction("copy")} />
               <Divider />
-              <SheetItem
+              <ActionSheetItem
                 icon={Trash2}
                 label={confirmDelete ? "确认删除？" : "删除"}
                 danger
@@ -496,37 +484,8 @@ export default function EfficiencyPage() {
   );
 }
 
-// ─── 下拉菜单项（设计稿: 48pt 高 / 17pt 文字） ───────────────
-
-function MenuItem({
-  icon: Icon,
-  label,
-  onClick,
-}: {
-  icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className="flex items-center justify-between shrink-0 h-[48pt] px-[16pt] w-full text-left active:bg-black/5"
-    >
-      <span className="text-[17pt] font-normal leading-[22pt] text-black">{label}</span>
-      <Icon className="w-[20pt] h-[20pt]" style={{ color: "#000000" }} />
-    </button>
-  );
-}
-
-// ─── 分隔线（设计稿: 0.5pt #E5E5EA） ─────────────────────────
-
-function Divider() {
-  return <div className="shrink-0 h-0 mx-[16pt]" style={{ borderBottom: `0.5pt solid ${BORDER}` }} />;
-}
-
-// ─── 操作弹层菜单项（设计稿: 56pt 高） ───────────────────────
-
-function SheetItem({
+// ─── 操作弹层菜单项 ──────────────────────────────────────────
+function ActionSheetItem({
   icon: Icon,
   label,
   danger,
@@ -540,78 +499,18 @@ function SheetItem({
   return (
     <button
       onClick={onClick}
-      className="flex items-center h-[56pt] px-[16pt] w-full text-left active:bg-black/5"
+      className="flex items-center h-[56px] px-4 w-full text-left active:bg-black/5"
     >
       <Icon
-        className="w-[24pt] h-[24pt] mr-[12pt] shrink-0"
-        style={{ color: danger ? DANGER : MUTED }}
+        className="w-[22px] h-[22px] mr-3 flex-shrink-0"
+        style={{ color: danger ? DANGER : "#86868B" }}
       />
       <span
-        className="text-[17pt] leading-[22pt]"
-        style={{ color: danger ? DANGER : "#000000", fontWeight: danger ? 500 : 400 }}
+        className="text-[15px]"
+        style={{ color: danger ? DANGER : "#1D1D1F" }}
       >
         {label}
       </span>
     </button>
-  );
-}
-
-// ─── 骨架屏（卡片轮廓一致） ──────────────────────────────────
-
-function SkeletonCard() {
-  return (
-    <div className="bg-white rounded-[16pt] p-[16pt] animate-pulse" style={{ boxShadow: CARD_SHADOW }}>
-      <div className="flex items-center justify-between">
-        <div className="h-[22pt] w-2/5 bg-[#F5F5F7] rounded-[8pt]" />
-        <div className="h-[18pt] w-[64pt] bg-[#F5F5F7] rounded-[8pt]" />
-      </div>
-      <div className="h-[18pt] w-1/2 bg-[#F5F5F7] rounded-[8pt] mt-[8pt]" />
-      <div className="w-full h-[6pt] bg-[#F5F5F7] rounded-[3pt] mt-[12pt]" />
-    </div>
-  );
-}
-
-// ─── 空状态（设计稿 empty-state.html） ───────────────────────
-
-function EmptyState({
-  hasAnyGoal,
-  showCompletedOnly,
-  onCreate,
-}: {
-  hasAnyGoal: boolean;
-  showCompletedOnly: boolean;
-  onCreate: () => void;
-}) {
-  if (hasAnyGoal && showCompletedOnly) {
-    return (
-      <div className="flex flex-col items-center justify-center py-[60pt]">
-        <p className="text-[17pt] leading-[22pt]" style={{ color: MUTED }}>
-          还没有已达成的目标
-        </p>
-      </div>
-    );
-  }
-  return (
-    <div className="flex flex-col items-center justify-center pt-[40pt]">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src="/assets/empty-state-illustration.jpg"
-        alt="空状态插图"
-        className="w-[200pt] h-[180pt] object-contain"
-      />
-      <p className="mt-[24pt] text-[17pt] leading-[22pt] tracking-[-0.41pt]" style={{ color: MUTED }}>
-        开始创建一个目标吧！
-      </p>
-      <button
-        onClick={onCreate}
-        className="mt-[24pt] w-full h-[48pt] rounded-[12pt] text-white text-[17pt] font-medium leading-[22pt]"
-        style={{
-          background: "linear-gradient(to right, #5856D6, #AF52DE)",
-          boxShadow: "0 4px 16px rgba(88,86,214,0.3)",
-        }}
-      >
-        创建目标
-      </button>
-    </div>
   );
 }

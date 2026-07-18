@@ -9,6 +9,7 @@ export interface Goal {
   deadline: string;     // ISO date YYYY-MM-DD
   progress: number;     // 0-100
   status: 'active' | 'completed' | 'paused' | 'archived';
+  completedAt?: number; // 完成时间戳(ms)，status→completed 时写入
   createdAt: number;
 }
 

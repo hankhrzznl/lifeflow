@@ -3,68 +3,71 @@
 import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { ChevronLeft, Plus, Smartphone, CreditCard, Banknote, Wallet } from "lucide-react";
+import { ChevronLeft, Plus, TrendingUp, TrendingDown } from "lucide-react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { getAllAccounts } from "@/lib/db/accounting.db";
+import { getAllAccounts, getTransactionsByMonth } from "@/lib/db/accounting.db";
 import type { Account } from "@/lib/db/accounting.db";
 import { showToast } from "@/components/ui/Toast";
 
 // ============================================================
-// 设计稿基准: lifeflow-accounting/pages/assets.html
+// 设计令牌（Apple 简约风）
 // ============================================================
+const ACCENT = "#5865F2";
+const TEXT_PRIMARY = "#1D1D1F";
+const TEXT_SECONDARY = "#86868B";
+const TEXT_TERTIARY = "#AEAEB2";
+const BORDER_CARD = "#E5E5E5";
+const BORDER_DIVIDER = "#F5F5F5";
+const BADGE_BG = "#EEF2FF";
 
-const BRAND = "#34C759";
-const MUTED = "#8E8E93";
-const BORDER = "#E5E5EA";
-const SHADOW_CARD = "0 4px 16px rgba(0,0,0,0.08)";
-
-// ─── 格式化 ──────────────────────────────────────────────────
-
-function fmtCompact(fen: number): string {
-  const yuan = fen / 100;
-  return yuan.toLocaleString("zh-CN", {
-    minimumFractionDigits: fen % 100 === 0 ? 0 : 2,
+// ─── 格式化（¥ + 空格 + 两位小数） ────────────────────────────
+function fmt(fen: number): string {
+  const absFen = Math.abs(fen);
+  const yuan = absFen / 100;
+  const formatted = yuan.toLocaleString("zh-CN", {
+    minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
+  return fen < 0 ? `-¥ ${formatted}` : `¥ ${formatted}`;
 }
 
-// ─── 账户图标映射 ────────────────────────────────────────────
-
-const ACCOUNT_ICON_MAP: Record<string, { icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>; color: string }> = {
-  "微信钱包": { icon: Smartphone, color: "#34C759" },
-  "支付宝": { icon: Smartphone, color: "#007AFF" },
-  "银行卡": { icon: CreditCard, color: "#5856D6" },
-  "现金": { icon: Banknote, color: "#FF9500" },
+// ─── 账户图标映射（颜色沿用旧实现，形态改首字符方块） ────────
+const ACCOUNT_COLOR_MAP: Record<string, string> = {
+  "微信钱包": "#34C759",
+  "支付宝": "#007AFF",
+  "银行卡": "#5856D6",
+  "现金": "#FF9500",
 };
 
-function getAccountIcon(name: string) {
-  return ACCOUNT_ICON_MAP[name] || { icon: Wallet, color: "#8E8E93" };
+function getAccountColor(name: string): string {
+  return ACCOUNT_COLOR_MAP[name] || "#86868B";
 }
 
-/** 账户行图标（40px 圆底 + 白色 20px 图标，视觉同 CategoryIcon） */
-function AccountIcon({ name }: { name: string }) {
-  const { icon: IconComp, color } = getAccountIcon(name);
-  return (
-    <div
-      className="flex items-center justify-center rounded-full shrink-0"
-      style={{ width: 40, height: 40, background: color }}
-    >
-      <IconComp style={{ width: 20, height: 20, color: "#FFFFFF" }} />
-    </div>
-  );
+function getAccountFirstChar(name: string): string {
+  return name.trim().charAt(0) || "钱";
+}
+
+function getAccountTypeLabel(type: string): string {
+  return type === "liability" ? "负债账户" : "资产账户";
 }
 
 // ============================================================
 // 页面
 // ============================================================
-
 export default function AssetsPage() {
   const router = useRouter();
 
   const accounts = useLiveQuery(() => getAllAccounts(), [], [] as Account[]);
 
-  // ─── 汇总 ──────────────────────────────────────────────────
+  // 本月交易（较上月徽标用）
+  const now = new Date();
+  const monthTxs = useLiveQuery(
+    () => getTransactionsByMonth(now.getFullYear(), now.getMonth() + 1),
+    [],
+    []
+  );
 
+  // ─── 汇总 ──────────────────────────────────────────────────
   const { totalAssets, totalLiabilities } = useMemo(() => {
     let assets = 0;
     let liabilities = 0;
@@ -78,8 +81,26 @@ export default function AssetsPage() {
   const netWorth = totalAssets - totalLiabilities;
   const hasAccounts = (accounts ?? []).length > 0;
 
-  // ─── 公共处理 ──────────────────────────────────────────────
+  // ─── 较上月（本月净收支） ──────────────────────────────────
+  const monthNetFlow = useMemo(() => {
+    let income = 0;
+    let expense = 0;
+    for (const t of monthTxs ?? []) {
+      if (t.type === "income") income += t.amount;
+      else expense += t.amount;
+    }
+    return income - expense;
+  }, [monthTxs]);
 
+  const isFlowPositive = monthNetFlow > 0;
+  const isFlowNegative = monthNetFlow < 0;
+  const flowLabel = useMemo(() => {
+    if (monthNetFlow === 0) return "较上月 ¥0";
+    const sign = isFlowPositive ? "+" : "-";
+    return `较上月 ${sign}${fmt(Math.abs(monthNetFlow)).replace("¥ ", "¥")}`;
+  }, [monthNetFlow, isFlowPositive]);
+
+  // ─── 公共处理 ──────────────────────────────────────────────
   const handleAdd = () => {
     showToast({ type: "info", message: "功能开发中" });
   };
@@ -91,128 +112,187 @@ export default function AssetsPage() {
   // ============================================================
   // 渲染
   // ============================================================
-
   return (
-    <div>
-      {/* ===== 导航条 44px ===== */}
-      <div className="h-[44px] flex items-center px-[16px] mt-3">
+    <div className="bg-white min-h-screen">
+      {/* ===== 顶部导航条 44px ===== */}
+      <div className="h-[44px] flex items-center px-4 mt-3">
         <button
           type="button"
           onClick={() => router.push("/accounting")}
-          className="inline-flex items-center justify-center w-[44px] h-[44px] -ml-[4px]"
+          className="inline-flex items-center justify-center w-[44px] h-[44px] -ml-1"
           aria-label="返回"
         >
-          <ChevronLeft
-            className="w-[28px] h-[28px]"
-            style={{ color: "#000000", strokeWidth: 1.5 }}
-          />
+          <ChevronLeft className="w-[28px] h-[28px]" style={{ color: TEXT_PRIMARY }} />
         </button>
         <div className="flex-1 flex items-center justify-center">
-          <span
-            className="text-[17px] font-semibold truncate"
-            style={{ color: "#000000", wordBreak: "keep-all", overflowWrap: "break-word" }}
-          >
+          <span className="text-[17px] font-semibold" style={{ color: TEXT_PRIMARY }}>
             资产
           </span>
         </div>
         <button
           type="button"
           onClick={handleAdd}
-          className="inline-flex items-center justify-center w-[44px] h-[44px] -mr-[4px]"
+          className="inline-flex items-center justify-center w-[44px] h-[44px] -mr-1"
           aria-label="新增"
         >
-          <Plus
-            className="w-[24px] h-[24px]"
-            style={{ color: "#000000", strokeWidth: 1.5 }}
-          />
+          <Plus className="w-[24px] h-[24px]" style={{ color: ACCENT }} />
         </button>
       </div>
 
-      {/* ===== 净资产卡 150px ===== */}
-      <div className="mx-[16px] mt-[27px]">
+      {/* ===== 净资产卡 ===== */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25 }}
+        className="mx-4 mt-[20px]"
+      >
         <div
-          className="h-[150px] rounded-[24px] p-[20px]"
-          style={{ background: "#FFFFFF", boxShadow: SHADOW_CARD }}
+          className="rounded-[24px] border p-[24px] flex flex-col items-center"
+          style={{ background: "#FFFFFF", borderColor: BORDER_CARD }}
         >
-          <p className="text-[13px] leading-none" style={{ color: MUTED }}>
-            净资产
-          </p>
-          <p
+          <span className="text-[13px]" style={{ color: TEXT_SECONDARY }}>净资产</span>
+          <span
             className="text-[34px] font-bold leading-none mt-[8px]"
-            style={{ color: "#000000" }}
+            style={{ color: TEXT_PRIMARY }}
           >
-            ¥{fmtCompact(netWorth)}
-          </p>
-          <div className="flex flex-row gap-[20px] mt-[58px]">
-            <p
-              className="text-[13px] leading-none truncate"
-              style={{ color: MUTED, flex: 1, minWidth: 0 }}
-            >
-              总资产：¥{fmtCompact(totalAssets)}
-            </p>
-            <p
-              className="text-[13px] leading-none truncate"
-              style={{ color: MUTED, flex: 1, minWidth: 0 }}
-            >
-              总负债：¥{fmtCompact(totalLiabilities)}
-            </p>
+            {fmt(netWorth)}
+          </span>
+          <div
+            className="mt-[16px] h-[32px] px-4 rounded-full flex items-center justify-center gap-1"
+            style={{ background: BADGE_BG }}
+          >
+            {isFlowPositive && <TrendingUp className="w-[16px] h-[16px]" style={{ color: ACCENT }} />}
+            {isFlowNegative && <TrendingDown className="w-[16px] h-[16px]" style={{ color: ACCENT }} />}
+            <span className="text-[14px] font-medium" style={{ color: ACCENT }}>
+              {flowLabel}
+            </span>
           </div>
         </div>
-      </div>
+      </motion.div>
 
-      {/* ===== 账户列表卡 ===== */}
-      {hasAccounts && (
-        <div
-          className="mx-[16px] mt-[16px] rounded-[16px] overflow-hidden"
-          style={{ background: "#FFFFFF", boxShadow: SHADOW_CARD }}
-        >
-          {(accounts ?? []).map((acc, idx) => {
-            return (
-              <motion.button
-                key={acc.id}
-                type="button"
-                onClick={handleAccountTap}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: idx * 0.03, duration: 0.25 }}
-                className="flex items-center gap-3 px-4 h-[64px] w-full text-left"
-                style={{
-                  borderTop: idx === 0 ? "none" : "0.5px solid #E5E5EA",
-                }}
-              >
-                <AccountIcon name={acc.name} />
-                <span
-                  className="flex-1 text-[15px] truncate"
-                  style={{ color: "#000000" }}
-                >
-                  {acc.name}
-                </span>
-                <span
-                  className="text-[16px] font-semibold shrink-0"
-                  style={{ color: "#000000" }}
-                >
-                  ¥{fmtCompact(acc.balance)}
-                </span>
-              </motion.button>
-            );
-          })}
+      {/* ===== 空态提示 ===== */}
+      {!hasAccounts && (
+        <div className="py-[24px] text-center">
+          <span className="text-[13px]" style={{ color: TEXT_TERTIARY }}>
+            暂无账户，点击下方添加
+          </span>
         </div>
       )}
 
-      {/* ===== + 新增钱包账户 ===== */}
-      <div
-        className="flex justify-center"
-        style={{ marginTop: hasAccounts ? 40 : 90 }}
-      >
-        <button
+      {/* ===== 账户列表卡 ===== */}
+      {hasAccounts && (
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.25, delay: 0.05 }}
+          className="mx-4 mt-[16px]"
+        >
+          <div
+            className="rounded-[16px] border overflow-hidden"
+            style={{ background: "#FFFFFF", borderColor: BORDER_CARD }}
+          >
+            {/* 卡头 */}
+            <div
+              className="px-[20px] h-[56px] flex items-center justify-between"
+              style={{ borderBottom: `0.5px solid ${BORDER_DIVIDER}` }}
+            >
+              <span className="text-[17px] font-semibold" style={{ color: TEXT_PRIMARY }}>
+                账户
+              </span>
+              <span className="text-[13px]" style={{ color: TEXT_SECONDARY }}>
+                共 {accounts!.length} 个账户
+              </span>
+            </div>
+
+            {/* 账户行 */}
+            {accounts!.map((acc) => {
+              const color = getAccountColor(acc.name);
+              const firstChar = getAccountFirstChar(acc.name);
+              const isLiability = acc.type === "liability";
+              const displayAmount = isLiability
+                ? `-${fmt(Math.abs(acc.balance))}`
+                : fmt(acc.balance);
+
+              return (
+                <motion.button
+                  key={acc.id}
+                  type="button"
+                  onClick={handleAccountTap}
+                  whileTap={{ scale: 0.98 }}
+                  className="flex items-center gap-[12px] px-[20px] h-[72px] w-full text-left"
+                  style={{ borderBottom: `0.5px solid ${BORDER_DIVIDER}` }}
+                >
+                  {/* 图标：彩色圆角方块 + 首字符 */}
+                  <div
+                    className="w-[44px] h-[44px] rounded-[12px] flex items-center justify-center shrink-0"
+                    style={{ background: color }}
+                  >
+                    <span className="text-[17px] font-semibold" style={{ color: "#FFFFFF" }}>
+                      {firstChar}
+                    </span>
+                  </div>
+
+                  {/* 中部：名称 + 类型 */}
+                  <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+                    <span
+                      className="text-[17px] font-semibold truncate"
+                      style={{ color: TEXT_PRIMARY }}
+                    >
+                      {acc.name}
+                    </span>
+                    <span className="text-[13px]" style={{ color: TEXT_SECONDARY }}>
+                      {getAccountTypeLabel(acc.type)}
+                    </span>
+                  </div>
+
+                  {/* 右侧金额 */}
+                  <span
+                    className="text-[17px] font-semibold shrink-0"
+                    style={{ color: TEXT_PRIMARY }}
+                  >
+                    {displayAmount}
+                  </span>
+                </motion.button>
+              );
+            })}
+
+            {/* 卡底汇总行 */}
+            <div
+              className="px-[20px] py-[16px] flex justify-between"
+              style={{ borderTop: `0.5px solid ${BORDER_DIVIDER}` }}
+            >
+              <div className="flex flex-col gap-1 items-start">
+                <span className="text-[13px]" style={{ color: TEXT_SECONDARY }}>总资产</span>
+                <span className="text-[17px] font-bold" style={{ color: TEXT_PRIMARY }}>
+                  {fmt(totalAssets)}
+                </span>
+              </div>
+              <div className="flex flex-col gap-1 items-end">
+                <span className="text-[13px]" style={{ color: TEXT_SECONDARY }}>总负债</span>
+                <span className="text-[17px] font-bold" style={{ color: TEXT_PRIMARY }}>
+                  -{fmt(Math.abs(totalLiabilities))}
+                </span>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* ===== 添加账户（虚线按钮） ===== */}
+      <div className="mx-4 mt-[16px] mb-[24px]">
+        <motion.button
           type="button"
           onClick={handleAdd}
-          className="inline-flex items-center justify-center text-[16px] font-normal whitespace-nowrap px-[4px] py-[2px]"
-          style={{ color: BRAND }}
-          aria-label="新增钱包账户"
+          whileTap={{ scale: 0.98 }}
+          className="h-[56px] rounded-[16px] w-full flex items-center justify-center gap-1"
+          style={{
+            background: "#FFFFFF",
+            border: `1.5px dashed ${BORDER_CARD}`,
+          }}
         >
-          + 新增钱包账户
-        </button>
+          <Plus className="w-[16px] h-[16px]" style={{ color: TEXT_SECONDARY }} />
+          <span className="text-[15px]" style={{ color: TEXT_SECONDARY }}>添加账户</span>
+        </motion.button>
       </div>
     </div>
   );

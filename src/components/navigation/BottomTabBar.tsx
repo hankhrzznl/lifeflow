@@ -9,14 +9,12 @@ import { Home, Target, Wallet, Heart } from "lucide-react";
 
 const SUBSITE_PREFIXES = ["/efficiency", "/accounting", "/health"];
 
-const INACTIVE = "#8E8E93";
-
 const tabs = [
-  { label: "主页", path: "/", icon: Home, color: "#5856D6" },
-  { label: "效率", path: "/efficiency", icon: Target, color: "#5856D6" },
-  { label: "记账", path: "/accounting", icon: Wallet, color: "#34C759" },
-  { label: "健康", path: "/health", icon: Heart, color: "#FF9500" },
-];
+  { label: "首页", path: "/", icon: Home },
+  { label: "效率", path: "/efficiency", icon: Target },
+  { label: "记账", path: "/accounting", icon: Wallet },
+  { label: "健康", path: "/health", icon: Heart },
+] as const;
 
 export default function BottomTabBar() {
   const pathname = usePathname();
@@ -28,21 +26,24 @@ export default function BottomTabBar() {
     path === "/" ? pathname === "/" : pathname.startsWith(path);
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white/85 backdrop-blur-[12px] border-t border-[#E5E5EA]">
-      <div className="w-full max-w-[430px] mx-auto grid grid-cols-4 h-[49pt]">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-[#E5E5E5]">
+      <div className="w-full max-w-[430px] mx-auto grid grid-cols-4 h-[49px]">
         {tabs.map((tab) => {
           const active = isActive(tab.path);
-          const color = active ? tab.color : INACTIVE;
           return (
             <Link
               key={tab.path}
               href={tab.path}
-              className="min-w-0 flex flex-col items-center justify-center gap-1 px-1 h-full"
+              className="min-w-0 flex flex-col items-center justify-center gap-[3px] px-1 h-full"
             >
-              <tab.icon className="w-6 h-6 shrink-0" style={{ color }} strokeWidth={1.5} />
+              <tab.icon
+                className="w-6 h-6 shrink-0"
+                style={{ color: active ? "#5865F2" : "#AEAEB2" }}
+                strokeWidth={2}
+              />
               <span
-              className="text-[10pt] font-medium leading-none whitespace-nowrap max-w-full truncate"
-                style={{ color }}
+                className="text-[11px] font-medium leading-none whitespace-nowrap max-w-full truncate"
+                style={{ color: active ? "#5865F2" : "#AEAEB2" }}
               >
                 {tab.label}
               </span>
@@ -51,7 +52,7 @@ export default function BottomTabBar() {
         })}
       </div>
       {/* 底部安全区 */}
-      <div className="h-[max(18px,env(safe-area-inset-bottom))]" />
+      <div style={{ height: "env(safe-area-inset-bottom)" }} />
     </nav>
   );
 }

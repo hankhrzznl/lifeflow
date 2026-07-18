@@ -40,7 +40,7 @@ export default function RootLayout({
         <ClientProviders>
           <SWProvider>
             <GlobalErrorBoundary>
-            <main className="flex-1 pb-16 overflow-auto min-h-screen">
+            <main className="flex-1 overflow-auto min-h-screen" style={{ paddingBottom: "var(--bottom-nav-height)" }}>
               {children}
             </main>
             <BottomTabBar />

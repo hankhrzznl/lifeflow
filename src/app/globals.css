@@ -1,83 +1,30 @@
 @import "tailwindcss";
 
-@custom-variant dark (&:where(.dark, .dark *));
-
 /* ============================================================ */
-/* 设计系统：Apple System UI */
+/* 设计系统：LifeFlow Apple 简约（单色基底 + 靛蓝 #5865F2 单强调）  */
+/* 铁律：所有金额一律全黑 #1D1D1F，语义色仅用于8px分类圆点+图标  */
 /* ============================================================ */
 
 @theme inline {
-  /* ── 系统色（iOS 原生色）── */
-  --color-sys-blue:    #007AFF;
-  --color-sys-green:   #34C759;
-  --color-sys-indigo:  #5856D6;
-  --color-sys-orange:  #FF9500;
-  --color-sys-pink:    #FF2D55;
-  --color-sys-purple:  #AF52DE;
-  --color-sys-red:     #FF3B30;
-  --color-sys-teal:    #5AC8FA;
-  --color-sys-yellow:  #FFCC00;
-  --color-sys-gray:    #8E8E93;
+  /* ── 新设计令牌（权威值）── */
+  --color-bg-page:      #FAFAFA;
+  --color-bg-card:      #FFFFFF;
+  --color-bg-fill:      #EEF2FF;
+  --color-accent:       #5865F2;
+  --color-text-primary:   #1D1D1F;
+  --color-text-secondary: #86868B;
+  --color-text-tertiary:  #AEAEB2;
+  --color-border:       #E5E5E5;
+  --color-separator:    #F5F5F5;
 
-  /* ── 子站主题色 ── */
-  --color-eff-primary: #5856D6;
-  --color-eff-light:   #ECECFC;
-  --color-fin-primary: #34C759;
-  --color-fin-light:   #E6F9EC;
-  --color-health-primary: #FF9500;
-  --color-health-light:   #FFF2E0;
-  --color-main-primary: #007AFF;
-  --color-main-light:   #E6F0FF;
-
-  /* ── 背景色 ── */
-  --color-bg-primary:   #FFFFFF;
-  --color-bg-secondary: #F5F5F7;
-  --color-bg-tertiary:  #EEEEEF;
-
-  /* ── 文字色 ── */
-  --color-text-primary:   #000000;
-  --color-text-secondary: #3C3C43;
-  --color-text-tertiary:  #8E8E93;
-  --color-text-quat:      #C7C7CC;
-  --color-text-inverse:   #FFFFFF;
-
-  /* ── 语义色 ── */
-  --color-success: #34C759;
+  /* ── 语义色（仅用于图标底色与8px分类圆点，金额不许上色）── */
+  --color-success:       #34C759;
   --color-success-light: #E6F9EC;
-  --color-warning: #FF9500;
+  --color-warning:       #FF9500;
   --color-warning-light: #FFF2E0;
-  --color-info:    #007AFF;
-  --color-info-light: #E6F0FF;
-
-  /* ── 边框/分隔 ── */
-  --color-border:       #E5E5EA;
-  --color-border-light: #F2F2F7;
-  --color-separator:    #E5E5EA;
-
-  /* ── 旧品牌色别名（保证现有组件不报错）── */
-  --color-brand-primary: var(--color-sys-indigo);
-  --color-brand-primary-hover: #4B49C9;
-  --color-brand-primary-light: var(--color-eff-light);
-  --color-brand-secondary: var(--color-sys-indigo);
-  --color-brand-secondary-hover: #4B49C9;
-
-  /* ── 旧表面色别名 ── */
-  --color-surface-desk: var(--color-bg-secondary);
-  --color-surface-desk-light: var(--color-bg-primary);
-  --color-surface-fabric: var(--color-bg-primary);
-  --color-surface-fabric-hover: var(--color-bg-secondary);
-
-  /* ── 旧编织色别名 ── */
-  --color-knit-thread: var(--color-sys-indigo);
-  --color-knit-done: var(--color-sys-green);
-  --color-knit-partial: #F5C542;
-  --color-knit-bg: #E9E9EB;
-  --color-knit-grid: #E5E5EA;
-
-  /* ── 旧兼容映射 ── */
-  --color-primary: var(--color-sys-indigo);
-  --color-primary-hover: #4B49C9;
-  --color-secondary: var(--color-sys-indigo);
+  --color-info:          #5865F2;
+  --color-info-light:    #EEF2FF;
+  --color-destructive:   #FF3B30;
 
   /* ── 字体 ── */
   --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", sans-serif;
@@ -85,13 +32,10 @@
   --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
 
   /* ── 阴影 ── */
-  --shadow-card:     0 1px 2px rgba(0,0,0,0.04), 0 4px 8px rgba(0,0,0,0.02);
+  --shadow-card:     0 1px 4px rgba(0,0,0,0.04);
   --shadow-elevated: 0 2px 4px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.06);
   --shadow-modal:    0 4px 24px rgba(0,0,0,0.08), 0 16px 48px rgba(0,0,0,0.04);
   --shadow-nav:      0 -1px 3px rgba(0,0,0,0.02), 0 -4px 12px rgba(0,0,0,0.04);
-  --shadow-fab:      0 4px 16px rgba(88,86,214,0.3);
-  --shadow-knit: var(--shadow-card);
-  --shadow-subtle:   0 1px 2px rgba(0,0,0,0.04);
 
   /* ── 圆角 ── */
   --radius-sm:   8px;
@@ -116,41 +60,23 @@
 /* ============================================================ */
 
 :root {
-  --background: var(--color-bg-secondary);
-  --foreground: var(--color-text-primary);
+  --background:      var(--color-bg-page);
+  --foreground:      var(--color-text-primary);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --bg-primary: var(--color-bg-primary);
-  --bg-secondary: var(--color-bg-secondary);
-  --text-primary: var(--color-text-primary);
-  --text-secondary: var(--color-text-secondary);
-  --card-bg: var(--color-bg-primary);
-  --card-border: var(--color-border);
-  --muted: var(--color-text-quat);
+  --bg-primary:      var(--color-bg-card);
+  --bg-secondary:    var(--color-bg-page);
+  --text-primary:    var(--color-text-primary);
+  --text-secondary:  var(--color-text-secondary);
+  --card-bg:         var(--color-bg-card);
+  --card-border:     var(--color-border);
+  --muted:           var(--color-text-tertiary);
   --muted-foreground: var(--color-text-secondary);
-  --border: var(--color-border);
-  --ring: var(--color-sys-blue);
-  --destructive: var(--color-sys-red);
+  --border:          var(--color-border);
+  --ring:            var(--color-accent);
+  --destructive:     var(--color-destructive);
   --destructive-foreground: #FFFFFF;
-  --bottom-nav-height: calc(64px + max(8px, env(safe-area-inset-bottom)));
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #000000;
-    --foreground: #FFFFFF;
-    --color-background: var(--background);
-    --color-foreground: var(--foreground);
-    --bg-primary: #000000;
-    --bg-secondary: #1C1C1E;
-    --text-primary: #FFFFFF;
-    --text-secondary: #EBEBF5;
-    --card-bg: #1C1C1E;
-    --card-border: #38383A;
-    --muted: #8E8E93;
-    --muted-foreground: #EBEBF5;
-    --border: #38383A;
-  }
+  --bottom-nav-height: calc(49px + env(safe-area-inset-bottom));
 }
 
 * {
@@ -167,9 +93,9 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* ── 文字选择（iOS 蓝色）── */
+/* ── 文字选择（贴强调色）── */
 ::selection {
-  background: rgba(0, 122, 255, 0.2);
+  background: rgba(79, 70, 229, 0.15);
 }
 
 /* ============================================================ */
@@ -243,18 +169,6 @@ body {
   border-radius: var(--radius-md);
 }
 
-@media (prefers-color-scheme: dark) {
-  .skeleton {
-    background: linear-gradient(
-      90deg,
-      var(--card-bg) 25%,
-      #2C2C2E 50%,
-      var(--card-bg) 75%
-    );
-    background-size: 200% 100%;
-  }
-}
-
 /* ── Scrollbar ── */
 ::-webkit-scrollbar {
   display: none;
@@ -276,4 +190,74 @@ body {
 
 .safe-bottom {
   padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* ============================================================= */
+/* 过渡兼容层：deprecated，禁止新增引用；各页面份完成后统一删除     */
+/* ============================================================= */
+
+@theme inline {
+  /* ── 系统色（iOS 原生色）── */
+  --color-sys-blue:    #007AFF;
+  --color-sys-green:   #34C759;
+  --color-sys-indigo:  #5856D6;
+  --color-sys-orange:  #FF9500;
+  --color-sys-pink:    #FF2D55;
+  --color-sys-purple:  #AF52DE;
+  --color-sys-red:     #FF3B30;
+  --color-sys-teal:    #5AC8FA;
+  --color-sys-yellow:  #FFCC00;
+  --color-sys-gray:    #8E8E93;
+
+  /* ── 子站主题色 ── */
+  --color-eff-primary: #5856D6;
+  --color-eff-light:   #ECECFC;
+  --color-fin-primary: #34C759;
+  --color-fin-light:   #E6F9EC;
+  --color-health-primary: #FF9500;
+  --color-health-light:   #FFF2E0;
+  --color-main-primary: #007AFF;
+  --color-main-light:   #E6F0FF;
+
+  /* ── 旧背景色 ── */
+  --color-bg-primary:   #FFFFFF;
+  --color-bg-secondary: #F5F5F7;
+  --color-bg-tertiary:  #EEEEEF;
+
+  /* ── 旧文字色（不与新令牌冲突的名）── */
+  --color-text-quat:    #C7C7CC;
+  --color-text-inverse: #FFFFFF;
+
+  /* ── 旧边框 ── */
+  --color-border-light: #F2F2F7;
+
+  /* ── 旧品牌色别名 ── */
+  --color-brand-primary: var(--color-sys-indigo);
+  --color-brand-primary-hover: #4B49C9;
+  --color-brand-primary-light: var(--color-eff-light);
+  --color-brand-secondary: var(--color-sys-indigo);
+  --color-brand-secondary-hover: #4B49C9;
+
+  /* ── 旧表面色别名 ── */
+  --color-surface-desk: var(--color-bg-secondary);
+  --color-surface-desk-light: var(--color-bg-primary);
+  --color-surface-fabric: var(--color-bg-primary);
+  --color-surface-fabric-hover: var(--color-bg-secondary);
+
+  /* ── 旧编织色别名 ── */
+  --color-knit-thread: var(--color-sys-indigo);
+  --color-knit-done: var(--color-sys-green);
+  --color-knit-partial: #F5C542;
+  --color-knit-bg: #E9E9EB;
+  --color-knit-grid: #E5E5EA;
+
+  /* ── 旧兼容映射 ── */
+  --color-primary: var(--color-sys-indigo);
+  --color-primary-hover: #4B49C9;
+  --color-secondary: var(--color-sys-indigo);
+
+  /* ── 旧阴影别名 ── */
+  --shadow-knit: var(--shadow-card);
+  --shadow-subtle: 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-fab: 0 4px 16px rgba(88,86,214,0.3);
 }

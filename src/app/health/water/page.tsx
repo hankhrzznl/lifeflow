@@ -1,18 +1,31 @@
 "use client";
 
 import { useEffect, useState, useMemo, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Droplets, Plus, ChevronLeft, Clock, Bell, Moon, Trash2 } from "lucide-react";
-import Link from "next/link";
+import { motion } from "framer-motion";
+import {
+  ChevronLeft, Droplets, Moon, Plus, Trash2, ArrowRight,
+} from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useHealthStore } from "@/lib/store/healthStore";
-import { healthDB } from "@/lib/db/health.db";
-import type { WaterGoal as WaterGoalType } from "@/lib/db/health.db";
+import { showToast } from "@/components/ui/Toast";
 
-// ─── Constants ───────────────────────────────────────────────
+// ============================================================
+// 设计稿基准: lifeflow-health/pages/water.html
+// 品牌橙 #FF9500
+// ============================================================
 
 const BRAND = "#FF9500";
-const TRACK_COLOR = "#F2F2F7";
-const CIRCUMFERENCE = 2 * Math.PI * 90;
+const BG = "#F2F2F7";
+const CARD_BG = "#FFFFFF";
+const MUTED = "#8E8E93";
+const BORDER = "#E5E5EA";
+const INPUT_BG = "#F2F2F7";
+const INFO = "#007AFF";
+const NIGHT_INDIGO = "#5856D6";
+const TAG_BG = "#F2F2F7";
+const TAG_TEXT = "#8E8E93";
+const PROGRESS_TRACK = "#E5E5EA";
+
 const QUICK_AMOUNTS = [200, 300, 500] as const;
 const REMINDER_OPTIONS = [
   { label: "30分钟", value: 30 },
@@ -21,257 +34,454 @@ const REMINDER_OPTIONS = [
   { label: "120分钟", value: 120 },
   { label: "关闭", value: 0 },
 ] as const;
-const WEEKDAY_LABELS = ["一", "二", "三", "四", "五", "六", "日"];
 
-function getLocalDate(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-function getDateNDaysAgo(n: number): string {
-  const d = new Date(); d.setDate(d.getDate() - n); return getLocalDate(d);
-}
+// ─── 格式化时间 ──────────────────────────────────────────────
+
 function formatTimestamp(ts: number): string {
   const d = new Date(ts);
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
-// ─── Skeleton ─────────────────────────────────────────────────
+// ─── iOS 开关 ────────────────────────────────────────────────
 
-function Skeleton() {
+function ToggleSwitch({
+  checked,
+  onChange,
+}: {
+  checked: boolean;
+  onChange: () => void;
+}) {
   return (
-    <div className="animate-pulse space-y-6">
-      <div className="flex items-center gap-3">
-        <div className="w-9 h-9 rounded-full bg-gray-200" />
-        <div className="space-y-2"><div className="h-6 w-28 bg-gray-200 rounded" /><div className="h-4 w-40 bg-gray-200 rounded" /></div>
-      </div>
-      <div className="flex justify-center"><div className="w-48 h-48 rounded-full bg-gray-200" /></div>
-      <div className="flex gap-3">
-        <div className="flex-1 h-11 bg-gray-200 rounded-full" /><div className="flex-1 h-11 bg-gray-200 rounded-full" /><div className="flex-1 h-11 bg-gray-200 rounded-full" />
-      </div>
-      <div className="bg-white rounded-2xl p-4 space-y-2">
-        <div className="h-4 w-20 bg-gray-200 rounded" />
-        {[0, 1, 2].map(i => <div key={i} className="h-10 bg-gray-100 rounded-xl" />)}
-      </div>
-      <div className="h-28 bg-white rounded-2xl" /><div className="h-24 bg-white rounded-2xl" /><div className="h-20 bg-white rounded-2xl" />
-      <div className="h-40 bg-white rounded-2xl" />
-    </div>
+    <button
+      type="button"
+      onClick={onChange}
+      className="relative shrink-0 rounded-full cursor-pointer"
+      style={{
+        width: 51,
+        height: 31,
+        background: checked ? BRAND : "#D1D5DB",
+        transition: "background 0.2s",
+      }}
+    >
+      <motion.div
+        className="absolute rounded-full bg-white"
+        animate={{ x: checked ? 22 : 2 }}
+        transition={{ type: "spring", stiffness: 500, damping: 30 }}
+        style={{ width: 27, height: 27, top: 2, boxShadow: "0 1px 3px rgba(0,0,0,0.2)" }}
+      />
+    </button>
   );
 }
 
-// ─── Page ─────────────────────────────────────────────────────
+// ============================================================
+// 页面
+// ============================================================
 
 export default function WaterPage() {
-  // Store
+  const router = useRouter();
+
   const waterLogs = useHealthStore((s) => s.waterLogs);
   const todayWaterTotal = useHealthStore((s) => s.todayWaterTotal);
   const waterGoal = useHealthStore((s) => s.waterGoal);
   const loadWaterData = useHealthStore((s) => s.loadWaterData);
   const addWaterAction = useHealthStore((s) => s.addWater);
+  const deleteWaterLogAction = useHealthStore((s) => s.deleteWaterLog);
   const updateWaterGoalAction = useHealthStore((s) => s.updateWaterGoal);
 
-  // Local
-  const dailyTarget = waterGoal?.dailyTarget ?? 2000;
-  const [goalInput, setGoalInput] = useState(dailyTarget);
-  const [reminderInterval, setReminderInterval] = useState(waterGoal?.reminderInterval ?? 0);
-  const [nightMode, setNightMode] = useState(waterGoal?.nightMode ?? false);
-  const [weekData, setWeekData] = useState<number[]>([]);
+  // 本地状态
+  const [goalInput, setGoalInput] = useState(2000);
   const [addingMap, setAddingMap] = useState<Record<number, boolean>>({});
   const [pageLoading, setPageLoading] = useState(true);
 
-  // Derived
+  const dailyTarget = waterGoal?.dailyTarget ?? 2000;
+  const reminderInterval = waterGoal?.reminderInterval ?? 0;
+  const nightMode = waterGoal?.nightMode ?? false;
+
+  // 初始化同步 goalInput
+  useEffect(() => {
+    if (!pageLoading) setGoalInput(dailyTarget);
+  }, [dailyTarget, pageLoading]);
+
+  // 加载数据
+  useEffect(() => {
+    (async () => {
+      setPageLoading(true);
+      await loadWaterData();
+      setPageLoading(false);
+    })();
+  }, [loadWaterData]);
+
+  // 进度
   const percent = useMemo(() => {
     if (dailyTarget <= 0) return 0;
     return Math.min(100, Math.round((todayWaterTotal / dailyTarget) * 100));
   }, [todayWaterTotal, dailyTarget]);
 
-  const strokeDash = (percent / 100) * CIRCUMFERENCE;
-  const maxWeek = useMemo(() => Math.max(...weekData, dailyTarget), [weekData, dailyTarget]);
-  const avgWeek = useMemo(() => weekData.length ? Math.round(weekData.reduce((a,b)=>a+b,0)/weekData.length) : 0, [weekData]);
+  // 按时间倒序
+  const sortedLogs = useMemo(
+    () => [...waterLogs].sort((a, b) => b.timestamp - a.timestamp),
+    [waterLogs],
+  );
 
-  // Sort logs by timestamp desc
-  const sortedLogs = useMemo(() => [...waterLogs].sort((a, b) => b.timestamp - a.timestamp), [waterLogs]);
+  // ─── 操作 ──────────────────────────────────────────────────
 
-  // Sync goalInput
-  useEffect(() => { setGoalInput(dailyTarget); }, [dailyTarget]);
-  useEffect(() => { setReminderInterval(waterGoal?.reminderInterval ?? 0); }, [waterGoal?.reminderInterval]);
-  useEffect(() => { setNightMode(waterGoal?.nightMode ?? false); }, [waterGoal?.nightMode]);
-
-  // Init
-  useEffect(() => {
-    (async () => { setPageLoading(true); await loadWaterData(); setPageLoading(false); })();
-  }, [loadWaterData]);
-
-  // 7-day
-  useEffect(() => {
-    (async () => {
+  const handleAdd = useCallback(
+    async (amount: number) => {
+      if (addingMap[amount]) return;
+      setAddingMap((p) => ({ ...p, [amount]: true }));
       try {
-        const today = getLocalDate(new Date());
-        const start = getDateNDaysAgo(6);
-        const logs = await healthDB.waterLogs.where("date").between(start, today, true, true).toArray();
-        const map: Record<string, number> = {};
-        for (const l of logs) map[l.date] = (map[l.date] || 0) + l.amount;
-        const data: number[] = [];
-        for (let i = 6; i >= 0; i--) data.push(map[getDateNDaysAgo(i)] || 0);
-        setWeekData(data);
-      } catch { setWeekData([0,0,0,0,0,0,0]); }
-    })();
-  }, [todayWaterTotal]);
+        await addWaterAction(amount);
+      } finally {
+        setAddingMap((p) => ({ ...p, [amount]: false }));
+      }
+    },
+    [addWaterAction, addingMap],
+  );
 
-  // Handlers
-  const handleAdd = useCallback(async (amount: number) => {
-    if (addingMap[amount]) return;
-    setAddingMap(p => ({ ...p, [amount]: true }));
-    try { await addWaterAction(amount); } finally { setAddingMap(p => ({ ...p, [amount]: false })); }
-  }, [addWaterAction, addingMap]);
+  const handleDelete = useCallback(
+    async (id: string) => {
+      await deleteWaterLogAction(id);
+    },
+    [deleteWaterLogAction],
+  );
 
   const handleSaveGoal = useCallback(() => {
-    const v = Math.max(100, Math.min(10000, goalInput));
+    const v = Math.max(100, Math.min(10000, Math.round(goalInput)));
     setGoalInput(v);
     updateWaterGoalAction({ dailyTarget: v });
+    showToast({ type: "success", message: "已保存" });
   }, [goalInput, updateWaterGoalAction]);
 
-  const handleReminder = useCallback((value: number) => {
-    setReminderInterval(value);
-    updateWaterGoalAction({ reminderInterval: value });
-  }, [updateWaterGoalAction]);
+  const handleReminder = useCallback(
+    (value: number) => {
+      updateWaterGoalAction({ reminderInterval: value });
+    },
+    [updateWaterGoalAction],
+  );
 
   const handleNightMode = useCallback(() => {
-    const next = !nightMode;
-    setNightMode(next);
-    updateWaterGoalAction({ nightMode: next });
+    updateWaterGoalAction({ nightMode: !nightMode });
   }, [nightMode, updateWaterGoalAction]);
 
-  if (pageLoading) return <div className="min-h-screen bg-[#F5F5F7] pb-24"><div className="max-w-2xl mx-auto px-5 pt-8"><Skeleton /></div></div>;
+  const showStatsToast = () => showToast({ type: "info", message: "功能开发中" });
+
+  // ════════════════════════════════════════════════════════════
 
   return (
-    <div className="min-h-screen bg-[#F5F5F7] pb-24">
-      <div className="max-w-2xl mx-auto px-5 pt-8">
-
-        {/* Header */}
-        <div className="flex items-center gap-3 mb-8">
-          <Link href="/health"><button className="w-9 h-9 rounded-full bg-white shadow-sm flex items-center justify-center hover:bg-gray-50 transition-colors"><ChevronLeft className="w-5 h-5 text-gray-500" /></button></Link>
-          <div><h1 className="text-2xl font-bold text-gray-900">饮水追踪</h1><p className="text-sm text-gray-500 mt-0.5">保持水分, 保持活力</p></div>
+    <div>
+      {/* ===== 1. 页头 ===== */}
+      <header
+        className="px-4 pt-12 pb-3 flex flex-col gap-0.5"
+        style={{ backgroundColor: BG }}
+      >
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => router.push("/health")}
+            className="inline-flex items-center justify-center w-8 h-8 -ml-1"
+            aria-label="返回"
+          >
+            <ChevronLeft className="w-6 h-6" style={{ color: "#000000" }} />
+          </button>
+          <span className="text-[18px] font-semibold truncate" style={{ color: "#000000" }}>
+            喝水提醒
+          </span>
         </div>
+        <p className="text-[13px] pl-10" style={{ color: MUTED }}>
+          定时推送·一键喝水
+        </p>
+      </header>
 
-        {/* Progress Circle */}
-        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.4 }} className="flex flex-col items-center mb-8">
-          <div className="relative w-48 h-48">
-            <svg viewBox="0 0 200 200" className="w-full h-full -rotate-90">
-              <circle cx="100" cy="100" r="90" fill="none" stroke={TRACK_COLOR} strokeWidth="14" />
-              <motion.circle cx="100" cy="100" r="90" fill="none" stroke="url(#waterGradient)" strokeWidth="14" strokeLinecap="round"
-                strokeDasharray={`${strokeDash} ${CIRCUMFERENCE}`}
-                initial={{ strokeDasharray: `0 ${CIRCUMFERENCE}` }}
-                animate={{ strokeDasharray: `${strokeDash} ${CIRCUMFERENCE}` }}
-                transition={{ duration: 0.8, ease: "easeOut" }}
-              />
-              <defs><linearGradient id="waterGradient" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#FF9500" /><stop offset="100%" stopColor="#FFB84D" /></linearGradient></defs>
-            </svg>
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <motion.span key={percent} initial={{ scale: 1.2, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="text-4xl font-bold text-gray-900">{percent}%</motion.span>
-              <span className="text-sm text-gray-500 mt-1">{todayWaterTotal} / {dailyTarget} ml</span>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* Quick Add */}
-        <div className="flex gap-3 mb-6">
-          {QUICK_AMOUNTS.map((amount) => (
-            <motion.button key={amount} whileTap={{ scale: 0.95 }} onClick={() => handleAdd(amount)} disabled={addingMap[amount]}
-              className="flex-1 py-3 rounded-full bg-white shadow-sm border border-gray-100 text-gray-700 font-medium text-sm flex items-center justify-center gap-1.5 hover:bg-orange-50 hover:border-orange-200 transition-colors disabled:opacity-50">
-              <Plus className="w-4 h-4" />+{amount}ml
-            </motion.button>
-          ))}
+      {/* ===== 2. 提示条 ===== */}
+      {pageLoading && (
+        <div className="px-4 pb-3">
+          <p className="text-center text-[13px]" style={{ color: MUTED }}>
+            暂无饮水目标，在项目中创建以追踪饮水进度
+          </p>
         </div>
+      )}
 
-        {/* Today Log */}
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="bg-white rounded-2xl shadow-sm p-4 mb-4">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">今日记录</h2>
-            {sortedLogs.length > 0 && <span className="text-xs text-gray-400">已喝 {sortedLogs.length} 次</span>}
+      {/* ===== 3. 卡片组 ===== */}
+      <div className="px-4 flex flex-col gap-3 pb-3">
+        {/* 卡片 1 · 今日饮水进度 */}
+        <motion.section
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-[12px] border p-4 flex flex-col gap-3"
+          style={{
+            background: CARD_BG,
+            borderColor: BORDER,
+            borderWidth: 1,
+          }}
+        >
+          <div className="flex items-center gap-2">
+            <Droplets className="w-5 h-5 shrink-0" style={{ color: INFO }} />
+            <h2 className="text-[17px] font-semibold truncate" style={{ color: "#000000" }}>
+              今日饮水进度
+            </h2>
           </div>
-          {sortedLogs.length === 0 ? (
-            <div className="flex flex-col items-center py-6 text-gray-400"><Droplets className="w-10 h-10 mb-2 opacity-30" /><span className="text-sm">今日暂无饮水记录</span></div>
-          ) : (
-            <div className="space-y-2">
-              {sortedLogs.map((entry, i) => (
-                <motion.div key={entry.id} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.03 }}
-                  className="flex items-center justify-between py-2 px-3 rounded-xl bg-orange-50/60">
-                  <div className="flex items-center gap-2">
-                    <Droplets className="w-4 h-4 text-[#FF9500]" />
-                    <span className="text-sm text-gray-700">{formatTimestamp(entry.timestamp)}</span>
-                  </div>
-                  <span className="text-sm font-bold text-[#FF9500]">{entry.amount} ml</span>
-                </motion.div>
-              ))}
-            </div>
-          )}
-        </motion.div>
-
-        {/* Goal Settings */}
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className="bg-white rounded-2xl shadow-sm p-4 mb-4">
-          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">每日饮水目标</h2>
-          <div className="flex items-center gap-3">
-            <input type="number" value={goalInput} onChange={(e) => setGoalInput(Math.max(0, parseInt(e.target.value) || 0))}
-              min={100} max={10000} step={50}
-              className="flex-1 px-4 py-2.5 rounded-xl bg-[#F2F2F7] text-gray-900 font-medium text-sm outline-none focus:ring-2 focus:ring-[#FF9500]/30 transition-all" />
-            <span className="text-sm text-gray-400 font-medium">ml</span>
-            <motion.button whileTap={{ scale: 0.95 }} onClick={handleSaveGoal}
-              className="px-5 py-2.5 rounded-xl text-white text-sm font-semibold transition-colors" style={{ backgroundColor: BRAND }}>保存</motion.button>
-          </div>
-        </motion.div>
-
-        {/* Reminder Settings */}
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-white rounded-2xl shadow-sm p-4 mb-4">
-          <div className="flex items-center gap-2 mb-3"><Bell className="w-4 h-4 text-[#FF9500]" /><h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">定时提醒</h2></div>
-          <div className="flex flex-wrap gap-2">
-            {REMINDER_OPTIONS.map((opt) => {
-              const isActive = reminderInterval === opt.value;
-              return (
-                <motion.button key={opt.value} whileTap={{ scale: 0.95 }} onClick={() => handleReminder(opt.value)}
-                  className="px-4 py-2 rounded-full text-sm font-medium transition-all"
-                  style={{ backgroundColor: isActive ? BRAND : TRACK_COLOR, color: isActive ? "#FFFFFF" : "#374151" }}>{opt.label}</motion.button>
-              );
-            })}
-          </div>
-        </motion.div>
-
-        {/* Night Mode */}
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }} className="bg-white rounded-2xl shadow-sm p-4 mb-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2"><Moon className="w-4 h-4 text-[#FF9500]" /><span className="text-sm font-medium text-gray-700">夜间免打扰 (22:00-08:00)</span></div>
-            <button onClick={handleNightMode} className="relative inline-flex items-center cursor-pointer">
-              <div className="w-[51px] h-[31px] rounded-full transition-colors duration-300" style={{ backgroundColor: nightMode ? BRAND : "#D1D5DB" }}>
-                <motion.div className="w-[27px] h-[27px] rounded-full bg-white shadow-md" animate={{ x: nightMode ? 22 : 2 }} transition={{ type: "spring", stiffness: 500, damping: 30 }} style={{ marginTop: 2 }} />
-              </div>
+            <span className="text-[13px]" style={{ color: MUTED }}>
+              已完成 {percent}%
+            </span>
+            <span className="text-[13px]" style={{ color: MUTED }}>
+              {todayWaterTotal}/{dailyTarget} ml
+            </span>
+          </div>
+          <div className="h-2 rounded-[4px] w-full" style={{ background: PROGRESS_TRACK }}>
+            <motion.div
+              className="h-2 rounded-[4px]"
+              initial={{ width: 0 }}
+              animate={{ width: `${percent}%` }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
+              style={{ background: BRAND }}
+            />
+          </div>
+          <span className="text-[13px]" style={{ color: MUTED }}>
+            已喝 {waterLogs.length} 次
+          </span>
+        </motion.section>
+
+        {/* 卡片 2 · 每日饮水目标 */}
+        <motion.section
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
+          className="rounded-[12px] border p-4 flex flex-col gap-3"
+          style={{
+            background: CARD_BG,
+            borderColor: BORDER,
+            borderWidth: 1,
+          }}
+        >
+          <h2 className="text-[17px] font-semibold truncate" style={{ color: "#000000" }}>
+            每日饮水目标
+          </h2>
+          <div className="flex items-center gap-2">
+            <div
+              className="flex items-center flex-1 min-w-0 rounded-[8px] px-3 h-10"
+              style={{ backgroundColor: INPUT_BG }}
+            >
+              <input
+                type="number"
+                value={goalInput}
+                onChange={(e) => setGoalInput(Math.max(0, parseInt(e.target.value) || 0))}
+                className="flex-1 min-w-0 bg-transparent text-[17px] outline-none border-none"
+                style={{ color: "#000000" }}
+              />
+            </div>
+            <span className="text-[15px] shrink-0" style={{ color: MUTED }}>ml</span>
+            <button
+              type="button"
+              onClick={handleSaveGoal}
+              className="shrink-0 h-10 px-5 rounded-[22px] text-[15px] font-medium"
+              style={{ backgroundColor: BRAND, color: "#FFFFFF" }}
+            >
+              保存
             </button>
           </div>
-        </motion.div>
+        </motion.section>
 
-        {/* 7-Day Chart */}
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.14 }} className="bg-white rounded-2xl shadow-sm p-4 mb-4">
-          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">近7天</h2>
-          <div className="flex items-end gap-3 h-32">
-            {weekData.map((val, i) => {
-              const h = maxWeek > 0 ? (val / maxWeek) * 100 : 0;
-              const isToday = i === weekData.length - 1;
+        {/* 卡片 3 · 定时提醒 */}
+        <motion.section
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="rounded-[12px] border p-4 flex flex-col gap-3"
+          style={{
+            background: CARD_BG,
+            borderColor: BORDER,
+            borderWidth: 1,
+          }}
+        >
+          <div className="flex items-center gap-2">
+            <Droplets className="w-5 h-5 shrink-0" style={{ color: INFO }} />
+            <h2 className="text-[17px] font-semibold truncate" style={{ color: "#000000" }}>
+              定时提醒
+            </h2>
+            <span
+              className="shrink-0 inline-flex items-center h-[22px] px-2 rounded-[13px] text-[12px]"
+              style={{ backgroundColor: TAG_BG, color: TAG_TEXT }}
+            >
+              {reminderInterval > 0 ? "已开启" : "已关闭"}
+            </span>
+          </div>
+          <p className="text-[13px]" style={{ color: MUTED }}>
+            {reminderInterval > 0
+              ? `每 ${reminderInterval} 分钟提醒一次`
+              : "提醒已关闭"}
+          </p>
+          <div
+            className="border-b"
+            style={{ borderColor: BORDER, borderWidth: "0.5px" }}
+          />
+          <span className="text-[13px]" style={{ color: MUTED }}>
+            提醒间隔
+          </span>
+          <div className="flex flex-nowrap gap-2 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
+            <style>{`.overflow-x-auto::-webkit-scrollbar{display:none}`}</style>
+            {REMINDER_OPTIONS.map((opt) => {
+              const active = reminderInterval === opt.value;
               return (
-                <div key={i} className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end">
-                  <motion.div initial={{ height: 0 }} animate={{ height: `${Math.max(h, 2)}%` }} transition={{ delay: 0.2 + i * 0.06, duration: 0.5 }}
-                    className="w-full rounded-t-xl" style={{ backgroundColor: isToday ? BRAND : "#FFE0B2", minHeight: 4 }} />
-                  <span className="text-[10px] text-gray-400">{WEEKDAY_LABELS[i]}</span>
-                </div>
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => handleReminder(opt.value)}
+                  className="shrink-0 inline-flex items-center justify-center h-8 px-4 rounded-[16px] text-[14px] whitespace-nowrap"
+                  style={{
+                    backgroundColor: active ? BRAND : INPUT_BG,
+                    color: active ? "#FFFFFF" : "#000000",
+                    fontWeight: active ? 500 : 400,
+                  }}
+                >
+                  {opt.label}
+                </button>
               );
             })}
           </div>
-          <div className="mt-2 text-xs text-gray-400 text-center">日均 {avgWeek} ml · 目标 {dailyTarget} ml</div>
-        </motion.div>
+        </motion.section>
 
-        {/* Bottom Link */}
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.18 }} className="text-center mb-8">
-          <Link href="/health/water/stats" className="inline-flex items-center gap-1 text-sm font-medium transition-colors" style={{ color: BRAND }}>
-            查看饮水完整统计 <ChevronLeft className="w-4 h-4 rotate-180" />
-          </Link>
-        </motion.div>
+        {/* 卡片 4 · 夜间免打扰 */}
+        <motion.section
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="rounded-[12px] border p-4 flex flex-col gap-2"
+          style={{
+            background: CARD_BG,
+            borderColor: BORDER,
+            borderWidth: 1,
+          }}
+        >
+          <div className="flex items-center gap-2">
+            <Moon className="w-5 h-5 shrink-0" style={{ color: NIGHT_INDIGO }} />
+            <h2 className="text-[17px] font-semibold truncate flex-1" style={{ color: "#000000" }}>
+              夜间免打扰
+            </h2>
+            <span
+              className="shrink-0 inline-flex items-center h-[22px] px-2 rounded-[13px] text-[12px] mr-2"
+              style={{ backgroundColor: TAG_BG, color: TAG_TEXT }}
+            >
+              {nightMode ? "已开启" : "已关闭"}
+            </span>
+            <ToggleSwitch checked={nightMode} onChange={handleNightMode} />
+          </div>
+          <p className="text-[13px]" style={{ color: MUTED }}>
+            {nightMode ? "22:00–08:00 不推送提醒" : "已关闭"}
+          </p>
+        </motion.section>
 
+        {/* 卡片 5 · 快捷喝水 */}
+        <motion.section
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="rounded-[12px] border p-4 flex flex-col gap-3"
+          style={{
+            background: CARD_BG,
+            borderColor: BORDER,
+            borderWidth: 1,
+          }}
+        >
+          <h2 className="text-[17px] font-semibold truncate" style={{ color: "#000000" }}>
+            快捷喝水
+          </h2>
+          <p className="text-[13px]" style={{ color: MUTED }}>
+            与主页人物框共享水杯预设值
+          </p>
+          <div className="flex flex-nowrap gap-2 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
+            {QUICK_AMOUNTS.map((amount) => (
+              <button
+                key={amount}
+                type="button"
+                onClick={() => handleAdd(amount)}
+                disabled={addingMap[amount]}
+                className="shrink-0 inline-flex items-center gap-1 h-9 px-4 rounded-[18px] text-[15px]"
+                style={{
+                  backgroundColor: INPUT_BG,
+                  color: "#000000",
+                  opacity: addingMap[amount] ? 0.5 : 1,
+                }}
+              >
+                <Plus className="w-[14px] h-[14px] shrink-0" />
+                <span className="whitespace-nowrap">{amount}ml</span>
+              </button>
+            ))}
+          </div>
+        </motion.section>
+
+        {/* 卡片 6 · 今日饮水明细 */}
+        <motion.section
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.25 }}
+          className="rounded-[12px] border p-4 flex flex-col gap-2"
+          style={{
+            background: CARD_BG,
+            borderColor: BORDER,
+            borderWidth: 1,
+          }}
+        >
+          <h2 className="text-[17px] font-semibold truncate" style={{ color: "#000000" }}>
+            今日饮水明细
+          </h2>
+          {sortedLogs.length === 0 ? (
+            <div className="flex items-center justify-center py-6">
+              <span className="text-[13px]" style={{ color: MUTED }}>
+                今日暂无饮水记录
+              </span>
+            </div>
+          ) : (
+            sortedLogs.map((entry, i) => (
+              <div
+                key={entry.id}
+                className="flex items-center justify-between py-2"
+                style={{
+                  borderBottom:
+                    i < sortedLogs.length - 1
+                      ? "0.5px solid #E5E5EA"
+                      : "none",
+                }}
+              >
+                <div className="flex items-center gap-2">
+                  <Droplets className="w-4 h-4" style={{ color: INFO }} />
+                  <span className="text-[13px]" style={{ color: "#000000" }}>
+                    {formatTimestamp(entry.timestamp)}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span
+                    className="text-[13px] font-medium"
+                    style={{ color: "#000000" }}
+                  >
+                    {entry.amount} ml
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(entry.id)}
+                    className="inline-flex items-center justify-center"
+                    aria-label="删除"
+                  >
+                    <Trash2 className="w-4 h-4" style={{ color: "#C7C7CC" }} />
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </motion.section>
+
+        {/* ===== 底部链接 ===== */}
+        <div className="flex items-center justify-center py-1">
+          <button
+            type="button"
+            onClick={showStatsToast}
+            className="inline-flex items-center gap-1 text-[15px] font-medium"
+            style={{ color: BRAND }}
+          >
+            <span>查看饮水完整统计</span>
+            <ArrowRight className="w-4 h-4" />
+          </button>
+        </div>
       </div>
     </div>
   );

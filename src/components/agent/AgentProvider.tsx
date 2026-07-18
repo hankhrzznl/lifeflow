@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback, createContext, useContext, useRef } from "react";
 import { usePathname } from "next/navigation";
-import { Sparkles } from "lucide-react";
 import type {
   ChatStateContext,
   AgentMessage,
@@ -432,32 +431,19 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
     <AgentContext.Provider value={value}>
       {children}
       {!isHiddenPage && (
-        <>
-          <button
-            onClick={() => setOpen(!open)}
-            className={`fixed bottom-20 right-4 md:bottom-8 md:right-8 z-50 w-14 h-14 rounded-full bg-gradient-to-br from-violet-500 to-blue-600 text-white shadow-lg shadow-violet-500/30 hover:shadow-xl hover:shadow-violet-500/40 active:scale-95 transition-all flex items-center justify-center ${
-              open ? "scale-0 opacity-0" : "scale-100 opacity-100"
-            }`}
-            style={{
-              animation: `fabAppear 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)`,
-            }}
-          >
-            <Sparkles className="w-6 h-6" />
-          </button>
-          <AgentChat
-            open={open}
-            onClose={() => setOpen(false)}
-            messages={messages}
-            state={stateCtx.currentState}
-            onSubmit={handleSubmit}
-            onAcceptSuggestion={handleAcceptSuggestion}
-            onModifySuggestion={handleModifySuggestion}
-            onRejectSuggestion={handleRejectSuggestion}
-            onClearHistory={handleClearHistory}
-            onRetry={handleRetry}
-            hasHistory={messages.length > 1}
-          />
-        </>
+        <AgentChat
+          open={open}
+          onClose={() => setOpen(false)}
+          messages={messages}
+          state={stateCtx.currentState}
+          onSubmit={handleSubmit}
+          onAcceptSuggestion={handleAcceptSuggestion}
+          onModifySuggestion={handleModifySuggestion}
+          onRejectSuggestion={handleRejectSuggestion}
+          onClearHistory={handleClearHistory}
+          onRetry={handleRetry}
+          hasHistory={messages.length > 1}
+        />
       )}
     </AgentContext.Provider>
   );

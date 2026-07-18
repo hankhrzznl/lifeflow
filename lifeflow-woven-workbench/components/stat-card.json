@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 2,
+  "sourceKind": "structured-spec",
+  "slug": "stat-card",
+  "name": "StatCard",
+  "displayName": "统计卡片",
+  "category": "card",
+  "confidence": "high",
+  "semanticTypeCandidates": ["Card", "StatCard"],
+  "variantDimensions": [
+    { "axis": "type", "values": ["active", "completed", "paused"] }
+  ],
+  "representativeVariants": [
+    { "type": "active" },
+    { "type": "completed" },
+    { "type": "paused" }
+  ],
+  "anatomy": ["root", "icon-area", "big-number", "label"],
+  "structurePatterns": {
+    "root": "Compact layout, light brand background, rounded-lg",
+    "big-number": "Large handwritten font number",
+    "label": "Small caption text below number"
+  },
+  "usageHints": {
+    "layout": "Horizontal row of 3 cards in header area",
+    "interaction": "Tappable to filter by status"
+  },
+  "doNotInvent": ["trend arrow", "percentage change", "chart mini"],
+  "unknowns": [],
+  "styles": {
+    "bg": { "active": "var(--color-primary-light)", "completed": "var(--color-success-light)", "paused": "var(--color-warning-light)" },
+    "borderRadius": "var(--radius-lg)",
+    "padding": "var(--space-lg)"
+  },
+  "traits": {
+    "layout": { "display": "flex", "direction": "column", "alignItems": "center", "gap": "var(--space-xs)" },
+    "number": { "fontFamily": "var(--font-family-display)", "fontSize": "var(--font-size-display)", "fontWeight": "var(--font-weight-bold)" },
+    "label": { "fontSize": "var(--font-size-caption)", "color": "var(--color-text-tertiary)" }
+  }
+}

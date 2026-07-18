@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+body { margin: 0; padding: var(--space-md); background: var(--color-surface); font-family: var(--font-family-body); color: var(--color-text-primary); }
+.specimen { display: flex; flex-direction: column; gap: var(--space-lg); }
+.story { display: flex; flex-direction: column; gap: var(--space-sm); }
+.story-label { font-size: var(--font-size-caption); color: var(--color-text-tertiary); font-weight: var(--font-weight-medium); text-transform: none; flex-shrink: 0; }
+.rail { display: flex; gap: var(--space-md); flex-wrap: wrap; align-items: stretch; }
+
+/* @component-css-start */
+.goal-card { display: flex; flex-direction: column; gap: var(--space-md); padding: var(--space-lg); background: var(--color-surface-card); border-radius: var(--radius-lg); box-shadow: var(--shadow-2); min-width: 280px; flex: 1 1 280px; max-width: 360px; cursor: pointer; transition: background .15s; }
+.goal-card:hover { background: var(--color-surface-card-hover); }
+.goal-card__progress { display: flex; align-items: center; gap: var(--space-sm); }
+.goal-card__progress-track { flex: 1; height: 8px; background: var(--color-knit-bg); border-radius: var(--radius-full); overflow: hidden; }
+.goal-card__progress-fill { height: 100%; border-radius: var(--radius-full); transition: width .3s; }
+.goal-card__progress-fill--active { background: var(--color-knit-progress); }
+.goal-card__progress-fill--completed { background: var(--color-knit-done); }
+.goal-card__progress-fill--paused { background: var(--color-knit-partial); }
+.goal-card__progress-text { font-size: var(--font-size-caption); color: var(--color-text-tertiary); white-space: nowrap; flex-shrink: 0; }
+.goal-card__title { margin: 0; font-family: var(--font-family-display); font-size: var(--font-size-h2); color: var(--color-text-primary); line-height: var(--line-height-tight); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.goal-card__desc { margin: 0; font-size: var(--font-size-body-sm); color: var(--color-text-secondary); line-height: var(--line-height-normal); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.goal-card__meta { display: flex; gap: var(--space-xs); font-size: var(--font-size-caption); color: var(--color-text-tertiary); }
+.goal-card__actions { display: flex; gap: var(--space-xs); margin-top: auto; padding-top: var(--space-xs); }
+.goal-card__btn { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; min-width: 32px; border: none; border-radius: var(--radius-sm); background: transparent; color: var(--color-text-tertiary); cursor: pointer; flex-shrink: 0; transition: background .15s, color .15s; }
+.goal-card__btn:hover { background: var(--color-surface-card-hover); color: var(--color-text-primary); }
+.goal-card__btn svg { width: 18px; height: 18px; }
+.goal-card__badge { display: inline-flex; align-items: center; padding: 2px var(--space-sm); border-radius: var(--radius-full); font-size: var(--font-size-caption); white-space: nowrap; flex-shrink: 0; }
+.goal-card__badge--active { background: var(--color-primary-light); color: var(--color-primary); }
+.goal-card__badge--completed { background: var(--color-success-light); color: var(--color-success); }
+.goal-card__badge--paused { background: var(--color-warning-light); color: var(--color-warning); }
+/* @component-css-end */
+</style>
+</head>
+<body>
+
+<svg style="display:none" xmlns="http://www.w3.org/2000/svg">
+  <symbol id="icon-pencil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></symbol>
+  <symbol id="icon-pause" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></symbol>
+  <symbol id="icon-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></symbol>
+  <symbol id="icon-play" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="6 3 20 12 6 21 6 3"/></symbol>
+</svg>
+
+<div class="specimen">
+  <div class="story">
+    <span class="story-label">状态变体</span>
+    <div class="rail">
+
+      <div class="goal-card" data-state="active">
+        <div class="goal-card__progress">
+          <div class="goal-card__progress-track">
+            <div class="goal-card__progress-fill goal-card__progress-fill--active" style="width:45%"></div>
+          </div>
+          <span class="goal-card__progress-text">45%</span>
+        </div>
+        <h3 class="goal-card__title">每日写作练习</h3>
+        <p class="goal-card__desc">坚持每天写作500字，记录生活中的灵感与思考，培养持续的写作习惯。</p>
+        <div class="goal-card__meta">
+          <span class="goal-card__badge goal-card__badge--active">进行中</span>
+          <span>已坚持 12 天</span>
+        </div>
+        <div class="goal-card__actions">
+          <button class="goal-card__btn" aria-label="编辑"><svg><use href="#icon-pencil"/></svg></button>
+          <button class="goal-card__btn" aria-label="暂停"><svg><use href="#icon-pause"/></svg></button>
+          <button class="goal-card__btn" aria-label="删除"><svg><use href="#icon-trash"/></svg></button>
+        </div>
+      </div>
+
+      <div class="goal-card" data-state="completed">
+        <div class="goal-card__progress">
+          <div class="goal-card__progress-track">
+            <div class="goal-card__progress-fill goal-card__progress-fill--completed" style="width:100%"></div>
+          </div>
+          <span class="goal-card__progress-text">100%</span>
+        </div>
+        <h3 class="goal-card__title">读完三本书</h3>
+        <p class="goal-card__desc">已完成全部阅读目标，涵盖哲学、历史与小说三大领域。</p>
+        <div class="goal-card__meta">
+          <span class="goal-card__badge goal-card__badge--completed">已完成</span>
+          <span>历时 45 天</span>
+        </div>
+        <div class="goal-card__actions">
+          <button class="goal-card__btn" aria-label="编辑"><svg><use href="#icon-pencil"/></svg></button>
+          <button class="goal-card__btn" aria-label="暂停"><svg><use href="#icon-pause"/></svg></button>
+          <button class="goal-card__btn" aria-label="删除"><svg><use href="#icon-trash"/></svg></button>
+        </div>
+      </div>
+
+      <div class="goal-card" data-state="paused">
+        <div class="goal-card__progress">
+          <div class="goal-card__progress-track">
+            <div class="goal-card__progress-fill goal-card__progress-fill--paused" style="width:30%"></div>
+          </div>
+          <span class="goal-card__progress-text">30%</span>
+        </div>
+        <h3 class="goal-card__title">学会编织围巾</h3>
+        <p class="goal-card__desc">暂停中，计划下月重启。正在等待合适的毛线与工具到货。</p>
+        <div class="goal-card__meta">
+          <span class="goal-card__badge goal-card__badge--paused">已暂停</span>
+          <span>已进行 6 天</span>
+        </div>
+        <div class="goal-card__actions">
+          <button class="goal-card__btn" aria-label="编辑"><svg><use href="#icon-pencil"/></svg></button>
+          <button class="goal-card__btn" aria-label="恢复"><svg><use href="#icon-play"/></svg></button>
+          <button class="goal-card__btn" aria-label="删除"><svg><use href="#icon-trash"/></svg></button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

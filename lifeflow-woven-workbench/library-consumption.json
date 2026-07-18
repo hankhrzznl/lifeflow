@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "recommendedReadOrder": [
+    "README.md",
+    "colors_and_type.css",
+    "css.json",
+    "components/index.json",
+    "components.css",
+    "components/button.json",
+    "components/goal-card.json",
+    "components/task-card.json",
+    "components/stat-card.json",
+    "components/knitting-progress.json",
+    "components/mascot-illustration.json",
+    "components/empty-state.json",
+    "components/bottom-navigation.json",
+    "components/check-in-panel.json"
+  ],
+  "coreComponents": [
+    "button",
+    "goal-card",
+    "task-card",
+    "stat-card",
+    "knitting-progress",
+    "mascot-illustration",
+    "empty-state",
+    "bottom-navigation",
+    "check-in-panel"
+  ],
+  "brand": {
+    "name": "LifeFlow",
+    "slug": "lifeflow",
+    "productType": "mobile-app",
+    "personality": ["warm", "handcrafted", "cozy", "playful", "imperfect"],
+    "language": "zh",
+    "visualTone": "织光者的工作台 — warm wooden desk, fabric textures, yarn/orange accents, hand-drawn charm",
+    "kitType": "app",
+    "colorNamingPrefix": "lifeflow"
+  }
+}

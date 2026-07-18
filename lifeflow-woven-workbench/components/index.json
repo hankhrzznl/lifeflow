@@ -1,0 +1,14 @@
+{
+  "components": [
+    { "slug": "button", "name": "Button", "displayName": "按钮", "category": "basic", "variants": 4, "file": "button.json" },
+    { "slug": "goal-card", "name": "GoalCard", "displayName": "目标卡片", "category": "card", "variants": 3, "file": "goal-card.json" },
+    { "slug": "task-card", "name": "TaskCard", "displayName": "任务卡片", "category": "card", "variants": 4, "file": "task-card.json" },
+    { "slug": "stat-card", "name": "StatCard", "displayName": "统计卡片", "category": "card", "variants": 3, "file": "stat-card.json" },
+    { "slug": "knitting-progress", "name": "KnittingProgress", "displayName": "编织进度条", "category": "indicator", "variants": 4, "file": "knitting-progress.json" },
+    { "slug": "mascot-illustration", "name": "MascotIllustration", "displayName": "小织插画", "category": "illustration", "variants": 5, "file": "mascot-illustration.json" },
+    { "slug": "empty-state", "name": "EmptyState", "displayName": "空状态", "category": "feedback", "variants": 3, "file": "empty-state.json" },
+    { "slug": "bottom-navigation", "name": "BottomNavigation", "displayName": "底部导航", "category": "navigation", "variants": 3, "file": "bottom-navigation.json" },
+    { "slug": "check-in-panel", "name": "CheckInPanel", "displayName": "打卡面板", "category": "overlay", "variants": 2, "file": "check-in-panel.json" }
+  ],
+  "total": 9
+}

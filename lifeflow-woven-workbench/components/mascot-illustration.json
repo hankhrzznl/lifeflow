@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 2,
+  "sourceKind": "structured-spec",
+  "slug": "mascot-illustration",
+  "name": "MascotIllustration",
+  "displayName": "小织插画",
+  "category": "illustration",
+  "confidence": "medium",
+  "semanticTypeCandidates": ["Illustration", "Mascot"],
+  "variantDimensions": [
+    { "axis": "state", "values": ["idle", "weaving", "completed", "confused", "celebrating"] }
+  ],
+  "representativeVariants": [
+    { "state": "idle" },
+    { "state": "weaving" },
+    { "state": "completed" },
+    { "state": "confused" },
+    { "state": "celebrating" }
+  ],
+  "anatomy": ["fox-body", "fox-face", "ears", "needle-arms", "yarn-threads", "accessories"],
+  "structurePatterns": {
+    "style": "Hand-drawn line art, CSS border-radius simulating irregular shapes, dashed outlines",
+    "primary-color": "var(--color-primary)",
+    "default-size": "120x120px",
+    "idle": "Fox tilting head, looking at tangled yarn",
+    "weaving": "Fox focused, needles crossing with thread",
+    "completed": "Fox holding up finished fabric, cheering",
+    "confused": "Fox scratching head, broken thread visible",
+    "celebrating": "Fox surrounded by yarn balls, confetti"
+  },
+  "usageHints": {
+    "empty-state": "Centered in empty state area",
+    "loading": "Weaving state with subtle bounce animation",
+    "completion": "Celebrating state with confetti effect"
+  },
+  "doNotInvent": ["photo-realistic rendering", "3D model", "detailed shading"],
+  "unknowns": ["exact SVG paths per state"],
+  "styles": {
+    "size": "120px",
+    "lineColor": "var(--color-primary)",
+    "fillColor": "var(--color-primary-light)"
+  }
+}

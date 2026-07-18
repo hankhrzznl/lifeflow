@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 2,
+  "sourceKind": "structured-spec",
+  "slug": "goal-card",
+  "name": "GoalCard",
+  "displayName": "目标卡片",
+  "category": "card",
+  "confidence": "high",
+  "semanticTypeCandidates": ["Card", "GoalCard"],
+  "variantDimensions": [
+    { "axis": "state", "values": ["active", "paused", "completed"] }
+  ],
+  "representativeVariants": [
+    { "state": "active" },
+    { "state": "completed" },
+    { "state": "paused" }
+  ],
+  "anatomy": ["root", "progress-bar", "title", "description", "meta-row", "action-bar"],
+  "structurePatterns": {
+    "root": "Fabric background card with shadow-md and rounded-lg",
+    "progress-bar": "KnittingProgress component at top",
+    "title": "Handwritten font, display goal name",
+    "action-bar": "Icon buttons for edit/delete/pause at bottom"
+  },
+  "usageHints": {
+    "grid": "1 col mobile / 2 col tablet / 3 col desktop",
+    "interaction": "Click card navigates to goal detail"
+  },
+  "doNotInvent": ["thumbnail images", "drag handle", "color picker"],
+  "unknowns": [],
+  "styles": {
+    "bg": "var(--color-surface-card)",
+    "hoverBg": "var(--color-surface-card-hover)",
+    "borderRadius": "var(--radius-lg)",
+    "shadow": "var(--shadow-2)",
+    "padding": "var(--space-lg)",
+    "gap": "var(--space-md)"
+  },
+  "traits": {
+    "layout": { "display": "flex", "direction": "column", "minWidth": "280px" },
+    "title": { "fontFamily": "var(--font-family-display)", "fontSize": "var(--font-size-h2)", "color": "var(--color-text-primary)" },
+    "description": { "fontSize": "var(--font-size-body-sm)", "color": "var(--color-text-secondary)" }
+  }
+}

@@ -21,6 +21,17 @@ const BORDER_NAV = "#E5E5E5";
 const BORDER_DIVIDER = "#F5F5F5";
 const ARROW_COLOR = "#C7C7CC";
 
+const CURRENCY_LABELS: Record<string, string> = {
+  CNY: "CNY (¥)", USD: "USD ($)", EUR: "EUR (€)", JPY: "JPY (¥)",
+};
+
+const CURRENCIES = [
+  { code: "CNY", label: "CNY (¥)" },
+  { code: "USD", label: "USD ($)" },
+  { code: "EUR", label: "EUR (€)" },
+  { code: "JPY", label: "JPY (¥)" },
+];
+
 // ============================================================
 // 页面
 // ============================================================
@@ -30,6 +41,8 @@ export default function NewLedgerPage() {
   const [name, setName] = useState("");
   const [coverIndex, setCoverIndex] = useState(0);
   const [note, setNote] = useState("");
+  const [currency, setCurrency] = useState("CNY");
+  const [showCurrencyPicker, setShowCurrencyPicker] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const canSubmit = name.trim().length > 0 && !submitting;
@@ -41,7 +54,7 @@ export default function NewLedgerPage() {
       await addLedger({
         name: name.trim(),
         type: "personal",
-        currency: "CNY",
+        currency: currency,
         coverIndex,
         note: note.trim() || undefined,
       });
@@ -144,12 +157,12 @@ export default function NewLedgerPage() {
         {/* 货币行 */}
         <button
           type="button"
-          onClick={() => showToast({ type: "info", message: "功能开发中" })}
+          onClick={() => setShowCurrencyPicker(true)}
           className="h-[52px] px-4 flex items-center justify-between w-full text-left"
         >
           <span className="text-[15px]" style={{ color: TEXT_PRIMARY }}>货币</span>
           <div className="flex items-center gap-1">
-            <span className="text-[15px]" style={{ color: TEXT_PRIMARY }}>CNY (¥)</span>
+            <span className="text-[15px]" style={{ color: TEXT_PRIMARY }}>{CURRENCY_LABELS[currency] || currency}</span>
             <ChevronRight className="w-4 h-4" style={{ color: ARROW_COLOR }} />
           </div>
         </button>
@@ -174,6 +187,32 @@ export default function NewLedgerPage() {
 
       {/* 底部安全区 */}
       <div className="pb-8" />
+
+      {/* 货币选择器 */}
+      {showCurrencyPicker && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center" onClick={() => setShowCurrencyPicker(false)}>
+          <div className="absolute inset-0 bg-black/30" />
+          <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} transition={{ type: "spring", damping: 30, stiffness: 400 }}
+            className="relative w-full max-w-[430px] bg-white rounded-t-[20px] pb-[max(16px,env(safe-area-inset-bottom))]"
+            onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 pt-5 pb-2">
+              <span className="text-[17px] font-semibold text-[#1D1D1F]">选择货币</span>
+              <button onClick={() => setShowCurrencyPicker(false)} className="text-[15px] text-[#86868B]">取消</button>
+            </div>
+            <div className="max-h-[320px] overflow-y-auto">
+              {CURRENCIES.map((c) => (
+                <button key={c.code} type="button" onClick={() => { setCurrency(c.code); setShowCurrencyPicker(false); }}
+                  className="w-full h-[52px] px-5 flex items-center justify-between active:bg-black/5">
+                  <span className="text-[15px] text-[#1D1D1F]">{c.label}</span>
+                  {currency === c.code && <div className="w-5 h-5 rounded-full bg-[#5865F2] flex items-center justify-center">
+                    <svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 6l3 3 5-6" stroke="#fff" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  </div>}
+                </button>
+              ))}
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }

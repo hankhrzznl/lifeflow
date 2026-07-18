@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 2,
+  "sourceKind": "structured-spec",
+  "slug": "task-card",
+  "name": "TaskCard",
+  "displayName": "任务卡片",
+  "category": "card",
+  "confidence": "high",
+  "semanticTypeCandidates": ["Card", "TaskCard", "ListItem"],
+  "variantDimensions": [
+    { "axis": "state", "values": ["pending", "in-progress", "completed", "overdue"] }
+  ],
+  "representativeVariants": [
+    { "state": "pending" },
+    { "state": "in-progress" },
+    { "state": "completed" },
+    { "state": "overdue" }
+  ],
+  "anatomy": ["root", "checkbox", "task-text", "quantity-display", "time-badge"],
+  "structurePatterns": {
+    "root": "Compact card with shadow-sm, fabric background",
+    "checkbox": "Knitting-grid styled checkbox on left",
+    "quantity": "actualQuantity / quantityTarget display",
+    "overdue": "Red dashed border + warning color"
+  },
+  "usageHints": {
+    "grouping": "Grouped by goal within today view",
+    "checkbox interaction": "Tap to toggle completion"
+  },
+  "doNotInvent": ["subtasks", "priority flags", "attachments"],
+  "unknowns": [],
+  "styles": {
+    "bg": "var(--color-surface-card)",
+    "borderRadius": "var(--radius-md)",
+    "shadow": "var(--shadow-1)",
+    "padding": "var(--space-md)",
+    "overdueBorder": "1px dashed var(--color-warning)"
+  },
+  "traits": {
+    "layout": { "display": "flex", "alignItems": "center", "gap": "var(--space-md)" },
+    "taskText": { "fontSize": "var(--font-size-body)", "color": "var(--color-text-primary)" },
+    "completed": { "textDecoration": "line-through", "color": "var(--color-text-tertiary)" },
+    "checkbox": { "size": "22px", "borderRadius": "var(--radius-sm)", "border": "1.5px solid var(--color-border-dashed)" }
+  }
+}

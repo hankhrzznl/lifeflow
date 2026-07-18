@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+body { margin: 0; padding: var(--space-md); background: var(--color-surface); font-family: var(--font-family-body); color: var(--color-text-primary); }
+.story { display: flex; align-items: center; gap: var(--space-sm); margin-bottom: var(--space-sm); }
+.story-label { width: 92px; flex-shrink: 0; font-size: var(--font-size-caption); color: var(--color-text-secondary); text-align: right; white-space: nowrap; }
+/* @component-css-start */
+.knit-progress { position: relative; flex: 1; min-width: 0; height: 24px; border-radius: var(--radius-sm); overflow: hidden; background: var(--color-knit-bg); }
+.knit-progress__grid { position: absolute; inset: 0; z-index: 1; border-radius: var(--radius-sm); background: repeating-linear-gradient(90deg, var(--color-knit-grid) 0 1px, transparent 1px 6px), repeating-linear-gradient(0deg, var(--color-knit-grid) 0 1px, transparent 1px 6px); }
+.knit-progress__fill { position: absolute; left: 0; top: 0; height: 100%; border-radius: var(--radius-sm); z-index: 2; transition: width 0.5s ease-in-out; }
+.knit-progress__yarn { position: absolute; top: 6px; width: 12px; height: 12px; border-radius: var(--radius-full); background: var(--color-primary); z-index: 3; transition: left 0.5s ease-in-out; flex-shrink: 0; }
+.knit-progress__percent { position: absolute; right: var(--space-sm); top: 50%; transform: translateY(-50%); z-index: 4; font-family: var(--font-family-display); font-size: var(--font-size-body-sm); color: var(--color-text-primary); line-height: 1; white-space: nowrap; }
+.knit-progress__stamp { position: absolute; right: var(--space-sm); top: 50%; transform: translateY(-50%); z-index: 4; font-family: var(--font-family-display); font-size: var(--font-size-body-sm); color: var(--color-text-inverse); line-height: 1; white-space: nowrap; }
+.knit-progress--in-progress .knit-progress__fill { background: var(--color-knit-progress); width: 35%; }
+.knit-progress--in-progress .knit-progress__yarn { left: calc(35% - 12px); }
+.knit-progress--partial .knit-progress__fill { background: var(--color-knit-partial); width: 68%; }
+.knit-progress--partial .knit-progress__yarn { left: calc(68% - 12px); }
+.knit-progress--completed .knit-progress__fill { background: var(--color-knit-done); width: 100%; }
+.knit-progress--completed .knit-progress__yarn { display: none; }
+.knit-progress--completed .knit-progress__percent { display: none; }
+.knit-progress--overdue .knit-progress__fill { background: var(--color-warning); width: 42%; }
+.knit-progress--overdue .knit-progress__yarn { display: none; }
+.knit-progress--overdue { border: 1px dashed var(--color-warning); overflow: visible; }
+.knit-progress--in-progress .knit-progress__stamp, .knit-progress--partial .knit-progress__stamp, .knit-progress--overdue .knit-progress__stamp { display: none; }
+/* @component-css-end */
+</style>
+</head>
+<body>
+<div class="story">
+<span class="story-label">进行中</span>
+<div class="knit-progress knit-progress--in-progress">
+<div class="knit-progress__grid"></div>
+<div class="knit-progress__fill"></div>
+<div class="knit-progress__yarn"></div>
+<span class="knit-progress__percent">35%</span>
+<span class="knit-progress__stamp">★</span>
+</div>
+</div>
+<div class="story">
+<span class="story-label">部分完成</span>
+<div class="knit-progress knit-progress--partial">
+<div class="knit-progress__grid"></div>
+<div class="knit-progress__fill"></div>
+<div class="knit-progress__yarn"></div>
+<span class="knit-progress__percent">68%</span>
+<span class="knit-progress__stamp">★</span>
+</div>
+</div>
+<div class="story">
+<span class="story-label">已完成</span>
+<div class="knit-progress knit-progress--completed">
+<div class="knit-progress__grid"></div>
+<div class="knit-progress__fill"></div>
+<div class="knit-progress__yarn"></div>
+<span class="knit-progress__percent">100%</span>
+<span class="knit-progress__stamp">★</span>
+</div>
+</div>
+<div class="story">
+<span class="story-label">已逾期</span>
+<div class="knit-progress knit-progress--overdue">
+<div class="knit-progress__grid"></div>
+<div class="knit-progress__fill"></div>
+<div class="knit-progress__yarn"></div>
+<span class="knit-progress__percent">42%</span>
+<span class="knit-progress__stamp">★</span>
+</div>
+</div>
+</body>
+</html>

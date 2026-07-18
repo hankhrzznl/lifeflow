@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 2,
+  "sourceKind": "structured-spec",
+  "slug": "button",
+  "name": "Button",
+  "displayName": "按钮",
+  "category": "basic",
+  "confidence": "high",
+  "semanticTypeCandidates": ["Button"],
+  "variantDimensions": [
+    { "axis": "variant", "values": ["primary", "secondary", "ghost", "icon"] },
+    { "axis": "size", "values": ["sm", "md", "lg"] },
+    { "axis": "state", "values": ["default", "hover", "active", "disabled", "success"] }
+  ],
+  "representativeVariants": [
+    { "variant": "primary", "size": "md", "state": "default" },
+    { "variant": "secondary", "size": "md", "state": "default" },
+    { "variant": "ghost", "size": "md", "state": "default" },
+    { "variant": "icon", "size": "md", "state": "default" },
+    { "variant": "primary", "size": "md", "state": "success" },
+    { "variant": "primary", "size": "md", "state": "disabled" }
+  ],
+  "anatomy": ["root", "label", "icon-start", "icon-end"],
+  "structurePatterns": {
+    "primary": "solid orange background, white text, rounded-md",
+    "secondary": "fabric background, brown border, brown text",
+    "ghost": "transparent background, brown text, no border",
+    "icon": "circular or rounded, icon-only, transparent or light background"
+  },
+  "usageHints": {
+    "primary": "Main CTAs, form submission, positive actions",
+    "secondary": "Cancel, back, secondary actions",
+    "ghost": "Toolbar actions, inline links",
+    "icon": "Quick actions, edit/delete in cards"
+  },
+  "doNotInvent": ["split button", "loading spinner state", "button groups"],
+  "unknowns": [],
+  "styles": {
+    "primary": {
+      "bg": "var(--color-primary)",
+      "text": "var(--color-text-inverse)",
+      "hoverBg": "var(--color-primary-hover)",
+      "borderRadius": "var(--radius-md)",
+      "padding": "var(--space-md) var(--space-lg)"
+    },
+    "secondary": {
+      "bg": "var(--color-surface-card)",
+      "text": "var(--color-secondary)",
+      "border": "1px solid var(--color-secondary)",
+      "borderRadius": "var(--radius-md)",
+      "padding": "var(--space-md) var(--space-lg)"
+    },
+    "ghost": {
+      "bg": "transparent",
+      "text": "var(--color-secondary)",
+      "borderRadius": "var(--radius-md)",
+      "padding": "var(--space-sm) var(--space-md)"
+    },
+    "success": {
+      "bg": "var(--color-success)",
+      "text": "var(--color-text-inverse)",
+      "borderRadius": "var(--radius-md)"
+    }
+  },
+  "traits": {
+    "sizes": { "sm": { "height": "32px", "padding": "6px 12px", "fontSize": "var(--font-size-body-sm)" }, "md": { "height": "40px", "padding": "10px 16px", "fontSize": "var(--font-size-body)" }, "lg": { "height": "48px", "padding": "14px 24px", "fontSize": "var(--font-size-h3)" } },
+    "radius": { "default": "var(--radius-md)", "icon": "var(--radius-full)" },
+    "disabled": { "opacity": "0.5", "cursor": "not-allowed" }
+  }
+}

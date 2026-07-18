@@ -1,0 +1,243 @@
+/* ═══════════════════════════════════════════════════════════════
+   components.css — Design System Component Definitions
+   Auto-extracted from preview/component-*.html
+   DO NOT EDIT MANUALLY — regenerate via extract-components-css.mjs
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Bottom Navigation ─────────────────────────────────────── */
+/* @anatomy
+   <div class="specimen" data-evidence-sample="home-active"> <span class="story-label">主页激活</span> <div class="stage"> <div class="bnav"> <div class="bnav-tab active"> <i data-lucide="home"></i> <span class="bnav-label">主页</span> <span class="bnav-badge"></span> </div>
+*/
+/* Component definitions — extracted to components.css */
+.bnav { position: absolute; bottom: 0; left: 0; right: 0; height: 64px; background: var(--color-surface); display: flex; align-items: center; justify-content: space-around; border-top: 1px solid var(--color-border); }
+.bnav::before { content: ''; position: absolute; top: 0; left: var(--space-sm); right: var(--space-sm); height: 2px; background: repeating-linear-gradient(90deg, var(--color-border-dashed) 0, var(--color-border-dashed) 3px, transparent 3px, transparent 6px); }
+.bnav-tab { display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; flex-shrink: 0; cursor: pointer; min-width: 0; padding: var(--space-xs) 0; transition: color .15s; color: var(--color-text-tertiary); }
+.bnav-tab:hover { filter: brightness(.92); }
+.bnav-tab .lucide { width: 22px; height: 22px; }
+.bnav-label { font-size: var(--font-size-caption); margin-top: 2px; white-space: nowrap; line-height: var(--line-height-tight); }
+.bnav-tab.active { color: var(--color-primary); }
+.bnav-tab.active:hover { filter: brightness(.92); }
+.bnav-fab { position: absolute; top: -28px; left: 50%; transform: translateX(-50%); width: 56px; height: 56px; border-radius: var(--radius-full); background: var(--color-primary); display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-3); cursor: pointer; z-index: 1; transition: filter .15s; }
+.bnav-fab:hover { filter: brightness(.92); }
+.bnav-fab .lucide { width: 26px; height: 26px; color: var(--color-text-inverse); }
+.bnav-badge { position: absolute; top: 0; right: 4px; width: 8px; height: 8px; border-radius: var(--radius-full); background: var(--color-primary); }
+
+/* ── Button ────────────────────────────────────────────────── */
+/* @anatomy
+   <span class="label">操作变体</span>
+*/
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: none; cursor: pointer; font-family: var(--font-family-body); font-weight: var(--font-weight-medium); white-space: nowrap; transition: background .15s, border-color .15s, opacity .15s; flex-shrink: 0; }
+.btn-primary { background: var(--color-primary); color: var(--color-text-inverse); border-radius: var(--radius-md); }
+.btn-primary:hover { background: var(--color-primary-hover); }
+.btn-primary:active { filter: brightness(.92); }
+.btn-secondary { background: var(--color-surface-card); color: var(--color-secondary); border: 1px solid var(--color-secondary); border-radius: var(--radius-md); }
+.btn-secondary:hover { background: var(--color-surface-card-hover); }
+.btn-secondary:active { filter: brightness(.95); }
+.btn-ghost { background: transparent; color: var(--color-secondary); border-radius: var(--radius-md); }
+.btn-ghost:hover { background: var(--color-primary-light); }
+.btn-ghost:active { filter: brightness(.95); }
+.btn-icon { border-radius: var(--radius-full); background: transparent; color: var(--color-secondary); }
+.btn-icon:hover { background: var(--color-primary-light); }
+.btn-icon:active { filter: brightness(.95); }
+.btn-success { background: var(--color-success); color: var(--color-text-inverse); }
+.btn-success:hover { filter: brightness(.92); }
+.btn-sm { height: 32px; min-width: 32px; padding: 0 12px; font-size: var(--font-size-body-sm); }
+.btn-md { height: 40px; min-width: 40px; padding: 0 16px; font-size: var(--font-size-body); }
+.btn-lg { height: 48px; min-width: 48px; padding: 0 24px; font-size: var(--font-size-h3); }
+.btn-icon.btn-sm { width: 32px; padding: 0; }
+.btn-icon.btn-md { width: 40px; padding: 0; }
+.btn-icon.btn-lg { width: 48px; padding: 0; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; pointer-events: none; }
+
+/* ── Check In Panel ────────────────────────────────────────── */
+/* @anatomy
+   <div class="specimen"> <div class="story"> <div class="story-label">编辑态</div>
+*/
+.cip-overlay { position: absolute; inset: 0; background: rgba(61,52,46,0.4); display: flex; align-items: center; justify-content: center; z-index: 10; }
+.cip-panel { position: relative; background: var(--color-surface-card); border-radius: var(--radius-xl); box-shadow: var(--shadow-3); padding: var(--space-xl); width: 100%; max-width: 360px; margin: var(--space-lg); display: flex; flex-direction: column; gap: var(--space-lg); }
+.cip-tape { position: absolute; top: -12px; left: 24px; width: 60px; height: 24px; background: linear-gradient(180deg, rgba(232,221,212,0.85), rgba(212,197,181,0.9)); border-radius: var(--radius-sm); transform: rotate(-3deg); }
+.cip-header { font-family: var(--font-family-display); font-size: var(--font-size-h2); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); line-height: var(--line-height-tight); text-align: center; }
+.cip-divider { border: none; border-top: 1px solid var(--color-border-light); margin: 0; }
+.cip-field { display: flex; flex-direction: column; gap: var(--space-sm); }
+.cip-field-mt { margin-top: var(--space-md); }
+.cip-label { font-family: var(--font-family-body); font-size: var(--font-size-body-sm); color: var(--color-text-secondary); }
+.cip-label-accent { font-family: var(--font-family-body); font-size: var(--font-size-body-sm); color: var(--color-text-primary); font-weight: var(--font-weight-medium); }
+.cip-input-row { display: flex; align-items: center; gap: var(--space-sm); }
+.cip-input { flex: 1; border: 1.5px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-sm) var(--space-md); font-family: var(--font-family-body); font-size: var(--font-size-body); color: var(--color-text-primary); background: var(--color-surface-card); outline: none; min-width: 0; transition: border-color .15s; }
+.cip-input:focus { border-color: var(--color-primary); }
+.cip-rating-row { display: flex; gap: var(--space-sm); align-items: center; flex-wrap: wrap; }
+.cip-rating-btn { width: 36px; height: 36px; border-radius: var(--radius-full); border: 1.5px solid var(--color-border); background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: background .15s, border-color .15s; padding: 0; }
+.cip-rating-btn:hover { border-color: var(--color-primary); background: var(--color-primary-light); }
+.cip-rating-btn.is-selected { background: var(--color-primary); border-color: var(--color-primary); }
+.cip-rating-btn:disabled { cursor: default; }
+.cip-actions { display: flex; gap: var(--space-md); }
+.cip-btn { flex: 1; display: inline-flex; align-items: center; justify-content: center; font-family: var(--font-family-body); font-size: var(--font-size-body-sm); font-weight: var(--font-weight-medium); border-radius: var(--radius-md); cursor: pointer; transition: background .15s, border-color .15s; white-space: nowrap; padding: var(--space-md) var(--space-xl); min-width: 0; border: 1.5px solid transparent; }
+.cip-btn-primary { background: var(--color-primary); color: var(--color-text-inverse); border-color: var(--color-primary); }
+.cip-btn-primary:hover { background: var(--color-primary-hover); border-color: var(--color-primary-hover); }
+.cip-btn-secondary { background: var(--color-surface-card); color: var(--color-secondary); border-color: var(--color-border); }
+.cip-btn-secondary:hover { background: var(--color-surface-card-hover); }
+.cip-btn:disabled { opacity: 0.5; cursor: default; }
+.cip-panel.is-completed .cip-rating-btn { pointer-events: none; opacity: 0.7; }
+.cip-completed-icon { display: flex; align-items: center; justify-content: center; padding: var(--space-lg) 0; }
+.cip-completed-check { width: 64px; height: 64px; border-radius: var(--radius-full); background: var(--color-success); display: flex; align-items: center; justify-content: center; }
+.cip-completed-check svg { stroke: var(--color-text-inverse); }
+.cip-completed-msg { font-family: var(--font-family-display); font-size: var(--font-size-h2); color: var(--color-text-primary); text-align: center; }
+.cip-completed-sub { font-family: var(--font-family-body); font-size: var(--font-size-body-sm); color: var(--color-text-secondary); text-align: center; }
+
+/* ── Empty State ───────────────────────────────────────────── */
+/* @anatomy
+   <div class="specimen"> <div class="stage"> <div class="story"> <div class="story-label">no-goals</div>
+*/
+.empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: var(--space-3xl); min-height: 300px; text-align: center; background: var(--color-surface-card); border-radius: var(--radius-lg); gap: var(--space-lg); }
+.fox { position: relative; width: 72px; height: 60px; flex-shrink: 0; }
+.fox-face { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 56px; height: 46px; background: var(--color-primary); border-radius: 50% 50% 42% 42%; }
+.fox-ear { position: absolute; top: 0; width: 0; height: 0; border-left: 8px solid transparent; border-right: 8px solid transparent; border-bottom: 18px solid var(--color-primary); }
+.fox-ear-l { left: 10px; transform: rotate(-12deg); }
+.fox-ear-r { right: 10px; transform: rotate(12deg); }
+.fox-eye { position: absolute; width: 6px; height: 7px; background: var(--color-text-primary); border-radius: 50%; top: 16px; }
+.fox-eye-l { left: 19px; }
+.fox-eye-r { right: 19px; }
+.fox-nose { position: absolute; width: 9px; height: 6px; background: var(--color-text-primary); border-radius: 50%; bottom: 10px; left: 50%; transform: translateX(-50%); }
+.fox-cheek { position: absolute; width: 20px; height: 16px; background: var(--color-surface-card); border-radius: 50% 50% 38% 38%; bottom: 2px; }
+.fox-cheek-l { left: 10px; }
+.fox-cheek-r { right: 10px; }
+.empty-state-title { font-family: var(--font-family-display); font-size: var(--font-size-h2); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); line-height: var(--line-height-tight); margin: 0; }
+.empty-state-desc { font-size: var(--font-size-body); color: var(--color-text-secondary); line-height: var(--line-height-normal); margin: 0; max-width: 260px; }
+.empty-state-btn { display: inline-flex; align-items: center; justify-content: center; padding: var(--space-sm) var(--space-xl); background: var(--color-primary); color: var(--color-text-inverse); border: none; border-radius: var(--radius-md); font-family: var(--font-family-body); font-size: var(--font-size-body); font-weight: var(--font-weight-medium); cursor: pointer; white-space: nowrap; min-width: 96px; transition: background .15s; }
+.empty-state-btn:hover { background: var(--color-primary-hover); }
+
+/* ── Goal Card ─────────────────────────────────────────────── */
+/* @anatomy
+   <div class="goal-card" data-state="active"> <div class="goal-card__progress"> <div class="goal-card__progress-track"> <div class="goal-card__progress-fill goal-card__progress-fill--active" style="width:45%">
+*/
+.goal-card { display: flex; flex-direction: column; gap: var(--space-md); padding: var(--space-lg); background: var(--color-surface-card); border-radius: var(--radius-lg); box-shadow: var(--shadow-2); min-width: 280px; flex: 1 1 280px; max-width: 360px; cursor: pointer; transition: background .15s; }
+.goal-card:hover { background: var(--color-surface-card-hover); }
+.goal-card__progress { display: flex; align-items: center; gap: var(--space-sm); }
+.goal-card__progress-track { flex: 1; height: 8px; background: var(--color-knit-bg); border-radius: var(--radius-full); overflow: hidden; }
+.goal-card__progress-fill { height: 100%; border-radius: var(--radius-full); transition: width .3s; }
+.goal-card__progress-fill--active { background: var(--color-knit-progress); }
+.goal-card__progress-fill--completed { background: var(--color-knit-done); }
+.goal-card__progress-fill--paused { background: var(--color-knit-partial); }
+.goal-card__progress-text { font-size: var(--font-size-caption); color: var(--color-text-tertiary); white-space: nowrap; flex-shrink: 0; }
+.goal-card__title { margin: 0; font-family: var(--font-family-display); font-size: var(--font-size-h2); color: var(--color-text-primary); line-height: var(--line-height-tight); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.goal-card__desc { margin: 0; font-size: var(--font-size-body-sm); color: var(--color-text-secondary); line-height: var(--line-height-normal); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.goal-card__meta { display: flex; gap: var(--space-xs); font-size: var(--font-size-caption); color: var(--color-text-tertiary); }
+.goal-card__actions { display: flex; gap: var(--space-xs); margin-top: auto; padding-top: var(--space-xs); }
+.goal-card__btn { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; min-width: 32px; border: none; border-radius: var(--radius-sm); background: transparent; color: var(--color-text-tertiary); cursor: pointer; flex-shrink: 0; transition: background .15s, color .15s; }
+.goal-card__btn:hover { background: var(--color-surface-card-hover); color: var(--color-text-primary); }
+.goal-card__btn svg { width: 18px; height: 18px; }
+.goal-card__badge { display: inline-flex; align-items: center; padding: 2px var(--space-sm); border-radius: var(--radius-full); font-size: var(--font-size-caption); white-space: nowrap; flex-shrink: 0; }
+.goal-card__badge--active { background: var(--color-primary-light); color: var(--color-primary); }
+.goal-card__badge--completed { background: var(--color-success-light); color: var(--color-success); }
+.goal-card__badge--paused { background: var(--color-warning-light); color: var(--color-warning); }
+
+/* ── Knitting Progress ─────────────────────────────────────── */
+/* @anatomy
+   <div class="story"> <span class="story-label">进行中</span> <div class="knit-progress knit-progress--in-progress"> <div class="knit-progress__grid"></div>
+*/
+.knit-progress { position: relative; flex: 1; min-width: 0; height: 24px; border-radius: var(--radius-sm); overflow: hidden; background: var(--color-knit-bg); }
+.knit-progress__grid { position: absolute; inset: 0; z-index: 1; border-radius: var(--radius-sm); background: repeating-linear-gradient(90deg, var(--color-knit-grid) 0 1px, transparent 1px 6px), repeating-linear-gradient(0deg, var(--color-knit-grid) 0 1px, transparent 1px 6px); }
+.knit-progress__fill { position: absolute; left: 0; top: 0; height: 100%; border-radius: var(--radius-sm); z-index: 2; transition: width 0.5s ease-in-out; }
+.knit-progress__yarn { position: absolute; top: 6px; width: 12px; height: 12px; border-radius: var(--radius-full); background: var(--color-primary); z-index: 3; transition: left 0.5s ease-in-out; flex-shrink: 0; }
+.knit-progress__percent { position: absolute; right: var(--space-sm); top: 50%; transform: translateY(-50%); z-index: 4; font-family: var(--font-family-display); font-size: var(--font-size-body-sm); color: var(--color-text-primary); line-height: 1; white-space: nowrap; }
+.knit-progress__stamp { position: absolute; right: var(--space-sm); top: 50%; transform: translateY(-50%); z-index: 4; font-family: var(--font-family-display); font-size: var(--font-size-body-sm); color: var(--color-text-inverse); line-height: 1; white-space: nowrap; }
+.knit-progress--in-progress .knit-progress__fill { background: var(--color-knit-progress); width: 35%; }
+.knit-progress--in-progress .knit-progress__yarn { left: calc(35% - 12px); }
+.knit-progress--partial .knit-progress__fill { background: var(--color-knit-partial); width: 68%; }
+.knit-progress--partial .knit-progress__yarn { left: calc(68% - 12px); }
+.knit-progress--completed .knit-progress__fill { background: var(--color-knit-done); width: 100%; }
+.knit-progress--completed .knit-progress__yarn { display: none; }
+.knit-progress--completed .knit-progress__percent { display: none; }
+.knit-progress--overdue .knit-progress__fill { background: var(--color-warning); width: 42%; }
+.knit-progress--overdue .knit-progress__yarn { display: none; }
+.knit-progress--overdue { border: 1px dashed var(--color-warning); overflow: visible; }
+.knit-progress--in-progress .knit-progress__stamp, .knit-progress--partial .knit-progress__stamp, .knit-progress--overdue .knit-progress__stamp { display: none; }
+
+/* ── Mascot Illustration ───────────────────────────────────── */
+/* @anatomy
+   <span class="story-label">等待态</span> <div class="mascot idle"> <div class="fox"> <div class="fox-ear-l">
+*/
+/* Component definitions — extracted to components.css */
+.mascot { position: relative; width: 120px; height: 120px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.fox { position: relative; width: 60px; height: 80px; }
+.fox-head { position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 44px; height: 38px; background: var(--color-primary-light); border: 2px dashed var(--color-primary); border-radius: 55% 45% 48% 52% / 62% 60% 38% 40%; }
+.fox-ear-l { position: absolute; top: -5px; left: 5px; width: 10px; height: 13px; background: var(--color-primary-light); border: 2px dashed var(--color-primary); border-radius: 62% 52% 18% 28%; transform: rotate(-18deg); }
+.fox-ear-r { position: absolute; top: -5px; right: 5px; width: 10px; height: 13px; background: var(--color-primary-light); border: 2px dashed var(--color-primary); border-radius: 52% 62% 28% 18%; transform: rotate(18deg); }
+.fox-eye-l { position: absolute; top: 11px; left: 9px; width: 5px; height: 6px; background: var(--color-text-primary); border-radius: 55% 45% 50% 50%; }
+.fox-eye-r { position: absolute; top: 11px; right: 9px; width: 5px; height: 6px; background: var(--color-text-primary); border-radius: 45% 55% 50% 50%; }
+.fox-nose { position: absolute; top: 19px; left: 50%; transform: translateX(-50%); width: 6px; height: 5px; background: var(--color-primary); border-radius: 48% 52% 55% 45%; }
+.fox-snout { position: absolute; top: 23px; left: 50%; transform: translateX(-50%); width: 18px; height: 12px; background: var(--color-primary-light); border: 1px dashed var(--color-primary); border-radius: 38% 42% 58% 52%; }
+.fox-body { position: absolute; top: 36px; left: 50%; transform: translateX(-50%); width: 32px; height: 28px; background: var(--color-primary-light); border: 2px dashed var(--color-primary); border-radius: 48% 52% 45% 55% / 38% 42% 62% 58%; }
+.fox-tail { position: absolute; bottom: 2px; right: -22px; width: 28px; height: 14px; background: var(--color-primary-light); border: 2px dashed var(--color-primary); border-radius: 58% 42% 35% 65% / 52% 48% 52% 48%; transform: rotate(-18deg); }
+/* State transforms */
+.mascot.idle .fox { transform: rotate(-8deg); }
+.mascot.confused .fox { transform: rotate(-10deg); }
+.mascot.celebrating .fox { transform: rotate(5deg); }
+/* Needles */
+.needle { position: absolute; width: 3px; height: 40px; background: var(--color-border-dashed); border-radius: var(--radius-full); }
+.needle-l { top: 8px; left: 17px; transform: rotate(-32deg); }
+.needle-r { top: 8px; right: 17px; transform: rotate(32deg); }
+/* Thread (weaving) */
+.thread { position: absolute; top: 26px; left: 12px; width: 36px; height: 2px; background: var(--color-knit-progress); border-radius: 1px; transform: rotate(-6deg); }
+/* Yarn ball cluster (idle) */
+.yarn-ball { position: absolute; width: 18px; height: 18px; border: 2px dashed var(--color-knit-progress); border-radius: 42% 58% 55% 45%; }
+.yarn-ball-1 { bottom: 6px; right: -26px; }
+.yarn-ball-2 { bottom: 2px; right: -12px; width: 14px; height: 14px; }
+.yarn-ball-3 { bottom: 12px; right: -20px; width: 12px; height: 12px; border-color: var(--color-knit-partial); }
+.yarn-thread { position: absolute; height: 2px; background: var(--color-knit-progress); border-radius: 1px; }
+.yarn-thread-1 { bottom: 16px; right: -18px; width: 14px; transform: rotate(-25deg); }
+.yarn-thread-2 { bottom: 12px; right: -12px; width: 10px; transform: rotate(15deg); }
+/* Checkmark (completed) */
+.chk-circle { position: absolute; top: -8px; right: 6px; width: 18px; height: 18px; border: 2px dashed var(--color-success); border-radius: 48% 52% 50% 50%; }
+.chk-mark { position: absolute; top: -3px; right: 12px; width: 6px; height: 10px; border-right: 2px solid var(--color-success); border-bottom: 2px solid var(--color-success); transform: rotate(45deg); }
+/* Raised arms */
+.arm { position: absolute; top: 8px; width: 3px; height: 18px; background: var(--color-primary); border-radius: var(--radius-full); }
+.arm-l { left: -8px; transform: rotate(-42deg); }
+.arm-r { right: -8px; transform: rotate(42deg); }
+/* Question mark (confused) */
+.qmark { position: absolute; top: -14px; right: 8px; font-family: var(--font-family-display); font-size: var(--font-size-h3); color: var(--color-warning); font-weight: var(--font-weight-bold); line-height: 1; }
+/* Broken thread (confused) */
+.th-broken { position: absolute; top: 22px; height: 2px; background: var(--color-knit-progress); border-radius: 1px; }
+.th-broken-l { left: 10px; width: 14px; transform: rotate(-12deg); }
+.th-broken-r { right: 10px; width: 10px; transform: rotate(8deg); }
+/* Confetti dots (celebrating) */
+.dot { position: absolute; width: 5px; height: 5px; border-radius: 45% 55% 50% 50%; }
+.dot-d1 { top: 4px; left: 52px; background: var(--color-knit-progress); }
+.dot-d2 { top: 10px; left: 64px; background: var(--color-success); }
+.dot-d3 { top: 2px; left: 62px; background: var(--color-knit-partial); width: 4px; height: 4px; }
+.dot-d4 { bottom: 22px; left: 54px; background: var(--color-info); }
+.dot-d5 { bottom: 16px; left: 66px; background: var(--color-warning); width: 4px; height: 4px; }
+.dot-d6 { top: 6px; left: 58px; background: var(--color-knit-progress); width: 6px; height: 6px; }
+/* Small yarn balls (celebrating) */
+.celeb-yarn { position: absolute; width: 12px; height: 12px; border: 2px dashed var(--color-knit-partial); border-radius: 48% 52% 44% 56%; }
+.celeb-yarn-1 { bottom: 6px; right: -28px; }
+.celeb-yarn-2 { bottom: 20px; right: -24px; border-color: var(--color-knit-done); }
+
+/* ── Stat Card ─────────────────────────────────────────────── */
+/* @anatomy
+   <div class="stat-card stat-card--active"> <span class="stat-card__number">5</span> <span class="stat-card__label">进行中</span>
+*/
+.stat-card { display: flex; flex-direction: column; align-items: center; gap: var(--space-xs); padding: var(--space-lg); border-radius: var(--radius-lg); flex: 1; min-width: 100px; }
+.stat-card--active { background: var(--color-primary-light); }
+.stat-card--completed { background: var(--color-success-light); }
+.stat-card--paused { background: var(--color-warning-light); }
+.stat-card__number { font-family: var(--font-family-display); font-size: var(--font-size-display); font-weight: var(--font-weight-bold); color: var(--color-text-primary); line-height: var(--line-height-tight); }
+.stat-card__label { font-size: var(--font-size-caption); color: var(--color-text-tertiary); white-space: nowrap; }
+
+/* ── Task Card ─────────────────────────────────────────────── */
+/* @anatomy
+   <div class="task-card" data-state="pending"> <div class="task-card-checkbox" role="checkbox" aria-checked="false" aria-label="待完成">
+*/
+/* Component definitions — extracted to components.css by deterministic script */
+.task-card { display: flex; align-items: center; gap: var(--space-md); padding: var(--space-md); background: var(--color-surface-card); border-radius: var(--radius-md); box-shadow: var(--shadow-1); width: 100%; }
+.task-card.overdue { border: 1px dashed var(--color-warning); }
+.task-card-checkbox { width: 22px; height: 22px; border-radius: var(--radius-sm); border: 1.5px solid var(--color-border-dashed); flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: transparent; cursor: pointer; transition: background .15s, border-color .15s; position: relative; }
+.task-card-checkbox:hover { background: var(--color-surface-card-hover); }
+.task-card-checkbox.in-progress { background: var(--color-knit-bg); border-color: var(--color-knit-grid); border-style: dashed; }
+.task-card-checkbox.in-progress:hover { background: var(--color-surface-card-hover); border-color: var(--color-knit-grid); }
+.task-card-checkbox.completed { background: var(--color-knit-done); border-color: var(--color-knit-done); }
+.task-card-checkbox.completed:hover { filter: brightness(.92); }
+.task-card-checkbox.completed::after { content: ''; position: absolute; width: 8px; height: 5px; border-left: 2px solid var(--color-text-inverse); border-bottom: 2px solid var(--color-text-inverse); transform: rotate(-45deg) translate(1px,-1px); }
+.task-card-text { font-size: var(--font-size-body); color: var(--color-text-primary); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.task-card-text.completed { text-decoration: line-through; color: var(--color-text-tertiary); }
+.task-card-quantity { font-size: var(--font-size-body-sm); color: var(--color-text-secondary); flex-shrink: 0; white-space: nowrap; }

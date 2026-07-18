@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 2,
+  "sourceKind": "structured-spec",
+  "slug": "bottom-navigation",
+  "name": "BottomNavigation",
+  "displayName": "底部导航",
+  "category": "navigation",
+  "confidence": "high",
+  "semanticTypeCandidates": ["Navigation", "TabBar", "BottomNavigation"],
+  "variantDimensions": [
+    { "axis": "activeTab", "values": ["home", "plan", "review", "assistant", "stats"] }
+  ],
+  "representativeVariants": [
+    { "activeTab": "home" },
+    { "activeTab": "plan" },
+    { "activeTab": "stats" }
+  ],
+  "anatomy": ["root", "tab-items", "fab-button", "top-border", "active-indicator"],
+  "structurePatterns": {
+    "root": "Fixed bottom bar, wood-desk background, knit-texture top border",
+    "tabs": "5 icons with labels, active=orange, inactive=gray",
+    "fab": "Center circular orange button with white + icon, elevated above bar",
+    "home-tab": "Shows small mascot avatar badge on home tab"
+  },
+  "usageHints": {
+    "height": "64px",
+    "fab": "Center-aligned, elevates above bar, links to quick-add",
+    "labels": "Home/规划/回顾/助手/统计"
+  },
+  "doNotInvent": ["swipe-to-navigate", "notification badges (except home)", "long-press menu"],
+  "unknowns": [],
+  "styles": {
+    "bg": "var(--color-surface)",
+    "activeColor": "var(--color-primary)",
+    "inactiveColor": "var(--color-text-tertiary)",
+    "fabBg": "var(--color-primary)",
+    "fabIcon": "var(--color-text-inverse)",
+    "borderTop": "1px solid var(--color-border)"
+  },
+  "traits": {
+    "height": "64px",
+    "layout": { "display": "flex", "alignItems": "center", "justifyContent": "space-around", "position": "fixed", "bottom": "0" },
+    "tab-label": { "fontSize": "var(--font-size-caption)", "marginTop": "var(--space-xs)" },
+    "fab": { "size": "56px", "borderRadius": "var(--radius-full)", "position": "absolute", "top": "-28px" }
+  }
+}

@@ -79,6 +79,18 @@ function CreateGoalInner() {
   const [previewGoalId, setPreviewGoalId] = useState("");
   const [strategyInfo, setStrategyInfo] = useState<{ label: string; confidence: number } | null>(null);
 
+  const [tag, setTag] = useState("");
+  const [showTagSheet, setShowTagSheet] = useState(false);
+
+  const PRESET_TAGS = [
+    { label: "工作", emoji: "💼" },
+    { label: "学习", emoji: "📚" },
+    { label: "生活", emoji: "🏠" },
+    { label: "健康", emoji: "💪" },
+    { label: "社交", emoji: "👥" },
+    { label: "旅行", emoji: "✈️" },
+  ];
+
   // ─── 编辑模式：载入现有目标 ───
   useEffect(() => {
     if (!editId) return;
@@ -112,7 +124,7 @@ function CreateGoalInner() {
         deadline,
         goalType,
         targetCount,
-        note: note.trim(),
+        note: (tag ? `[${tag}] ` : "") + note.trim(),
       };
 
       if (isEdit && editId) {
@@ -204,10 +216,15 @@ function CreateGoalInner() {
         >
           <div
             className="flex items-center justify-between cursor-pointer"
-            onClick={() => showToast({ type: "info", message: "功能开发中" })}
+            onClick={() => setShowTagSheet(true)}
           >
             <span className="text-[14px] text-[#86868B]">项目标签</span>
-            <ChevronRight className="w-4 h-4 text-[#86868B]" />
+            <div className="flex items-center gap-1">
+              {tag !== "" && (
+                <span className="text-[15px] text-[#1D1D1F]">{PRESET_TAGS.find((t) => t.label === tag)?.emoji} {tag}</span>
+              )}
+              <ChevronRight className="w-4 h-4 text-[#86868B]" />
+            </div>
           </div>
           {/* 色点行 + 横线 */}
           <div className="relative mt-[30px] flex items-center gap-4">
@@ -397,6 +414,30 @@ function CreateGoalInner() {
         >
           确认并保存 ({previewTasks.length} 个任务)
         </button>
+      </BottomSheet>
+
+      {/* ===== 项目标签选择 ===== */}
+      <BottomSheet
+        open={showTagSheet}
+        onClose={() => setShowTagSheet(false)}
+        title="选择项目标签"
+      >
+        <div className="space-y-2">
+          {PRESET_TAGS.map((t) => (
+            <button
+              key={t.label}
+              type="button"
+              onClick={() => {
+                setTag(t.label);
+                setShowTagSheet(false);
+              }}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-gray-50"
+            >
+              <span className="text-xl">{t.emoji}</span>
+              <span className="text-[15px] text-[#1D1D1F]">{t.label}</span>
+            </button>
+          ))}
+        </div>
       </BottomSheet>
     </div>
   );

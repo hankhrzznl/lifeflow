@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 2,
+  "sourceKind": "structured-spec",
+  "slug": "check-in-panel",
+  "name": "CheckInPanel",
+  "displayName": "打卡面板",
+  "category": "overlay",
+  "confidence": "high",
+  "semanticTypeCandidates": ["Modal", "Panel", "CheckInPanel"],
+  "variantDimensions": [
+    { "axis": "state", "values": ["default", "submitting", "completed"] }
+  ],
+  "representativeVariants": [
+    { "state": "default" },
+    { "state": "completed" }
+  ],
+  "anatomy": ["overlay", "root", "tape-corner", "habit-header", "quantity-input", "mood-rating", "action-buttons"],
+  "structurePatterns": {
+    "root": "Sticky-note style panel, fabric background, large radius, shadow-lg",
+    "tape": "CSS gradient simulating tape at top-left corner",
+    "header": "Handwritten font title + day counter",
+    "rating": "10 circular buttons using knit-grid style",
+    "action": "Primary orange button with '织完这一针' text"
+  },
+  "usageHints": {
+    "trigger": "Tap on today's task to open",
+    "animation": "Scale + fade in, tape peel effect",
+    "rating": "1-10 scale for mood after task"
+  },
+  "doNotInvent": ["photo attachment", "voice note", "location tag"],
+  "unknowns": [],
+  "styles": {
+    "bg": "var(--color-surface-card)",
+    "borderRadius": "var(--radius-xl)",
+    "shadow": "var(--shadow-3)",
+    "padding": "var(--space-xl)",
+    "gap": "var(--space-lg)",
+    "maxWidth": "360px"
+  },
+  "traits": {
+    "overlay": { "background": "rgba(61,52,46,0.4)", "position": "fixed", "inset": "0", "display": "flex", "alignItems": "center", "justifyContent": "center" },
+    "tape": { "position": "absolute", "top": "-12px", "left": "24px", "width": "60px", "height": "24px", "background": "linear-gradient(180deg, rgba(232,221,212,0.85), rgba(212,197,181,0.9))", "borderRadius": "var(--radius-sm)", "transform": "rotate(-3deg)" },
+    "title": { "fontFamily": "var(--font-family-display)", "fontSize": "var(--font-size-h2)", "color": "var(--color-text-primary)" },
+    "rating-btn": { "size": "36px", "borderRadius": "var(--radius-full)", "border": "1.5px solid var(--color-border)" },
+    "btn-primary": { "bg": "var(--color-primary)", "color": "var(--color-text-inverse)", "borderRadius": "var(--radius-md)", "padding": "var(--space-md) var(--space-xl)" }
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 2,
+  "sourceKind": "structured-spec",
+  "slug": "knitting-progress",
+  "name": "KnittingProgress",
+  "displayName": "编织进度条",
+  "category": "indicator",
+  "confidence": "high",
+  "semanticTypeCandidates": ["Progress", "ProgressBar"],
+  "variantDimensions": [
+    { "axis": "status", "values": ["in-progress", "partial", "completed", "overdue"] }
+  ],
+  "representativeVariants": [
+    { "status": "in-progress" },
+    { "status": "partial" },
+    { "status": "completed" },
+    { "status": "overdue" }
+  ],
+  "anatomy": ["root", "grid-bg", "fill-bar", "yarn-ball", "percentage-label", "stamp"],
+  "structurePatterns": {
+    "root": "Horizontal bar with knit-grid background",
+    "grid-bg": "repeating-linear-gradient simulating woven fabric texture",
+    "fill-bar": "Colored fill from left representing progress %",
+    "yarn-ball": "Small animated circle at fill-end (not shown for completed/overdue)",
+    "stamp": "Seal/stamp icon shown on completed state"
+  },
+  "usageHints": {
+    "placement": "Top of GoalCard, inside detail views",
+    "animation": "Yarn ball bounces gently during active progress"
+  },
+  "doNotInvent": ["drag-to-change-value", "tooltip on hover", "step markers"],
+  "unknowns": [],
+  "styles": {
+    "gridBg": "var(--color-knit-bg)",
+    "gridLine": "var(--color-knit-grid)",
+    "fillInProgress": "var(--color-knit-progress)",
+    "fillPartial": "var(--color-knit-partial)",
+    "fillCompleted": "var(--color-knit-done)",
+    "fillOverdue": "var(--color-warning)",
+    "height": "24px",
+    "borderRadius": "var(--radius-sm)",
+    "yarnBallSize": "12px"
+  },
+  "traits": {
+    "grid": { "background": "repeating-linear-gradient pattern" },
+    "fill": { "transition": "width 0.5s ease-in-out", "borderRadius": "var(--radius-sm)" },
+    "percentage": { "fontFamily": "var(--font-family-display)", "fontSize": "var(--font-size-body-sm)", "color": "var(--color-text-primary)", "textAlign": "right" }
+  }
+}

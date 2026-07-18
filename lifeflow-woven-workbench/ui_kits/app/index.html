@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LifeFlow · 织光者的工作台</title>
+<!-- data-layout-guard="uikit-v1" -->
+<!-- data-component="button" data-component="goal-card" data-component="task-card" data-component="stat-card" data-component="knitting-progress" data-component="mascot-illustration" data-component="bottom-navigation" data-component="check-in-panel" -->
+<link rel="stylesheet" href="../../colors_and_type.css">
+<link rel="stylesheet" href="../../components.css">
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-family-body);background:var(--color-surface-light);-webkit-font-smoothing:antialiased}
+.uikit-shell{width:100%;max-width:1184px;margin:0 auto;overflow:hidden;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:var(--space-xl)}
+[data-component]{min-width:0;max-width:100%;overflow:hidden}
+.uikit-truncate{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.uikit-nowrap{white-space:nowrap;flex-shrink:0}
+.uikit-sidebar,.uikit-main,.uikit-toolbar{min-width:0}
+.uikit-sidebar{overflow:hidden;max-width:100%}
+.uikit-toolbar{display:flex;align-items:center;gap:var(--space-sm)}
+.uikit-responsive-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-lg)}
+.uikit-table-wrap{max-width:100%;overflow-x:auto;overscroll-behavior-x:contain}
+.uikit-action-cell{display:flex;align-items:center;gap:8px;min-width:0;max-width:160px;overflow:hidden}
+.uikit-action{min-width:0;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media (max-width:640px){.uikit-toolbar{flex-direction:column;align-items:stretch}.uikit-responsive-grid{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:900px){.uikit-shell{grid-template-columns:minmax(0,1fr)}.uikit-responsive-grid{grid-template-columns:minmax(0,1fr)}}
+
+.phone-frame{width:390px;height:780px;border-radius:40px;border:8px solid var(--color-surface);overflow:hidden;position:relative;box-shadow:var(--shadow-3);background:var(--color-surface-card);flex-shrink:0}
+.phone-status-bar{height:36px;display:flex;align-items:center;justify-content:space-between;padding:0 var(--space-xl);background:var(--color-surface-card);flex-shrink:0}
+.phone-status-bar .time{font-size:var(--font-size-body-sm);font-weight:var(--font-weight-semibold);color:var(--color-text-primary)}
+.phone-status-icons{display:flex;align-items:center;gap:6px}
+.phone-screen{flex:1;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;position:relative}
+.phone-screen::-webkit-scrollbar{width:0}
+.screen-header{padding:var(--space-lg) var(--space-lg) var(--space-sm);flex-shrink:0}
+.screen-header-title{font-family:var(--font-family-display);font-size:var(--font-size-h1);font-weight:var(--font-weight-bold);color:var(--color-text-primary);line-height:var(--line-height-tight)}
+.screen-header-sub{font-family:var(--font-family-body);font-size:var(--font-size-body-sm);color:var(--color-text-secondary);margin-top:var(--space-xs)}
+.screen-body{flex:1;padding:0 var(--space-lg) var(--space-lg);display:flex;flex-direction:column;gap:var(--space-lg)}
+.stats-row{display:flex;gap:var(--space-sm)}
+.stats-row>*{flex:1;min-width:0}
+.goals-list{display:flex;flex-direction:column;gap:var(--space-md)}
+.task-section-title{font-family:var(--font-family-body);font-size:var(--font-size-body-sm);font-weight:var(--font-weight-medium);color:var(--color-text-secondary);padding:var(--space-xs) 0}
+.task-list{display:flex;flex-direction:column;gap:var(--space-sm)}
+.phone-home-indicator{width:134px;height:5px;background:var(--color-text-primary);border-radius:100px;margin:8px auto;opacity:0.2}
+.screen-footer{padding-bottom:env(safe-area-inset-bottom,0)}
+
+.mood-emoji{font-family:var(--font-family-display);font-size:var(--font-size-h2);color:var(--color-text-secondary)}
+.checkin-stats{display:flex;gap:var(--space-sm);margin-bottom:var(--space-md)}
+.checkin-stats>*{flex:1;min-width:0}
+
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.screen-enter{animation:fadeIn .28s cubic-bezier(.3,0,0,1)}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>lucide.createIcons();</script>
+<script type="text/babel">
+const {useState,useEffect} = React;
+
+/* ── Status Bar ── */
+function StatusBar(){
+  return React.createElement("div",{className:"phone-status-bar"},
+    React.createElement("span",{className:"time"},"9:41"),
+    React.createElement("div",{className:"phone-status-icons"},
+      React.createElement("i",{"data-lucide":"signal",style:{width:"14px",height:"14px",display:"inline-block"}}),
+      React.createElement("i",{"data-lucide":"wifi",style:{width:"14px",height:"14px",display:"inline-block"}}),
+      React.createElement("i",{"data-lucide":"battery-full",style:{width:"14px",height:"14px",display:"inline-block"}})
+    )
+  );
+}
+
+/* ── Screen 1: 目标列表 ── */
+function GoalsScreen(){
+  return React.createElement("div",{className:"phone-screen screen-enter"},
+    React.createElement("div",{className:"screen-header"},
+      React.createElement("div",{className:"screen-header-title"},"我的目标"),
+      React.createElement("div",{className:"screen-header-sub"},"每一针都是前行的痕迹")
+    ),
+    React.createElement("div",{className:"screen-body"},
+      React.createElement("div",{className:"stats-row"},
+        React.createElement("div",{className:"stat-card stat-card--active","data-component":"stat-card"},
+          React.createElement("span",{className:"stat-card__number"},"3"),
+          React.createElement("span",{className:"stat-card__label"},"进行中")
+        ),
+        React.createElement("div",{className:"stat-card stat-card--completed","data-component":"stat-card"},
+          React.createElement("span",{className:"stat-card__number"},"5"),
+          React.createElement("span",{className:"stat-card__label"},"已完成")
+        ),
+        React.createElement("div",{className:"stat-card stat-card--paused","data-component":"stat-card"},
+          React.createElement("span",{className:"stat-card__number"},"1"),
+          React.createElement("span",{className:"stat-card__label"},"暂停")
+        )
+      ),
+      React.createElement("div",{className:"goals-list"},
+        React.createElement("div",{className:"goal-card","data-component":"goal-card","data-state":"active"},
+          React.createElement("div",{className:"goal-card__badge goal-card__badge--active"},"进行中"),
+          React.createElement("h3",{className:"goal-card__title"},"学习编织技巧"),
+          React.createElement("p",{className:"goal-card__desc"},"掌握三种基础针法，完成练习样片"),
+          React.createElement("div",{className:"goal-card__progress"},
+            React.createElement("div",{className:"knit-progress knit-progress--in-progress","data-component":"knitting-progress"},
+              React.createElement("div",{className:"knit-progress__grid"}),
+              React.createElement("div",{className:"knit-progress__fill"}),
+              React.createElement("div",{className:"knit-progress__yarn"}),
+              React.createElement("span",{className:"knit-progress__percent"},"45%")
+            )
+          ),
+          React.createElement("div",{className:"goal-card__meta uikit-truncate"},
+            React.createElement("span",null,"还剩12针 · 每日15分钟")
+          ),
+          React.createElement("div",{className:"goal-card__actions"},
+            React.createElement("button",{className:"goal-card__btn"},
+              React.createElement("i",{"data-lucide":"edit-3",style:{width:"18px",height:"18px",display:"inline-block"}})
+            ),
+            React.createElement("button",{className:"goal-card__btn"},
+              React.createElement("i",{"data-lucide":"more-horizontal",style:{width:"18px",height:"18px",display:"inline-block"}})
+            )
+          )
+        ),
+        React.createElement("div",{className:"goal-card","data-component":"goal-card","data-state":"active"},
+          React.createElement("div",{className:"goal-card__badge goal-card__badge--active"},"进行中"),
+          React.createElement("h3",{className:"goal-card__title"},"设计冬季围巾"),
+          React.createElement("p",{className:"goal-card__desc"},"选定毛线与配色方案，开始打样"),
+          React.createElement("div",{className:"goal-card__progress"},
+            React.createElement("div",{className:"knit-progress knit-progress--partial","data-component":"knitting-progress"},
+              React.createElement("div",{className:"knit-progress__grid"}),
+              React.createElement("div",{className:"knit-progress__fill"}),
+              React.createElement("div",{className:"knit-progress__yarn"}),
+              React.createElement("span",{className:"knit-progress__percent"},"68%")
+            )
+          ),
+          React.createElement("div",{className:"goal-card__meta uikit-truncate"},
+            React.createElement("span",null,"还剩8针 · 每日20分钟")
+          ),
+          React.createElement("div",{className:"goal-card__actions"},
+            React.createElement("button",{className:"goal-card__btn"},
+              React.createElement("i",{"data-lucide":"edit-3",style:{width:"18px",height:"18px",display:"inline-block"}})
+            ),
+            React.createElement("button",{className:"goal-card__btn"},
+              React.createElement("i",{"data-lucide":"more-horizontal",style:{width:"18px",height:"18px",display:"inline-block"}})
+            )
+          )
+        ),
+        React.createElement("div",{className:"goal-card","data-component":"goal-card","data-state":"completed"},
+          React.createElement("div",{className:"goal-card__badge goal-card__badge--completed"},"已完成"),
+          React.createElement("h3",{className:"goal-card__title"},"完成毛衣编织"),
+          React.createElement("p",{className:"goal-card__desc"},"这件毛衣终于织完啦，穿上去真暖和"),
+          React.createElement("div",{className:"goal-card__progress"},
+            React.createElement("div",{className:"knit-progress knit-progress--completed","data-component":"knitting-progress"},
+              React.createElement("div",{className:"knit-progress__grid"}),
+              React.createElement("div",{className:"knit-progress__fill"}),
+              React.createElement("span",{className:"knit-progress__stamp"},"织完了！")
+            )
+          ),
+          React.createElement("div",{className:"goal-card__meta uikit-truncate"},
+            React.createElement("span",null,"7月12日完成")
+          ),
+          React.createElement("div",{className:"goal-card__actions"},
+            React.createElement("button",{className:"goal-card__btn"},
+              React.createElement("i",{"data-lucide":"eye",style:{width:"18px",height:"18px",display:"inline-block"}})
+            ),
+            React.createElement("button",{className:"goal-card__btn"},
+              React.createElement("i",{"data-lucide":"share-2",style:{width:"18px",height:"18px",display:"inline-block"}})
+            )
+          )
+        )
+      )
+    )
+  );
+}
+
+/* ── Screen 2: 今日任务 ── */
+function TasksScreen(){
+  const tasks=[
+    {id:1,text:"整理毛线颜色",state:"pending",qty:"12色"},
+    {id:2,text:"完成袖口收针",state:"in-progress",qty:"32针"},
+    {id:3,text:"挑选编织图案",state:"completed",qty:"3选1"},
+    {id:4,text:"清洗羊绒毛线",state:"pending",qty:"2团"},
+    {id:5,text:"整理编织工具",state:"overdue",qty:null},
+    {id:6,text:"练习新针法",state:"pending",qty:"15分钟"}
+  ];
+  return React.createElement("div",{className:"phone-screen screen-enter"},
+    React.createElement("div",{className:"screen-header"},
+      React.createElement("div",{className:"screen-header-title"},"今日任务"),
+      React.createElement("div",{className:"screen-header-sub"},"7月16日 · 周三")
+    ),
+    React.createElement("div",{className:"screen-body"},
+      React.createElement("div",null,
+        React.createElement("div",{className:"task-section-title"},"待完成"),
+        React.createElement("div",{className:"task-list"},
+          tasks.filter(t=>t.state!=="completed").map(t=>{
+            const ckbCls="task-card-checkbox"+(t.state==="in-progress"?" in-progress":"")+(t.state==="overdue"?" in-progress":"");
+            const txtCls="task-card-text";
+            const cardCls="task-card"+(t.state==="overdue"?" overdue":"");
+            return React.createElement("div",{key:t.id,className:cardCls,"data-component":"task-card","data-state":t.state},
+              React.createElement("div",{className:ckbCls,role:"checkbox","aria-checked":"false","aria-label":t.text}),
+              React.createElement("span",{className:txtCls},t.text),
+              t.qty?React.createElement("span",{className:"task-card-quantity"},t.qty):null
+            );
+          })
+        )
+      ),
+      React.createElement("div",null,
+        React.createElement("div",{className:"task-section-title"},"已完成"),
+        React.createElement("div",{className:"task-list"},
+          tasks.filter(t=>t.state==="completed").map(t=>
+            React.createElement("div",{key:t.id,className:"task-card","data-component":"task-card","data-state":"completed"},
+              React.createElement("div",{className:"task-card-checkbox completed",role:"checkbox","aria-checked":"true","aria-label":t.text}),
+              React.createElement("span",{className:"task-card-text completed"},t.text),
+              React.createElement("span",{className:"task-card-quantity"},t.qty)
+            )
+          )
+        )
+      ),
+      React.createElement("button",{className:"btn btn-primary btn-md","data-component":"button",style:{width:"100%",justifyContent:"center",marginTop:"var(--space-sm)"}},
+        React.createElement("i",{"data-lucide":"plus",style:{width:"16px",height:"16px",display:"inline-block"}}),
+        "添加新任务"
+      )
+    )
+  );
+}
+
+/* ── Screen 3: 打卡 ── */
+function CheckinScreen(){
+  const [rating,setRating]=useState(7);
+  const [submitted,setSubmitted]=useState(false);
+  const handleSubmit=()=>{setSubmitted(true);setTimeout(()=>setSubmitted(false),3000)};
+  if(submitted){
+    return React.createElement("div",{className:"phone-screen screen-enter"},
+      React.createElement("div",{className:"screen-header"},
+        React.createElement("div",{className:"screen-header-title"},"每日打卡"),
+        React.createElement("div",{className:"screen-header-sub"},"记录今天的编织时光")
+      ),
+      React.createElement("div",{className:"screen-body",style:{alignItems:"center",justifyContent:"center",flex:1}},
+        React.createElement("div",{className:"mascot celebrating","data-component":"mascot-illustration"},
+          React.createElement("div",{className:"fox"},
+            React.createElement("div",{className:"fox-ear-l"}),
+            React.createElement("div",{className:"fox-ear-r"}),
+            React.createElement("div",{className:"fox-head"}),
+            React.createElement("div",{className:"fox-body"}),
+            React.createElement("div",{className:"fox-tail"}),
+            React.createElement("div",{className:"fox-eye-l"}),React.createElement("div",{className:"fox-eye-r"}),
+            React.createElement("div",{className:"fox-nose"}),React.createElement("div",{className:"fox-snout"}),
+            React.createElement("div",{className:"needle needle-l"}),React.createElement("div",{className:"needle needle-r"}),
+            React.createElement("div",{className:"thread"}),
+            React.createElement("div",{className:"arm arm-l"}),React.createElement("div",{className:"arm arm-r"}),
+            React.createElement("div",{className:"dot dot-d1"}),React.createElement("div",{className:"dot dot-d2"}),
+            React.createElement("div",{className:"dot dot-d3"}),React.createElement("div",{className:"dot dot-d4"}),
+            React.createElement("div",{className:"dot dot-d5"}),React.createElement("div",{className:"dot dot-d6"}),
+            React.createElement("div",{className:"celeb-yarn celeb-yarn-1"}),React.createElement("div",{className:"celeb-yarn celeb-yarn-2"})
+          )
+        ),
+        React.createElement("p",{style:{fontFamily:"var(--font-family-display)",fontSize:"var(--font-size-h2)",color:"var(--color-text-primary)",marginTop:"var(--space-lg)",textAlign:"center"}},"织完这一针！"),
+        React.createElement("p",{style:{fontSize:"var(--font-size-body-sm)",color:"var(--color-text-secondary)",textAlign:"center",marginTop:"var(--space-xs)"}},"今天的努力已被记录，明天继续加油")
+      )
+    );
+  }
+  return React.createElement("div",{className:"phone-screen screen-enter"},
+    React.createElement("div",{className:"screen-header"},
+      React.createElement("div",{className:"screen-header-title"},"每日打卡"),
+      React.createElement("div",{className:"screen-header-sub"},"记录今天的编织时光")
+    ),
+    React.createElement("div",{className:"screen-body"},
+      React.createElement("div",{className:"checkin-stats"},
+        React.createElement("div",{className:"stat-card stat-card--active","data-component":"stat-card"},
+          React.createElement("span",{className:"stat-card__number"},"7"),
+          React.createElement("span",{className:"stat-card__label"},"连续打卡")
+        ),
+        React.createElement("div",{className:"stat-card stat-card--completed","data-component":"stat-card"},
+          React.createElement("span",{className:"stat-card__number"},"12"),
+          React.createElement("span",{className:"stat-card__label"},"本月次数")
+        )
+      ),
+      React.createElement("div",{className:"cip-panel","data-component":"check-in-panel",style:{position:"relative",maxWidth:"none",margin:"0"}},
+        React.createElement("div",{className:"cip-tape"}),
+        React.createElement("div",{className:"cip-header"},"今日心情"),
+        React.createElement("div",null,
+          React.createElement("span",{className:"cip-label"},"今天编织的感受如何？"),
+          React.createElement("div",{className:"cip-rating-row",style:{marginTop:"var(--space-sm)"}},
+            [1,2,3,4,5,6,7,8,9,10].map(n=>
+              React.createElement("button",{key:n,className:"cip-rating-btn"+(n<=rating?" is-selected":""),onClick:()=>setRating(n),style:{fontFamily:"var(--font-family-body)",fontSize:"var(--font-size-caption)",color:n<=rating?"var(--color-text-inverse)":"var(--color-text-secondary)"}},n)
+            )
+          )
+        ),
+        React.createElement("hr",{className:"cip-divider"}),
+        React.createElement("div",{className:"cip-field cip-field-mt"},
+          React.createElement("span",{className:"cip-label-accent"},"编织笔记"),
+          React.createElement("div",{className:"cip-input-row"},
+            React.createElement("input",{className:"cip-input",type:"text",placeholder:"今天的编织心得...",style:{fontSize:"var(--font-size-body-sm)"}})
+          )
+        ),
+        React.createElement("div",{className:"cip-actions"},
+          React.createElement("button",{className:"cip-btn cip-btn-secondary",disabled:true},"稍后再织"),
+          React.createElement("button",{className:"cip-btn cip-btn-primary","data-component":"button",onClick:handleSubmit},"织完这一针")
+        )
+      )
+    )
+  );
+}
+
+/* ── Bottom Navigation ── */
+function BottomNav({active,onChange}){
+  const tabs=[
+    {id:0,icon:"target",label:"目标"},
+    {id:1,icon:"list-checks",label:"任务"},
+    {id:2,icon:"pencil-ruler",label:"打卡"}
+  ];
+  return React.createElement("div",{className:"bnav","data-component":"bottom-navigation",style:{position:"absolute",bottom:0,left:0,right:0}},
+    tabs.map(t=>
+      React.createElement("div",{key:t.id,className:"bnav-tab"+(active===t.id?" active":""),onClick:()=>onChange(t.id)},
+        React.createElement("i",{"data-lucide":t.icon,style:{width:"22px",height:"22px",display:"inline-block"}}),
+        React.createElement("span",{className:"bnav-label"},t.label),
+        t.id===0?React.createElement("span",{className:"bnav-badge"}):null
+      )
+    ),
+    React.createElement("div",{className:"bnav-fab",onClick:()=>onChange(2)},
+      React.createElement("i",{"data-lucide":"plus",style:{width:"26px",height:"26px",display:"inline-block"}})
+    )
+  );
+}
+
+/* ── App ── */
+function App(){
+  const [tab,setTab]=useState(0);
+  useEffect(()=>{lucide.createIcons()},[tab]);
+  const screens=[GoalsScreen,TasksScreen,CheckinScreen];
+  return React.createElement("div",{className:"uikit-shell","data-layout-guard":"uikit-v1"},
+    React.createElement("div",{className:"phone-frame"},
+      React.createElement(StatusBar),
+      React.createElement(screens[tab],{key:tab}),
+      React.createElement(BottomNav,{active:tab,onChange:setTab}),
+      React.createElement("div",{className:"phone-home-indicator",style:{position:"absolute",bottom:4,left:"50%",transform:"translateX(-50%)"}})
+    )
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(App));
+</script>
+</body>
+</html>

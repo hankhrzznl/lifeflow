@@ -3,18 +3,16 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
-import { showToast } from "@/components/ui/Toast";
 
 // ============================================================
-// 健康子站骨架 + 5 pill 二级导航（仅总览页渲染）
+// 健康子站骨架 + 4 pill 二级导航（仅总览页渲染）
 // ============================================================
 
 const pills = [
   { label: "总览", path: "/health" },
-  { label: "规划", path: "" },
-  { label: "回顾", path: "" },
-  { label: "助手", path: "" },
-  { label: "统计", path: "" },
+  { label: "饮水", path: "/health/water" },
+  { label: "睡眠", path: "/health/sleep" },
+  { label: "训练", path: "/health/fitness" },
 ];
 
 function PillNav() {
@@ -22,20 +20,12 @@ function PillNav() {
   return (
     <nav className="mt-4 flex gap-2 overflow-x-auto scrollbar-hide">
       {pills.map((p) => {
-        const isActive = p.path === "/health" && pathname === "/health";
-        const isPlaceholder = p.path === "";
-        return isPlaceholder ? (
-          <motion.button
-            key={p.label}
-            type="button"
-            whileTap={{ scale: 0.95 }}
-            onClick={() => showToast({ type: "info", message: "功能开发中" })}
-            className="h-8 px-4 rounded-full text-[13px] bg-[#F5F5F5] text-[#86868B] opacity-50 flex-shrink-0"
-          >
-            {p.label}
-          </motion.button>
-        ) : (
-          <Link key={p.label} href={p.path}>
+        const isActive =
+          p.path === "/health"
+            ? pathname === "/health"
+            : pathname.startsWith(p.path);
+        return (
+          <Link key={p.path} href={p.path}>
             <motion.span
               whileTap={{ scale: 0.95 }}
               className={`h-8 px-4 rounded-full text-[13px] flex-shrink-0 inline-flex items-center ${

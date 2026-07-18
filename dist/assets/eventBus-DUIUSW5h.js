@@ -1,0 +1,1 @@
+class i{constructor(){this.events=new Map}on(s,e){this.events.has(s)||this.events.set(s,[]),this.events.get(s).push(e)}off(s,e){const t=this.events.get(s);t&&this.events.set(s,t.filter(n=>n!==e))}emit(s,e){const t=this.events.get(s);t==null||t.forEach(n=>n(e))}}const o=new i;export{o as e};

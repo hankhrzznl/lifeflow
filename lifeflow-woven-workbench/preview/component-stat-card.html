@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>统计卡片 — LifeFlow</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+body { margin: 0; padding: var(--space-md); background: var(--color-surface); font-family: var(--font-family-body); color: var(--color-text-primary); }
+.specimen { display: flex; flex-direction: column; gap: var(--space-md); }
+.rail { display: flex; gap: var(--space-md); flex-wrap: wrap; }
+/* @component-css-start */
+.stat-card { display: flex; flex-direction: column; align-items: center; gap: var(--space-xs); padding: var(--space-lg); border-radius: var(--radius-lg); flex: 1; min-width: 100px; }
+.stat-card--active { background: var(--color-primary-light); }
+.stat-card--completed { background: var(--color-success-light); }
+.stat-card--paused { background: var(--color-warning-light); }
+.stat-card__number { font-family: var(--font-family-display); font-size: var(--font-size-display); font-weight: var(--font-weight-bold); color: var(--color-text-primary); line-height: var(--line-height-tight); }
+.stat-card__label { font-size: var(--font-size-caption); color: var(--color-text-tertiary); white-space: nowrap; }
+/* @component-css-end */
+</style>
+</head>
+<body>
+<div class="specimen">
+  <div class="rail">
+    <div class="stat-card stat-card--active">
+      <span class="stat-card__number">5</span>
+      <span class="stat-card__label">进行中</span>
+    </div>
+    <div class="stat-card stat-card--completed">
+      <span class="stat-card__number">12</span>
+      <span class="stat-card__label">已完成</span>
+    </div>
+    <div class="stat-card stat-card--paused">
+      <span class="stat-card__number">3</span>
+      <span class="stat-card__label">已暂停</span>
+    </div>
+  </div>
+</div>
+</body>
+</html>

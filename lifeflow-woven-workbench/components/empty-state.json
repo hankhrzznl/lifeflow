@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 2,
+  "sourceKind": "structured-spec",
+  "slug": "empty-state",
+  "name": "EmptyState",
+  "displayName": "空状态",
+  "category": "feedback",
+  "confidence": "high",
+  "semanticTypeCandidates": ["EmptyState", "Placeholder"],
+  "variantDimensions": [
+    { "axis": "type", "values": ["no-goals", "no-tasks", "no-data"] }
+  ],
+  "representativeVariants": [
+    { "type": "no-goals" },
+    { "type": "no-tasks" },
+    { "type": "no-data" }
+  ],
+  "anatomy": ["root", "mascot", "title", "description", "action-button"],
+  "structurePatterns": {
+    "root": "Centered vertical layout, padding 3xl",
+    "mascot": "MascotIllustration component centered",
+    "title": "Handwritten font, encouraging message",
+    "description": "Body text, secondary color",
+    "button": "Primary button at bottom"
+  },
+  "usageHints": {
+    "no-goals": "Show on empty goals page",
+    "no-tasks": "Show on empty today page",
+    "animation": "Mascot enter with spring animation"
+  },
+  "doNotInvent": ["illustrations other than mascot", "carousel", "video"],
+  "unknowns": [],
+  "styles": {
+    "padding": "var(--space-3xl)",
+    "textAlign": "center",
+    "gap": "var(--space-lg)"
+  },
+  "traits": {
+    "layout": { "display": "flex", "direction": "column", "alignItems": "center", "justifyContent": "center", "minHeight": "300px" },
+    "title": { "fontFamily": "var(--font-family-display)", "fontSize": "var(--font-size-h2)", "color": "var(--color-text-primary)" },
+    "description": { "fontSize": "var(--font-size-body)", "color": "var(--color-text-secondary)" }
+  }
+}

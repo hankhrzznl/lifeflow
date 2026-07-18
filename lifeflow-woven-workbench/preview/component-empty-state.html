@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+body { margin: 0; padding: 12px; background: var(--color-surface); font-family: var(--font-family-body); color: var(--color-text-primary); }
+.specimen { display: flex; flex-direction: column; gap: var(--space-xl); }
+.stage { display: flex; flex-direction: column; gap: var(--space-xl); }
+.story { display: flex; flex-direction: column; gap: var(--space-sm); }
+.story-label { font-family: var(--font-family-body); font-size: var(--font-size-caption); color: var(--color-text-tertiary); text-transform: none; padding-left: 4px; width: 92px; flex-shrink: 0; }
+
+/* @component-css-start */
+.empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: var(--space-3xl); min-height: 300px; text-align: center; background: var(--color-surface-card); border-radius: var(--radius-lg); gap: var(--space-lg); }
+.fox { position: relative; width: 72px; height: 60px; flex-shrink: 0; }
+.fox-face { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 56px; height: 46px; background: var(--color-primary); border-radius: 50% 50% 42% 42%; }
+.fox-ear { position: absolute; top: 0; width: 0; height: 0; border-left: 8px solid transparent; border-right: 8px solid transparent; border-bottom: 18px solid var(--color-primary); }
+.fox-ear-l { left: 10px; transform: rotate(-12deg); }
+.fox-ear-r { right: 10px; transform: rotate(12deg); }
+.fox-eye { position: absolute; width: 6px; height: 7px; background: var(--color-text-primary); border-radius: 50%; top: 16px; }
+.fox-eye-l { left: 19px; }
+.fox-eye-r { right: 19px; }
+.fox-nose { position: absolute; width: 9px; height: 6px; background: var(--color-text-primary); border-radius: 50%; bottom: 10px; left: 50%; transform: translateX(-50%); }
+.fox-cheek { position: absolute; width: 20px; height: 16px; background: var(--color-surface-card); border-radius: 50% 50% 38% 38%; bottom: 2px; }
+.fox-cheek-l { left: 10px; }
+.fox-cheek-r { right: 10px; }
+.empty-state-title { font-family: var(--font-family-display); font-size: var(--font-size-h2); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); line-height: var(--line-height-tight); margin: 0; }
+.empty-state-desc { font-size: var(--font-size-body); color: var(--color-text-secondary); line-height: var(--line-height-normal); margin: 0; max-width: 260px; }
+.empty-state-btn { display: inline-flex; align-items: center; justify-content: center; padding: var(--space-sm) var(--space-xl); background: var(--color-primary); color: var(--color-text-inverse); border: none; border-radius: var(--radius-md); font-family: var(--font-family-body); font-size: var(--font-size-body); font-weight: var(--font-weight-medium); cursor: pointer; white-space: nowrap; min-width: 96px; transition: background .15s; }
+.empty-state-btn:hover { background: var(--color-primary-hover); }
+/* @component-css-end */
+</style>
+</head>
+<body>
+<div class="specimen">
+  <div class="stage">
+    <div class="story">
+      <div class="story-label">no-goals</div>
+      <div class="empty-state" data-evidence-sample="no-goals">
+        <div class="fox"><div class="fox-ear fox-ear-l"></div><div class="fox-ear fox-ear-r"></div><div class="fox-face"></div><div class="fox-cheek fox-cheek-l"></div><div class="fox-cheek fox-cheek-r"></div><div class="fox-eye fox-eye-l"></div><div class="fox-eye fox-eye-r"></div><div class="fox-nose"></div></div>
+        <h2 class="empty-state-title">还没开始织呢</h2>
+        <p class="empty-state-desc">点击下方的线团，开始你的第一块布料吧</p>
+        <button class="empty-state-btn">开始编织</button>
+      </div>
+    </div>
+    <div class="story">
+      <div class="story-label">no-tasks</div>
+      <div class="empty-state" data-evidence-sample="no-tasks">
+        <div class="fox"><div class="fox-ear fox-ear-l"></div><div class="fox-ear fox-ear-r"></div><div class="fox-face"></div><div class="fox-cheek fox-cheek-l"></div><div class="fox-cheek fox-cheek-r"></div><div class="fox-eye fox-eye-l"></div><div class="fox-eye fox-eye-r"></div><div class="fox-nose"></div></div>
+        <h2 class="empty-state-title">今天还没有任务</h2>
+        <p class="empty-state-desc">去目标页面拆解今天的任务吧</p>
+        <button class="empty-state-btn">去规划</button>
+      </div>
+    </div>
+    <div class="story">
+      <div class="story-label">no-data</div>
+      <div class="empty-state" data-evidence-sample="no-data">
+        <div class="fox"><div class="fox-ear fox-ear-l"></div><div class="fox-ear fox-ear-r"></div><div class="fox-face"></div><div class="fox-cheek fox-cheek-l"></div><div class="fox-cheek fox-cheek-r"></div><div class="fox-eye fox-eye-l"></div><div class="fox-eye fox-eye-r"></div><div class="fox-nose"></div></div>
+        <h2 class="empty-state-title">这里还是空的</h2>
+        <p class="empty-state-desc">数据会随着使用慢慢积累</p>
+        <button class="empty-state-btn">刷新</button>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

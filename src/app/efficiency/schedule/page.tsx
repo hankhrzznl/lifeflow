@@ -527,6 +527,8 @@ function CreateTaskSheet({
   const [form, setForm] = useState<FormData>(getDefaultForm(selectedDate));
   const [tab, setTab] = useState<"normal" | "progress">("normal");
   const [isSaving, setIsSaving] = useState(false);
+  const [showTimeSheet, setShowTimeSheet] = useState(false);
+  const [reminderTime, setReminderTime] = useState("");
 
   useEffect(() => {
     if (open) { setForm(getDefaultForm(selectedDate)); setTab("normal"); setIsSaving(false); }
@@ -612,7 +614,7 @@ function CreateTaskSheet({
                 })}
               </div>
 
-              {tab === "normal" ? <NormalFields form={form} patch={patch} /> : <ProgressFields form={form} patch={patch} suggestedDailyMin={suggestedDailyMin} />}
+              {tab === "normal" ? <NormalFields form={form} patch={patch} onTimeClick={() => setShowTimeSheet(true)} /> : <ProgressFields form={form} patch={patch} suggestedDailyMin={suggestedDailyMin} onTimeClick={() => setShowTimeSheet(true)} />}
 
               {/* 收起键盘 */}
               <div className="flex items-center justify-center gap-1 pt-1 pb-2">
@@ -621,6 +623,34 @@ function CreateTaskSheet({
               </div>
             </div>
           </motion.div>
+
+          {/* ===== 时间提醒选择 Sheet ===== */}
+          {showTimeSheet && (
+            <div className="fixed inset-0 z-[60] flex items-end justify-center" onClick={() => setShowTimeSheet(false)}>
+              <div className="absolute inset-0 bg-black/30" />
+              <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} transition={{ type: "spring", damping: 30, stiffness: 400 }}
+                className="relative w-full max-w-[430px] bg-white rounded-t-[20px] pb-[max(16px,env(safe-area-inset-bottom))]"
+                onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-center justify-between px-5 pt-5 pb-4">
+                  <button onClick={() => setShowTimeSheet(false)} className="text-[15px] text-[#86868B]">取消</button>
+                  <span className="text-[17px] font-semibold text-[#1D1D1F]">设置提醒时间</span>
+                  <button onClick={() => {
+                    if (reminderTime) {
+                      const current = form.note || "";
+                      const withoutOldTime = current.replace(/^\[\d{2}:\d{2}\]\s*/, "");
+                      patch({ note: `[${reminderTime}] ${withoutOldTime}`.trim() });
+                    }
+                    setShowTimeSheet(false);
+                  }} className="text-[15px] font-semibold text-[#5865F2]">确定</button>
+                </div>
+                <div className="px-5 flex justify-center">
+                  <input type="time" value={reminderTime} onChange={(e) => setReminderTime(e.target.value)}
+                    className="h-12 px-4 rounded-[12px] bg-[#F5F5F5] text-[17px] text-[#1D1D1F] outline-none w-full text-center" />
+                </div>
+                <div className="h-4" />
+              </motion.div>
+            </div>
+          )}
         </>
       )}
     </AnimatePresence>
@@ -630,7 +660,7 @@ function CreateTaskSheet({
 // ============================================================
 // 普通任务字段
 // ============================================================
-function NormalFields({ form, patch }: { form: FormData; patch: (p: Partial<FormData>) => void }) {
+function NormalFields({ form, patch, onTimeClick }: { form: FormData; patch: (p: Partial<FormData>) => void; onTimeClick: () => void }) {
   return (
     <>
       <div className="bg-white rounded-xl border border-[#EBEBEB] p-4">
@@ -654,7 +684,7 @@ function NormalFields({ form, patch }: { form: FormData; patch: (p: Partial<Form
         options={REPEAT_OPTIONS} onChange={(v) => { if (v === "custom") { showToast({ type: "info", message: "自定义循环开发中" }); return; } patch({ repeat: v as FormData["repeat"] }); }} />
 
       <ConfigRow icon={<Clock className="w-5 h-5 text-[#86868B]" />} label="时间和提醒"
-        onClick={() => showToast({ type: "info", message: "功能开发中" })} />
+        onClick={onTimeClick} />
 
       <ImportantRow value={form.isImportant} onChange={(v) => patch({ isImportant: v })} />
     </>
@@ -664,7 +694,7 @@ function NormalFields({ form, patch }: { form: FormData; patch: (p: Partial<Form
 // ============================================================
 // 进度条任务字段
 // ============================================================
-function ProgressFields({ form, patch, suggestedDailyMin }: { form: FormData; patch: (p: Partial<FormData>) => void; suggestedDailyMin: number }) {
+function ProgressFields({ form, patch, suggestedDailyMin, onTimeClick }: { form: FormData; patch: (p: Partial<FormData>) => void; suggestedDailyMin: number; onTimeClick: () => void }) {
   const noEnd = form.endDate === NO_END_DATE;
   return (
     <>
@@ -725,7 +755,7 @@ function ProgressFields({ form, patch, suggestedDailyMin }: { form: FormData; pa
       </div>
 
       <ConfigRow icon={<Clock className="w-5 h-5 text-[#86868B]" />} label="时间和提醒"
-        onClick={() => showToast({ type: "info", message: "功能开发中" })} />
+        onClick={onTimeClick} />
 
       <ImportantRow value={form.isImportant} onChange={(v) => patch({ isImportant: v })} />
     </>

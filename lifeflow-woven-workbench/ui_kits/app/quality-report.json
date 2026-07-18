@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "screensGenerated": 3,
+  "coreComponentsUsed": [
+    "button",
+    "goal-card",
+    "task-card",
+    "stat-card",
+    "knitting-progress",
+    "mascot-illustration",
+    "bottom-navigation",
+    "check-in-panel"
+  ],
+  "supportComponentsUsed": [],
+  "previewClassReuseRate": 0.85,
+  "hasProductContext": true,
+  "inventedComponents": [],
+  "renderedFromEvidence": [],
+  "interactiveStatesRendered": {
+    "hover": true,
+    "disabled": true,
+    "active": true
+  },
+  "primaryActionPerScreen": [
+    { "screen": 0, "action": "goals-header-cta" },
+    { "screen": 1, "action": "today-check-in-cta" },
+    { "screen": 2, "action": "check-in-submit" }
+  ],
+  "warnings": [
+    "empty-state component from SKILL.md not rendered - all screens have populated content that does not require empty-state display"
+  ]
+}

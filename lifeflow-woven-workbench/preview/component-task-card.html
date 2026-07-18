@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>任务卡片 - LifeFlow</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+/* Page scaffold — NOT extracted */
+body { margin: 0; padding: 12px; background: var(--color-surface); font-family: var(--font-family-body); color: var(--color-text-primary); }
+.specimen { display: flex; flex-direction: column; gap: var(--space-md); }
+.stage { display: flex; flex-direction: column; gap: var(--space-sm); }
+.story { display: flex; flex-direction: column; gap: var(--space-sm); }
+.rail { display: flex; flex-direction: column; gap: var(--space-sm); }
+.story-label { font-size: var(--font-size-body-sm); color: var(--color-text-secondary); font-weight: var(--font-weight-medium); }
+
+/* @component-css-start */
+/* Component definitions — extracted to components.css by deterministic script */
+.task-card { display: flex; align-items: center; gap: var(--space-md); padding: var(--space-md); background: var(--color-surface-card); border-radius: var(--radius-md); box-shadow: var(--shadow-1); width: 100%; }
+.task-card.overdue { border: 1px dashed var(--color-warning); }
+.task-card-checkbox { width: 22px; height: 22px; border-radius: var(--radius-sm); border: 1.5px solid var(--color-border-dashed); flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: transparent; cursor: pointer; transition: background .15s, border-color .15s; position: relative; }
+.task-card-checkbox:hover { background: var(--color-surface-card-hover); }
+.task-card-checkbox.in-progress { background: var(--color-knit-bg); border-color: var(--color-knit-grid); border-style: dashed; }
+.task-card-checkbox.in-progress:hover { background: var(--color-surface-card-hover); border-color: var(--color-knit-grid); }
+.task-card-checkbox.completed { background: var(--color-knit-done); border-color: var(--color-knit-done); }
+.task-card-checkbox.completed:hover { filter: brightness(.92); }
+.task-card-checkbox.completed::after { content: ''; position: absolute; width: 8px; height: 5px; border-left: 2px solid var(--color-text-inverse); border-bottom: 2px solid var(--color-text-inverse); transform: rotate(-45deg) translate(1px,-1px); }
+.task-card-text { font-size: var(--font-size-body); color: var(--color-text-primary); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.task-card-text.completed { text-decoration: line-through; color: var(--color-text-tertiary); }
+.task-card-quantity { font-size: var(--font-size-body-sm); color: var(--color-text-secondary); flex-shrink: 0; white-space: nowrap; }
+/* @component-css-end */
+</style>
+</head>
+<body>
+<div class="specimen">
+  <div class="stage">
+    <div class="story">
+      <span class="story-label">状态变体</span>
+      <div class="rail">
+        <div class="task-card" data-state="pending">
+          <div class="task-card-checkbox" role="checkbox" aria-checked="false" aria-label="待完成"></div>
+          <span class="task-card-text">整理今日灵感笔记</span>
+          <span class="task-card-quantity">0/12</span>
+        </div>
+        <div class="task-card" data-state="in-progress">
+          <div class="task-card-checkbox in-progress" role="checkbox" aria-checked="mixed" aria-label="进行中"></div>
+          <span class="task-card-text">完成编织练习</span>
+          <span class="task-card-quantity">3/8</span>
+        </div>
+        <div class="task-card" data-state="completed">
+          <div class="task-card-checkbox completed" role="checkbox" aria-checked="true" aria-label="已完成"></div>
+          <span class="task-card-text completed">晨间冥想</span>
+          <span class="task-card-quantity">1/1</span>
+        </div>
+        <div class="task-card overdue" data-state="overdue">
+          <div class="task-card-checkbox" role="checkbox" aria-checked="false" aria-label="已逾期"></div>
+          <span class="task-card-text">提交设计稿</span>
+          <span class="task-card-quantity">2/5</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

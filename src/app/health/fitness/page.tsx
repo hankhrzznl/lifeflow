@@ -1,1206 +1,523 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useHealthStore } from "@/lib/store/healthStore";
-import type { MuscleGroupV2, ExerciseV2, WorkoutSession, WorkoutExercise, ExerciseSet } from "@/lib/db/health.db";
 import { addExerciseV2 } from "@/lib/db/health.db";
+import type { MuscleGroupV2, ExerciseV2, WorkoutSession, WorkoutExercise, ExerciseSet } from "@/lib/db/health.db";
 import BottomSheet from "@/components/common/BottomSheet";
 import { showToast } from "@/components/ui/Toast";
 import {
-  Plus,
-  Dumbbell,
-  Flame,
-  Clock,
-  ChevronLeft,
-  Layers,
-  Trophy,
-  TrendingUp,
-  Search,
-  ChevronRight,
-  ChevronDown,
-  Trash2,
-  X,
-  Grip,
-  Footprints,
-  Triangle,
-  Circle,
-  PanelBottom,
-  Armchair,
-  Target,
-  Minus,
-  ArrowUp,
-  ArrowDown,
+  ChevronLeft, Plus, Activity, PlusSquare, Flame, Dumbbell, Users, Trophy,
+  ChevronRight, Pencil, Clock, Trash2, Sparkles, BarChart3, Calendar,
+  Search, X, PenTool, History, HelpCircle, Check, Footprints, ArrowLeft, Target, TrendingUp, ArrowUp,
 } from "lucide-react";
 
 // ============================================================
-// 常量
+// 设计稿基准: lifeflow-health/pages/fitness.html + fitness-record.html
+// 品牌橙 #FF9500
 // ============================================================
 
-const MUSCLE_GROUP_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
-  Armchair,
-  PanelBottom,
-  Footprints,
-  Triangle,
-  Grip,
-  Circle,
-};
+const BRAND = "#FF9500";
+const BG = "#F2F2F7";
+const CARD = "#FFFFFF";
+const MUTED = "#8E8E93";
+const TERTIARY = "#C7C7CC";
+const BORDER = "#E5E5EA";
+const TINT = "#FFF3E0";
+const SHADOW_CARD = "0 2px 8px rgba(0,0,0,0.08)";
+const SHADOW_BTN = "0 2px 8px rgba(255,149,0,0.25)";
+const SHADOW_FAB = "0 4px 16px rgba(255,149,0,0.35)";
+const INFO = "#007AFF";
+const SUCCESS = "#34C759";
+const ERROR = "#FF3B30";
 
-const RPE_GRADIENT_STOPS = [
-  { rpe: 1, color: "#007AFF", label: "很轻松" },
-  { rpe: 3, color: "#007AFF", label: "很轻松" },
-  { rpe: 4, color: "#34C759", label: "适中" },
-  { rpe: 6, color: "#34C759", label: "适中" },
-  { rpe: 7, color: "#FF9500", label: "困难" },
-  { rpe: 8, color: "#FF9500", label: "困难" },
-  { rpe: 9, color: "#FF3B30", label: "极限" },
-  { rpe: 10, color: "#FF3B30", label: "极限" },
-];
-
-const RPE_DESCRIPTIONS: Record<number, string> = {
-  1: "很轻松，几乎没有感觉",
-  2: "很轻松，几乎没有感觉",
-  3: "轻松，能持续很久",
-  4: "轻松，能持续很久",
-  5: "适中，能持续较长时间",
-  6: "适中，能持续较长时间",
-  7: "较重，还能做3次",
-  8: "很重，还能做2次",
-  9: "非常重，还能做1次",
-  10: "极限，无法再做",
-};
+// ─── RPE 色阶 ────────────────────────────────────────────────
 
 function getRPEColor(rpe: number): string {
-  if (rpe <= 3) return "#007AFF";
-  if (rpe <= 6) return "#34C759";
-  if (rpe <= 8) return "#FF9500";
-  return "#FF3B30";
+  if (rpe <= 3) return INFO;
+  if (rpe <= 6) return SUCCESS;
+  if (rpe <= 8) return BRAND;
+  return ERROR;
 }
 
-const RPE_GRADIENT_CSS = `linear-gradient(to right, ${RPE_GRADIENT_STOPS
-  .filter((s, i, arr) => i === 0 || s.rpe !== arr[i - 1].rpe)
-  .map((s) => `${s.color} ${((s.rpe - 1) / 9) * 100}%`)
-  .join(", ")})`;
+// ─── 肌群图标映射（硬编码设计稿规则） ─────────────────────────
 
-// ============================================================
-// 辅助函数
-// ============================================================
+const MUSCLE_ICONS: Record<string, React.ComponentType<{ className?: string; style?: React.CSSProperties }>> = {
+  "胸部": Dumbbell,
+  "背部": ArrowLeft,
+  "腿部": Footprints,
+  "肩部": Users,
+  "手臂": Dumbbell,
+  "核心": Target,
+};
 
-const todayStr = () => new Date().toISOString().slice(0, 10);
+// ─── 日期工具 ────────────────────────────────────────────────
 
-function computeWorkoutSummary(session: WorkoutSession) {
-  const exerciseCount = session.exercises.length;
-  const totalSets = session.exercises.reduce((sum, e) => sum + e.sets.length, 0);
-  return { exerciseCount, totalSets };
+function localTodayStr(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-function getLastWorkoutForExercise(
-  exerciseId: string,
-  sessions: WorkoutSession[]
-): WorkoutExercise | null {
-  for (const s of sessions) {
-    const found = s.exercises.find((e) => e.exerciseId === exerciseId);
-    if (found) return found;
-  }
-  return null;
-}
-
-function computeWorkoutExerciseAvg(we: WorkoutExercise) {
-  const sets = we.sets;
-  if (sets.length === 0) return { avgReps: 0, avgWeight: 0, avgRpe: 0 };
-  const avgReps = Math.round(sets.reduce((s, x) => s + x.reps, 0) / sets.length);
-  const avgWeight = Math.round(sets.reduce((s, x) => s + x.weight, 0) / sets.length);
-  const avgRpe = Math.round(sets.reduce((s, x) => s + x.rpe, 0) / sets.length);
-  return { avgReps, avgWeight, avgRpe };
+function formatDateCn(d: Date): string {
+  return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
 }
 
 // ============================================================
-// 页面主组件
+// 页面
 // ============================================================
 
 export default function FitnessPage() {
   const router = useRouter();
 
   const {
-    muscleGroupsV2,
-    exercisesV2,
-    workoutSessions,
-    weeklyStats,
-    loadFitnessDataV2,
-    addWorkoutSessionV2,
-    deleteWorkoutSessionV2,
+    muscleGroupsV2, exercisesV2, workoutSessions, weeklyStats,
+    loadFitnessDataV2, addWorkoutSessionV2, deleteWorkoutSessionV2,
   } = useHealthStore();
 
   const [loading, setLoading] = useState(true);
 
-  // UI state
-  const [expandedMuscle, setExpandedMuscle] = useState<string | null>(null);
-  const [expandedWorkout, setExpandedWorkout] = useState<string | null>(null);
-
-  // Sheet state
+  // Sheet
   const [sheetOpen, setSheetOpen] = useState(false);
   const [sheetStep, setSheetStep] = useState<"select" | "record">("select");
   const [currentExercises, setCurrentExercises] = useState<WorkoutExercise[]>([]);
-  const [selectedExerciseIdx, setSelectedExerciseIdx] = useState(0);
-  const [addSheetOpen, setAddSheetOpen] = useState(false);
-  const [newExerciseName, setNewExerciseName] = useState("");
-  const [newExerciseGroupId, setNewExerciseGroupId] = useState("");
-
-  // Search
   const [searchQuery, setSearchQuery] = useState("");
 
-  // ─── 加载数据 ────────────────────────────────────────────
+  // 自定义动作
+  const [customOpen, setCustomOpen] = useState(false);
+  const [customName, setCustomName] = useState("");
+  const [customGroupId, setCustomGroupId] = useState("");
 
-  useEffect(() => {
-    loadFitnessDataV2().finally(() => setLoading(false));
-  }, [loadFitnessDataV2]);
+  // 展开的 workout
+  const [expandedWorkout, setExpandedWorkout] = useState<string | null>(null);
 
-  // ─── 筛选后的肌群和动作 ──────────────────────────────────
+  useEffect(() => { loadFitnessDataV2().finally(() => setLoading(false)); }, [loadFitnessDataV2]);
 
-  const filteredMuscleGroups = useMemo(() => {
-    if (!searchQuery.trim()) return muscleGroupsV2;
-    const q = searchQuery.toLowerCase();
-    return muscleGroupsV2.filter((g) => {
-      const exercisesInGroup = exercisesV2.filter((e) => e.muscleGroupId === g.id);
-      const matchGroup = g.name.toLowerCase().includes(q);
-      const matchSub = g.subMuscles.some((s) => s.toLowerCase().includes(q));
-      const matchExercise = exercisesInGroup.some((e) => e.name.toLowerCase().includes(q));
-      return matchGroup || matchSub || matchExercise;
+  // ─── 主页数据 ──────────────────────────────────────────────
+
+  const recentSessions = useMemo(
+    () => [...workoutSessions].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 20),
+    [workoutSessions],
+  );
+  const hasRecent = recentSessions.length > 0;
+
+  const fmtVolume = (v: number) => v >= 1000 ? `${(v / 1000).toFixed(1)}t` : `${v}`;
+
+  // ─── 动作添加 ──────────────────────────────────────────────
+
+  const addExercise = useCallback((ex: ExerciseV2) => {
+    setCurrentExercises((prev) => {
+      if (prev.find((e) => e.exerciseId === ex.id)) return prev;
+      return [...prev, { exerciseId: ex.id, exerciseName: ex.name, sets: [] }];
     });
-  }, [muscleGroupsV2, exercisesV2, searchQuery]);
-
-  const getExercisesForGroup = useCallback(
-    (groupId: string) => exercisesV2.filter((e) => e.muscleGroupId === groupId),
-    [exercisesV2]
-  );
-
-  const getMuscleGroupById = useCallback(
-    (id: string) => muscleGroupsV2.find((g) => g.id === id),
-    [muscleGroupsV2]
-  );
-
-  // ─── 添加动作到当前训练 ────────────────────────────────
-
-  const addExerciseToWorkout = useCallback(
-    (exercise: ExerciseV2) => {
-      setCurrentExercises((prev) => {
-        const exists = prev.find((e) => e.exerciseId === exercise.id);
-        if (exists) return prev;
-        const group = getMuscleGroupById(exercise.muscleGroupId);
-        return [
-          ...prev,
-          {
-            exerciseId: exercise.id,
-            exerciseName: exercise.name,
-            muscleGroupName: group?.name ?? "",
-            sets: [],
-          },
-        ];
-      });
-      setSelectedExerciseIdx(currentExercises.length);
-      setSheetStep("record");
-    },
-    [currentExercises.length, getMuscleGroupById]
-  );
-
-  const removeCurrentExercise = useCallback((index: number) => {
-    setCurrentExercises((prev) => prev.filter((_, i) => i !== index));
-    setSelectedExerciseIdx((prev) => Math.max(0, prev - 1));
+    setSheetStep("record");
   }, []);
 
-  const addSetToExercise = useCallback((index: number) => {
-    setCurrentExercises((prev) =>
-      prev.map((e, i) => {
-        if (i !== index) return e;
-        const setNumber = e.sets.length + 1;
-        return {
-          ...e,
-          sets: [
-            ...e.sets,
-            {
-              id: crypto.randomUUID(),
-              setNumber,
-              reps: 10,
-              weight: 20,
-              rpe: 5,
-              isPR: false,
-            },
-          ],
-        };
-      })
-    );
+  const removeExercise = useCallback((idx: number) => {
+    setCurrentExercises((prev) => prev.filter((_, i) => i !== idx));
   }, []);
 
-  const updateSet = useCallback(
-    (exerciseIdx: number, setId: string, field: keyof ExerciseSet, value: number | boolean) => {
-      setCurrentExercises((prev) =>
-        prev.map((e, i) => {
-          if (i !== exerciseIdx) return e;
-          return {
-            ...e,
-            sets: e.sets.map((s) => (s.id === setId ? { ...s, [field]: value } : s)),
-          };
-        })
-      );
-    },
-    []
-  );
-
-  const removeSet = useCallback((exerciseIdx: number, setId: string) => {
-    setCurrentExercises((prev) =>
-      prev.map((e, i) => {
-        if (i !== exerciseIdx) return e;
-        const newSets = e.sets.filter((s) => s.id !== setId);
-        return {
-          ...e,
-          sets: newSets.map((s, idx) => ({ ...s, setNumber: idx + 1 })),
-        };
-      })
-    );
+  const addSet = useCallback((exIdx: number) => {
+    setCurrentExercises((prev) => prev.map((e, i) => {
+      if (i !== exIdx) return e;
+      const sn = e.sets.length + 1;
+      const last = e.sets[e.sets.length - 1];
+      return { ...e, sets: [...e.sets, { id: crypto.randomUUID(), setNumber: sn, reps: last?.reps ?? 10, weight: last?.weight ?? 20, rpe: last?.rpe ?? 7, isPR: false }] };
+    }));
   }, []);
 
-  // ─── 保存训练 ────────────────────────────────────────────
+  const updateSet = useCallback((exIdx: number, sid: string, field: keyof ExerciseSet, value: number | boolean) => {
+    setCurrentExercises((prev) => prev.map((e, i) => {
+      if (i !== exIdx) return e;
+      return { ...e, sets: e.sets.map((s) => s.id === sid ? { ...s, [field]: value } : s) };
+    }));
+  }, []);
 
-  const handleSaveWorkout = useCallback(async () => {
-    const validExercises = currentExercises.filter((e) => e.sets.length > 0);
-    if (validExercises.length === 0) {
-      showToast({ type: "warning", message: "请至少添加一组训练" });
-      return;
+  const removeSet = useCallback((exIdx: number, sid: string) => {
+    setCurrentExercises((prev) => prev.map((e, i) => {
+      if (i !== exIdx) return e;
+      const ns = e.sets.filter((s) => s.id !== sid);
+      return { ...e, sets: ns.map((s, idx) => ({ ...s, setNumber: idx + 1 })) };
+    }));
+  }, []);
+
+  const cycleRPE = useCallback((exIdx: number, sid: string, current: number) => {
+    const next = current >= 10 ? 1 : current + 0.5;
+    updateSet(exIdx, sid, "rpe", next);
+  }, [updateSet]);
+
+  // ─── 保存/删除 ────────────────────────────────────────────
+
+  const handleSave = useCallback(async () => {
+    const valid = currentExercises.filter((e) => e.sets.length > 0);
+    if (valid.length === 0) { showToast({ type: "warning", message: "请至少添加一组训练" }); return; }
+    // isPR判定
+    const allSessions = workoutSessions;
+    for (const we of valid) {
+      const history = allSessions.flatMap((s) => s.exercises.filter((e) => e.exerciseId === we.exerciseId));
+      const maxHist = history.length > 0 ? Math.max(...history.flatMap((e) => e.sets.map((s) => s.weight))) : 0;
+      for (const s of we.sets) { if (s.weight > maxHist) s.isPR = true; }
     }
-
-    await addWorkoutSessionV2({
-      date: todayStr(),
-      exercises: validExercises,
-      notes: "",
-    });
-
+    await addWorkoutSessionV2({ date: localTodayStr(), exercises: valid, notes: "" });
     showToast({ type: "success", message: "训练已保存" });
     setSheetOpen(false);
-    setSheetStep("select");
     setCurrentExercises([]);
-    setSelectedExerciseIdx(0);
     setSearchQuery("");
-  }, [currentExercises, addWorkoutSessionV2]);
+  }, [currentExercises, addWorkoutSessionV2, workoutSessions]);
 
-  // ─── 删除训练 ───────────────────────────────────────────
+  const handleDelete = useCallback(async (id: string) => {
+    await deleteWorkoutSessionV2(id);
+    showToast({ type: "success", message: "训练记录已删除" });
+  }, [deleteWorkoutSessionV2]);
 
-  const handleDeleteWorkout = useCallback(
-    async (id: string) => {
-      await deleteWorkoutSessionV2(id);
-      showToast({ type: "success", message: "训练记录已删除" });
-    },
-    [deleteWorkoutSessionV2]
-  );
-
-  // ─── 添加自定义动作 ─────────────────────────────────────
-
-  const handleAddCustomExercise = useCallback(async () => {
-    if (!newExerciseName.trim() || !newExerciseGroupId) {
-      showToast({ type: "warning", message: "请输入动作名称并选择肌群" });
-      return;
-    }
-    await addExerciseV2({
-      muscleGroupId: newExerciseGroupId,
-      name: newExerciseName.trim(),
-      isCustom: true,
-    });
+  const handleCustomAdd = useCallback(async () => {
+    if (!customName.trim() || !customGroupId) { showToast({ type: "warning", message: "请输入动作名称并选择肌群" }); return; }
+    await addExerciseV2({ muscleGroupId: customGroupId, name: customName.trim(), isCustom: true });
     showToast({ type: "success", message: "自定义动作已添加" });
-    setNewExerciseName("");
-    setAddSheetOpen(false);
+    setCustomName("");
+    setCustomOpen(false);
     loadFitnessDataV2();
-  }, [newExerciseName, newExerciseGroupId, loadFitnessDataV2]);
+  }, [customName, customGroupId, loadFitnessDataV2]);
 
-  // ─── 关闭 Sheet 重置 ─────────────────────────────────────
+  // ─── 关闭 sheet ───────────────────────────────────────────
 
-  const handleCloseSheet = useCallback(() => {
-    setSheetOpen(false);
-    setSheetStep("select");
-    setCurrentExercises([]);
-    setSelectedExerciseIdx(0);
-    setSearchQuery("");
-  }, []);
-
-  // ─── 开始新训练 ─────────────────────────────────────────
-
-  const handleStartWorkout = useCallback(() => {
-    setCurrentExercises([]);
-    setSelectedExerciseIdx(0);
-    setSheetStep("select");
-    setSearchQuery("");
-    setSheetOpen(true);
-  }, []);
+  const closeSheet = () => { setSheetOpen(false); setCurrentExercises([]); setSearchQuery(""); };
 
   // ============================================================
   // 渲染
-  // ============================================================
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#F5F5F7] flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-2 border-[#FF9500] border-t-transparent rounded-full animate-spin" />
-          <span className="text-sm text-gray-400">加载中...</span>
-        </div>
+  if (loading) return (
+    <div className="flex items-center justify-center" style={{ minHeight: "60vh" }}>
+      <div className="flex flex-col items-center gap-3">
+        <div className="w-8 h-8 border-2 border-[#FF9500] border-t-transparent rounded-full animate-spin" />
+        <span className="text-sm" style={{ color: TERTIARY }}>加载中...</span>
       </div>
-    );
-  }
-
-  const recentSessions = [...workoutSessions]
-    .sort((a, b) => b.date.localeCompare(a.date))
-    .slice(0, 20);
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-[#F5F5F7] pb-32">
-      <div className="max-w-2xl mx-auto px-5 pt-8">
-        {/* ======================================================== */}
-        {/* Section 1: Header + Weekly Summary                       */}
-        {/* ======================================================== */}
+    <div className="pb-8">
+      {/* ===== A1. 页头 96px ===== */}
+      <div className="flex flex-col pt-3 pb-4 px-4" style={{ height: 96 }}>
+        <button type="button" onClick={() => router.push("/health")}
+          className="inline-flex items-center justify-center w-8 h-8 -ml-1 mb-0.5" aria-label="返回">
+          <ChevronLeft className="w-6 h-6" style={{ color: BRAND }} />
+        </button>
+        <h1 className="text-[34px] font-bold leading-tight tracking-[-0.02em] text-black">健身</h1>
+        <p className="text-[15px] leading-snug mt-0.5" style={{ color: MUTED }}>力量训练记录 · 计划管理</p>
+      </div>
 
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => router.push("/health")}
-              className="w-9 h-9 rounded-full bg-white shadow-sm flex items-center justify-center"
-            >
-              <ChevronLeft className="w-5 h-5 text-gray-500" />
-            </button>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">力量训练</h1>
-              <p className="text-sm text-gray-500 mt-0.5">记录每一次训练</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Action Pills */}
-        <div className="flex items-center gap-2 mb-6">
-          <button
-            onClick={handleStartWorkout}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#FF9500] text-white text-sm font-medium shadow-sm"
-          >
-            <Plus className="w-4 h-4" />
-            添加训练
+      <div className="px-4">
+        {/* ===== A2. 操作按钮行 ===== */}
+        <div className="flex items-center gap-2 mb-3">
+          <button type="button" onClick={() => { setCurrentExercises([]); setSheetStep("select"); setSearchQuery(""); setSheetOpen(true); }}
+            className="inline-flex items-center justify-center gap-1.5 h-11 px-5 rounded-[22px] text-[16px] font-semibold text-white shrink-0"
+            style={{ background: BRAND, boxShadow: SHADOW_BTN }}>
+            <Plus className="w-[18px] h-[18px] shrink-0" />添加训练记录
           </button>
-          <button
-            onClick={() => router.push("/health/fitness/warmup")}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-white text-gray-700 text-sm font-medium shadow-sm border border-gray-200"
-          >
-            <Flame className="w-4 h-4" />
-            热身拉伸
+          <button type="button" onClick={() => showToast({ type: "info", message: "功能开发中" })}
+            className="inline-flex items-center justify-center gap-1 h-11 px-3 rounded-[22px] text-[14px] font-medium text-black shrink-0" style={{ background: BG }}>
+            <Activity className="w-4 h-4 shrink-0" />热身/拉伸
           </button>
-          <button
-            onClick={() => showToast({ type: "info", message: "功能开发中" })}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-white text-gray-700 text-sm font-medium shadow-sm border border-gray-200"
-          >
-            <Clock className="w-4 h-4" />
-            创建计划
+          <button type="button" onClick={() => showToast({ type: "info", message: "功能开发中" })}
+            className="inline-flex items-center justify-center gap-1 h-11 px-3 rounded-[22px] text-[14px] font-medium text-black shrink-0" style={{ background: BG }}>
+            <PlusSquare className="w-4 h-4 shrink-0" />创建计划
           </button>
         </div>
 
-        {/* Weekly Summary Card */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-gradient-to-br from-[#FF9500] to-[#FF3B30] rounded-2xl shadow-md p-5 mb-6 text-white"
-        >
-          <div className="flex items-center gap-2 mb-4">
-            <Target className="w-5 h-5" />
-            <span className="text-sm font-medium opacity-90">本周概况</span>
+        {/* ===== A3. 本周训练总结 ===== */}
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+          className="rounded-2xl p-4 mb-3" style={{ background: CARD, boxShadow: SHADOW_CARD }}>
+          <div className="flex items-center gap-1.5 mb-3">
+            <Flame className="w-5 h-5 shrink-0" style={{ color: BRAND }} />
+            <h2 className="text-[20px] font-semibold text-black leading-tight">本周训练总结</h2>
           </div>
-          <div className="grid grid-cols-4 gap-4">
-            <div className="text-center">
-              <Dumbbell className="w-5 h-5 mx-auto mb-1 opacity-80" />
-              <div className="text-xl font-bold">{weeklyStats.sessions}</div>
-              <div className="text-xs opacity-70 mt-0.5">训练次数</div>
-            </div>
-            <div className="text-center">
-              <Layers className="w-5 h-5 mx-auto mb-1 opacity-80" />
-              <div className="text-xl font-bold">{weeklyStats.muscles}</div>
-              <div className="text-xs opacity-70 mt-0.5">覆盖肌群</div>
-            </div>
-            <div className="text-center">
-              <Trophy className="w-5 h-5 mx-auto mb-1 opacity-80" />
-              <div className="text-xl font-bold">{weeklyStats.prs}</div>
-              <div className="text-xs opacity-70 mt-0.5">个人最佳</div>
-            </div>
-            <div className="text-center">
-              <TrendingUp className="w-5 h-5 mx-auto mb-1 opacity-80" />
-              <div className="text-xl font-bold">{weeklyStats.totalVolume}</div>
-              <div className="text-xs opacity-70 mt-0.5">总训练量</div>
-            </div>
+          <div className="grid grid-cols-2 gap-3">
+            {[
+              { icon: Dumbbell, value: weeklyStats.sessions, label: "训练次数" },
+              { icon: Users, value: weeklyStats.muscles, label: "覆盖肌群" },
+              { icon: Trophy, value: weeklyStats.prs, label: "个人最佳" },
+              { icon: BarChart3, value: fmtVolume(weeklyStats.totalVolume), label: "总训练量" },
+            ].map((item, i) => (
+              <div key={i} className="rounded-xl p-3 flex flex-col items-center justify-center min-h-[80px]" style={{ background: TINT }}>
+                <item.icon className="w-5 h-5 mb-1" style={{ color: BRAND }} />
+                <span className="text-[34px] font-bold leading-none tabular-nums" style={{ color: BRAND }}>{item.value}</span>
+                <span className="text-[13px] leading-snug mt-1" style={{ color: MUTED }}>{item.label}</span>
+              </div>
+            ))}
           </div>
         </motion.div>
 
-        {/* ======================================================== */}
-        {/* Section 2: Muscle Groups List                            */}
-        {/* ======================================================== */}
-
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.06 }}
-          className="bg-white rounded-2xl shadow-sm p-4 mb-6"
-        >
-          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
-            肌群训练
-          </h2>
-          <div className="space-y-2">
-            {muscleGroupsV2.map((group) => {
-              const isExpanded = expandedMuscle === group.id;
-              const IconComp = MUSCLE_GROUP_ICONS[group.icon] ?? Dumbbell;
-              const groupExercises = getExercisesForGroup(group.id);
-
+        {/* ===== A4. 肌肉群管理 ===== */}
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
+          className="rounded-2xl p-4 mb-3" style={{ background: CARD, boxShadow: SHADOW_CARD }}>
+          <div className="flex items-center gap-1.5 mb-1">
+            <Dumbbell className="w-5 h-5 shrink-0" style={{ color: BRAND }} />
+            <h2 className="text-[20px] font-semibold text-black leading-tight">肌肉群管理</h2>
+          </div>
+          <div className="flex flex-col">
+            {muscleGroupsV2.map((g, i) => {
+              const IconComp = MUSCLE_ICONS[g.name] || Dumbbell;
+              const subCount = g.subMuscles.length;
               return (
-                <div
-                  key={group.id}
-                  className="rounded-xl overflow-hidden border border-gray-100"
-                >
-                  {/* Header */}
-                  <button
-                    onClick={() => setExpandedMuscle(isExpanded ? null : group.id)}
-                    className="w-full flex items-center gap-3 p-3 bg-[#FFF9F2] hover:bg-[#FFF3E5] transition-colors"
-                  >
-                    <div className="w-8 h-8 rounded-lg bg-[#FF9500]/10 flex items-center justify-center">
-                      <IconComp className="w-4 h-4 text-[#FF9500]" />
-                    </div>
-                    <div className="flex-1 text-left">
-                      <div className="text-sm font-medium text-gray-900">{group.name}</div>
-                      <div className="text-xs text-gray-400">
-                        {group.subMuscles.length} 个子肌群
-                      </div>
-                    </div>
-                    <motion.div
-                      animate={{ rotate: isExpanded ? 180 : 0 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      <ChevronDown className="w-4 h-4 text-gray-400" />
-                    </motion.div>
-                  </button>
-
-                  {/* Expanded Content */}
-                  <AnimatePresence>
-                    {isExpanded && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: "auto", opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.25 }}
-                        className="overflow-hidden"
-                      >
-                        <div className="px-3 pb-3 pt-2">
-                          {/* Sub-muscle tags */}
-                          <div className="flex flex-wrap gap-1.5 mb-3">
-                            {group.subMuscles.map((sub) => (
-                              <span
-                                key={sub}
-                                className="text-xs px-2 py-0.5 rounded-full bg-[#FFF3E5] text-[#FF9500] font-medium"
-                              >
-                                {sub}
-                              </span>
-                            ))}
-                          </div>
-
-                          {/* Exercises */}
-                          <div className="space-y-1">
-                            {groupExercises.map((ex) => (
-                              <div
-                                key={ex.id}
-                                className="flex items-center gap-2 py-2 px-2 rounded-lg hover:bg-gray-50 transition-colors"
-                              >
-                                <div className="w-1.5 h-1.5 rounded-full bg-[#FF9500]" />
-                                <span className="text-sm text-gray-700">{ex.name}</span>
-                                {ex.isCustom && (
-                                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">
-                                    自定义
-                                  </span>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-
-                          {/* Add custom exercise button */}
-                          <button
-                            onClick={() => {
-                              setNewExerciseGroupId(group.id);
-                              setAddSheetOpen(true);
-                            }}
-                            className="w-full mt-2 py-2 rounded-lg border border-dashed border-gray-200 text-gray-400 text-xs font-medium flex items-center justify-center gap-1.5 hover:border-[#FF9500] hover:text-[#FF9500] transition-colors"
-                          >
-                            <Plus className="w-3.5 h-3.5" />
-                            添加自定义动作
-                          </button>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
+                <button key={g.id} type="button" onClick={() => showToast({ type: "info", message: "功能开发中" })}
+                  className="flex items-center h-14 gap-3 w-full"
+                  style={{ borderBottom: i < muscleGroupsV2.length - 1 ? "0.5px solid #E5E5EA" : "none" }}>
+                  <div className="w-10 h-10 rounded-[10px] flex items-center justify-center shrink-0" style={{ background: TINT }}>
+                    <IconComp className="w-5 h-5" style={{ color: BRAND }} />
+                  </div>
+                  <div className="flex-1 min-w-0 flex flex-col justify-center">
+                    <span className="text-[17px] font-semibold text-black leading-tight truncate">{g.name}</span>
+                    <span className="text-[13px] leading-tight truncate" style={{ color: MUTED }}>
+                      {g.subMuscles.slice(0, 2).join("、")}
+                    </span>
+                  </div>
+                  <span className="text-[12px] font-medium shrink-0" style={{ color: i === 0 ? BRAND : MUTED }}>{subCount}个小肌肉</span>
+                  <Pencil className="w-[18px] h-[18px] shrink-0" style={{ color: TERTIARY }} />
+                  <ChevronRight className="w-5 h-5 shrink-0" style={{ color: TERTIARY }} />
+                </button>
               );
             })}
           </div>
         </motion.div>
 
-        {/* ======================================================== */}
-        {/* Section 3: Recent Workouts                               */}
-        {/* ======================================================== */}
-
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="bg-white rounded-2xl shadow-sm p-4 mb-6"
-        >
-          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
-            最近训练
-          </h2>
-
-          {recentSessions.length === 0 ? (
-            <div className="text-center py-8 text-gray-400 text-sm">
-              <Dumbbell className="w-8 h-8 mx-auto mb-2 opacity-30" />
-              暂无训练记录，开始你的第一次训练吧
+        {/* ===== A5. 最近训练 ===== */}
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+          className="rounded-2xl p-4 mb-3" style={{ background: CARD, boxShadow: SHADOW_CARD }}>
+          <div className="flex items-center gap-1.5 mb-1">
+            <Clock className="w-5 h-5 shrink-0" style={{ color: BRAND }} />
+            <h2 className="text-[20px] font-semibold text-black leading-tight">最近训练</h2>
+            <span className="text-[12px] ml-1" style={{ color: MUTED }}>{recentSessions.length}条记录</span>
+            <span className="ml-auto text-[12px] font-medium px-2.5 py-1 rounded-[10px] shrink-0 cursor-pointer"
+              style={{ background: TINT, color: BRAND }} onClick={() => showToast({ type: "info", message: "功能开发中" })}>批量管理</span>
+          </div>
+          {!hasRecent ? (
+            <div className="flex flex-col items-center justify-center py-14">
+              <Dumbbell className="w-12 h-12 mb-4" style={{ color: TERTIARY }} />
+              <p className="text-[17px] font-medium mb-1" style={{ color: TERTIARY }}>暂无训练记录</p>
+              <p className="text-[15px]" style={{ color: TERTIARY }}>开始记录你的力量训练吧</p>
             </div>
           ) : (
-            <div className="space-y-2">
-              {recentSessions.map((session) => {
-                const isExpanded = expandedWorkout === session.id;
-                const { exerciseCount, totalSets } = computeWorkoutSummary(session);
-
+            <div className="flex flex-col">
+              {recentSessions.map((s, si) => {
+                const isExp = expandedWorkout === s.id;
+                const exCount = s.exercises.length;
+                const setCount = s.exercises.reduce((sum, e) => sum + e.sets.length, 0);
+                const d = new Date(s.date);
+                const today = localTodayStr();
+                const yesterdayVal = new Date(); yesterdayVal.setDate(yesterdayVal.getDate() - 1);
+                const yesterday = `${yesterdayVal.getFullYear()}-${String(yesterdayVal.getMonth()+1).padStart(2,"0")}-${String(yesterdayVal.getDate()).padStart(2,"0")}`;
+                const dateLabel = s.date === today ? "今天" : s.date === yesterday ? "昨天" : `${d.getMonth()+1}月${d.getDate()}日`;
                 return (
-                  <div
-                    key={session.id}
-                    className="rounded-xl overflow-hidden border border-gray-100"
-                  >
-                    {/* Session card header */}
-                    <button
-                      onClick={() =>
-                        setExpandedWorkout(isExpanded ? null : session.id!)
-                      }
-                      className="w-full flex items-center gap-3 p-3 hover:bg-gray-50 transition-colors"
-                    >
-                      <div className="w-8 h-8 rounded-lg bg-[#FFF3E5] flex items-center justify-center">
-                        <Dumbbell className="w-4 h-4 text-[#FF9500]" />
+                  <div key={s.id} style={{ borderBottom: si < recentSessions.length - 1 ? "0.5px solid #E5E5EA" : "none" }}>
+                    <button type="button" onClick={() => setExpandedWorkout(isExp ? null : s.id!)}
+                      className="flex items-center gap-3 h-14 w-full">
+                      <div className="w-10 h-10 rounded-[10px] flex items-center justify-center shrink-0" style={{ background: TINT }}>
+                        <Dumbbell className="w-5 h-5" style={{ color: BRAND }} />
                       </div>
-                      <div className="flex-1 text-left">
-                        <div className="text-sm font-medium text-gray-900">
-                          {session.date}
-                        </div>
-                        <div className="text-xs text-gray-400">
-                          {exerciseCount}个动作 · {totalSets}组
-                        </div>
+                      <div className="flex-1 min-w-0 text-left">
+                        <span className="text-[17px] font-semibold text-black">{dateLabel}</span>
+                        <span className="text-[13px] block" style={{ color: MUTED }}>{exCount}个动作 · {setCount}组</span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (session.id) handleDeleteWorkout(session.id);
-                          }}
-                          className="w-7 h-7 rounded-full flex items-center justify-center text-gray-300 hover:text-red-400 hover:bg-red-50 transition-colors"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                        <motion.div
-                          animate={{ rotate: isExpanded ? 90 : 0 }}
-                          transition={{ duration: 0.2 }}
-                        >
-                          <ChevronRight className="w-4 h-4 text-gray-400" />
-                        </motion.div>
-                      </div>
+                      <button type="button" onClick={(e) => { e.stopPropagation(); handleDelete(s.id!); }}
+                        className="w-5 h-5 flex items-center justify-center"><Trash2 className="w-5 h-5" style={{ color: TERTIARY }} /></button>
+                      <ChevronRight className="w-5 h-5" style={{ color: TERTIARY }} />
                     </button>
-
-                    {/* Expanded: exercises with sets */}
-                    <AnimatePresence>
-                      {isExpanded && (
-                        <motion.div
-                          initial={{ height: 0, opacity: 0 }}
-                          animate={{ height: "auto", opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.25 }}
-                          className="overflow-hidden"
-                        >
-                          <div className="px-3 pb-3 border-t border-gray-50">
-                            {session.exercises.map((we, ei) => {
-                              const avg = computeWorkoutExerciseAvg(we);
-                              return (
-                                <div
-                                  key={ei}
-                                  className="py-2 border-b border-gray-50 last:border-0"
-                                >
-                                  <div className="text-sm font-medium text-gray-800 mb-1.5">
-                                    {we.exerciseName}
-                                  </div>
-                                  <div className="flex flex-wrap gap-1.5">
-                                    {we.sets.map((s) => (
-                                      <span
-                                        key={s.id}
-                                        className="text-xs px-2 py-0.5 rounded-md bg-gray-100 text-gray-600"
-                                      >
-                                        {s.reps}次×{s.weight}kg
-                                        <span
-                                          className="ml-1 font-medium"
-                                          style={{ color: getRPEColor(s.rpe) }}
-                                        >
-                                          RPE{s.rpe}
-                                        </span>
-                                        {s.isPR && (
-                                          <span className="ml-1 text-[#FF9500]">★</span>
-                                        )}
-                                      </span>
-                                    ))}
-                                  </div>
-                                  <div className="flex items-center gap-3 mt-1 text-[11px] text-gray-400">
-                                    <span>
-                                      平均 {avg.avgReps}次 × {avg.avgWeight}kg
-                                    </span>
-                                    <span style={{ color: getRPEColor(avg.avgRpe) }}>
-                                      平均RPE {avg.avgRpe}
-                                    </span>
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
+                    {isExp && (
+                      <div className="pb-3 pl-[52px] flex flex-wrap gap-1.5">
+                        {s.exercises.map((we) => we.sets.map((set) => (
+                          <span key={set.id} className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-md" style={{ background: BG, color: "#000" }}>
+                            {we.exerciseName} {set.weight}kg×{set.reps}
+                            <span style={{ color: getRPEColor(set.rpe) }}>RPE{set.rpe}</span>
+                            {set.isPR && <span style={{ color: BRAND }}>★</span>}
+                          </span>
+                        )))}
+                      </div>
+                    )}
                   </div>
                 );
               })}
             </div>
           )}
         </motion.div>
+
+        {/* ===== A6. 底部链接 ===== */}
+        <button type="button" onClick={() => showToast({ type: "info", message: "功能开发中" })}
+          className="block w-full rounded-xl p-4 text-center mb-3" style={{ background: CARD, boxShadow: SHADOW_CARD }}>
+          <span className="text-[15px] font-medium" style={{ color: BRAND }}>查看完整训练数据统计 →</span>
+        </button>
       </div>
 
-      {/* ============================================================ */}
-      {/* Workout Recording BottomSheet                                */}
-      {/* ============================================================ */}
-      <BottomSheet
-        open={sheetOpen}
-        onClose={handleCloseSheet}
-        title={sheetStep === "select" ? "记录训练" : "记录组数"}
-      >
+      {/* ===== A7. FAB ===== */}
+      <button type="button" onClick={() => showToast({ type: "info", message: "功能开发中" })}
+        className="fixed w-14 h-14 rounded-full z-40 flex items-center justify-center"
+        style={{ right: "max(16px, calc(50% - 215px + 16px))", bottom: 100, background: BRAND, boxShadow: SHADOW_FAB }} aria-label="智能助手">
+        <Sparkles className="w-6 h-6 text-white" />
+      </button>
+
+      {/* ═══════════════════════════════════════ 记录训练 Sheet ═══ */}
+      <BottomSheet open={sheetOpen} onClose={closeSheet} title={sheetStep === "select" ? "记录训练" : "记录训练"}>
         {sheetStep === "select" ? (
-          <SelectExerciseStep
-            muscleGroupsV2={filteredMuscleGroups}
-            exercisesV2={exercisesV2}
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-            currentExercises={currentExercises}
-            onAddExercise={addExerciseToWorkout}
-            getExercisesForGroup={getExercisesForGroup}
-          />
-        ) : (
-          <RecordSetsStep
-            currentExercises={currentExercises}
-            selectedExerciseIdx={selectedExerciseIdx}
-            onSelectExercise={(idx) => {
-              setSelectedExerciseIdx(idx);
-            }}
-            onAddSet={addSetToExercise}
-            onUpdateSet={updateSet}
-            onRemoveSet={removeSet}
-            onRemoveExercise={removeCurrentExercise}
-            onAddMoreExercises={() => setSheetStep("select")}
-            onSave={handleSaveWorkout}
-            workoutSessions={workoutSessions}
-          />
-        )}
-      </BottomSheet>
-
-      {/* ============================================================ */}
-      {/* Add Custom Exercise Mini-Sheet                               */}
-      {/* ============================================================ */}
-      <BottomSheet
-        open={addSheetOpen}
-        onClose={() => setAddSheetOpen(false)}
-        title="添加自定义动作"
-      >
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              动作名称
-            </label>
-            <input
-              type="text"
-              value={newExerciseName}
-              onChange={(e) => setNewExerciseName(e.target.value)}
-              placeholder="例如：上斜哑铃卧推"
-              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#FF9500] focus:ring-1 focus:ring-[#FF9500]/20"
-            />
-          </div>
-          <button
-            onClick={handleAddCustomExercise}
-            className="w-full py-3 rounded-xl bg-[#FF9500] text-white font-medium text-sm"
-          >
-            添加动作
-          </button>
-        </div>
-      </BottomSheet>
-    </div>
-  );
-}
-
-// ============================================================
-// Step 1: Select Exercise
-// ============================================================
-
-function SelectExerciseStep({
-  muscleGroupsV2,
-  exercisesV2,
-  searchQuery,
-  onSearchChange,
-  currentExercises,
-  onAddExercise,
-  getExercisesForGroup,
-}: {
-  muscleGroupsV2: MuscleGroupV2[];
-  exercisesV2: ExerciseV2[];
-  searchQuery: string;
-  onSearchChange: (q: string) => void;
-  currentExercises: WorkoutExercise[];
-  onAddExercise: (ex: ExerciseV2) => void;
-  getExercisesForGroup: (groupId: string) => ExerciseV2[];
-}) {
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => {
-    if (muscleGroupsV2.length > 0) return new Set([muscleGroupsV2[0].id]);
-    return new Set();
-  });
-
-  const toggleGroup = (id: string) => {
-    setExpandedGroups((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
-  const addedIds = new Set(currentExercises.map((e) => e.exerciseId));
-
-  return (
-    <div className="flex flex-col" style={{ minHeight: "60vh" }}>
-      {/* Search */}
-      <div className="relative mb-4">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => onSearchChange(e.target.value)}
-          placeholder="搜索动作或肌群..."
-          className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#FF9500] focus:ring-1 focus:ring-[#FF9500]/20"
-        />
-        {searchQuery && (
-          <button
-            onClick={() => onSearchChange("")}
-            className="absolute right-3 top-1/2 -translate-y-1/2"
-          >
-            <X className="w-4 h-4 text-gray-400" />
-          </button>
-        )}
-      </div>
-
-      {/* Muscle groups list */}
-      <div className="flex-1 overflow-y-auto space-y-1 -mx-5 px-5">
-        {muscleGroupsV2.map((group) => {
-          const IconComp = MUSCLE_GROUP_ICONS[group.icon] ?? Dumbbell;
-          const isExpanded = expandedGroups.has(group.id);
-          const groupExercises = getExercisesForGroup(group.id);
-
-          return (
-            <div key={group.id} className="rounded-xl overflow-hidden">
-              <button
-                onClick={() => toggleGroup(group.id)}
-                className="w-full flex items-center gap-3 p-3 hover:bg-[#FFF9F2] transition-colors"
-              >
-                <div className="w-7 h-7 rounded-lg bg-[#FF9500]/10 flex items-center justify-center">
-                  <IconComp className="w-3.5 h-3.5 text-[#FF9500]" />
-                </div>
-                <span className="text-sm font-medium text-gray-800 flex-1 text-left">
-                  {group.name}
-                </span>
-                <span className="text-xs text-gray-400 mr-2">
-                  {groupExercises.length}
-                </span>
-                <motion.div
-                  animate={{ rotate: isExpanded ? 180 : 0 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <ChevronDown className="w-4 h-4 text-gray-400" />
-                </motion.div>
-              </button>
-
-              <AnimatePresence>
-                {isExpanded && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: "auto", opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.2 }}
-                    className="overflow-hidden"
-                  >
-                    <div className="pb-2">
-                      {groupExercises.map((ex) => {
-                        const isAdded = addedIds.has(ex.id);
-                        return (
-                          <div
-                            key={ex.id}
-                            className="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 transition-colors"
-                          >
-                            <div className="w-1.5 h-1.5 rounded-full bg-gray-300" />
-                            <span className="text-sm text-gray-700 flex-1">
-                              {ex.name}
-                            </span>
-                            <button
-                              onClick={() => onAddExercise(ex)}
-                              disabled={isAdded}
-                              className={`w-7 h-7 rounded-full flex items-center justify-center transition-colors ${
-                                isAdded
-                                  ? "bg-[#34C759]/10 text-[#34C759]"
-                                  : "bg-[#FF9500]/10 text-[#FF9500] hover:bg-[#FF9500] hover:text-white"
-                              }`}
-                            >
-                              <Plus className="w-4 h-4" />
-                            </button>
-                          </div>
-                        );
-                      })}
+          /* 选择动作 */
+          <div className="flex flex-col" style={{ minHeight: "50vh" }}>
+            <div className="flex items-center gap-2 mb-3">
+              <div className="flex-1 flex items-center rounded-[10px] h-11 px-3" style={{ background: BG }}>
+                <Search className="w-4 h-4 shrink-0" style={{ color: MUTED }} />
+                <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="搜索动作或肌群..."
+                  className="flex-1 bg-transparent outline-none text-[15px] ml-2" style={{ color: "#000" }} />
+                {searchQuery && <button onClick={() => setSearchQuery("")}><X className="w-4 h-4" style={{ color: MUTED }} /></button>}
+              </div>
+            </div>
+            <div className="flex-1 overflow-y-auto space-y-1">
+              {muscleGroupsV2.filter((g) => {
+                if (!searchQuery.trim()) return true;
+                const q = searchQuery.toLowerCase();
+                const exs = exercisesV2.filter((e) => e.muscleGroupId === g.id);
+                return g.name.toLowerCase().includes(q) || g.subMuscles.some((s) => s.toLowerCase().includes(q)) || exs.some((e) => e.name.toLowerCase().includes(q));
+              }).map((g) => {
+                const IconComp = MUSCLE_ICONS[g.name] || Dumbbell;
+                const gExs = exercisesV2.filter((e) => e.muscleGroupId === g.id);
+                const addedIds = new Set(currentExercises.map((e) => e.exerciseId));
+                return (
+                  <div key={g.id} className="rounded-xl overflow-hidden">
+                    <div className="flex items-center gap-3 p-3" style={{ background: TINT }}>
+                      <div className="w-10 h-10 rounded-[10px] flex items-center justify-center shrink-0" style={{ background: CARD }}>
+                        <IconComp className="w-5 h-5" style={{ color: BRAND }} />
+                      </div>
+                      <span className="flex-1 text-[17px] font-semibold text-black text-left">{g.name}</span>
+                      <span className="text-[12px] font-medium" style={{ color: MUTED }}>{g.subMuscles.length}个小肌肉</span>
                     </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                    {gExs.map((ex) => {
+                      const isAdded = addedIds.has(ex.id);
+                      return (
+                        <button key={ex.id} type="button" onClick={() => addExercise(ex)} disabled={isAdded}
+                          className="flex items-center gap-3 w-full px-3 py-2.5" style={{ borderBottom: "0.5px solid #E5E5EA", opacity: isAdded ? 0.5 : 1 }}>
+                          <span className="flex-1 text-left text-[15px] text-black">{ex.name}</span>
+                          <span className={`w-6 h-6 rounded-full flex items-center justify-center ${isAdded ? "" : ""}`}
+                            style={{ background: isAdded ? SUCCESS : "transparent", border: isAdded ? "none" : `1.5px solid ${BRAND}` }}>
+                            {isAdded ? <Check className="w-3.5 h-3.5 text-white" /> : <Plus className="w-3.5 h-3.5" style={{ color: BRAND }} />}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                );
+              })}
             </div>
-          );
-        })}
-      </div>
-
-      {/* Bottom summary */}
-      <div className="sticky bottom-0 -mx-5 px-5 pt-3 pb-1 bg-white border-t border-gray-100">
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-gray-500">
-            已选 <span className="font-semibold text-[#FF9500]">{currentExercises.length}</span> 个动作
-          </span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ============================================================
-// Step 2: Record Sets
-// ============================================================
-
-function RecordSetsStep({
-  currentExercises,
-  selectedExerciseIdx,
-  onSelectExercise,
-  onAddSet,
-  onUpdateSet,
-  onRemoveSet,
-  onRemoveExercise,
-  onAddMoreExercises,
-  onSave,
-  workoutSessions,
-}: {
-  currentExercises: WorkoutExercise[];
-  selectedExerciseIdx: number;
-  onSelectExercise: (idx: number) => void;
-  onAddSet: (idx: number) => void;
-  onUpdateSet: (exerciseIdx: number, setId: string, field: keyof ExerciseSet, value: number | boolean) => void;
-  onRemoveSet: (exerciseIdx: number, setId: string) => void;
-  onRemoveExercise: (idx: number) => void;
-  onAddMoreExercises: () => void;
-  onSave: () => void;
-  workoutSessions: WorkoutSession[];
-}) {
-  const selectedExercise = currentExercises[selectedExerciseIdx];
-
-  if (currentExercises.length === 0) {
-    return (
-      <div className="text-center py-12">
-        <p className="text-gray-400 text-sm">请先添加至少一个动作</p>
-        <button
-          onClick={onAddMoreExercises}
-          className="mt-3 px-4 py-2 rounded-xl bg-[#FF9500] text-white text-sm font-medium"
-        >
-          返回选择动作
-        </button>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex flex-col" style={{ minHeight: "60vh" }}>
-      {/* Exercise tabs */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-3 mb-3 -mx-5 px-5 border-b border-gray-100">
-        {currentExercises.map((we, idx) => (
-          <button
-            key={idx}
-            onClick={() => onSelectExercise(idx)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap shrink-0 transition-colors ${
-              idx === selectedExerciseIdx
-                ? "bg-[#FF9500] text-white"
-                : "bg-gray-100 text-gray-600"
-            }`}
-          >
-            {we.exerciseName}
-            {we.sets.length > 0 && (
-              <span
-                className={`w-4 h-4 rounded-full text-[10px] flex items-center justify-center ${
-                  idx === selectedExerciseIdx
-                    ? "bg-white/20 text-white"
-                    : "bg-gray-200 text-gray-500"
-                }`}
-              >
-                {we.sets.length}
-              </span>
-            )}
-          </button>
-        ))}
-        <button
-          onClick={onAddMoreExercises}
-          className="shrink-0 w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 hover:bg-[#FFF3E5] hover:text-[#FF9500] transition-colors"
-        >
-          <Plus className="w-3.5 h-3.5" />
-        </button>
-      </div>
-
-      {/* Selected exercise: sets recording */}
-      {selectedExercise && (
-        <>
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              <h3 className="text-sm font-semibold text-gray-900">
-                {selectedExercise.exerciseName}
-              </h3>
-              <p className="text-xs text-gray-400">组数记录</p>
+            <div className="sticky bottom-0 pt-3 pb-1 text-center text-sm" style={{ color: MUTED, background: CARD }}>
+              已选 {currentExercises.length} 个动作
             </div>
-            <button
-              onClick={() => onRemoveExercise(selectedExerciseIdx)}
-              className="w-7 h-7 rounded-full flex items-center justify-center text-gray-300 hover:text-red-400 hover:bg-red-50 transition-colors"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-            </button>
           </div>
-
-          {/* Set headers */}
-          <div className="flex items-center gap-2 text-[10px] text-gray-400 font-medium mb-2 px-2">
-            <div className="w-10">组次</div>
-            <div className="flex-1 text-center">次数</div>
-            <div className="flex-1 text-center">重量(kg)</div>
-            <div className="flex-1 text-center">RPE</div>
-            <div className="w-6" />
-          </div>
-
-          {/* Sets */}
-          <div className="space-y-2 mb-4">
-            {selectedExercise.sets.map((s) => (
-              <motion.div
-                key={s.id}
-                initial={{ opacity: 0, x: -12 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="flex items-center gap-2 p-2 rounded-xl bg-gray-50"
-              >
-                <span className="w-10 text-xs font-medium text-gray-500 text-center">
-                  第{s.setNumber}组
-                </span>
-
-                {/* Reps */}
-                <div className="flex-1 flex items-center">
-                  <button
-                    onClick={() => {
-                      if (s.reps > 1)
-                        onUpdateSet(selectedExerciseIdx, s.id, "reps", s.reps - 1);
-                    }}
-                    className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-gray-500"
-                  >
-                    <Minus className="w-3 h-3" />
-                  </button>
-                  <input
-                    type="number"
-                    value={s.reps}
-                    onChange={(e) =>
-                      onUpdateSet(
-                        selectedExerciseIdx,
-                        s.id,
-                        "reps",
-                        parseInt(e.target.value) || 0
-                      )
-                    }
-                    className="w-12 text-center text-sm font-medium bg-transparent outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                    min={0}
-                  />
-                  <button
-                    onClick={() =>
-                      onUpdateSet(selectedExerciseIdx, s.id, "reps", s.reps + 1)
-                    }
-                    className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-gray-500"
-                  >
-                    <Plus className="w-3 h-3" />
-                  </button>
-                </div>
-
-                {/* Weight */}
-                <div className="flex-1 flex items-center">
-                  <button
-                    onClick={() => {
-                      if (s.weight > 0)
-                        onUpdateSet(
-                          selectedExerciseIdx,
-                          s.id,
-                          "weight",
-                          Math.max(0, s.weight - 2.5)
-                        );
-                    }}
-                    className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-gray-500"
-                  >
-                    <Minus className="w-3 h-3" />
-                  </button>
-                  <input
-                    type="number"
-                    value={s.weight}
-                    onChange={(e) =>
-                      onUpdateSet(
-                        selectedExerciseIdx,
-                        s.id,
-                        "weight",
-                        parseFloat(e.target.value) || 0
-                      )
-                    }
-                    className="w-12 text-center text-sm font-medium bg-transparent outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                    step={2.5}
-                    min={0}
-                  />
-                  <button
-                    onClick={() =>
-                      onUpdateSet(
-                        selectedExerciseIdx,
-                        s.id,
-                        "weight",
-                        s.weight + 2.5
-                      )
-                    }
-                    className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-gray-500"
-                  >
-                    <Plus className="w-3 h-3" />
-                  </button>
-                </div>
-
-                {/* RPE */}
-                <div className="flex-1">
-                  <input
-                    type="range"
-                    min={1}
-                    max={10}
-                    step={1}
-                    value={s.rpe}
-                    onChange={(e) =>
-                      onUpdateSet(
-                        selectedExerciseIdx,
-                        s.id,
-                        "rpe",
-                        parseInt(e.target.value)
-                      )
-                    }
-                    className="w-full h-1.5 rounded-full appearance-none cursor-pointer"
-                    style={{
-                      background: RPE_GRADIENT_CSS,
-                    }}
-                  />
-                  <div
-                    className="text-[10px] font-semibold text-center mt-0.5"
-                    style={{ color: getRPEColor(s.rpe) }}
-                  >
-                    {s.rpe}
+        ) : (
+          /* 记录训练 */
+          <div className="flex flex-col" style={{ minHeight: "50vh" }}>
+            {/* 日期条 */}
+            <div className="flex items-center gap-2 h-11 px-3 mb-4 rounded-[10px]" style={{ background: BG }}>
+              <Calendar className="w-4 h-4 shrink-0" style={{ color: BRAND }} />
+              <span className="text-[17px] font-normal" style={{ color: "#000" }}>{formatDateCn(new Date())}</span>
+            </div>
+            {/* 动作列表 */}
+            {currentExercises.map((we, exIdx) => (
+              <div key={exIdx} className="rounded-[12px] p-4 mb-3" style={{ background: CARD, boxShadow: SHADOW_CARD }}>
+                <div className="flex items-center justify-between h-11">
+                  <span className="text-[17px] font-semibold text-black truncate">{we.exerciseName}</span>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <button type="button" onClick={() => showToast({ type: "info", message: "功能开发中" })}
+                      className="flex items-center gap-0.5 whitespace-nowrap" style={{ color: BRAND }}>
+                      <History className="w-4 h-4 shrink-0" /><span className="text-xs">历史</span>
+                    </button>
+                    <button type="button" onClick={() => removeExercise(exIdx)}><Trash2 className="w-5 h-5" style={{ color: TERTIARY }} /></button>
                   </div>
                 </div>
-
-                {/* Delete set */}
-                <button
-                  onClick={() => onRemoveSet(selectedExerciseIdx, s.id)}
-                  className="w-6 h-6 rounded-full flex items-center justify-center text-gray-300 hover:text-red-400"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </motion.div>
-            ))}
-          </div>
-
-          {/* RPE legend for selected exercise's last set */}
-          {selectedExercise.sets.length > 0 && (
-            <div className="mb-4 px-2 py-2 rounded-xl bg-gray-50">
-              <div className="text-xs text-gray-500">
-                RPE {selectedExercise.sets[selectedExercise.sets.length - 1].rpe}:{" "}
-                {RPE_DESCRIPTIONS[selectedExercise.sets[selectedExercise.sets.length - 1].rpe] ?? ""}
-              </div>
-              <div className="flex items-center gap-1 mt-2 h-1.5 rounded-full overflow-hidden">
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((r) => (
-                  <div
-                    key={r}
-                    className="flex-1 h-full"
-                    style={{ backgroundColor: getRPEColor(r) }}
-                  />
+                {/* RPE图例 */}
+                <div className="flex items-center gap-2 py-2 mb-2 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
+                  {[["1-3 轻", INFO], ["4-6 中", SUCCESS], ["7-8 中高", BRAND], ["9-10 极限", ERROR]].map(([label, color]) => (
+                    <div key={label as string} className="flex items-center gap-1 shrink-0">
+                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: color as string }} />
+                      <span className="text-[10px] whitespace-nowrap" style={{ color: MUTED }}>{label}</span>
+                    </div>
+                  ))}
+                </div>
+                {/* 组表头 */}
+                <div className="flex items-center h-8 rounded-[8px]" style={{ background: BG }}>
+                  <div className="w-10 text-center text-xs" style={{ color: MUTED }}>组</div>
+                  <div className="w-20 text-center text-xs" style={{ color: MUTED }}>重量</div>
+                  <div className="w-[60px] text-center text-xs" style={{ color: MUTED }}>次数</div>
+                  <div className="w-20 text-center text-xs flex items-center justify-center gap-0.5" style={{ color: MUTED }}>
+                    RPE<HelpCircle className="w-3 h-3" style={{ color: MUTED }} />
+                  </div>
+                  <div className="w-10 text-center text-xs" style={{ color: MUTED }}>完成</div>
+                </div>
+                {/* 组行 */}
+                {we.sets.map((s) => (
+                  <div key={s.id} className="flex items-center h-12 border-b" style={{ borderColor: BORDER }}>
+                    <div className="w-10 text-center text-[17px]" style={{ color: "#000" }}>{s.setNumber}</div>
+                    <div className="w-20 flex justify-center">
+                      <input type="number" value={s.weight} onChange={(e) => updateSet(exIdx, s.id, "weight", parseFloat(e.target.value) || 0)}
+                        className="w-[60px] h-9 rounded-[8px] text-[17px] text-center bg-transparent outline-none"
+                        style={{ background: BG, color: "#000", MozAppearance: "textfield", WebkitAppearance: "none" }} step={2.5} />
+                    </div>
+                    <div className="w-[60px] flex justify-center">
+                      <input type="number" value={s.reps} onChange={(e) => updateSet(exIdx, s.id, "reps", parseInt(e.target.value) || 0)}
+                        className="w-11 h-9 rounded-[8px] text-[17px] text-center bg-transparent outline-none"
+                        style={{ background: BG, color: "#000", MozAppearance: "textfield", WebkitAppearance: "none" }} />
+                    </div>
+                    <div className="w-20 flex items-center justify-center gap-1.5">
+                      <span className="w-1 h-4 rounded-full shrink-0" style={{ background: getRPEColor(s.rpe) }} />
+                      <button type="button" onClick={() => cycleRPE(exIdx, s.id, s.rpe)}
+                        className="text-[17px] font-normal" style={{ color: "#000" }}>{s.rpe}</button>
+                    </div>
+                    <div className="w-10 flex justify-center">
+                      <span className="inline-flex items-center justify-center w-5 h-5 rounded-full" style={{ background: BRAND }}>
+                        <Check className="w-3.5 h-3.5 text-white" />
+                      </span>
+                    </div>
+                  </div>
                 ))}
+                {/* 添加组 */}
+                <button type="button" onClick={() => addSet(exIdx)}
+                  className="w-full flex items-center justify-center gap-1 h-10 border-t" style={{ borderColor: BORDER, color: BRAND }}>
+                  <Plus className="w-3.5 h-3.5" /><span className="text-sm font-medium">添加组</span>
+                </button>
               </div>
-              <div className="flex justify-between mt-1">
-                <span className="text-[9px] text-[#007AFF]">很轻松</span>
-                <span className="text-[9px] text-[#34C759]">适中</span>
-                <span className="text-[9px] text-[#FF9500]">困难</span>
-                <span className="text-[9px] text-[#FF3B30]">极限</span>
-              </div>
-            </div>
-          )}
+            ))}
 
-          {/* Add set button */}
-          <button
-            onClick={() => onAddSet(selectedExerciseIdx)}
-            className="w-full py-2.5 rounded-xl border border-dashed border-[#FF9500]/30 text-[#FF9500] text-sm font-medium flex items-center justify-center gap-1.5 mb-4 hover:bg-[#FFF9F2] transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            添加一组
-          </button>
+            {/* 添加动作按钮 */}
+            <button type="button" onClick={() => setSheetStep("select")}
+              className="w-full h-11 flex items-center justify-center gap-1.5 rounded-[10px] border mb-2 text-[17px]"
+              style={{ borderColor: BRAND, color: BRAND }}>
+              <Plus className="w-[18px] h-[18px]" />添加动作
+            </button>
 
-          {/* ==================================================== */}
-          {/* Step 3: History Comparison                            */}
-          {/* ==================================================== */}
-          {(() => {
-            const last = getLastWorkoutForExercise(
-              selectedExercise.exerciseId,
-              workoutSessions
-            );
-            if (!last) return null;
-            const lastAvg = computeWorkoutExerciseAvg(last);
-            const curr = selectedExercise;
-            const currAvg = computeWorkoutExerciseAvg(curr);
+            {/* 自定义动作 */}
+            <button type="button" onClick={() => { setCustomGroupId(muscleGroupsV2[0]?.id || ""); setCustomOpen(true); }}
+              className="flex items-center gap-1 mb-2" style={{ color: MUTED }}>
+              <PenTool className="w-3.5 h-3.5" /><span className="text-[13px]">创建自定义动作</span>
+            </button>
 
-            return (
-              <div className="mb-4 p-3 rounded-xl bg-blue-50 border border-blue-100">
-                <div className="text-xs font-medium text-blue-700 mb-2">
-                  上次训练对比
-                </div>
-                <div className="text-xs text-blue-600 mb-1">
-                  上次：{last.sets.length}组×{lastAvg.avgReps}次×{lastAvg.avgWeight}kg，平均RPE {lastAvg.avgRpe}
-                </div>
-                <div className="text-xs text-blue-600">
-                  本次：{curr.sets.length}组×{currAvg.avgReps}次×{currAvg.avgWeight}kg，平均RPE {currAvg.avgRpe}
-                  <span className="ml-1">
-                    {currAvg.avgWeight > lastAvg.avgWeight ? (
-                      <ArrowUp className="inline w-3 h-3 text-[#34C759]" />
-                    ) : currAvg.avgWeight < lastAvg.avgWeight ? (
-                      <ArrowDown className="inline w-3 h-3 text-[#FF3B30]" />
-                    ) : null}
-                  </span>
-                </div>
-              </div>
-            );
-          })()}
-        </>
-      )}
+            {/* 保存 */}
+            <button type="button" onClick={handleSave}
+              className="w-full h-11 rounded-[22px] text-[17px] font-semibold text-white" style={{ background: BRAND }}>
+              保存
+            </button>
+          </div>
+        )}
+      </BottomSheet>
 
-      {/* Save button */}
-      <button
-        onClick={onSave}
-        className="w-full py-3 rounded-xl bg-[#FF9500] text-white font-medium text-sm mt-auto"
-      >
-        保存训练
-      </button>
+      {/* 自定义动作 mini sheet */}
+      <BottomSheet open={customOpen} onClose={() => setCustomOpen(false)} title="创建自定义动作">
+        <div className="flex flex-col gap-3">
+          <input type="text" value={customName} onChange={(e) => setCustomName(e.target.value)} placeholder="动作名称"
+            className="w-full h-10 rounded-[8px] px-3 text-[15px] outline-none border-0" style={{ background: BG, color: "#000" }} />
+          <select value={customGroupId} onChange={(e) => setCustomGroupId(e.target.value)}
+            className="w-full h-10 rounded-[8px] px-3 text-[15px] outline-none border-0" style={{ background: BG, color: "#000" }}>
+            {muscleGroupsV2.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
+          </select>
+          <button type="button" onClick={handleCustomAdd}
+            className="w-full h-10 rounded-[22px] text-[15px] font-medium text-white" style={{ background: BRAND }}>添加</button>
+        </div>
+      </BottomSheet>
     </div>
   );
 }

@@ -629,7 +629,7 @@ function CreateTaskSheet({
             <div className="fixed inset-0 z-[60] flex items-end justify-center" onClick={() => setShowTimeSheet(false)}>
               <div className="absolute inset-0 bg-black/30" />
               <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} transition={{ type: "spring", damping: 30, stiffness: 400 }}
-                className="relative w-full max-w-[430px] bg-white rounded-t-[20px] pb-[max(16px,env(safe-area-inset-bottom))]"
+                className="relative w-full max-w-[430px] bg-white rounded-t-[20px] pb-[calc(56px+max(16px,env(safe-area-inset-bottom)))]"
                 onClick={(e) => e.stopPropagation()}>
                 <div className="flex items-center justify-between px-5 pt-5 pb-4">
                   <button onClick={() => setShowTimeSheet(false)} className="text-[15px] text-[#86868B]">取消</button>

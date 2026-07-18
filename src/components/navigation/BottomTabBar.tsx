@@ -4,10 +4,16 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, Target, Wallet, Heart } from "lucide-react";
 
-// ─── 新架构：主站导航 ─────────────────────────────────────────
-// 主站(/) + 三子站入口。子站路由下自动隐藏（子站有自己的导航栏）。
+// ─── 全站统一底导，仅全屏流程页隐藏 ──────────────────────────
+// 4-tab：首页 / 效率 / 记账 / 健康，在所有页面显示
+// 全屏流程页（record/ledgers/search/create）隐藏
 
-const SUBSITE_PREFIXES = ["/efficiency", "/accounting", "/health"];
+const FULLSCREEN_PREFIXES = [
+  "/accounting/record",
+  "/accounting/ledgers",
+  "/accounting/search",
+  "/efficiency/create",
+];
 
 const tabs = [
   { label: "首页", path: "/", icon: Home },
@@ -19,8 +25,8 @@ const tabs = [
 export default function BottomTabBar() {
   const pathname = usePathname();
 
-  // 子站页面由子站 layout 渲染自己的导航，这里直接隐藏
-  if (SUBSITE_PREFIXES.some((p) => pathname.startsWith(p))) return null;
+  // 全屏流程页不显示底导
+  if (FULLSCREEN_PREFIXES.some((p) => pathname.startsWith(p))) return null;
 
   const isActive = (path: string) =>
     path === "/" ? pathname === "/" : pathname.startsWith(path);

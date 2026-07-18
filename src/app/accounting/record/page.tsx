@@ -143,7 +143,7 @@ export default function RecordPage() {
         <div className="grid grid-cols-3 gap-x-4 gap-y-6">
           {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((k) => (
             <button key={k} type="button" onClick={() => pressDigit(k)}
-              className="h-[64px] rounded-[16px] text-[28px] font-medium text-[#1D1D1F] active:bg-black/5 flex items-center justify-center" />
+              className="h-[64px] rounded-[16px] text-[28px] font-medium text-[#1D1D1F] active:bg-black/5 flex items-center justify-center">{k}</button>
           ))}
           <button type="button" onClick={() => showToast({ type: "info", message: "直接输入数字即可，末两位是分" })}
             className="h-[64px] rounded-[16px] text-[28px] font-medium text-[#1D1D1F] active:bg-black/5 flex items-center justify-center">.</button>

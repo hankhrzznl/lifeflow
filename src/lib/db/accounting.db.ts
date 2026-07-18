@@ -228,7 +228,7 @@ export async function getAllCategories(): Promise<Category[]> {
   return accountingDB.categories.toArray();
 }
 
-// ─── 清空所有记账数据 ────────────────────────────────────────
+// ─── 清空所有记账数据并重新播种默认数据 ──────────────────────
 export async function clearAllAccountingData(): Promise<void> {
   await accountingDB.transaction(
     "rw",
@@ -238,6 +238,48 @@ export async function clearAllAccountingData(): Promise<void> {
       await accountingDB.accounts.clear();
       await accountingDB.transactions.clear();
       await accountingDB.categories.clear();
+
+      const now = Date.now();
+
+      // 重新创建默认账本
+      const ledgerId = crypto.randomUUID();
+      await accountingDB.ledgers.add({
+        id: ledgerId, name: "日常账本", type: "personal", currency: "CNY", isDefault: true, createdAt: now,
+      });
+
+      // 重新创建默认账户
+      const defaultAccounts = [
+        { id: crypto.randomUUID(), ledgerId, name: "微信钱包", type: "asset", balance: 0, currency: "CNY", createdAt: now },
+        { id: crypto.randomUUID(), ledgerId, name: "支付宝", type: "asset", balance: 0, currency: "CNY", createdAt: now },
+        { id: crypto.randomUUID(), ledgerId, name: "银行卡", type: "asset", balance: 0, currency: "CNY", createdAt: now },
+        { id: crypto.randomUUID(), ledgerId, name: "现金", type: "asset", balance: 0, currency: "CNY", createdAt: now },
+      ];
+      for (const a of defaultAccounts) await accountingDB.accounts.add(a);
+
+      // 重新创建默认分类
+      const expenseCategories = [
+        { id: crypto.randomUUID(), name: "餐饮", type: "expense", icon: "utensils-crossed", color: "#FF3B30", ledgerId },
+        { id: crypto.randomUUID(), name: "购物", type: "expense", icon: "shopping-bag", color: "#FF9500", ledgerId },
+        { id: crypto.randomUUID(), name: "日用", type: "expense", icon: "package", color: "#5856D6", ledgerId },
+        { id: crypto.randomUUID(), name: "交通", type: "expense", icon: "car", color: "#007AFF", ledgerId },
+        { id: crypto.randomUUID(), name: "蔬菜", type: "expense", icon: "leaf", color: "#34C759", ledgerId },
+        { id: crypto.randomUUID(), name: "水果", type: "expense", icon: "apple", color: "#FF3B30", ledgerId },
+        { id: crypto.randomUUID(), name: "零食", type: "expense", icon: "candy", color: "#FF9500", ledgerId },
+        { id: crypto.randomUUID(), name: "运动", type: "expense", icon: "dumbbell", color: "#34C759", ledgerId },
+        { id: crypto.randomUUID(), name: "娱乐", type: "expense", icon: "gamepad-2", color: "#5856D6", ledgerId },
+        { id: crypto.randomUUID(), name: "通讯", type: "expense", icon: "smartphone", color: "#007AFF", ledgerId },
+        { id: crypto.randomUUID(), name: "服饰", type: "expense", icon: "shirt", color: "#AF52DE", ledgerId },
+        { id: crypto.randomUUID(), name: "美容", type: "expense", icon: "sparkles", color: "#FF9500", ledgerId },
+      ];
+      const incomeCategories = [
+        { id: crypto.randomUUID(), name: "工资", type: "income", icon: "banknote", color: "#34C759", ledgerId },
+        { id: crypto.randomUUID(), name: "红包", type: "income", icon: "gift", color: "#FF3B30", ledgerId },
+        { id: crypto.randomUUID(), name: "理财", type: "income", icon: "trending-up", color: "#FF9500", ledgerId },
+        { id: crypto.randomUUID(), name: "奖金", type: "income", icon: "trophy", color: "#5856D6", ledgerId },
+        { id: crypto.randomUUID(), name: "租金", type: "income", icon: "home", color: "#007AFF", ledgerId },
+        { id: crypto.randomUUID(), name: "其他", type: "income", icon: "help-circle", color: "#8E8E93", ledgerId },
+      ];
+      for (const c of [...expenseCategories, ...incomeCategories]) await accountingDB.categories.add(c);
     },
   );
 }

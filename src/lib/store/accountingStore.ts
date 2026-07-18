@@ -7,6 +7,8 @@ import {
   getTransactionsByMonth,
   addTransaction as addTransactionToDB,
   deleteTransaction as deleteTransactionFromDB,
+  accountingDB,
+  addCategory,
 } from '../db/accounting.db';
 import type { Ledger, Account, Transaction, Category } from '../db/accounting.db';
 
@@ -63,6 +65,44 @@ export const useAccountingStore = create<AccountingState>()((set, get) => ({
   loadData: async () => {
     set({ loading: true });
     try {
+      // 确保默认数据存在（分类为空时自动播种）
+      const existingCats = await getAllCategories();
+      if (existingCats.length === 0) {
+        const ledgerId = crypto.randomUUID();
+        const now = Date.now();
+        await accountingDB.ledgers.add({ id: ledgerId, name: "日常账本", type: "personal", currency: "CNY", isDefault: true, createdAt: now });
+        const defaultAccounts = [
+          { id: crypto.randomUUID(), ledgerId, name: "微信钱包", type: "asset", balance: 0, currency: "CNY", createdAt: now },
+          { id: crypto.randomUUID(), ledgerId, name: "支付宝", type: "asset", balance: 0, currency: "CNY", createdAt: now },
+          { id: crypto.randomUUID(), ledgerId, name: "银行卡", type: "asset", balance: 0, currency: "CNY", createdAt: now },
+          { id: crypto.randomUUID(), ledgerId, name: "现金", type: "asset", balance: 0, currency: "CNY", createdAt: now },
+        ];
+        for (const a of defaultAccounts) await accountingDB.accounts.add(a);
+        const expenseCats = [
+          { name: "餐饮", type: "expense", icon: "utensils-crossed", color: "#FF3B30", ledgerId },
+          { name: "购物", type: "expense", icon: "shopping-bag", color: "#FF9500", ledgerId },
+          { name: "日用", type: "expense", icon: "package", color: "#5856D6", ledgerId },
+          { name: "交通", type: "expense", icon: "car", color: "#007AFF", ledgerId },
+          { name: "蔬菜", type: "expense", icon: "leaf", color: "#34C759", ledgerId },
+          { name: "水果", type: "expense", icon: "apple", color: "#FF3B30", ledgerId },
+          { name: "零食", type: "expense", icon: "candy", color: "#FF9500", ledgerId },
+          { name: "运动", type: "expense", icon: "dumbbell", color: "#34C759", ledgerId },
+          { name: "娱乐", type: "expense", icon: "gamepad-2", color: "#5856D6", ledgerId },
+          { name: "通讯", type: "expense", icon: "smartphone", color: "#007AFF", ledgerId },
+          { name: "服饰", type: "expense", icon: "shirt", color: "#AF52DE", ledgerId },
+          { name: "美容", type: "expense", icon: "sparkles", color: "#FF9500", ledgerId },
+        ];
+        const incomeCats = [
+          { name: "工资", type: "income", icon: "banknote", color: "#34C759", ledgerId },
+          { name: "红包", type: "income", icon: "gift", color: "#FF3B30", ledgerId },
+          { name: "理财", type: "income", icon: "trending-up", color: "#FF9500", ledgerId },
+          { name: "奖金", type: "income", icon: "trophy", color: "#5856D6", ledgerId },
+          { name: "租金", type: "income", icon: "home", color: "#007AFF", ledgerId },
+          { name: "其他", type: "income", icon: "help-circle", color: "#8E8E93", ledgerId },
+        ];
+        for (const c of [...expenseCats, ...incomeCats]) await addCategory(c);
+      }
+
       const ledger = await getDefaultLedger();
       const ledgerId = ledger?.id ?? null;
 

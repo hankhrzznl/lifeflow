@@ -1,156 +1,152 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
-import { motion } from "framer-motion";
+import { useMemo, useState, useCallback } from "react";
 import Link from "next/link";
-import {
-  ChevronLeft, ChevronRight, TrendingDown, TrendingUp,
-  BarChart3, LineChart, ShoppingBag, Coffee, Home, Car, Gift, Package,
-  Leaf, Apple, Candy, Dumbbell, Gamepad2, Smartphone, Shirt, Sparkles,
-  Banknote, Trophy, HelpCircle, UtensilsCrossed,
-} from "lucide-react";
-import {
-  BarChart, Bar, LineChart as ReLineChart, Line,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-} from "recharts";
-import { accountingDB } from "@/lib/db/accounting.db";
+import { useRouter } from "next/navigation";
+import { useLiveQuery } from "dexie-react-hooks";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { getTransactionsByMonth, getAllCategories } from "@/lib/db/accounting.db";
 import type { Transaction, Category } from "@/lib/db/accounting.db";
-import { useAccountingStore } from "@/lib/store/accountingStore";
+import { getIcon } from "@/components/accounting/CategoryIcon";
+import { showToast } from "@/components/ui/Toast";
 
-// ─── 图标映射 ────────────────────────────────────────────────
+// ============================================================
+// 设计稿基准: lifeflow-accounting/pages/monthly-bill.html
+// 背景 #F2F2F7 / 支出红 #FF3B30 / 收入蓝 #007AFF
+// ============================================================
 
-const ICON_MAP: Record<string, React.ComponentType<any>> = {
-  "utensils-crossed": UtensilsCrossed,
-  "shopping-bag": ShoppingBag,
-  "package": Package,
-  "car": Car,
-  "leaf": Leaf,
-  "apple": Apple,
-  "candy": Candy,
-  "dumbbell": Dumbbell,
-  "gamepad-2": Gamepad2,
-  "smartphone": Smartphone,
-  "shirt": Shirt,
-  "sparkles": Sparkles,
-  "banknote": Banknote,
-  "gift": Gift,
-  "trending-up": TrendingUp,
-  "trophy": Trophy,
-  "home": Home,
-  "help-circle": HelpCircle,
-};
-
-function getIcon(name: string) { return ICON_MAP[name] || HelpCircle; }
-
-const MONTH_NAMES = ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"];
+const BRAND = "#34C759";
+const EXPENSE = "#FF3B30";
+const INCOME = "#007AFF";
+const MUTED = "#8E8E93";
+const DISABLED = "#C7C7CC";
+const BORDER = "#E5E5EA";
+const BG = "#F2F2F7";
+const SHADOW_CARD = "0 4px 16px rgba(0,0,0,0.08)";
 
 // ─── 格式化 ──────────────────────────────────────────────────
 
-function fmtYuan(fen: number): string {
-  return `￥${(fen / 100).toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+function fmtCompact(fen: number): string {
+  const yuan = fen / 100;
+  return yuan.toLocaleString("zh-CN", {
+    minimumFractionDigits: fen % 100 === 0 ? 0 : 2,
+    maximumFractionDigits: 2,
+  });
 }
 
-function fmtYuanShort(fen: number): string {
-  return `${(fen / 100).toFixed(2)}`;
+function fmtFull(fen: number): string {
+  return (fen / 100).toLocaleString("zh-CN", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 }
 
-// ─── 页面主组件 ──────────────────────────────────────────────
+// ─── Y 轴刻度取整 ────────────────────────────────────────────
+
+function niceMax(val: number): number {
+  if (val <= 0) return 500;
+  const exp = Math.floor(Math.log10(val));
+  const mag = Math.pow(10, exp);
+  const norm = val / mag;
+  if (norm <= 1) return mag;
+  if (norm <= 2) return 2 * mag;
+  if (norm <= 5) return 5 * mag;
+  return 10 * mag;
+}
+
+// ─── 月份拆分 7 段 ───────────────────────────────────────────
+
+function buildSegments(year: number, month: number, txs: Transaction[], typeTab: "expense" | "income") {
+  const days = new Date(year, month, 0).getDate();
+  const baseSize = Math.floor(days / 7);
+  const extra = days % 7;
+
+  const segments: { start: number; end: number; label: string; amount: number }[] = [];
+  let day = 1;
+
+  for (let i = 0; i < 7; i++) {
+    const segSize = baseSize + (i < extra ? 1 : 0);
+    const end = Math.min(day + segSize - 1, days);
+
+    let sum = 0;
+    const prefix = `${year}-${String(month).padStart(2, "0")}`;
+    for (const t of txs) {
+      if (t.type !== typeTab) continue;
+      const d = parseInt(t.date.slice(-2), 10);
+      if (d >= day && d <= end) sum += t.amount;
+    }
+
+    segments.push({ start: day, end, label: `${month}.${day}`, amount: sum / 100 });
+    day = end + 1;
+  }
+
+  return segments;
+}
+
+// ============================================================
+// 页面
+// ============================================================
 
 export default function ChartPage() {
-  const { categories: storeCategories } = useAccountingStore();
+  const router = useRouter();
 
-  // 视图状态
-  const [viewMode, setViewMode] = useState<"month" | "year">("month");
   const [currentYear, setCurrentYear] = useState(() => new Date().getFullYear());
   const [currentMonth, setCurrentMonth] = useState(() => new Date().getMonth() + 1);
   const [typeTab, setTypeTab] = useState<"expense" | "income">("expense");
+  // chartType 仅记录 UI 切换：实际折线图未就绪，只保留柱状图
   const [chartType, setChartType] = useState<"bar" | "line">("bar");
 
-  // 数据
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
+  // ─── 月份切换 ──────────────────────────────────────────────
 
-  // ─── 加载数据 ──────────────────────────────────────────────
-
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const cats = storeCategories.length > 0
-        ? storeCategories
-        : await accountingDB.categories.toArray();
-      setCategories(cats);
-
-      if (viewMode === "month") {
-        const prefix = `${currentYear}-${String(currentMonth).padStart(2, "0")}`;
-        const txs = await accountingDB.transactions
-          .filter((t) => t.date.startsWith(prefix))
-          .toArray();
-        setTransactions(txs);
-      } else {
-        const prefix = `${currentYear}-`;
-        const txs = await accountingDB.transactions
-          .filter((t) => t.date.startsWith(prefix))
-          .toArray();
-        setTransactions(txs);
-      }
-    } catch {
-      // ignore
-    } finally {
-      setLoading(false);
-    }
-  }, [viewMode, currentYear, currentMonth, storeCategories]);
-
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
-
-  // ─── 当月/当年切换重置 ─────────────────────────────────────
-
-  const switchViewMode = (m: "month" | "year") => {
-    setViewMode(m);
-    const now = new Date();
-    setCurrentYear(now.getFullYear());
-    setCurrentMonth(now.getMonth() + 1);
-  };
-
-  const goPrev = () => {
-    if (viewMode === "month") {
-      if (currentMonth === 1) {
-        setCurrentYear((y) => y - 1);
-        setCurrentMonth(12);
-      } else {
-        setCurrentMonth((m) => m - 1);
-      }
-    } else {
+  const goPrevMonth = useCallback(() => {
+    if (currentMonth === 1) {
       setCurrentYear((y) => y - 1);
-    }
-  };
-
-  const goNext = () => {
-    if (viewMode === "month") {
-      if (currentMonth === 12) {
-        setCurrentYear((y) => y + 1);
-        setCurrentMonth(1);
-      } else {
-        setCurrentMonth((m) => m + 1);
-      }
+      setCurrentMonth(12);
     } else {
-      setCurrentYear((y) => y + 1);
+      setCurrentMonth((m) => m - 1);
     }
-  };
+  }, [currentMonth]);
 
-  // ─── 按类型筛选 ────────────────────────────────────────────
+  const goNextMonth = useCallback(() => {
+    if (currentMonth === 12) {
+      setCurrentYear((y) => y + 1);
+      setCurrentMonth(1);
+    } else {
+      setCurrentMonth((m) => m + 1);
+    }
+  }, [currentMonth]);
+
+  // ─── 数据（liveQuery） ──────────────────────────────────────
+
+  const txs = useLiveQuery(
+    () => getTransactionsByMonth(currentYear, currentMonth),
+    [currentYear, currentMonth],
+    [] as Transaction[],
+  );
+
+  const categories = useLiveQuery(() => getAllCategories(), [], [] as Category[]);
+
+  // ─── 分类映射 ──────────────────────────────────────────────
+
+  const categoryMap = useMemo(() => {
+    const m = new Map<string, Category>();
+    for (const c of categories) m.set(c.id, c);
+    return m;
+  }, [categories]);
+
+  // ─── 类型筛选 ──────────────────────────────────────────────
 
   const filteredTxs = useMemo(
-    () => transactions.filter((t) => t.type === typeTab),
-    [transactions, typeTab],
+    () => (txs ?? []).filter((t) => t.type === typeTab),
+    [txs, typeTab],
   );
 
   const oppositeTxs = useMemo(
-    () => transactions.filter((t) => t.type === (typeTab === "expense" ? "income" : "expense")),
-    [transactions, typeTab],
+    () => (txs ?? []).filter((t) => t.type === (typeTab === "expense" ? "income" : "expense")),
+    [txs, typeTab],
   );
+
+  // ─── 汇总 ──────────────────────────────────────────────────
 
   const totalAmount = useMemo(
     () => filteredTxs.reduce((s, t) => s + t.amount, 0),
@@ -162,337 +158,507 @@ export default function ChartPage() {
     () => oppositeTxs.reduce((s, t) => s + t.amount, 0),
     [oppositeTxs],
   );
-  const balance = typeTab === "expense"
-    ? oppositeTotal - totalAmount
-    : totalAmount - oppositeTotal;
 
-  // ─── 趋势图数据 ────────────────────────────────────────────
+  // 结余 = 收入合计 − 支出合计（全月口径）
+  const totalIncome = useMemo(
+    () => (txs ?? []).filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0),
+    [txs],
+  );
+  const totalExpense = useMemo(
+    () => (txs ?? []).filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0),
+    [txs],
+  );
+  const balance = totalIncome - totalExpense;
 
-  const chartData = useMemo(() => {
-    if (viewMode === "month") {
-      const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
-      const dailyMap: Record<string, number> = {};
-      for (const t of filteredTxs) {
-        const day = t.date.slice(-2);
-        dailyMap[day] = (dailyMap[day] || 0) + t.amount;
-      }
-      const result = [];
-      for (let d = 1; d <= daysInMonth; d++) {
-        const key = String(d).padStart(2, "0");
-        result.push({ label: `${d}日`, amount: (dailyMap[key] || 0) / 100 });
-      }
-      return result;
-    } else {
-      const monthlyMap: Record<string, number> = {};
-      for (const t of filteredTxs) {
-        const m = t.date.slice(5, 7);
-        monthlyMap[m] = (monthlyMap[m] || 0) + t.amount;
-      }
-      const result = [];
-      for (let m = 1; m <= 12; m++) {
-        const key = String(m).padStart(2, "0");
-        result.push({ label: `${m}月`, amount: (monthlyMap[key] || 0) / 100 });
-      }
-      return result;
-    }
-  }, [filteredTxs, viewMode, currentYear, currentMonth]);
+  // ─── 趋势分段 ──────────────────────────────────────────────
 
-  const avgAmount = useMemo(() => {
-    if (chartData.length === 0) return 0;
-    return chartData.reduce((s, d) => s + d.amount, 0) / chartData.length;
-  }, [chartData]);
+  const segments = useMemo(
+    () => buildSegments(currentYear, currentMonth, txs ?? [], typeTab),
+    [currentYear, currentMonth, txs, typeTab],
+  );
 
-  // ─── 分类排行榜 ────────────────────────────────────────────
+  const maxSeg = Math.max(...segments.map((s) => s.amount), 0);
+  const yMax = niceMax(maxSeg);
+  const yLabels = useMemo(() => {
+    const step = yMax / 5;
+    return [yMax, yMax - step, yMax - step * 2, yMax - step * 3, yMax - step * 4].map((v) =>
+      Math.round(v),
+    );
+  }, [yMax]);
+
+  // 日平均（元）
+  const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
+  const dailyAvg = daysInMonth > 0 ? totalAmount / 100 / daysInMonth : 0;
+
+  // ─── 类别排行榜 ────────────────────────────────────────────
 
   const categoryRanking = useMemo(() => {
     const map: Record<string, number> = {};
     for (const t of filteredTxs) {
-      const cid = t.categoryId || "unknown";
+      const cid = t.categoryId || "__unknown__";
       map[cid] = (map[cid] || 0) + t.amount;
     }
     return Object.entries(map)
       .map(([cid, amount]) => {
-        const cat = categories.find((c) => c.id === cid);
-        return { categoryId: cid, name: cat?.name || "其他", icon: cat?.icon || "help-circle", color: cat?.color || "#8E8E93", amount };
+        const cat = cid === "__unknown__" ? null : categoryMap.get(cid);
+        return {
+          categoryId: cid,
+          name: cat?.name || "其他",
+          icon: cat?.icon || "help-circle",
+          color: cat?.color || "#8E8E93",
+          amount,
+        };
       })
       .sort((a, b) => b.amount - a.amount);
-  }, [filteredTxs, categories]);
+  }, [filteredTxs, categoryMap]);
 
-  const maxCatAmount = categoryRanking[0]?.amount || 1;
+  const maxCatAmount = categoryRanking[0]?.amount ?? 1;
 
-  // ─── 明细排行榜 Top 10 ─────────────────────────────────────
+  // ─── 明细排行榜 ────────────────────────────────────────────
 
   const detailRanking = useMemo(() => {
-    return [...filteredTxs]
-      .sort((a, b) => b.amount - a.amount)
-      .slice(0, 10);
+    return [...filteredTxs].sort((a, b) => b.amount - a.amount).slice(0, 10);
   }, [filteredTxs]);
 
-  const getCategoryInfo = (cid: string | undefined) => {
-    return categories.find((c) => c.id === cid);
+  // ─── 切换处理 ──────────────────────────────────────────────
+
+  const handleYearTab = () => {
+    showToast({ type: "info", message: "功能开发中" });
   };
 
-  // ─── Chart 颜色 ─────────────────────────────────────────────
+  const handleLineTab = () => {
+    showToast({ type: "info", message: "功能开发中" });
+  };
 
-  const chartColor = typeTab === "expense" ? "#FF3B30" : "#34C759";
   const isExpense = typeTab === "expense";
+  const amountColor = isExpense ? EXPENSE : INCOME;
+  const typeLabel = isExpense ? "支出" : "收入";
+  const otherLabel = isExpense ? "收入" : "支出";
+  const opponentCount = oppositeTxs.length;
+  const opponentTotalFen = oppositeTotal;
 
-  // ─── X轴间隔显示 ───────────────────────────────────────────
+  const isEmpty = filteredTxs.length === 0;
 
-  const xInterval = viewMode === "month" ? 4 : 0; // 月视图每5天显示一个，年视图全显示
-
-  // ─── 渲染 ──────────────────────────────────────────────────
+  // ============================================================
+  // 渲染
+  // ============================================================
 
   return (
-    <div className="min-h-screen bg-[#F5F5F7] pb-28">
-      <div className="max-w-2xl mx-auto px-5 pt-8">
-        {/* ===== 顶部导航 ===== */}
-        <div className="flex items-center justify-between mb-5">
+    <div style={{ background: BG, minHeight: "100vh" }}>
+      <div className="mx-auto" style={{ maxWidth: 430 }}>
+
+        {/* ===== 1. 顶部导航条 52px ===== */}
+        <div
+          className="flex items-center relative"
+          style={{ height: 52, padding: "0 8px" }}
+        >
           {/* 返回 */}
-          <Link href="/accounting" className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center hover:bg-gray-50 transition-colors">
-            <ChevronLeft className="w-5 h-5 text-gray-500" />
+          <Link
+            href="/accounting"
+            className="inline-flex items-center justify-center"
+            style={{ width: 44, height: 44 }}
+            aria-label="返回"
+          >
+            <ChevronLeft className="h-6 w-6" style={{ color: "#000000" }} />
           </Link>
 
-          {/* 月账单 / 年账单 */}
-          <div className="flex bg-gray-100 rounded-full p-0.5">
-            {(["month", "year"] as const).map((m) => (
-              <button
-                key={m}
-                onClick={() => switchViewMode(m)}
-                className={`px-5 py-1.5 rounded-full text-sm font-medium transition-all ${
-                  viewMode === m ? "bg-white shadow-sm text-gray-900" : "text-gray-500"
-                }`}
+          {/* 月账单 | 年账单 分段控件 160×36 */}
+          <div
+            className="absolute"
+            style={{ left: "50%", top: "50%", transform: "translate(-50%, -50%)" }}
+          >
+            <div
+              className="flex rounded-full"
+              style={{
+                width: 160,
+                height: 36,
+                background: BORDER,
+                padding: 2,
+              }}
+            >
+              <div
+                className="flex-1 flex items-center justify-center rounded-full"
+                style={{ background: "#FFFFFF" }}
               >
-                {m === "month" ? "月账单" : "年账单"}
+                <span style={{ fontSize: 15, fontWeight: 600, color: "#000000" }}>
+                  月账单
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={handleYearTab}
+                className="flex-1 flex items-center justify-center rounded-full"
+                style={{ background: "transparent" }}
+              >
+                <span style={{ fontSize: 15, fontWeight: 400, color: MUTED }}>
+                  年账单
+                </span>
               </button>
-            ))}
+            </div>
           </div>
+        </div>
 
-          {/* 月份/年份选择器 */}
+        {/* ===== 2. 日期 + 筛选行 44px ===== */}
+        <div
+          className="flex items-center justify-between"
+          style={{ height: 44, padding: "0 20px" }}
+        >
+          {/* 月份选择器 */}
           <div className="flex items-center gap-1">
             <button
-              onClick={goPrev}
-              className="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center hover:bg-gray-50"
+              type="button"
+              onClick={goPrevMonth}
+              className="inline-flex items-center justify-center"
+              style={{ width: 28, height: 28 }}
+              aria-label="上一月"
             >
-              <ChevronLeft className="w-4 h-4 text-gray-500" />
+              <ChevronLeft className="h-4 w-4" style={{ color: MUTED }} />
             </button>
-            <span className="text-sm font-bold text-gray-900 min-w-[90px] text-center">
-              {currentYear}年{viewMode === "month" ? `${String(currentMonth).padStart(2, "0")}月` : ""}
+            <span
+              style={{
+                fontSize: 17,
+                fontWeight: 600,
+                color: "#000000",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {currentYear}年{String(currentMonth).padStart(2, "0")}月
             </span>
             <button
-              onClick={goNext}
-              className="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center hover:bg-gray-50"
+              type="button"
+              onClick={goNextMonth}
+              className="inline-flex items-center justify-center"
+              style={{ width: 28, height: 28 }}
+              aria-label="下一月"
             >
-              <ChevronRight className="w-4 h-4 text-gray-500" />
+              <ChevronRight className="h-4 w-4" style={{ color: MUTED }} />
+            </button>
+          </div>
+
+          {/* 支出 | 收入 分段控件 120×32 */}
+          <div
+            className="flex rounded-full"
+            style={{
+              width: 120,
+              height: 32,
+              background: BORDER,
+              padding: 2,
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => setTypeTab("expense")}
+              className="flex-1 flex items-center justify-center rounded-full"
+              style={{
+                background: typeTab === "expense" ? "#FFFFFF" : "transparent",
+              }}
+            >
+              <span
+                style={{
+                  fontSize: 15,
+                  fontWeight: typeTab === "expense" ? 600 : 400,
+                  color: typeTab === "expense" ? "#000000" : MUTED,
+                }}
+              >
+                支出
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setTypeTab("income")}
+              className="flex-1 flex items-center justify-center rounded-full"
+              style={{
+                background: typeTab === "income" ? "#FFFFFF" : "transparent",
+              }}
+            >
+              <span
+                style={{
+                  fontSize: 15,
+                  fontWeight: typeTab === "income" ? 600 : 400,
+                  color: typeTab === "income" ? "#000000" : MUTED,
+                }}
+              >
+                收入
+              </span>
             </button>
           </div>
         </div>
 
-        {/* ===== 统计摘要卡片 ===== */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-2xl shadow-sm p-5 mb-5"
+        {/* ===== 3. 汇总卡片 140px ===== */}
+        <div
+          className="mx-4 flex flex-col justify-center"
+          style={{
+            height: 140,
+            background: "#FFFFFF",
+            borderRadius: 16,
+            boxShadow: SHADOW_CARD,
+            padding: 16,
+          }}
         >
-          {/* 支出/收入 Tab */}
-          <div className="flex justify-end mb-3">
-            <div className="flex bg-gray-100 rounded-full p-0.5">
-              <button
-                onClick={() => setTypeTab("expense")}
-                className={`px-4 py-1 rounded-full text-xs font-medium transition-all ${
-                  typeTab === "expense" ? "bg-white shadow-sm text-[#FF3B30]" : "text-gray-500"
-                }`}
-              >
-                支出
-              </button>
-              <button
-                onClick={() => setTypeTab("income")}
-                className={`px-4 py-1 rounded-full text-xs font-medium transition-all ${
-                  typeTab === "income" ? "bg-white shadow-sm text-[#34C759]" : "text-gray-500"
-                }`}
-              >
-                收入
-              </button>
-            </div>
-          </div>
+          <p style={{ fontSize: 15, color: MUTED, margin: "0 0 8px 0" }}>
+            共{typeLabel} {txCount} 笔，合计
+          </p>
+          <p
+            style={{
+              fontSize: 34,
+              fontWeight: 700,
+              color: amountColor,
+              margin: "0 0 12px 0",
+              lineHeight: 1.2,
+            }}
+          >
+            ¥{fmtCompact(totalAmount)}
+          </p>
+          <p style={{ fontSize: 15, color: MUTED, margin: 0 }}>
+            {opponentCount} 笔{otherLabel}{" "}
+            <span style={{ color: isExpense ? INCOME : EXPENSE }}>
+              ¥{fmtCompact(opponentTotalFen)}
+            </span>
+            {"  |  结余 ¥"}
+            {fmtCompact(balance)}
+          </p>
+        </div>
 
-          {/* 合计金额 */}
-          {loading ? (
-            <div className="h-24 flex items-center justify-center">
-              <div className="w-6 h-6 border-2 border-gray-300 border-t-gray-500 rounded-full animate-spin" />
+        {/* ===== 4. 趋势区标题行 44px ===== */}
+        <div
+          className="flex items-center justify-between mx-4"
+          style={{ height: 44, marginTop: 16 }}
+        >
+          <span style={{ fontSize: 17, fontWeight: 600, color: "#000000" }}>
+            {typeLabel}月趋势图
+          </span>
+
+          {/* 柱状图 | 折线图 分段控件 120×28 */}
+          <div
+            className="flex rounded-full"
+            style={{
+              width: 120,
+              height: 28,
+              background: BORDER,
+              padding: 2,
+            }}
+          >
+            <div
+              className="flex-1 flex items-center justify-center rounded-full"
+              style={{
+                background: chartType === "bar" ? "#FFFFFF" : "transparent",
+              }}
+            >
+              <span
+                style={{
+                  fontSize: 13,
+                  fontWeight: chartType === "bar" ? 600 : 400,
+                  color: chartType === "bar" ? "#000000" : MUTED,
+                }}
+              >
+                柱状图
+              </span>
             </div>
-          ) : (
-            <>
-              <div className="text-center mb-4">
-                <div className="text-sm text-gray-500">
-                  共{typeTab === "expense" ? "支出" : "收入"} {txCount} 笔，合计
-                </div>
+            <button
+              type="button"
+              onClick={handleLineTab}
+              className="flex-1 flex items-center justify-center rounded-full"
+              style={{ background: "transparent" }}
+            >
+              <span style={{ fontSize: 13, fontWeight: 400, color: MUTED }}>
+                折线图
+              </span>
+            </button>
+          </div>
+        </div>
+
+        {/* ===== 5. 图表卡片 280px ===== */}
+        <div
+          className="mx-4 flex flex-col"
+          style={{
+            height: 280,
+            background: "#FFFFFF",
+            borderRadius: 16,
+            boxShadow: SHADOW_CARD,
+            padding: 16,
+          }}
+        >
+          {/* 日平均 */}
+          <p style={{ fontSize: 13, color: MUTED, margin: "0 0 12px 0" }}>
+            日平均 ¥{fmtCompact(Math.round(dailyAvg * 100))}
+          </p>
+
+          {/* 图表区 */}
+          <div className="flex-1 flex flex-col" style={{ position: "relative" }}>
+            {/* Grid + Bars 区域 */}
+            <div
+              className="flex-1 relative"
+              style={{ paddingLeft: 36, paddingBottom: 28 }}
+            >
+              {/* 网格线 */}
+              <div
+                className="flex flex-col justify-between"
+                style={{
+                  position: "absolute",
+                  left: 36,
+                  right: 0,
+                  top: 0,
+                  bottom: 28,
+                  pointerEvents: "none",
+                }}
+              >
+                {[0, 1, 2, 3, 4].map((i) => (
+                  <div key={i} style={{ height: 0.5, background: BORDER }} />
+                ))}
+              </div>
+
+              {/* Y 轴标签 */}
+              <div
+                className="flex flex-col justify-between"
+                style={{
+                  position: "absolute",
+                  left: 0,
+                  right: 0,
+                  top: 0,
+                  bottom: 28,
+                  pointerEvents: "none",
+                }}
+              >
+                {yLabels.map((v, i) => (
+                  <div key={i} style={{ textAlign: "right", paddingRight: 4 }}>
+                    <span style={{ fontSize: 10, color: DISABLED }}>{v}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* 柱子 */}
+              <div
+                className="relative h-full"
+                style={{ marginLeft: 4 }}
+              >
                 <div
-                  className="text-4xl font-extrabold mt-1 tracking-tight"
-                  style={{ color: chartColor }}
+                  className="absolute inset-x-0 bottom-0 flex items-end justify-around"
+                  style={{ height: "100%" }}
                 >
-                  {fmtYuan(totalAmount)}
+                  {segments.map((seg, i) => {
+                    const pct = yMax > 0 ? (seg.amount / yMax) * 100 : 0;
+                    const hasData = seg.amount > 0;
+                    return (
+                      <div
+                        key={i}
+                        style={{
+                          width: 24,
+                          height: `${pct}%`,
+                          background: amountColor,
+                          borderRadius: "4px 4px 0 0",
+                          opacity: hasData ? 1 : 0.15,
+                        }}
+                      />
+                    );
+                  })}
                 </div>
+                {/* X 轴底线 */}
+                <div
+                  className="absolute inset-x-0"
+                  style={{
+                    bottom: -1,
+                    height: 0.5,
+                    background: BORDER,
+                  }}
+                />
               </div>
+            </div>
 
-              {/* 对方统计 + 结余 */}
-              <div className="flex items-center justify-center gap-1 text-xs text-gray-500">
-                <span>{oppositeTxs.length} 笔{typeTab === "expense" ? "收入" : "支出"}</span>
-                <span className="font-medium text-gray-700">{fmtYuan(oppositeTotal)}</span>
-                <span className="mx-1">|</span>
-                <span>结余</span>
-                <span
-                  className="font-medium"
-                  style={{ color: balance >= 0 ? "#34C759" : "#FF3B30" }}
-                >
-                  {fmtYuan(balance)}
+            {/* X 轴标签 */}
+            <div
+              className="flex justify-around"
+              style={{ paddingLeft: 40, height: 28 }}
+            >
+              {segments.map((seg, i) => (
+                <span key={i} style={{ fontSize: 11, color: DISABLED }}>
+                  {seg.label}
                 </span>
-              </div>
-            </>
-          )}
-        </motion.div>
-
-        {/* ===== 趋势图 ===== */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.05 }}
-          className="bg-white rounded-2xl shadow-sm p-5 mb-5"
-        >
-          {/* 标题行 */}
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-semibold text-gray-700">
-              {typeTab === "expense" ? "支出" : "收入"}
-              {viewMode === "month" ? "月" : "年"}趋势图
-            </h3>
-            {/* 柱/折线切换 */}
-            <div className="flex bg-gray-100 rounded-full p-0.5">
-              <button
-                onClick={() => setChartType("bar")}
-                className={`p-1.5 rounded-full transition-all ${
-                  chartType === "bar" ? "bg-white shadow-sm text-gray-900" : "text-gray-400"
-                }`}
-              >
-                <BarChart3 className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => setChartType("line")}
-                className={`p-1.5 rounded-full transition-all ${
-                  chartType === "line" ? "bg-white shadow-sm text-gray-900" : "text-gray-400"
-                }`}
-              >
-                <LineChart className="w-4 h-4" />
-              </button>
+              ))}
             </div>
           </div>
+        </div>
 
-          {/* 日均/月均 */}
-          {chartData.length > 0 && chartData.some((d) => d.amount > 0) ? (
-            <div className="text-xs text-gray-500 mb-3">
-              {viewMode === "month" ? "日" : "月"}平均 {fmtYuanShort(avgAmount * 100)}
-            </div>
-          ) : null}
-
-          {/* 图表 */}
-          {chartData.length === 0 || chartData.every((d) => d.amount === 0) ? (
-            <div className="h-48 flex items-center justify-center text-sm text-gray-400">
-              没有数据
-            </div>
-          ) : (
-            <div className="h-52">
-              <ResponsiveContainer width="100%" height="100%">
-                {chartType === "bar" ? (
-                  <BarChart data={chartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#F2F2F7" />
-                    <XAxis
-                      dataKey="label"
-                      tick={{ fontSize: 11, fill: "#8E8E93" }}
-                      interval={xInterval}
-                      axisLine={false}
-                      tickLine={false}
-                    />
-                    <YAxis
-                      tick={{ fontSize: 11, fill: "#8E8E93" }}
-                      axisLine={false}
-                      tickLine={false}
-                      width={45}
-                    />
-                    <Tooltip
-                      formatter={(val) => [`￥${Number(val).toFixed(2)}`, typeTab === "expense" ? "支出" : "收入"]}
-                      contentStyle={{ borderRadius: 10, border: "none", boxShadow: "0 2px 12px rgba(0,0,0,0.1)", fontSize: 12 }}
-                    />
-                    <Bar dataKey="amount" fill={chartColor} radius={[4, 4, 0, 0]} maxBarSize={24} />
-                  </BarChart>
-                ) : (
-                  <ReLineChart data={chartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#F2F2F7" />
-                    <XAxis
-                      dataKey="label"
-                      tick={{ fontSize: 11, fill: "#8E8E93" }}
-                      interval={xInterval}
-                      axisLine={false}
-                      tickLine={false}
-                    />
-                    <YAxis
-                      tick={{ fontSize: 11, fill: "#8E8E93" }}
-                      axisLine={false}
-                      tickLine={false}
-                      width={45}
-                    />
-                    <Tooltip
-                      formatter={(val) => [`￥${Number(val).toFixed(2)}`, typeTab === "expense" ? "支出" : "收入"]}
-                      contentStyle={{ borderRadius: 10, border: "none", boxShadow: "0 2px 12px rgba(0,0,0,0.1)", fontSize: 12 }}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="amount"
-                      stroke={chartColor}
-                      strokeWidth={2}
-                      dot={{ fill: chartColor, r: 3, strokeWidth: 0 }}
-                      activeDot={{ r: 5 }}
-                    />
-                  </ReLineChart>
-                )}
-              </ResponsiveContainer>
-            </div>
-          )}
-        </motion.div>
-
-        {/* ===== 类别排行榜 ===== */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="bg-white rounded-2xl shadow-sm p-5 mb-5"
+        {/* ===== 6. 类别排行榜 ===== */}
+        <div className="mx-4" style={{ marginTop: 12 }}>
+          <span style={{ fontSize: 17, fontWeight: 600, color: "#000000" }}>
+            {typeLabel}类别排行榜
+          </span>
+        </div>
+        <div
+          className="mx-4"
+          style={{
+            background: "#FFFFFF",
+            borderRadius: 16,
+            boxShadow: SHADOW_CARD,
+            marginTop: 8,
+          }}
         >
-          <h3 className="text-sm font-semibold text-gray-700 mb-4">
-            {typeTab === "expense" ? "支出" : "收入"}类别排行榜
-          </h3>
-
           {categoryRanking.length === 0 ? (
-            <div className="py-8 text-center text-sm text-gray-400">没有数据</div>
+            <div
+              className="flex items-center justify-center"
+              style={{ height: 80 }}
+            >
+              <span style={{ fontSize: 17, color: DISABLED }}>没有数据</span>
+            </div>
           ) : (
-            <div className="space-y-3">
+            <div className="flex flex-col" style={{ padding: 16, gap: 12 }}>
               {categoryRanking.map((item) => {
                 const IconComp = getIcon(item.icon);
-                const pct = maxCatAmount > 0 ? (item.amount / maxCatAmount) * 100 : 0;
+                const pct =
+                  maxCatAmount > 0 ? (item.amount / maxCatAmount) * 100 : 0;
                 return (
                   <div key={item.categoryId} className="flex items-center gap-3">
+                    {/* 图标底 36×36 */}
                     <div
-                      className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0"
-                      style={{ backgroundColor: `${item.color}18` }}
+                      className="flex items-center justify-center rounded-full shrink-0"
+                      style={{
+                        width: 36,
+                        height: 36,
+                        background: `${item.color}18`,
+                      }}
                     >
-                      <IconComp className="w-4 h-4" style={{ color: item.color }} />
+                      <IconComp
+                        style={{ width: 16, height: 16, color: item.color }}
+                      />
                     </div>
+                    {/* 文字 + 进度条 */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-medium text-gray-900">{item.name}</span>
-                        <span className="text-sm font-semibold text-gray-900">{fmtYuan(item.amount)}</span>
+                        <span
+                          className="truncate"
+                          style={{
+                            fontSize: 14,
+                            fontWeight: 500,
+                            color: "#000000",
+                          }}
+                        >
+                          {item.name}
+                        </span>
+                        <span
+                          className="shrink-0 ml-2"
+                          style={{
+                            fontSize: 14,
+                            fontWeight: 600,
+                            color: "#000000",
+                          }}
+                        >
+                          ¥{fmtCompact(item.amount)}
+                        </span>
                       </div>
-                      <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                      {/* 进度条 */}
+                      <div
+                        className="rounded-full overflow-hidden"
+                        style={{
+                          height: 6,
+                          background: "#F2F2F7",
+                        }}
+                      >
                         <div
-                          className="h-full rounded-full transition-all duration-500"
-                          style={{ width: `${pct}%`, backgroundColor: item.color }}
+                          className="h-full rounded-full"
+                          style={{
+                            width: `${pct}%`,
+                            background: item.color,
+                          }}
                         />
                       </div>
                     </div>
@@ -501,54 +667,92 @@ export default function ChartPage() {
               })}
             </div>
           )}
-        </motion.div>
+        </div>
 
-        {/* ===== 明细排行榜 Top 10 ===== */}
-        {typeTab === "expense" && (
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.15 }}
-            className="bg-white rounded-2xl shadow-sm p-5"
-          >
-            <h3 className="text-sm font-semibold text-gray-700 mb-4">
-              支出明细排行榜（前10）
-            </h3>
-
-            {detailRanking.length === 0 ? (
-              <div className="py-8 text-center text-sm text-gray-400">没有数据</div>
-            ) : (
-              <div className="space-y-2">
-                {detailRanking.map((tx, idx) => {
-                  const cat = getCategoryInfo(tx.categoryId);
-                  const IconComp = getIcon(cat?.icon || "help-circle");
-                  const catColor = cat?.color || "#8E8E93";
-                  return (
-                    <div key={tx.id} className="flex items-center gap-3 py-1.5">
-                      <span className="text-xs font-bold text-gray-400 w-5 flex-shrink-0">
-                        {idx + 1}
-                      </span>
-                      <div
-                        className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-                        style={{ backgroundColor: `${catColor}18` }}
-                      >
-                        <IconComp className="w-4 h-4" style={{ color: catColor }} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm text-gray-900 truncate">
-                          {tx.note || cat?.name || "未分类"}
-                        </div>
-                      </div>
-                      <span className="text-sm font-semibold text-[#FF3B30] flex-shrink-0">
-                        {fmtYuan(tx.amount)}
-                      </span>
+        {/* ===== 7. 明细排行榜 ===== */}
+        <div className="mx-4" style={{ marginTop: 12 }}>
+          <span style={{ fontSize: 17, fontWeight: 600, color: "#000000" }}>
+            {typeLabel}明细排行榜（前10）
+          </span>
+        </div>
+        <div
+          className="mx-4"
+          style={{
+            background: "#FFFFFF",
+            borderRadius: 16,
+            boxShadow: SHADOW_CARD,
+            marginTop: 8,
+            marginBottom: 24,
+          }}
+        >
+          {detailRanking.length === 0 ? (
+            <div
+              className="flex items-center justify-center"
+              style={{ height: 80 }}
+            >
+              <span style={{ fontSize: 17, color: DISABLED }}>没有数据</span>
+            </div>
+          ) : (
+            <div className="flex flex-col" style={{ padding: 16, gap: 8 }}>
+              {detailRanking.map((tx, idx) => {
+                const cat = tx.categoryId
+                  ? categoryMap.get(tx.categoryId)
+                  : undefined;
+                const IconComp = getIcon(cat?.icon || "help-circle");
+                const catColor = cat?.color || "#8E8E93";
+                const displayName = tx.note || cat?.name || "未分类";
+                return (
+                  <div key={tx.id} className="flex items-center gap-3">
+                    {/* 名次 */}
+                    <span
+                      className="shrink-0 text-center"
+                      style={{
+                        width: 20,
+                        fontSize: 12,
+                        fontWeight: 700,
+                        color: DISABLED,
+                      }}
+                    >
+                      {idx + 1}
+                    </span>
+                    {/* 图标底 32×32 */}
+                    <div
+                      className="flex items-center justify-center rounded-lg shrink-0"
+                      style={{
+                        width: 32,
+                        height: 32,
+                        background: `${catColor}18`,
+                      }}
+                    >
+                      <IconComp
+                        style={{ width: 16, height: 16, color: catColor }}
+                      />
                     </div>
-                  );
-                })}
-              </div>
-            )}
-          </motion.div>
-        )}
+                    {/* 描述 */}
+                    <span
+                      className="flex-1 truncate"
+                      style={{ fontSize: 14, color: "#000000" }}
+                    >
+                      {displayName}
+                    </span>
+                    {/* 金额 */}
+                    <span
+                      className="shrink-0"
+                      style={{
+                        fontSize: 14,
+                        fontWeight: 600,
+                        color: amountColor,
+                      }}
+                    >
+                      ¥{fmtFull(tx.amount)}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
       </div>
     </div>
   );

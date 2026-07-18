@@ -8,6 +8,7 @@ export interface Ledger {
   type: string;
   currency: string;
   coverIndex?: number;
+  note?: string;
   createdAt: number;
 }
 

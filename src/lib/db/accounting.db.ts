@@ -147,7 +147,11 @@ export async function getAllLedgers(): Promise<Ledger[]> {
 }
 
 export async function getDefaultLedger(): Promise<Ledger | undefined> {
-  return accountingDB.ledgers.orderBy('createdAt').first();
+  const ledgers = await accountingDB.ledgers.toArray();
+  if (ledgers.length === 0) return undefined;
+  const dl = ledgers.find((l) => l.isDefault);
+  if (dl) return dl;
+  return ledgers.sort((a, b) => a.createdAt - b.createdAt)[0];
 }
 
 // ─── Accounts CRUD ───────────────────────────────────────────

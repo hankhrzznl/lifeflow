@@ -10,6 +10,9 @@ export interface Goal {
   progress: number;     // 0-100
   status: 'active' | 'completed' | 'paused' | 'archived';
   completedAt?: number; // 完成时间戳(ms)，status→completed 时写入
+  goalType?: 'count' | 'habit';   // 目标类型，默认 'count'
+  targetCount?: number;           // 完成 N 次，默认 5
+  note?: string;                  // 备注，默认 ''
   createdAt: number;
 }
 

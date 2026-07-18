@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Check, Sparkles, Calendar } from "lucide-react";
+import { ChevronRight, Minus, Plus, Sparkles, Check } from "lucide-react";
 import { useEfficiencyStore } from "@/lib/store/efficiencyStore";
 import { efficiencyDB, type ScheduleTask } from "@/lib/db/efficiency.db";
 import BottomSheet from "@/components/common/BottomSheet";
@@ -11,24 +11,49 @@ import { plannerBrain } from "@/lib/brains/planner";
 import { showToast } from "@/components/ui/Toast";
 
 // ============================================================
-// 设计稿基准: lifeflow-goals/pages/create-goal.html
-// 白底 / X关闭 + 居中Tab / 28pt大标题 / 56pt输入卡 / 50pt继续按钮
+// 设计令牌
 // ============================================================
 
-const FONT =
-  "-apple-system,BlinkMacSystemFont,'SF Pro Display','SF Pro Text','Segoe UI',sans-serif";
-const BRAND = "#5856D6";
-const MUTED = "#8E8E93";
-const BORDER = "#E5E5EA";
-const STRONG = "#C7C7CC";
-
-const COLORS = ["#5856D6", "#34C759", "#FF9500", "#007AFF", "#FF2D55", "#AF52DE"];
+const ACCENT = "#5865F2";
+const NEW_COLORS = ["#5865F2", "#FF9500", "#34C759", "#E94057"];
 
 function getDefaultDeadline(): string {
   const d = new Date();
   d.setDate(d.getDate() + 30);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
+
+// ============================================================
+// iOS Switch
+// ============================================================
+
+function Toggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className="shrink-0 relative"
+      style={{
+        width: 51,
+        height: 31,
+        borderRadius: 15.5,
+        background: on ? ACCENT : "#E5E5E5",
+        transition: "background 200ms",
+      }}
+    >
+      <motion.span
+        className="absolute bg-white rounded-full"
+        style={{ top: 2, width: 27, height: 27, boxShadow: "0 1px 3px rgba(0,0,0,0.15)" }}
+        animate={{ left: on ? 22 : 2 }}
+        transition={{ type: "spring", stiffness: 500, damping: 30 }}
+      />
+    </button>
+  );
+}
+
+// ============================================================
+// 主组件
+// ============================================================
 
 function CreateGoalInner() {
   const router = useRouter();
@@ -39,12 +64,15 @@ function CreateGoalInner() {
   const { addGoal, confirmBreakdown, loadGoals } = useEfficiencyStore();
 
   const [title, setTitle] = useState("");
-  const [color, setColor] = useState(COLORS[0]);
+  const [color, setColor] = useState(NEW_COLORS[0]);
+  const [goalType, setGoalType] = useState<"count" | "habit">("count");
+  const [targetCount, setTargetCount] = useState(5);
   const [deadline, setDeadline] = useState(getDefaultDeadline());
+  const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [loaded, setLoaded] = useState(!isEdit);
+  const [focused, setFocused] = useState(false);
 
-  const [paletteOpen, setPaletteOpen] = useState(false);
   const [useAI, setUseAI] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewTasks, setPreviewTasks] = useState<Omit<ScheduleTask, "id" | "createdAt">[]>([]);
@@ -59,8 +87,11 @@ function CreateGoalInner() {
       if (cancelled) return;
       if (goal) {
         setTitle(goal.title);
-        setColor(goal.color || COLORS[0]);
+        setColor(goal.color || NEW_COLORS[0]);
+        setGoalType(goal.goalType || "count");
+        setTargetCount(goal.targetCount || 5);
         setDeadline(goal.deadline || getDefaultDeadline());
+        setNote(goal.note || "");
       } else {
         showToast({ type: "error", message: "目标不存在" });
       }
@@ -75,17 +106,22 @@ function CreateGoalInner() {
     if (!canSubmit) return;
     setSaving(true);
     try {
+      const data = {
+        title: title.trim(),
+        color,
+        deadline,
+        goalType,
+        targetCount,
+        note: note.trim(),
+      };
+
       if (isEdit && editId) {
-        await efficiencyDB.goals.update(editId, {
-          title: title.trim(),
-          color,
-          deadline,
-        });
+        await efficiencyDB.goals.update(editId, data);
         await loadGoals();
         showToast({ type: "success", message: "已保存" });
         router.push("/efficiency");
       } else if (useAI) {
-        const goalId = await addGoal({ title: title.trim(), color, deadline, status: "active" });
+        const goalId = await addGoal({ ...data, status: "active" });
         const strategy = plannerBrain.analyze(title.trim());
         const tasks = plannerBrain.generateTasks(strategy, goalId);
         setPreviewTasks(tasks);
@@ -94,198 +130,227 @@ function CreateGoalInner() {
         setPreviewOpen(true);
         setSaving(false);
       } else {
-        await addGoal({ title: title.trim(), color, deadline, status: "active" });
+        await addGoal({ ...data, status: "active" });
         router.push("/efficiency");
       }
     } catch {
       setSaving(false);
       showToast({ type: "error", message: "保存失败" });
     }
-  }, [canSubmit, isEdit, editId, title, color, deadline, useAI, addGoal, loadGoals, router]);
+  }, [canSubmit, isEdit, editId, title, color, deadline, goalType, targetCount, note, useAI, addGoal, loadGoals, router]);
 
   if (!loaded) return null;
 
   return (
-    <div className="min-h-screen bg-white" style={{ fontFamily: FONT }}>
-      {/* ===== Top Bar（设计稿: X + 创建目标/模板 Tab） ===== */}
-      <div className="relative flex items-center justify-center px-[16pt] mt-[24pt]" style={{ height: "28pt" }}>
-        <button
-          type="button"
-          onClick={() => router.push("/efficiency")}
-          aria-label="关闭"
-          className="absolute left-[16pt] w-[24pt] h-[24pt] flex items-center justify-center"
-        >
-          <X className="w-[24pt] h-[24pt]" style={{ color: BRAND }} strokeWidth={2.5} />
-        </button>
-        <div className="flex gap-[24pt]">
-          <span className="relative text-[15pt] font-semibold leading-[20pt]" style={{ color: BRAND }}>
-            {isEdit ? "编辑目标" : "创建目标"}
-            <span
-              className="absolute left-0 right-0"
-              style={{ bottom: "-4pt", height: "2pt", background: BRAND, borderRadius: "1pt" }}
-            />
+    <div className="min-h-screen bg-[#FAFAFA]">
+      {/* ===== 页头 ===== */}
+      <div className="bg-white border-b border-[#EAEAEA]">
+        <div className="h-[44px] px-4 flex items-center justify-between relative max-w-[430px] mx-auto">
+          <button
+            type="button"
+            onClick={() => router.push("/efficiency")}
+            className="text-[17px] text-[#86868B]"
+          >
+            取消
+          </button>
+          <span className="absolute left-1/2 -translate-x-1/2 text-[17px] font-semibold text-[#1D1D1F]">
+            {isEdit ? "编辑目标" : "新建目标"}
           </span>
           <button
             type="button"
-            onClick={() => showToast({ type: "info", message: "目标模板开发中" })}
-            className="text-[15pt] leading-[20pt]"
-            style={{ color: MUTED }}
+            onClick={handleSave}
+            disabled={!canSubmit || saving}
+            className="text-[17px] font-medium transition-opacity"
+            style={{ color: canSubmit ? ACCENT : "#9F9FA0", opacity: saving ? 0.5 : 1 }}
           >
-            模板
+            保存
           </button>
         </div>
       </div>
 
-      {/* ===== Content ===== */}
-      <div className="px-[16pt]" style={{ paddingTop: "64pt" }}>
-        <h1 className="text-[28pt] font-bold leading-[34pt] tracking-[0.36pt] text-black m-0">
-          {isEdit ? "修改你的目标" : "你想达成什么目标？"}
-        </h1>
-
-        {/* 输入卡（设计稿: 56pt / 色点 40pt / 聚焦品牌色边框） */}
-        <div
-          className="flex items-center bg-white rounded-[12pt] px-[16pt] transition-colors"
-          style={{
-            marginTop: "24pt",
-            height: "56pt",
-            border: `1pt solid ${paletteOpen ? BRAND : BORDER}`,
-          }}
+      {/* ===== 卡片组 ===== */}
+      <div className="max-w-[430px] mx-auto px-4 pt-6 flex flex-col gap-6">
+        {/* 卡片 1 · 目标名称 */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white rounded-[8px] border border-[#EBEBEB] px-4 py-4"
         >
-          <button
-            type="button"
-            aria-label="选择颜色"
-            onClick={() => setPaletteOpen((p) => !p)}
-            className="shrink-0 mr-[12pt] flex items-center justify-center transition-transform active:scale-90"
-            style={{ width: "40pt", height: "40pt", borderRadius: "50%", background: color }}
+          <p className="text-[14px] text-[#86868B] mb-2">目标名称</p>
+          <div
+            className="h-12 rounded-[10px] bg-[#F5F5F7] px-4 flex items-center"
+            style={focused ? { boxShadow: "0 0 0 1px #5865F2" } : undefined}
           >
-            {paletteOpen && <Check className="w-[18pt] h-[18pt]" style={{ color: "#FFF" }} strokeWidth={3} />}
-          </button>
-          <input
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="目标名称"
-            autoFocus={!isEdit}
-            className="flex-1 min-w-0 border-none outline-none text-[17pt] text-black bg-transparent placeholder:text-[#8E8E93]"
-            style={{ caretColor: BRAND }}
-            onFocus={(e) => {
-              e.currentTarget.parentElement!.style.borderColor = BRAND;
-            }}
-            onBlur={(e) => {
-              if (!paletteOpen) e.currentTarget.parentElement!.style.borderColor = BORDER;
-            }}
-          />
-        </div>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="输入目标名称"
+              autoFocus={!isEdit}
+              onFocus={() => setFocused(true)}
+              onBlur={() => setFocused(false)}
+              className="flex-1 bg-transparent outline-none text-[17px] text-[#1D1D1F] placeholder-[#9F9FA0]"
+              style={{ caretColor: ACCENT }}
+            />
+          </div>
+        </motion.div>
 
-        {/* 颜色面板（点色点展开） */}
-        <AnimatePresence initial={false}>
-          {paletteOpen && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.25, ease: [0.32, 0.72, 0, 1] }}
-              className="overflow-hidden"
-            >
-              <div className="flex gap-[12pt] pt-[16pt] px-[4pt]">
-                {COLORS.map((c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    aria-label={c}
-                    onClick={() => {
-                      setColor(c);
-                      setPaletteOpen(false);
-                    }}
-                    className="relative flex items-center justify-center transition-transform active:scale-90"
-                    style={{
-                      width: "32pt",
-                      height: "32pt",
-                      borderRadius: "50%",
-                      background: c,
-                      boxShadow: color === c ? `0 0 0 2pt #FFF, 0 0 0 3.5pt ${c}` : undefined,
-                    }}
-                  >
-                    {color === c && <Check className="w-[14pt] h-[14pt]" style={{ color: "#FFF" }} strokeWidth={3} />}
-                  </button>
-                ))}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* 截止日期（同一卡片语言） */}
-        <div
-          className="relative flex items-center bg-white rounded-[12pt] px-[16pt] mt-[12pt]"
-          style={{ height: "56pt", border: `1pt solid ${BORDER}` }}
+        {/* 卡片 2 · 项目标签 */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
+          className="bg-white rounded-[8px] border border-[#EBEBEB] px-4 pt-4 pb-[18px]"
         >
-          <Calendar className="w-[20pt] h-[20pt] shrink-0 mr-[12pt]" style={{ color: "#FF6B6B" }} />
-          <span className="text-[17pt] text-black">截止日期</span>
-          <span className="flex-1 text-right text-[15pt]" style={{ color: MUTED }}>
-            {deadline.replace(/-/g, "/")}
-          </span>
+          <div
+            className="flex items-center justify-between cursor-pointer"
+            onClick={() => showToast({ type: "info", message: "功能开发中" })}
+          >
+            <span className="text-[14px] text-[#86868B]">项目标签</span>
+            <ChevronRight className="w-4 h-4 text-[#86868B]" />
+          </div>
+          {/* 色点行 + 横线 */}
+          <div className="relative mt-[30px] flex items-center gap-4">
+            <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-px bg-[#EBEBEB]" />
+            {NEW_COLORS.map((c) => {
+              const selected = color === c;
+              return (
+                <motion.button
+                  key={c}
+                  type="button"
+                  whileTap={{ scale: 0.85 }}
+                  onClick={() => setColor(c)}
+                  className="relative z-10 w-2 h-2 rounded-full flex items-center justify-center"
+                  style={{
+                    backgroundColor: c,
+                    boxShadow: selected
+                      ? `0 0 0 2px #FFFFFF, 0 0 0 4px ${c}`
+                      : undefined,
+                  }}
+                >
+                  {selected && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
+                </motion.button>
+              );
+            })}
+          </div>
+        </motion.div>
+
+        {/* 卡片 3 · 目标类型 */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="bg-white rounded-[8px] border border-[#EBEBEB] px-4 pt-4 pb-4"
+        >
+          <p className="text-[14px] text-[#86868B] mb-4">目标类型</p>
+
+          {/* 分段控件 */}
+          <div className="h-10 w-full rounded-[10px] bg-[#F5F5F7] p-[2px] flex">
+            {(["count", "habit"] as const).map((type) => {
+              const active = goalType === type;
+              return (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => setGoalType(type)}
+                  className="flex-1 rounded-[8px] text-[14px] transition-colors"
+                  style={{
+                    color: active ? ACCENT : "#86868B",
+                    fontWeight: active ? 500 : 400,
+                    background: active ? "#EEF0FF" : "transparent",
+                  }}
+                >
+                  {type === "count" ? "次数目标" : "习惯目标"}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* 步进器行 */}
+          <div className="flex items-center justify-between mt-5">
+            <span className="text-[17px] text-[#1D1D1F]">
+              完成 <span className="font-semibold">{targetCount}</span> 次
+            </span>
+            <div className="flex items-center gap-3">
+              <motion.button
+                whileTap={{ scale: 0.9 }}
+                type="button"
+                onClick={() => setTargetCount((n) => Math.max(1, n - 1))}
+                disabled={targetCount <= 1}
+                className="w-8 h-8 rounded-full bg-[#5865F2] flex items-center justify-center transition-opacity"
+                style={{ opacity: targetCount <= 1 ? 0.4 : 1 }}
+              >
+                <Minus className="w-4 h-4 text-white" />
+              </motion.button>
+              <motion.button
+                whileTap={{ scale: 0.9 }}
+                type="button"
+                onClick={() => setTargetCount((n) => Math.min(999, n + 1))}
+                className="w-8 h-8 rounded-full bg-[#5865F2] flex items-center justify-center"
+              >
+                <Plus className="w-4 h-4 text-white" />
+              </motion.button>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* 卡片 4 · 截止日期 */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="bg-white rounded-[8px] border border-[#EBEBEB] px-4 h-[76px] flex items-center justify-between relative"
+        >
+          <span className="text-[14px] text-[#86868B]">截止日期</span>
+          <div className="flex items-center gap-1">
+            <span className="text-[15px] text-[#1D1D1F]">{deadline}</span>
+            <ChevronRight className="w-4 h-4 text-[#86868B]" />
+          </div>
           <input
             type="date"
             value={deadline}
             onChange={(e) => e.target.value && setDeadline(e.target.value)}
             className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
           />
-        </div>
+        </motion.div>
 
-        {/* 智能拆解（编辑模式隐藏） */}
+        {/* 卡片 5 · 备注 */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="bg-white rounded-[8px] border border-[#EBEBEB] px-4 pt-4 pb-4"
+        >
+          <p className="text-[14px] text-[#86868B] mb-2">备注</p>
+          <textarea
+            rows={3}
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="添加备注…"
+            className="w-full rounded-[10px] bg-[#F5F5F7] px-4 py-3 text-[14px] text-[#1D1D1F] placeholder-[#9F9FA0] resize-none outline-none"
+          />
+        </motion.div>
+
+        {/* 卡片 6 · 智能拆解（仅新建模式） */}
         {!isEdit && (
-          <div
-            className="bg-white rounded-[12pt] px-[16pt] pt-[16pt] pb-[12pt] mt-[12pt]"
-            style={{ border: `1pt solid ${BORDER}` }}
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.25 }}
+            className="bg-white rounded-[8px] border border-[#EBEBEB] px-4 py-4"
           >
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-[8pt]">
-                <Sparkles className="w-[20pt] h-[20pt]" style={{ color: BRAND }} />
-                <span className="text-[17pt] text-black">智能拆解</span>
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-[#5865F2]" />
+                <span className="text-[15px] font-medium text-[#1D1D1F]">智能拆解</span>
               </div>
-              <button
-                type="button"
-                onClick={() => setUseAI(!useAI)}
-                className="shrink-0 relative"
-                style={{
-                  width: "51pt",
-                  height: "31pt",
-                  borderRadius: "15.5pt",
-                  background: useAI ? "#34C759" : BORDER,
-                  transition: "background 200ms",
-                }}
-              >
-                <motion.span
-                  className="absolute bg-white rounded-full"
-                  style={{ top: "2pt", width: "27pt", height: "27pt", boxShadow: "0 1px 3px rgba(0,0,0,0.15)" }}
-                  animate={{ left: useAI ? "22pt" : "2pt" }}
-                  transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                />
-              </button>
+              <Toggle on={useAI} onToggle={() => setUseAI((v) => !v)} />
             </div>
-            <div className="mt-[4pt]">
-              <span className="text-[13pt] leading-[18pt]" style={{ color: MUTED }}>
-                开启后自动将目标拆解为多阶段任务
-              </span>
-            </div>
-          </div>
+            <p className="text-[13px] text-[#86868B] mt-1">
+              开启后自动将目标拆解为多阶段任务
+            </p>
+          </motion.div>
         )}
-
-        {/* 继续按钮（设计稿: 50pt / 灰色禁用 → 品牌色可用） */}
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={!canSubmit}
-          className="w-full rounded-[12pt] text-[17pt] font-medium transition-colors"
-          style={{
-            marginTop: "32pt",
-            height: "50pt",
-            background: canSubmit ? BRAND : BORDER,
-            color: canSubmit ? "#FFFFFF" : STRONG,
-          }}
-        >
-          {saving ? "保存中…" : isEdit ? "保存" : "继续"}
-        </button>
       </div>
 
       {/* ===== 智能拆解预览 ===== */}
@@ -299,8 +364,8 @@ function CreateGoalInner() {
       >
         {strategyInfo && (
           <div className="flex items-center gap-2 mb-3 px-1">
-            <Sparkles className="w-4 h-4" style={{ color: BRAND }} />
-            <span className="text-sm font-medium" style={{ color: BRAND }}>{strategyInfo.label}</span>
+            <Sparkles className="w-4 h-4 text-[#5865F2]" />
+            <span className="text-sm font-medium text-[#5865F2]">{strategyInfo.label}</span>
             <span className="text-xs text-gray-400">置信度 {strategyInfo.confidence}%</span>
           </div>
         )}
@@ -309,7 +374,7 @@ function CreateGoalInner() {
             <div key={i} className="flex items-start gap-3 p-3 rounded-xl bg-gray-50">
               <div
                 className="w-1.5 h-1.5 rounded-full mt-2 flex-shrink-0"
-                style={{ backgroundColor: task.isImportant ? "#FF9500" : BRAND }}
+                style={{ backgroundColor: task.isImportant ? "#FF9500" : "#5865F2" }}
               />
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium text-gray-900 truncate">{task.title}</div>
@@ -328,8 +393,7 @@ function CreateGoalInner() {
             setPreviewOpen(false);
             router.push("/efficiency");
           }}
-          className="w-full py-3 rounded-xl text-white font-medium text-sm"
-          style={{ backgroundColor: BRAND }}
+          className="w-full py-3 rounded-xl text-white font-medium text-sm bg-[#5865F2]"
         >
           确认并保存 ({previewTasks.length} 个任务)
         </button>

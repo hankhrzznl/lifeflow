@@ -3,8 +3,10 @@
 import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import { useLiveQuery } from "dexie-react-hooks";
 import { Calendar, Pencil, Delete } from "lucide-react";
 import { useAccountingStore } from "@/lib/store/accountingStore";
+import { getAllCategories } from "@/lib/db/accounting.db";
 import type { Category } from "@/lib/db/accounting.db";
 import { CategoryIcon } from "@/components/accounting/CategoryIcon";
 import { showToast } from "@/components/ui/Toast";
@@ -31,7 +33,13 @@ function formatRaw(raw: string): string {
 // ============================================================
 export default function RecordPage() {
   const router = useRouter();
-  const { accounts, categories, defaultLedgerId, loadData, addTransaction } = useAccountingStore();
+  const { accounts, defaultLedgerId, loadData, addTransaction } = useAccountingStore();
+
+  // 分类直接用 useLiveQuery 订阅（比 store 更实时可靠）
+  const allCategories = useLiveQuery(() => getAllCategories(), [], [] as Category[]);
+
+  // 首次加载：store 的 loadData 负责播种数据，这里只做初始化触发
+  useEffect(() => { loadData(); }, [loadData]);
 
   const [type, setType] = useState<"expense" | "income">("expense");
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
@@ -45,8 +53,8 @@ export default function RecordPage() {
   useEffect(() => { loadData(); }, [loadData]);
 
   const visibleCategories = useMemo(
-    () => (categories ?? []).filter((c) => c.type === type),
-    [categories, type],
+    () => (allCategories ?? []).filter((c) => c.type === type),
+    [allCategories, type],
   );
 
   useEffect(() => { setSelectedCategory(null); }, [type]);

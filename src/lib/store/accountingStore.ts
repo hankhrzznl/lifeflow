@@ -137,7 +137,8 @@ export const useAccountingStore = create<AccountingState>()((set, get) => ({
         monthExpense: monthStats.expense,
         loading: false,
       });
-    } catch {
+    } catch (e) {
+      console.error("accountingStore.loadData failed:", e);
       set({ loading: false });
     }
   },

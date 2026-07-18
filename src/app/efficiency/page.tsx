@@ -82,10 +82,9 @@ export default function EfficiencyPage() {
     (goal: Goal) => {
       if (longPressed.current) { longPressed.current = false; return; }
       if (quickGoalId) { setQuickGoalId(null); return; }
-      setSheetGoal(goal);
-      setConfirmDelete(false);
+      router.push(`/efficiency/goals/${goal.id}`);
     },
-    [quickGoalId],
+    [router, quickGoalId],
   );
 
   const handleQuickAction = useCallback(

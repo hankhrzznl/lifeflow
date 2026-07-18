@@ -84,6 +84,7 @@ export interface ScheduleTask {
   dailyMin?: number;
   progressCalc?: 'sum' | 'average';
   hasSubTasks?: boolean;
+  progressCurrent?: number;   // 当前进度值（手动更新）
   createdAt: number;
 }
 

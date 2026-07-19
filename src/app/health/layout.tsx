@@ -51,9 +51,12 @@ export default function HealthLayout({ children }: { children: React.ReactNode }
     <div className="min-h-screen bg-[#FAFAFA]">
       {/* 页头 + pill 导航仅总览页渲染 */}
       {isHome && (
-        <header className="px-4 pt-9 pb-0">
+        <header className="px-4 pt-5 pb-0">
           <div className="flex items-end justify-between">
-            <h1 className="text-[32px] font-bold tracking-[-0.02em] text-[#1D1D1F]">健康</h1>
+            <div>
+              <h1 className="text-[34px] font-bold tracking-[-0.02em] text-[#1D1D1F]">健康</h1>
+              <p className="text-[15px] mt-1" style={{ color: "#8E8E93" }}>健康追踪 · 数据总览</p>
+            </div>
             <span className="text-[15px] text-[#86868B]">
               {(() => {
                 const d = new Date();

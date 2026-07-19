@@ -68,6 +68,7 @@ export default function HabitsPage() {
         </button>
         <h1 className="text-[34px] font-bold tracking-[-0.02em] leading-tight flex-1">习惯打卡</h1>
       </div>
+      <p className="text-[15px] mb-4" style={{ color: "#8E8E93" }}>每日坚持 · 持续打卡</p>
 
       {/* 添加 */}
       {showAdd ? (

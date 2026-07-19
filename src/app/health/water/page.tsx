@@ -121,9 +121,9 @@ export default function WaterPage() {
             <ChevronLeft className="w-6 h-6 text-[#1D1D1F]" />
           </div>
         </div>
-        <div className="px-4 pt-5 pb-8 flex flex-col gap-5">
+        <div className="px-4 pt-5 pb-6 flex flex-col gap-5">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="bg-white rounded-[16px] border border-[#E5E5E5] p-4 animate-pulse">
+            <div key={i} className="bg-white rounded-xl p-4 animate-pulse" style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
               <div className="h-5 w-1/3 bg-[#F5F5F5] rounded mb-3" />
               <div className="h-8 w-2/3 bg-[#F5F5F5] rounded" />
             </div>
@@ -154,7 +154,7 @@ export default function WaterPage() {
         {/* 英雄卡 · 今日饮水 */}
         <motion.div
           initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-[16px] border border-[#E5E5E5] p-4 flex flex-col items-center"
+          className="bg-white rounded-xl p-4 flex flex-col items-center" style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}
         >
           <Droplets className="w-6 h-6 text-[#6366F1]" />
           <span className="mt-3 text-[34px] font-bold text-[#1D1D1F]">
@@ -201,7 +201,7 @@ export default function WaterPage() {
         <motion.div
           initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="bg-white rounded-[16px] border border-[#E5E5E5] p-4 flex flex-col"
+          className="bg-white rounded-xl p-4 flex flex-col" style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}
         >
           <h2 className="text-[17px] font-semibold text-[#1D1D1F] mb-3">目标设置</h2>
 
@@ -257,7 +257,7 @@ export default function WaterPage() {
         <motion.div
           initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15 }}
-          className="bg-white rounded-[16px] border border-[#E5E5E5] p-4 flex flex-col"
+          className="bg-white rounded-xl p-4 flex flex-col" style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}
         >
           {/* 提醒间隔行 */}
           <div className="flex items-center justify-between">
@@ -296,7 +296,7 @@ export default function WaterPage() {
         <motion.div
           initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="bg-white rounded-[16px] border border-[#E5E5E5] p-4 flex flex-col"
+          className="bg-white rounded-xl p-4 flex flex-col" style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}
         >
           <h2 className="text-[17px] font-semibold text-[#1D1D1F] mb-1">今日记录</h2>
           {sortedLogs.length === 0 ? (

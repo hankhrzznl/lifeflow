@@ -226,8 +226,9 @@ export default function EfficiencyPage() {
   return (
     <div>
       {/* ===== Header ===== */}
-      <div className="px-4 pt-[56px]">
+      <div className="px-4 pt-5">
         <h1 className="text-[34px] font-bold text-[#1D1D1F]">效率</h1>
+        <p className="text-[15px] mt-1" style={{ color: "#8E8E93" }}>项目 · 目标 · 任务</p>
       </div>
 
       {/* ===== Project 标签筛选 ===== */}

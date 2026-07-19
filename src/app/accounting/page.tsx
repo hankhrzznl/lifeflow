@@ -140,8 +140,11 @@ export default function AccountingPage() {
   return (
     <div className="pb-6">
       {/* ===== C1. 标题行 ===== */}
-      <div className="px-4 pt-10 flex items-center justify-between">
-        <h1 className="text-[28px] font-bold text-[#1D1D1F] leading-none">记账</h1>
+      <div className="px-4 pt-5 flex items-center justify-between">
+        <div>
+          <h1 className="text-[34px] font-bold text-[#1D1D1F] tracking-[-0.02em] leading-tight">记账</h1>
+          <p className="text-[15px] mt-1" style={{ color: "#8E8E93" }}>明细记录 · 收支一览</p>
+        </div>
         <div className="relative">
           <button
             type="button"

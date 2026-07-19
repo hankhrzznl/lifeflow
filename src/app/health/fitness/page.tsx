@@ -149,9 +149,9 @@ export default function FitnessPage() {
     return (
       <div>
         <div className="h-12 px-5 flex items-center bg-white border-b border-[#EBEBEB]"><ChevronLeft className="w-[22px] h-[22px] text-[#1D1D1F]" /></div>
-        <div className="px-5 pt-5 flex flex-col gap-3">
+        <div className="px-4 pt-3 flex flex-col gap-3">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="bg-white rounded-[10px] border border-[#EBEBEB] p-5 animate-pulse">
+            <div key={i} className="bg-white rounded-xl p-5 animate-pulse" style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
               <div className="h-6 w-1/3 bg-[#F5F5F7] rounded mb-3" />
               <div className="h-8 w-2/3 bg-[#F5F5F7] rounded" />
             </div>
@@ -174,12 +174,12 @@ export default function FitnessPage() {
           className="text-[16px] font-medium text-[#6366F1]">记录训练</button>
       </div>
 
-      <div className="px-5 pt-5 flex flex-col gap-3">
+      <div className="px-4 pt-3 flex flex-col gap-3">
 
         {/* ===== 本周卡 ===== */}
         <motion.div
           initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-[10px] border border-[#EBEBEB] p-5"
+          className="bg-white rounded-xl p-5" style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}
         >
           <div className="flex items-baseline justify-between">
             <span className="text-[20px] font-bold text-[#1D1D1F]">本周</span>
@@ -209,7 +209,7 @@ export default function FitnessPage() {
         <motion.div
           initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.05 }}
-          className="bg-white rounded-[10px] border border-[#EBEBEB] p-5"
+          className="bg-white rounded-xl p-5" style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}
         >
           <span className="text-[20px] font-bold text-[#1D1D1F]">肌群</span>
           <div className="mt-4 grid grid-cols-2 gap-[10px]">
@@ -229,7 +229,7 @@ export default function FitnessPage() {
         <motion.div
           initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="bg-white rounded-[10px] border border-[#EBEBEB] p-5"
+          className="bg-white rounded-xl p-5" style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}
         >
           <span className="text-[20px] font-bold text-[#1D1D1F]">最近训练</span>
 
@@ -307,7 +307,7 @@ export default function FitnessPage() {
         <motion.div
           initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15 }}
-          className="h-[104px] rounded-[10px] border-[1.5px] border-dashed border-[#D2D2D7] flex flex-col items-center justify-center gap-1.5 cursor-pointer"
+          className="h-[104px] rounded-xl border-[1.5px] border-dashed border-[#D2D2D7] flex flex-col items-center justify-center gap-1.5 cursor-pointer"
           onClick={() => setRecordOpen(true)}
         >
           <span className="text-[14px] text-[#AEAEB2]">点击右上角「记录训练」开始</span>

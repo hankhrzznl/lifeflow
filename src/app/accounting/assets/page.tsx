@@ -154,7 +154,7 @@ export default function AssetsPage() {
 
   // ============================================================
   return (
-    <div className="bg-white min-h-screen">
+    <div className="min-h-screen">
       {/* 导航条 */}
       <div className="h-[44px] flex items-center px-4 mt-3">
         <button type="button" onClick={() => router.push("/accounting")}
@@ -173,7 +173,7 @@ export default function AssetsPage() {
       {/* 净资产卡 */}
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}
         className="mx-4 mt-[20px]">
-        <div className="rounded-[24px] border p-[24px] flex flex-col items-center" style={{ background: "#FFFFFF", borderColor: BORDER_CARD }}>
+        <div className="rounded-xl p-[24px] flex flex-col items-center" style={{ background: "#FFFFFF", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
           <span className="text-[13px]" style={{ color: TEXT_SECONDARY }}>净资产</span>
           <span className="text-[34px] font-bold leading-none mt-[8px]" style={{ color: TEXT_PRIMARY }}>{fmt(netWorth)}</span>
           <div className="mt-[16px] h-[32px] px-4 rounded-full flex items-center justify-center gap-1" style={{ background: BADGE_BG }}>
@@ -194,7 +194,7 @@ export default function AssetsPage() {
       {hasAccounts && (
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: 0.05 }}
           className="mx-4 mt-[16px]">
-          <div className="rounded-[16px] border overflow-hidden" style={{ background: "#FFFFFF", borderColor: BORDER_CARD }}>
+          <div className="rounded-xl overflow-hidden" style={{ background: "#FFFFFF", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
             <div className="px-[20px] h-[56px] flex items-center justify-between" style={{ borderBottom: `0.5px solid ${BORDER_DIVIDER}` }}>
               <span className="text-[17px] font-semibold" style={{ color: TEXT_PRIMARY }}>账户</span>
               <span className="text-[13px]" style={{ color: TEXT_SECONDARY }}>共 {accounts!.length} 个账户</span>

@@ -69,6 +69,7 @@ export default function NotesPage() {
         </button>
         <h1 className="text-[34px] font-bold tracking-[-0.02em] leading-tight flex-1">备忘录</h1>
       </div>
+      <p className="text-[15px] mb-4" style={{ color: "#8E8E93" }}>灵感记录 · 随时备忘</p>
 
       {showAdd ? (
         <div className="rounded-xl bg-white p-4 mb-4 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">

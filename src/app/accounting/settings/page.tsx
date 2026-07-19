@@ -207,7 +207,7 @@ export default function SettingsPage() {
       {/* 统计双卡 */}
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}
         className="px-4 mt-4 flex gap-3">
-        <div className="flex-1 h-[104px] rounded-[20px] border p-4 flex flex-col justify-between" style={{ background: "#FFFFFF", borderColor: BORDER_CARD }}>
+        <div className="flex-1 h-[104px] rounded-xl p-4 flex flex-col justify-between" style={{ background: "#FFFFFF", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
           <span className="text-[13px]" style={{ color: MUTED }}>总交易</span>
           <div className="flex items-baseline gap-1">
             {loaded ? (
@@ -216,7 +216,7 @@ export default function SettingsPage() {
             ) : <div className="h-[34px] w-[80px] rounded-md animate-pulse" style={{ background: SKELETON }} />}
           </div>
         </div>
-        <div className="flex-1 h-[104px] rounded-[20px] border p-4 flex flex-col justify-between" style={{ background: "#FFFFFF", borderColor: BORDER_CARD }}>
+        <div className="flex-1 h-[104px] rounded-xl p-4 flex flex-col justify-between" style={{ background: "#FFFFFF", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
           <span className="text-[13px]" style={{ color: MUTED }}>记账天数</span>
           <div className="flex items-baseline gap-1">
             {loaded ? (
@@ -230,7 +230,7 @@ export default function SettingsPage() {
       {/* 通用分组 */}
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: 0.05 }}
         className="mx-4 mt-4">
-        <div className="rounded-[20px] border overflow-hidden" style={{ background: "#FFFFFF", borderColor: BORDER_CARD }}>
+        <div className="rounded-xl overflow-hidden" style={{ background: "#FFFFFF", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
           <div className="px-4 pt-4 pb-1"><span className="text-[13px]" style={{ color: MUTED }}>通用</span></div>
 
           <button type="button" onClick={() => setShowLedgerPicker(true)} className="h-[56px] flex items-center justify-between px-4 w-full active:opacity-50">
@@ -262,7 +262,7 @@ export default function SettingsPage() {
       {/* 显示分组 */}
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: 0.1 }}
         className="mx-4 mt-4">
-        <div className="rounded-[20px] border overflow-hidden" style={{ background: "#FFFFFF", borderColor: BORDER_CARD }}>
+        <div className="rounded-xl overflow-hidden" style={{ background: "#FFFFFF", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
           <div className="px-4 pt-4 pb-1"><span className="text-[13px]" style={{ color: MUTED }}>显示</span></div>
           <button type="button" onClick={toggleHideZero} className="h-[56px] flex items-center justify-between px-4 w-full active:opacity-50">
             <span className="text-[17px]" style={{ color: INK }}>隐藏零交易分类</span>
@@ -279,7 +279,7 @@ export default function SettingsPage() {
       {/* 数据分组 */}
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: 0.15 }}
         className="mx-4 mt-4">
-        <div className="rounded-[20px] border overflow-hidden" style={{ background: "#FFFFFF", borderColor: BORDER_CARD }}>
+        <div className="rounded-xl overflow-hidden" style={{ background: "#FFFFFF", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
           <div className="px-4 pt-4 pb-1"><span className="text-[13px]" style={{ color: MUTED }}>数据</span></div>
           <button type="button" onClick={handleExport} className="h-[56px] flex items-center justify-between px-4 w-full active:opacity-50">
             <span className="text-[17px]" style={{ color: INK }}>导出数据</span>

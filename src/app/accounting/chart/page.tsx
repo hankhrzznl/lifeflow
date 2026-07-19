@@ -179,18 +179,18 @@ export default function ChartPage() {
 
           {/* 汇总双卡 */}
           <div className="flex gap-3 px-4">
-            <div className="flex-1 h-[108px] rounded-[20px] bg-white flex flex-col items-center justify-center gap-1.5" style={{ boxShadow: SHADOW_CARD }}>
+            <div className="flex-1 h-[108px] rounded-xl bg-white flex flex-col items-center justify-center gap-1.5" style={{ boxShadow: SHADOW_CARD }}>
               <span className="text-[13px] text-[#86868B]">支出</span>
               <span className="text-[28px] font-bold leading-none text-[#1D1D1F]">¥{fmtCompact(monthExpense)}</span>
             </div>
-            <div className="flex-1 h-[108px] rounded-[20px] bg-white flex flex-col items-center justify-center gap-1.5" style={{ boxShadow: SHADOW_CARD }}>
+            <div className="flex-1 h-[108px] rounded-xl bg-white flex flex-col items-center justify-center gap-1.5" style={{ boxShadow: SHADOW_CARD }}>
               <span className="text-[13px] text-[#86868B]">收入</span>
               <span className="text-[28px] font-bold leading-none text-[#1D1D1F]">¥{fmtCompact(monthIncome)}</span>
             </div>
           </div>
 
           {/* 每日支出·近7日 */}
-          <div className="mx-4 mt-3 rounded-[20px] bg-white p-5" style={{ boxShadow: SHADOW_CARD }}>
+          <div className="mx-4 mt-3 rounded-xl bg-white p-5" style={{ boxShadow: SHADOW_CARD }}>
             <h2 className="text-[17px] font-bold text-[#1D1D1F]">每日支出·近7日</h2>
             <div className="mt-4 h-[160px] flex items-end">
               {weekExpenses.map((val, i) => {
@@ -223,7 +223,7 @@ export default function ChartPage() {
           </div>
 
           {/* 类别排行 */}
-          <div className="mx-4 mt-3 rounded-[20px] bg-white p-5" style={{ boxShadow: SHADOW_CARD }}>
+          <div className="mx-4 mt-3 rounded-xl bg-white p-5" style={{ boxShadow: SHADOW_CARD }}>
             <h2 className="text-[17px] font-bold text-[#1D1D1F]">类别排行</h2>
             {monthCatRanking.length === 0 ? (
               <div className="py-8 text-center text-[13px] text-[#AEAEB2]">当月暂无支出记录</div>
@@ -253,7 +253,7 @@ export default function ChartPage() {
           </div>
 
           {/* 支出 Top 10 */}
-          <div className="mx-4 mt-3 mb-6 rounded-[20px] bg-white p-5" style={{ boxShadow: SHADOW_CARD }}>
+          <div className="mx-4 mt-3 mb-6 rounded-xl bg-white p-5" style={{ boxShadow: SHADOW_CARD }}>
             <h2 className="text-[17px] font-bold text-[#1D1D1F]">支出 Top 10</h2>
             {monthTop10.length === 0 ? (
               <div className="py-8 text-center text-[13px] text-[#AEAEB2]">当月暂无支出记录</div>
@@ -293,18 +293,18 @@ export default function ChartPage() {
 
           {/* 汇总双卡 */}
           <div className="flex gap-3 px-4">
-            <div className="flex-1 h-[108px] rounded-[20px] bg-white flex flex-col items-center justify-center gap-1.5" style={{ boxShadow: SHADOW_CARD }}>
+            <div className="flex-1 h-[108px] rounded-xl bg-white flex flex-col items-center justify-center gap-1.5" style={{ boxShadow: SHADOW_CARD }}>
               <span className="text-[13px] text-[#86868B]">支出</span>
               <span className="text-[28px] font-bold leading-none text-[#1D1D1F]">¥{fmtCompact(yearExpense)}</span>
             </div>
-            <div className="flex-1 h-[108px] rounded-[20px] bg-white flex flex-col items-center justify-center gap-1.5" style={{ boxShadow: SHADOW_CARD }}>
+            <div className="flex-1 h-[108px] rounded-xl bg-white flex flex-col items-center justify-center gap-1.5" style={{ boxShadow: SHADOW_CARD }}>
               <span className="text-[13px] text-[#86868B]">收入</span>
               <span className="text-[28px] font-bold leading-none text-[#1D1D1F]">¥{fmtCompact(yearIncome)}</span>
             </div>
           </div>
 
           {/* 每月支出·{year}年（待设计补充后校准） */}
-          <div className="mx-4 mt-3 rounded-[20px] bg-white p-5" style={{ boxShadow: SHADOW_CARD }}>
+          <div className="mx-4 mt-3 rounded-xl bg-white p-5" style={{ boxShadow: SHADOW_CARD }}>
             <h2 className="text-[17px] font-bold text-[#1D1D1F]">每月支出·{yearViewYear}年</h2>
             <div className="mt-4 h-[160px] flex items-end">
               {monthlyBuckets.map((val, i) => {
@@ -333,7 +333,7 @@ export default function ChartPage() {
           </div>
 
           {/* 类别排行 */}
-          <div className="mx-4 mt-3 mb-6 rounded-[20px] bg-white p-5" style={{ boxShadow: SHADOW_CARD }}>
+          <div className="mx-4 mt-3 mb-6 rounded-xl bg-white p-5" style={{ boxShadow: SHADOW_CARD }}>
             <h2 className="text-[17px] font-bold text-[#1D1D1F]">类别排行</h2>
             {yearCatRanking.length === 0 ? (
               <div className="py-8 text-center text-[13px] text-[#AEAEB2]">全年暂无支出记录</div>

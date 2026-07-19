@@ -232,9 +232,9 @@ export default function SleepPage() {
             <ChevronLeft className="w-6 h-6 text-[#515154]" />
           </div>
         </div>
-        <div className="px-4 pt-6 pb-10 flex flex-col gap-6">
+        <div className="px-4 pt-3 pb-4 flex flex-col gap-6">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="bg-white rounded-[10px] border border-[#EBEBEB] px-5 pt-6 pb-6 animate-pulse">
+            <div key={i} className="bg-white rounded-xl px-5 pt-6 pb-6 animate-pulse" style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
               <div className="h-6 w-1/3 bg-[#F5F5F5] rounded mb-3" />
               <div className="h-8 w-2/3 bg-[#F5F5F5] rounded" />
             </div>
@@ -257,12 +257,12 @@ export default function SleepPage() {
         </div>
       </div>
 
-      <div className="px-4 pt-6 pb-10 flex flex-col gap-6">
+      <div className="px-4 pt-3 pb-4 flex flex-col gap-6">
 
         {/* ===== 卡片 1 · 入睡标尺 ===== */}
         <motion.div
           initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-[10px] border border-[#EBEBEB] px-5 pt-6 pb-6"
+          className="bg-white rounded-xl px-5 pt-6 pb-6" style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}
         >
           {/* 双列 */}
           <div className="flex items-center">
@@ -324,7 +324,7 @@ export default function SleepPage() {
         <motion.div
           initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.05 }}
-          className="bg-white rounded-[10px] border border-[#EBEBEB] px-5 pt-6 pb-6"
+          className="bg-white rounded-xl px-5 pt-6 pb-6" style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}
         >
           <div className="text-center">
             <span className="text-[17px] font-bold text-[#1D1D1F]">连续 {consecutiveDays} 天达成目标</span>
@@ -350,7 +350,7 @@ export default function SleepPage() {
         <motion.div
           initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="bg-white rounded-[10px] border border-[#EBEBEB] px-5 pt-6 pb-6"
+          className="bg-white rounded-xl px-5 pt-6 pb-6" style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}
         >
           <h2 className="text-[18px] font-bold text-[#1D1D1F]">入睡目标</h2>
 
@@ -398,7 +398,7 @@ export default function SleepPage() {
         <motion.div
           initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15 }}
-          className="bg-white rounded-[10px] border border-[#EBEBEB] px-5 pt-6 pb-6"
+          className="bg-white rounded-xl px-5 pt-6 pb-6" style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}
         >
           <h2 className="text-[18px] font-bold text-[#1D1D1F]">30 天趋势</h2>
           <div className="mt-6 flex">

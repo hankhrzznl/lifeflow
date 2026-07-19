@@ -59,6 +59,7 @@ function CreateGoalInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const editId = searchParams.get("id");
+  const incomingProjectId = searchParams.get("projectId");
   const isEdit = Boolean(editId);
 
   const { addGoal, confirmBreakdown, loadGoals } = useEfficiencyStore();
@@ -125,6 +126,7 @@ function CreateGoalInner() {
         goalType,
         targetCount,
         note: (tag ? `[${tag}] ` : "") + note.trim(),
+        projectId: incomingProjectId || undefined,
       };
 
       if (isEdit && editId) {

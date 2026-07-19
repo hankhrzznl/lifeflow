@@ -4,11 +4,11 @@ import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Plus, CheckCircle2, Pause, Play, SquarePen, Copy, Trash2, Pencil,
+  Plus, CheckCircle2, Pause, Play, SquarePen, Copy, Trash2, Pencil, FolderKanban,
 } from "lucide-react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { useEfficiencyStore } from "@/lib/store/efficiencyStore";
-import { efficiencyDB, type Goal } from "@/lib/db/efficiency.db";
+import { efficiencyDB, type Goal, type Project, getAllProjects, addProject } from "@/lib/db/efficiency.db";
 import { showToast } from "@/components/ui/Toast";
 
 // ─── 设计令牌 ────────────────────────────────────────────────
@@ -59,6 +59,26 @@ export default function EfficiencyPage() {
 
   const [sheetGoal, setSheetGoal] = useState<Goal | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+
+  // ─── Project 筛选 ──────────────────────────────────────────
+  const projects = useLiveQuery(() => getAllProjects(), [], [] as Project[]);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const [showProjectAdd, setShowProjectAdd] = useState(false);
+  const [newProjectName, setNewProjectName] = useState("");
+
+  const handleAddProject = useCallback(async () => {
+    if (!newProjectName.trim()) return;
+    await addProject({ name: newProjectName.trim(), color: ACCENT, icon: "FolderKanban", description: "", sortOrder: (projects ?? []).length });
+    showToast({ type: "success", message: "已创建" });
+    setNewProjectName("");
+    setShowProjectAdd(false);
+  }, [newProjectName, projects]);
+
+  // ─── 过滤后的 Goals ────────────────────────────────────────
+  const filteredGoals = useMemo(() => {
+    if (selectedProjectId === null) return goals;
+    return goals.filter((g) => g.projectId === selectedProjectId);
+  }, [goals, selectedProjectId]);
 
   // ─── 长按快捷操作 ──────────────────────────────────────────
   const [quickGoalId, setQuickGoalId] = useState<string | null>(null);
@@ -135,11 +155,11 @@ export default function EfficiencyPage() {
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
 
-    const active = goals
+    const active = filteredGoals
       .filter((g) => g.status === "active" || g.status === "paused")
       .sort((a, b) => b.createdAt - a.createdAt);
 
-    const completed = goals
+    const completed = filteredGoals
       .filter((g) => g.status === "completed")
       .sort((a, b) => {
         const aTime = a.completedAt ?? 0;
@@ -148,12 +168,12 @@ export default function EfficiencyPage() {
         return b.createdAt - a.createdAt;
       });
 
-    const monthCount = goals.filter(
+    const monthCount = filteredGoals.filter(
       (g) => g.status === "completed" && g.completedAt && g.completedAt >= monthStart,
     ).length;
 
     return { activeGoals: active, completedGoals: completed, monthCompletedCount: monthCount };
-  }, [goals]);
+  }, [filteredGoals]);
 
   // ─── 操作弹层 ──────────────────────────────────────────────
   const closeSheet = useCallback(() => {
@@ -210,6 +230,58 @@ export default function EfficiencyPage() {
         <h1 className="text-[34px] font-bold text-[#1D1D1F]">效率</h1>
       </div>
 
+      {/* ===== Project 标签筛选 ===== */}
+      <div className="px-4 mt-3 flex items-center gap-2 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
+        <button
+          type="button"
+          onClick={() => setSelectedProjectId(null)}
+          className={`shrink-0 h-8 px-3 rounded-full text-[13px] font-medium transition-colors ${
+            selectedProjectId === null
+              ? "bg-[#6366F1] text-white"
+              : "bg-[#F5F5F5] text-[#86868B]"
+          }`}
+        >
+          全部
+        </button>
+        {(projects ?? []).map((p) => (
+          <button
+            key={p.id}
+            type="button"
+            onClick={() => setSelectedProjectId(p.id)}
+            className={`shrink-0 h-8 px-3 rounded-full text-[13px] font-medium transition-colors ${
+              selectedProjectId === p.id
+                ? "text-white"
+                : "bg-[#F5F5F5] text-[#86868B]"
+            }`}
+            style={{ background: selectedProjectId === p.id ? p.color : undefined }}
+          >
+            {p.name}
+          </button>
+        ))}
+        {showProjectAdd ? (
+          <div className="flex items-center gap-1 shrink-0">
+            <input
+              type="text"
+              value={newProjectName}
+              onChange={(e) => setNewProjectName(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") handleAddProject(); }}
+              placeholder="项目名"
+              autoFocus
+              className="h-8 w-24 px-3 rounded-full text-[13px] bg-[#F5F5F5] outline-none"
+            />
+            <button onClick={handleAddProject} className="text-[20px] text-[#6366F1]">✓</button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setShowProjectAdd(true)}
+            className="shrink-0 w-8 h-8 rounded-full bg-[#F5F5F5] flex items-center justify-center text-[#86868B]"
+          >
+            <Plus className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+
       {/* ===== 主操作行 ===== */}
       <div className="px-4 mt-[24px] flex items-center justify-between">
         <div className="text-[15px] text-[#86868B]">
@@ -221,7 +293,7 @@ export default function EfficiencyPage() {
         </div>
         <motion.button
           whileTap={{ scale: 0.95 }}
-          onClick={() => router.push("/efficiency/create")}
+          onClick={() => router.push(`/efficiency/create${selectedProjectId ? `?projectId=${selectedProjectId}` : ""}`)}
           className="h-[40px] px-5 rounded-full bg-[#6366F1] text-white text-[15px] font-semibold flex items-center gap-1"
         >
           <Plus className="w-4 h-4" />

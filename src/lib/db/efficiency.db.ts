@@ -252,7 +252,8 @@ export async function deleteProject(id: string): Promise<void> {
 }
 
 export async function getAllProjects(): Promise<Project[]> {
-  return efficiencyDB.projects.orderBy('sortOrder').toArray();
+  const all = await efficiencyDB.projects.toArray();
+  return all.sort((a, b) => a.sortOrder - b.sortOrder);
 }
 
 // ─── Schedule Tasks CRUD ─────────────────────────────────────

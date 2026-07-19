@@ -1,22 +1,24 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useCallback } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { useLiveQuery } from "dexie-react-hooks";
 import {
-  Target, PlusCircle, ChevronRight,
-  Droplets, Moon,
+  PlusCircle, Droplets, Moon, TrendingUp,
+  CheckSquare, Wallet, Flame, Timer, CalendarCheck,
 } from "lucide-react";
-import { efficiencyDB } from "@/lib/db/efficiency.db";
-import type { Goal, ScheduleTask } from "@/lib/db/efficiency.db";
-import { accountingDB } from "@/lib/db/accounting.db";
-import type { Transaction, Category } from "@/lib/db/accounting.db";
-import { healthDB } from "@/lib/db/health.db";
-import type { WaterLog, SleepRecord } from "@/lib/db/health.db";
+import { getScheduleTasksByDate, getAllScheduleTasks, updateScheduleTask } from "@/lib/db/efficiency.db";
+import type { ScheduleTask } from "@/lib/db/efficiency.db";
+import { getTransactionsByDate } from "@/lib/db/accounting.db";
+import type { Transaction } from "@/lib/db/accounting.db";
+import { getWaterLogsByDate, getWaterGoal, getWorkoutSessionByDate, getSleepLogByDate } from "@/lib/db/health.db";
+import type { WaterLog, SleepLog } from "@/lib/db/health.db";
+import { getHabits, toggleHabitDay } from "@/lib/db/life.db";
+import type { Habit } from "@/lib/db/life.db";
 
 // ============================================================
-// 工具
+// 首页仪表盘 — H5 结构 + lifeflow 数据
 // ============================================================
 
 function todayStr(): string {
@@ -24,507 +26,289 @@ function todayStr(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-function greetByHour(hour: number): string {
-  if (hour >= 6 && hour < 12) return "早上好";
-  if (hour >= 12 && hour < 18) return "下午好";
-  return "晚上好";
-}
-
-function formatDateCN(date: Date): string {
+function formatDateCN(): string {
+  const d = new Date();
   const weekDays = ["日", "一", "二", "三", "四", "五", "六"];
-  return `${date.getMonth() + 1}月${date.getDate()}日 周${weekDays[date.getDay()]}`;
+  return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日 星期${weekDays[d.getDay()]}`;
 }
 
 function formatYuan(fen: number): string {
-  // 分转元，取整，不带小数位
-  const yuan = Math.round(fen / 100);
-  if (yuan >= 0) return `¥${yuan.toLocaleString("zh-CN")}`;
-  return `-¥${Math.abs(yuan).toLocaleString("zh-CN")}`;
+  return Math.round(fen / 100).toLocaleString("zh-CN");
 }
 
-function formatSignedYuan(fen: number): string {
-  const yuan = Math.round(fen / 100);
-  if (yuan >= 0) return `+¥${yuan.toLocaleString("zh-CN")}`;
-  return `-¥${Math.abs(yuan).toLocaleString("zh-CN")}`;
+function fmtCompact(fen: number): string {
+  const yuan = fen / 100;
+  return yuan.toLocaleString("zh-CN", { minimumFractionDigits: fen % 100 === 0 ? 0 : 2, maximumFractionDigits: 2 });
 }
 
-function formatWater(ml: number): string {
-  if (ml >= 1000) return `${(ml / 1000).toFixed(1)}L`;
-  return `${ml}ml`;
-}
+// ─── H5 图标到 lucide 映射 ───────────────────────────────────
 
-function formatSleep(hours: number): string {
-  return `${hours.toFixed(1)}h`;
-}
+const HABIT_ICON_MAP: Record<string, string> = {
+  "🌅": "Sunrise",
+  "📖": "BookOpen",
+  "🏃": "Footprints",
+  "🧘": "Sparkles",
+  "💧": "Droplets",
+};
 
-function sleepQualityText(quality: number): string {
-  if (quality >= 4) return "良好";
-  if (quality === 3) return "一般";
-  return "较差";
-}
+// ════════════════════════════════════════════════════════════
 
-// ============================================================
-// 迷你进度条
-// ============================================================
-
-function MiniProgressBar({ pct }: { pct: number }) {
-  const clamped = Math.min(100, Math.max(0, pct));
-  return (
-    <div className="h-1 rounded-full bg-[#E5E5E5] overflow-hidden">
-      <motion.div
-        initial={{ width: 0 }}
-        animate={{ width: `${clamped}%` }}
-        transition={{ duration: 0.6, ease: "easeOut" }}
-        className="h-full rounded-full bg-[#5865F2]"
-      />
-    </div>
-  );
-}
-
-// ============================================================
-// 迷你圆环
-// ============================================================
-
-function MiniRing({ pct, size = 40, strokeWidth = 4 }: { pct: number; size?: number; strokeWidth?: number }) {
-  const clamped = Math.min(100, Math.max(0, pct));
-  const r = (size - strokeWidth) / 2;
-  const circ = 2 * Math.PI * r;
-  const center = size / 2;
-
-  return (
-    <svg width={size} height={size} className="flex-shrink-0">
-      <circle
-        cx={center} cy={center} r={r}
-        fill="none"
-        stroke="#E5E5E5"
-        strokeWidth={strokeWidth}
-      />
-      <motion.circle
-        cx={center} cy={center} r={r}
-        fill="none"
-        stroke="#5865F2"
-        strokeWidth={strokeWidth}
-        strokeLinecap="round"
-        strokeDasharray={circ}
-        initial={{ strokeDashoffset: circ }}
-        animate={{ strokeDashoffset: circ - (circ * clamped) / 100 }}
-        transition={{ duration: 0.8, ease: "easeOut" }}
-        style={{ transform: "rotate(-90deg)", transformOrigin: "center" }}
-      />
-    </svg>
-  );
-}
-
-// ============================================================
-// 主页
-// ============================================================
-
-export default function DashboardPage() {
+export default function HomePage() {
   const today = todayStr();
-  const now = new Date();
-  const greeting = greetByHour(now.getHours());
-  const dateLabel = formatDateCN(now);
 
-  // ─── 效率数据 ────────────────────────────────────────────
+  // ─── 数据订阅 ──────────────────────────────────────────────
 
-  const efficiencyData = useLiveQuery(async () => {
-    const [goals, scheduleTasks] = await Promise.all([
-      efficiencyDB.goals.toArray(),
-      efficiencyDB.scheduleTasks.toArray(),
-    ]);
-    return { goals, scheduleTasks };
-  }, [], { goals: [] as Goal[], scheduleTasks: [] as ScheduleTask[] });
+  const todayTasks = useLiveQuery(() => getScheduleTasksByDate(today), [today], [] as ScheduleTask[]);
+  const allTasks = useLiveQuery(() => getAllScheduleTasks(), [], [] as ScheduleTask[]);
+  const todayTxs = useLiveQuery(() => getTransactionsByDate(today), [today], [] as Transaction[]);
+  const todayWaterLogs = useLiveQuery(() => getWaterLogsByDate(today), [today], []);
+  const waterGoal = useLiveQuery(() => getWaterGoal(), [], undefined);
+  const todayWorkout = useLiveQuery(() => getWorkoutSessionByDate(today), [today], undefined);
+  const todaySleep = useLiveQuery(() => getSleepLogByDate(today), [today], undefined);
+  const habits = useLiveQuery(() => getHabits(), [], [] as Habit[]);
 
-  const {
-    todayTaskTotal, todayTaskCompleted, completionPct,
-    pendingTasks,
-    goalColorMap,
-  } = useMemo(() => {
-    if (!efficiencyData) return {
-      todayTaskTotal: 0, todayTaskCompleted: 0, completionPct: 0,
-      pendingTasks: [] as ScheduleTask[],
-      goalColorMap: new Map<string, string>(),
-    };
+  // ─── 聚合计算 ──────────────────────────────────────────────
 
-    const { goals, scheduleTasks } = efficiencyData;
+  const incompleteTasks = (todayTasks ?? []).filter((t) => !t.isCompleted);
+  const q1Count = (allTasks ?? []).filter((t) => !t.isCompleted && t.quadrant === "q1").length;
+  const q2Count = (allTasks ?? []).filter((t) => !t.isCompleted && (!t.quadrant || t.quadrant === "q2")).length;
 
-    const colorMap = new Map<string, string>();
-    for (const g of goals) colorMap.set(g.id, g.color);
+  const todayExpense = (todayTxs ?? []).filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0);
+  const todayIncome = (todayTxs ?? []).filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0);
 
-    const tTasks = scheduleTasks.filter((t) => {
-      if (t.isCompleted) return false;
-      if (t.date === today) return true;
-      if (t.type === "multi_day" && t.startDate && t.endDate) {
-        return t.startDate <= today && t.endDate >= today;
-      }
-      return false;
-    });
+  const waterTotal = (todayWaterLogs ?? []).reduce((s, l) => s + l.amount, 0);
+  const waterTarget = waterGoal?.dailyTarget ?? 2000;
+  const waterPct = waterTarget > 0 ? Math.min(100, Math.round((waterTotal / waterTarget) * 100)) : 0;
+  const sleepHours = todaySleep ? `${Math.floor(timeToMinutes(todaySleep.actualTime) / 60)}h` : "--";
+  const trained = !!todayWorkout;
 
-    const allTodayTasks = scheduleTasks.filter((t) => {
-      if (t.date === today) return true;
-      if (t.type === "multi_day" && t.startDate && t.endDate) {
-        return t.startDate <= today && t.endDate >= today;
-      }
-      return false;
-    });
+  const healthScore = Math.round(
+    (waterPct + (trained ? 100 : 0) + (todaySleep ? (todaySleep.isOnTime ? 100 : 50) : 0)) / 3
+  );
 
-    const completed = allTodayTasks.filter((t) => t.isCompleted).length;
-    const total = allTodayTasks.length;
-    const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
+  // ─── 切换任务 ──────────────────────────────────────────────
 
-    // 未完成任务按日期排序，取前2条
-    const pending = tTasks
-      .sort((a, b) => (a.date || "").localeCompare(b.date || ""))
-      .slice(0, 2);
+  const toggleTask = useCallback(async (task: ScheduleTask) => {
+    await updateScheduleTask(task.id, { isCompleted: !task.isCompleted });
+  }, []);
 
-    return {
-      todayTaskTotal: total,
-      todayTaskCompleted: completed,
-      completionPct: pct,
-      pendingTasks: pending,
-      goalColorMap: colorMap,
-    };
-  }, [efficiencyData, today]);
+  const toggleHabit = useCallback(async (habit: Habit) => {
+    await toggleHabitDay(habit.id, today);
+  }, [today]);
 
-  // ─── 记账数据 ────────────────────────────────────────────
+  // ─── 问候 ──────────────────────────────────────────────────
 
-  const accountingData = useLiveQuery(async () => {
-    const [txs, cats] = await Promise.all([
-      accountingDB.transactions.toArray(),
-      accountingDB.categories.toArray(),
-    ]);
-    return { txs, cats };
-  }, [], { txs: [] as Transaction[], cats: [] as Category[] });
+  const hour = new Date().getHours();
+  const greeting = hour < 6 ? "凌晨好" : hour < 9 ? "早上好" : hour < 12 ? "上午好" : hour < 14 ? "中午好" : hour < 18 ? "下午好" : "晚上好";
 
-  const {
-    todayNet, todayExpenseCount, top2Transactions,
-    categoryMap,
-  } = useMemo(() => {
-    if (!accountingData) return {
-      todayNet: 0, todayExpenseCount: 0,
-      top2Transactions: [] as Transaction[],
-      categoryMap: new Map<string, Category>(),
-    };
-
-    const { txs, cats } = accountingData;
-
-    const catMap = new Map<string, Category>();
-    for (const c of cats) catMap.set(c.id, c);
-
-    const todayTxs = txs.filter((t) => t.date === today);
-    const incomeTotal = todayTxs.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0);
-    const expenseTotal = todayTxs.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0);
-    const net = incomeTotal - expenseTotal;
-    const expenseCount = todayTxs.filter((t) => t.type === "expense").length;
-
-    const top2 = todayTxs
-      .sort((a, b) => b.createdAt - a.createdAt)
-      .slice(0, 2);
-
-    return {
-      todayNet: net,
-      todayExpenseCount: expenseCount,
-      top2Transactions: top2,
-      categoryMap: catMap,
-    };
-  }, [accountingData, today]);
-
-  // ─── 健康数据 ────────────────────────────────────────────
-
-  const healthData = useLiveQuery(async () => {
-    const [waterLogs, sleepRecords, waterGoals] = await Promise.all([
-      healthDB.waterLogs.toArray(),
-      healthDB.sleepRecords.toArray(),
-      healthDB.waterGoals.toArray(),
-    ]);
-    const waterGoal = waterGoals.length > 0 ? waterGoals[0] : { dailyTarget: 2000, cupSize: 200 };
-    return { waterLogs, sleepRecords, waterGoal };
-  }, [], {
-    waterLogs: [] as WaterLog[],
-    sleepRecords: [] as SleepRecord[],
-    waterGoal: { dailyTarget: 2000, cupSize: 200 },
-  });
-
-  const {
-    waterMl, waterGoal, healthPct,
-    lastSleep,
-  } = useMemo(() => {
-    if (!healthData) return {
-      waterMl: 0, waterGoal: 2000, healthPct: 0,
-      lastSleep: undefined as SleepRecord | undefined,
-    };
-
-    const { waterLogs, sleepRecords, waterGoal } = healthData;
-
-    const todayLogs = waterLogs.filter((l) => l.date === today);
-    const wMl = todayLogs.reduce((s, l) => s + l.amount, 0);
-    const wGoal = waterGoal.dailyTarget || 2000;
-    // 今日健康百分比 = 今日饮水完成度
-    const hPct = wGoal > 0 ? Math.min(100, Math.round((wMl / wGoal) * 100)) : 0;
-
-    const sSorted = [...sleepRecords].sort((a, b) => b.date.localeCompare(a.date));
-    const lastS = sSorted[0];
-
-    return { waterMl: wMl, waterGoal: wGoal, healthPct: hPct, lastSleep: lastS };
-  }, [healthData, today]);
-
-  // ─── 数据就绪标记 ─────────────────────────────────────────
-
-  const isReady = efficiencyData && accountingData && healthData;
-
-  // ─── 卡入场动画 ──────────────────────────────────────────
-
-  const cardAnim = (delay: number) => ({
-    initial: { opacity: 0, y: 12 },
-    animate: { opacity: 1, y: 0 },
-    transition: { delay, duration: 0.35, ease: "easeOut" as const },
-  });
-
-  // ============================================================
-  // 渲染
-  // ============================================================
+  // ════════════════════════════════════════════════════════════
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA]">
-      <div className="mx-auto max-w-[430px] px-4 pt-12 pb-28 flex flex-col gap-4">
+    <div className="px-4 pt-5 pb-6 flex flex-col gap-4">
+      {/* ===== 问候 ===== */}
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+        className="rounded-2xl p-5 text-white" style={{ background: "linear-gradient(135deg, #6366F1, #8B5CF6)" }}>
+        <div className="text-[15px] opacity-90">{greeting} 👋</div>
+        <div className="text-[28px] font-bold mt-1">三条线，一张网</div>
+        <div className="text-[13px] opacity-80 mt-1">{formatDateCN()}</div>
+      </motion.div>
 
-        {/* ===== 页头（问候区） ===== */}
-        <motion.div {...cardAnim(0)} className="flex flex-col gap-1">
-          <span className="text-[13px] text-[#86868B]">{dateLabel}</span>
-          <h1 className="text-[34px] font-bold text-[#1D1D1F] tracking-tight">{greeting}</h1>
-        </motion.div>
-
-        {/* ===== 装饰分隔（标语区） ===== */}
-        <motion.div {...cardAnim(0.03)} className="flex flex-col items-center gap-1 py-2">
-          <div className="w-full flex flex-col gap-1">
-            <div className="h-px w-full bg-[#E5E5E5]" />
-            <div className="h-px w-full bg-[#E5E5E5]" />
-            <div className="h-px w-full bg-[#E5E5E5]" />
-          </div>
-          <span className="text-[13px] text-[#AEAEB2] mt-1">三条线，一张网</span>
-        </motion.div>
-
-        {/* ===== 今日概览卡（三指标） ===== */}
-        <motion.div
-          {...cardAnim(0.06)}
-          className="bg-white rounded-[20px] border border-[#F5F5F5] p-5"
-        >
-          {!isReady ? (
-            <div className="grid grid-cols-3 gap-4">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="flex flex-col gap-2">
-                  <div className="h-4 w-12 bg-[#F5F5F5] rounded animate-pulse" />
-                  <div className="h-8 w-16 bg-[#F5F5F5] rounded animate-pulse" />
-                  <div className="h-4 w-full bg-[#F5F5F5] rounded animate-pulse" />
-                </div>
-              ))}
+      {/* ===== 统计四宫格 ===== */}
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.04 }}
+        className="grid grid-cols-2 gap-3">
+        {[
+          { label: "今日待办", value: `${incompleteTasks.length} 件`, color: "#6366F1", href: "/tasks" },
+          { label: "今日支出", value: `¥${formatYuan(todayExpense)}`, color: todayExpense > 0 ? "#FF3B30" : "#000", href: "/accounting" },
+          { label: "重要紧急", value: `${q1Count} 件`, color: "#FF3B30", href: "/tasks" },
+          { label: "健康完成", value: `${healthScore}%`, color: "#FF9500", href: "/health" },
+        ].map((item) => (
+          <Link key={item.label} href={item.href}>
+            <div className="rounded-xl bg-white p-4 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
+              <div className="text-[13px] mb-1" style={{ color: "#8E8E93" }}>{item.label}</div>
+              <div className="text-[22px] font-bold" style={{ color: item.color }}>{item.value}</div>
             </div>
-          ) : (
-            <div className="grid grid-cols-3">
-              {/* 今日目标 */}
-              <div className="flex flex-col gap-1.5">
-                <span className="text-[13px] text-[#86868B]">今日目标</span>
-                <span className="text-[28px] font-bold text-[#1D1D1F] leading-none">
-                  {todayTaskCompleted}/{todayTaskTotal}
-                </span>
-                <MiniProgressBar pct={completionPct} />
-              </div>
-
-              {/* 今日收支 */}
-              <div className="flex flex-col gap-1.5 px-3">
-                <span className="text-[13px] text-[#86868B]">今日收支</span>
-                <span className="text-[28px] font-bold text-[#1D1D1F] leading-none">
-                  {formatYuan(todayNet)}
-                </span>
-                <span className="text-[12px] text-[#AEAEB2]">
-                  支出 {todayExpenseCount} 笔
-                </span>
-              </div>
-
-              {/* 今日健康 */}
-              <div className="flex flex-col gap-1.5">
-                <span className="text-[13px] text-[#86868B]">今日健康</span>
-                <span className="text-[28px] font-bold text-[#1D1D1F] leading-none">
-                  {healthPct}%
-                </span>
-                <MiniRing pct={healthPct} />
-              </div>
-            </div>
-          )}
-        </motion.div>
-
-        {/* ===== 快捷操作行 ===== */}
-        <motion.div {...cardAnim(0.09)} className="grid grid-cols-2 gap-3">
-          <Link href="/efficiency/create">
-            <motion.div
-              whileTap={{ scale: 0.97 }}
-              className="h-16 rounded-[16px] bg-[#EEF2FF] flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <Target className="w-[22px] h-[22px] text-[#5865F2]" strokeWidth={2} />
-              <span className="text-[15px] font-semibold text-[#5865F2]">添加目标</span>
-            </motion.div>
           </Link>
-          <Link href="/accounting/record">
-            <motion.div
-              whileTap={{ scale: 0.97 }}
-              className="h-16 rounded-[16px] bg-[#EEF2FF] flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <PlusCircle className="w-[22px] h-[22px] text-[#5865F2]" strokeWidth={2} />
-              <span className="text-[15px] font-semibold text-[#5865F2]">记一笔</span>
-            </motion.div>
+        ))}
+      </motion.div>
+
+      {/* ===== 快捷操作 ===== */}
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}
+        className="flex gap-3">
+        {[
+          { icon: CheckSquare, label: "添加事项", href: "/tasks", bg: "#6366F1" },
+          { icon: Wallet, label: "记一笔", href: "/accounting/record", bg: "#34C759" },
+          { icon: Timer, label: "专注", href: "/more/focus", bg: "#FF9500" },
+          { icon: CalendarCheck, label: "打卡", href: "/more/habits", bg: "#AF52DE" },
+        ].map((item) => (
+          <Link key={item.label} href={item.href}
+            className="flex-1 flex flex-col items-center gap-1 py-3 rounded-xl bg-white shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
+            <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ background: `${item.bg}16` }}>
+              <item.icon className="w-5 h-5" style={{ color: item.bg }} />
+            </div>
+            <span className="text-[12px] font-medium" style={{ color: "#8E8E93" }}>{item.label}</span>
           </Link>
-        </motion.div>
+        ))}
+      </motion.div>
 
-        {/* ===== 效率分区卡 ===== */}
-        <motion.div
-          {...cardAnim(0.12)}
-          className="bg-white rounded-[20px] border border-[#F5F5F5] p-5"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-[20px] font-bold text-[#1D1D1F]">效率</h2>
-            <Link href="/efficiency" className="flex items-center gap-0.5">
-              <span className="text-[15px] font-medium text-[#5865F2]">查看全部</span>
-              <ChevronRight className="w-4 h-4 text-[#5865F2]" strokeWidth={2} />
-            </Link>
+      {/* ===== 今日事项 ===== */}
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }}
+        className="rounded-xl bg-white p-4 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <CheckSquare className="w-5 h-5" style={{ color: "#6366F1" }} />
+            <span className="text-[17px] font-semibold">今日事项</span>
           </div>
+          <Link href="/tasks" className="text-[13px]" style={{ color: "#6366F1" }}>查看全部 →</Link>
+        </div>
+        {incompleteTasks.length === 0 ? (
+          <div className="text-center py-6">
+            <div className="text-3xl mb-2">🎉</div>
+            <div className="text-[15px]" style={{ color: "#8E8E93" }}>今天没有待办事项</div>
+          </div>
+        ) : (
+          <div className="flex flex-col">
+            {incompleteTasks.slice(0, 5).map((t) => (
+              <button key={t.id} type="button" onClick={() => toggleTask(t)}
+                className="flex items-center gap-3 py-2.5 w-full text-left"
+                style={{ borderBottom: "0.5px solid #E5E5EA" }}>
+                <div className="w-5 h-5 rounded-full border-2 border-[#C7C7CC] shrink-0" />
+                <span className="flex-1 text-[15px] truncate" style={{ color: "#000" }}>{t.title}</span>
+                <span className="text-[11px] px-1.5 py-0.5 rounded font-medium shrink-0"
+                  style={{
+                    background: getQuadrantBg(t.quadrant),
+                    color: getQuadrantColor(t.quadrant),
+                  }}>
+                  {getQuadrantLabel(t.quadrant)}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+      </motion.div>
 
-          {!isReady ? (
-            <div className="space-y-3">
-              {[1, 2].map((i) => (
-                <div key={i} className="h-10 bg-[#F5F5F5] rounded-lg animate-pulse" />
-              ))}
-            </div>
-          ) : pendingTasks.length === 0 ? (
-            <div className="py-4 text-center text-[13px] text-[#AEAEB2]">暂无待办事项</div>
-          ) : (
-            <div className="flex flex-col">
-              {pendingTasks.map((task, idx) => {
-                const dotColor = task.goalId ? (goalColorMap.get(task.goalId) || "#5865F2") : "#5865F2";
-                const dateLabelText = task.date === today
-                  ? "今天"
-                  : (() => {
-                      const d = new Date();
-                      d.setDate(d.getDate() + 1);
-                      const tomorrow = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-                      if (task.date === tomorrow) return "明天";
-                      if (task.date) {
-                        const parts = task.date.split("-");
-                        return `${parseInt(parts[1])}月${parseInt(parts[2])}日`;
-                      }
-                      return "";
-                    })();
-                return (
-                  <div
-                    key={task.id}
-                    className={`flex items-center gap-3 py-2.5 ${idx > 0 ? "border-t border-[#F5F5F5]" : ""}`}
-                  >
-                    <div
-                      className="w-2 h-2 rounded-full flex-shrink-0"
-                      style={{ backgroundColor: dotColor }}
-                    />
-                    <span className="text-[15px] text-[#1D1D1F] truncate flex-1">{task.title}</span>
-                    <span className="text-[13px] text-[#AEAEB2] flex-shrink-0">{dateLabelText}</span>
+      {/* ===== 今日收支 ===== */}
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.16 }}
+        className="rounded-xl bg-white p-4 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <Wallet className="w-5 h-5" style={{ color: "#34C759" }} />
+            <span className="text-[17px] font-semibold">今日收支</span>
+          </div>
+          <Link href="/accounting" className="text-[13px]" style={{ color: "#34C759" }}>查看全部 →</Link>
+        </div>
+        <div className="flex gap-4">
+          <div className="flex-1 rounded-lg p-3" style={{ background: "#34C75910" }}>
+            <div className="text-[13px]" style={{ color: "#8E8E93" }}>收入</div>
+            <div className="text-[20px] font-bold mt-1" style={{ color: "#007AFF" }}>¥{fmtCompact(todayIncome)}</div>
+          </div>
+          <div className="flex-1 rounded-lg p-3" style={{ background: "#FF3B3010" }}>
+            <div className="text-[13px]" style={{ color: "#8E8E93" }}>支出</div>
+            <div className="text-[20px] font-bold mt-1" style={{ color: "#FF3B30" }}>¥{fmtCompact(todayExpense)}</div>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* ===== 健康概览 ===== */}
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+        className="rounded-xl bg-white p-4 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <Heart className="w-5 h-5" style={{ color: "#FF9500" }} />
+            <span className="text-[17px] font-semibold">健康概览</span>
+          </div>
+          <Link href="/health" className="text-[13px]" style={{ color: "#FF9500" }}>详情 →</Link>
+        </div>
+        <div className="flex gap-3">
+          <div className="flex-1 rounded-lg p-3 text-center" style={{ background: "#007AFF10" }}>
+            <Droplets className="w-5 h-5 mx-auto mb-1" style={{ color: "#007AFF" }} />
+            <div className="text-[15px] font-bold" style={{ color: "#007AFF" }}>{waterPct}%</div>
+            <div className="text-[12px]" style={{ color: "#8E8E93" }}>饮水</div>
+          </div>
+          <div className="flex-1 rounded-lg p-3 text-center" style={{ background: "#5856D610" }}>
+            <Moon className="w-5 h-5 mx-auto mb-1" style={{ color: "#5856D6" }} />
+            <div className="text-[15px] font-bold" style={{ color: "#5856D6" }}>{sleepHours}</div>
+            <div className="text-[12px]" style={{ color: "#8E8E93" }}>睡眠</div>
+          </div>
+          <div className="flex-1 rounded-lg p-3 text-center" style={{ background: "#FF950010" }}>
+            <Flame className="w-5 h-5 mx-auto mb-1" style={{ color: trained ? "#FF9500" : "#C7C7CC" }} />
+            <div className="text-[15px] font-bold" style={{ color: trained ? "#FF9500" : "#C7C7CC" }}>{trained ? "✓" : "--"}</div>
+            <div className="text-[12px]" style={{ color: "#8E8E93" }}>训练</div>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* ===== 习惯打卡 ===== */}
+      {habits && habits.length > 0 && (
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.24 }}
+          className="rounded-xl bg-white p-4 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-[17px] font-semibold">习惯打卡</span>
+            <Link href="/more/habits" className="text-[13px]" style={{ color: "#8E8E93" }}>详情 →</Link>
+          </div>
+          <div className="flex gap-3">
+            {habits.slice(0, 5).map((h) => {
+              const done = h.days[today];
+              return (
+                <button key={h.id} type="button" onClick={() => toggleHabit(h)}
+                  className="flex-1 flex flex-col items-center gap-1 py-2 rounded-lg"
+                  style={{ background: `${h.color}10` }}>
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-lg ${done ? "opacity-100" : "opacity-40"}`}
+                    style={{ background: done ? h.color : "transparent", border: done ? "none" : `2px solid ${h.color}40` }}>
+                    <span>{getHabitEmoji(h.name)}</span>
                   </div>
-                );
-              })}
-            </div>
-          )}
-        </motion.div>
-
-        {/* ===== 记账分区卡 ===== */}
-        <motion.div
-          {...cardAnim(0.15)}
-          className="bg-white rounded-[20px] border border-[#F5F5F5] p-5"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-[20px] font-bold text-[#1D1D1F]">记账</h2>
-            <Link href="/accounting" className="flex items-center gap-0.5">
-              <span className="text-[15px] font-medium text-[#5865F2]">查看全部</span>
-              <ChevronRight className="w-4 h-4 text-[#5865F2]" strokeWidth={2} />
-            </Link>
+                  <span className="text-[11px] font-medium" style={{ color: done ? "#000" : "#C7C7CC" }}>{h.name}</span>
+                </button>
+              );
+            })}
           </div>
-
-          {!isReady ? (
-            <div className="space-y-3">
-              {[1, 2].map((i) => (
-                <div key={i} className="h-10 bg-[#F5F5F5] rounded-lg animate-pulse" />
-              ))}
-            </div>
-          ) : top2Transactions.length === 0 ? (
-            <div className="py-4 text-center text-[13px] text-[#AEAEB2]">今日暂无收支记录</div>
-          ) : (
-            <div className="flex flex-col">
-              {top2Transactions.map((tx, idx) => {
-                const cat = tx.categoryId ? categoryMap.get(tx.categoryId) : undefined;
-                const label = tx.note || cat?.name || "未命名";
-                return (
-                  <div
-                    key={tx.id}
-                    className={`flex items-center justify-between py-3 ${idx > 0 ? "border-t border-[#F5F5F5]" : ""}`}
-                  >
-                    <span className="text-[15px] text-[#1D1D1F] truncate flex-1 mr-2">{label}</span>
-                    <span className="text-[15px] font-semibold text-[#1D1D1F] flex-shrink-0">
-                      {formatSignedYuan(tx.type === "income" ? tx.amount : -tx.amount)}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          )}
         </motion.div>
-
-        {/* ===== 健康分区卡 ===== */}
-        <motion.div
-          {...cardAnim(0.18)}
-          className="bg-white rounded-[20px] border border-[#F5F5F5] p-5"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-[20px] font-bold text-[#1D1D1F]">健康</h2>
-            <Link href="/health" className="flex items-center gap-0.5">
-              <span className="text-[15px] font-medium text-[#5865F2]">查看全部</span>
-              <ChevronRight className="w-4 h-4 text-[#5865F2]" strokeWidth={2} />
-            </Link>
-          </div>
-
-          {!isReady ? (
-            <div className="grid grid-cols-2">
-              {[1, 2].map((i) => (
-                <div key={i} className="flex flex-col items-center gap-2 py-2">
-                  <div className="w-6 h-6 bg-[#F5F5F5] rounded animate-pulse" />
-                  <div className="h-4 w-12 bg-[#F5F5F5] rounded animate-pulse" />
-                  <div className="h-7 w-16 bg-[#F5F5F5] rounded animate-pulse" />
-                  <div className="h-4 w-20 bg-[#F5F5F5] rounded animate-pulse" />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="grid grid-cols-2">
-              {/* 饮水列 */}
-              <div className="flex flex-col items-center gap-1 py-2 border-r border-[#F5F5F5]">
-                <Droplets className="w-6 h-6 text-[#5865F2]" strokeWidth={2} />
-                <span className="text-[13px] text-[#86868B]">今日饮水</span>
-                <span className="text-[24px] font-bold text-[#1D1D1F]">
-                  {waterMl > 0 ? formatWater(waterMl) : "暂无记录"}
-                </span>
-                <span className="text-[12px] text-[#AEAEB2]">目标 {formatWater(waterGoal)}</span>
-              </div>
-
-              {/* 睡眠列 */}
-              <div className="flex flex-col items-center gap-1 py-2">
-                <Moon className="w-6 h-6 text-[#5865F2]" strokeWidth={2} />
-                <span className="text-[13px] text-[#86868B]">昨晚睡眠</span>
-                <span className="text-[24px] font-bold text-[#1D1D1F]">
-                  {lastSleep ? formatSleep(lastSleep.duration) : "暂无记录"}
-                </span>
-                <span className="text-[12px] text-[#AEAEB2]">
-                  {lastSleep ? `质量 · ${sleepQualityText(lastSleep.quality)}` : ""}
-                </span>
-              </div>
-            </div>
-          )}
-        </motion.div>
-
-      </div>
+      )}
     </div>
+  );
+}
+
+// ─── 工具 ────────────────────────────────────────────────────
+
+function timeToMinutes(t: string): number {
+  const [h, m] = t.split(":").map(Number);
+  return h * 60 + m;
+}
+
+function getQuadrantLabel(q?: string): string {
+  switch (q) {
+    case "q1": return "紧急重要";
+    case "q2": return "重要不紧急";
+    case "q3": return "不重要紧急";
+    case "q4": return "不重要不紧急";
+    default: return "未分类";
+  }
+}
+
+function getQuadrantColor(q?: string): string {
+  switch (q) {
+    case "q1": return "#FF3B30";
+    case "q2": return "#007AFF";
+    case "q3": return "#FF9500";
+    case "q4": return "#8E8E93";
+    default: return "#8E8E93";
+  }
+}
+
+function getQuadrantBg(q?: string): string {
+  return `${getQuadrantColor(q)}16`;
+}
+
+function getHabitEmoji(name: string): string {
+  const map: Record<string, string> = {
+    "早起6:30": "🌅", "阅读30分钟": "📖", "运动": "🏃", "冥想10分钟": "🧘", "喝水8杯": "💧",
+  };
+  return map[name] || "✅";
+}
+
+function Heart(props: { className?: string; style?: React.CSSProperties }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
+    </svg>
   );
 }

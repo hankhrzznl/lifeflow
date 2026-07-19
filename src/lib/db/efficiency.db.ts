@@ -4,6 +4,7 @@ import Dexie, { type Table } from 'dexie';
 
 export interface Goal {
   id: string;           // uuid, primary key
+  projectId?: string;      // FK → Project，null=未分类
   title: string;
   color: string;        // hex color like "#5856D6"
   deadline: string;     // ISO date YYYY-MM-DD
@@ -13,6 +14,16 @@ export interface Goal {
   goalType?: 'count' | 'habit';   // 目标类型，默认 'count'
   targetCount?: number;           // 完成 N 次，默认 5
   note?: string;                  // 备注，默认 ''
+  createdAt: number;
+}
+
+export interface Project {
+  id: string;              // uuid
+  name: string;
+  color: string;           // "#7C3AED"
+  icon: string;            // lucide icon name
+  description: string;
+  sortOrder: number;
   createdAt: number;
 }
 
@@ -63,12 +74,14 @@ export interface EfficiencyHabit {
 export interface ScheduleTask {
   id: string;               // uuid
   goalId: string | null;    // 关联目标ID
+  projectId?: string;       // FK → Project（冗余，方便按项目查询）
   title: string;
   type: 'single' | 'multi_day' | 'recurring';
   date: string | null;      // YYYY-MM-DD
   startDate?: string;
   endDate?: string;
   recurringDays?: number[]; // [0-6]
+  quadrant?: 'q1' | 'q2' | 'q3' | 'q4';  // 四象限: q1=重要紧急 q2=重要不紧急 q3=不重要紧急 q4=不重要不紧急
   isCompleted: boolean;
   plannedTime: number;      // 分钟
   actualTime: number;
@@ -95,6 +108,7 @@ export class EfficiencyDB extends Dexie {
   tasks!: Table<EfficiencyTask, number>;
   habits!: Table<EfficiencyHabit, number>;
   scheduleTasks!: Table<ScheduleTask, string>;
+  projects!: Table<Project, string>;
 
   constructor() {
     super('LifeFlowEfficiency');
@@ -111,6 +125,9 @@ export class EfficiencyDB extends Dexie {
     });
     this.version(3).stores({
       scheduleTasks: '&id, date, goalId, isCompleted, isImportant',
+    });
+    this.version(4).stores({
+      projects: '&id, name',
     });
   }
 }
@@ -216,6 +233,26 @@ export async function deleteHabit(id: number): Promise<void> {
 
 export async function getAllHabits(): Promise<EfficiencyHabit[]> {
   return efficiencyDB.habits.toArray();
+}
+
+// ─── Projects CRUD ───────────────────────────────────────────
+
+export async function addProject(p: Omit<Project, 'id' | 'createdAt'>): Promise<string> {
+  const id = crypto.randomUUID();
+  await efficiencyDB.projects.add({ ...p, id, createdAt: Date.now() });
+  return id;
+}
+
+export async function updateProject(id: string, updates: Partial<Project>): Promise<void> {
+  await efficiencyDB.projects.update(id, updates);
+}
+
+export async function deleteProject(id: string): Promise<void> {
+  await efficiencyDB.projects.delete(id);
+}
+
+export async function getAllProjects(): Promise<Project[]> {
+  return efficiencyDB.projects.orderBy('sortOrder').toArray();
 }
 
 // ─── Schedule Tasks CRUD ─────────────────────────────────────

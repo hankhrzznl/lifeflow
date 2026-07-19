@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Target, Wallet, Heart } from "lucide-react";
+import { Home, Target, CheckSquare, Wallet, Heart, Package } from "lucide-react";
 
 // ─── 全站统一底导，仅全屏流程页隐藏 ──────────────────────────
-// 4-tab：首页 / 效率 / 记账 / 健康，在所有页面显示
-// 全屏流程页（record/ledgers/search/create）隐藏
+// 6-tab：首页 / 效率 / 事项 / 记账 / 健康 / 更多
+// 全屏流程页隐藏
 
 const FULLSCREEN_PREFIXES = [
   "/accounting/record",
@@ -18,14 +18,15 @@ const FULLSCREEN_PREFIXES = [
 const tabs = [
   { label: "首页", path: "/", icon: Home },
   { label: "效率", path: "/efficiency", icon: Target },
+  { label: "事项", path: "/tasks", icon: CheckSquare },
   { label: "记账", path: "/accounting", icon: Wallet },
   { label: "健康", path: "/health", icon: Heart },
+  { label: "更多", path: "/more", icon: Package },
 ] as const;
 
 export default function BottomTabBar() {
   const pathname = usePathname();
 
-  // 全屏流程页不显示底导
   if (FULLSCREEN_PREFIXES.some((p) => pathname.startsWith(p))) return null;
 
   const isActive = (path: string) =>
@@ -33,7 +34,7 @@ export default function BottomTabBar() {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-[#E5E5E5]">
-      <div className="w-full max-w-[430px] mx-auto grid grid-cols-4 h-[49px]">
+      <div className="w-full max-w-[430px] mx-auto grid grid-cols-6 h-[49px]">
         {tabs.map((tab) => {
           const active = isActive(tab.path);
           return (
@@ -57,7 +58,6 @@ export default function BottomTabBar() {
           );
         })}
       </div>
-      {/* 底部安全区 */}
       <div style={{ height: "env(safe-area-inset-bottom)" }} />
     </nav>
   );

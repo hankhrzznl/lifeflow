@@ -12,7 +12,7 @@ import { showToast } from "@/components/ui/Toast";
 // ============================================================
 // 设计令牌
 // ============================================================
-const ACCENT = "#5865F2";
+const ACCENT = "#6366F1";
 const INK = "#1D1D1F";
 const MUTED = "#86868B";
 const FAINT = "#AEAEB2";
@@ -295,7 +295,7 @@ export default function SleepPage() {
                 initial={false}
                 animate={{ left: `${actualPct}%` }}
                 transition={{ duration: 0.4, ease: "easeOut" }}
-                className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-[#5865F2] ring-[3px] ring-white z-10"
+                className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-[#6366F1] ring-[3px] ring-white z-10"
               />
             )}
           </div>
@@ -314,7 +314,7 @@ export default function SleepPage() {
           {/* 无记录态按钮 */}
           {!todaySleepLog && (
             <button type="button" onClick={handleLogSleep} disabled={isSaving}
-              className="mt-3 w-full h-11 rounded-full text-[15px] font-semibold text-white bg-[#5865F2] disabled:opacity-60">
+              className="mt-3 w-full h-11 rounded-full text-[15px] font-semibold text-white bg-[#6366F1] disabled:opacity-60">
               {isSaving ? "记录中…" : "记录入睡时间"}
             </button>
           )}
@@ -357,13 +357,13 @@ export default function SleepPage() {
           {/* 步进行 */}
           <div className="mt-5 flex items-center justify-center gap-8">
             <button type="button" onClick={() => handleGoalStep(-5)}
-              className="w-8 h-8 rounded-full border-2 border-[#5865F2] bg-white flex items-center justify-center">
-              <Minus className="w-4 h-4 text-[#5865F2]" />
+              className="w-8 h-8 rounded-full border-2 border-[#6366F1] bg-white flex items-center justify-center">
+              <Minus className="w-4 h-4 text-[#6366F1]" />
             </button>
             <span className="text-[34px] font-bold tabular-nums text-[#1D1D1F]">{targetTime}</span>
             <button type="button" onClick={() => handleGoalStep(5)}
-              className="w-8 h-8 rounded-full border-2 border-[#5865F2] bg-white flex items-center justify-center">
-              <Plus className="w-4 h-4 text-[#5865F2]" />
+              className="w-8 h-8 rounded-full border-2 border-[#6366F1] bg-white flex items-center justify-center">
+              <Plus className="w-4 h-4 text-[#6366F1]" />
             </button>
           </div>
 
@@ -484,7 +484,7 @@ export default function SleepPage() {
                     className="w-full h-10 rounded-[10px] px-3 text-[15px] border-0 outline-none bg-[#F5F5F7] text-[#1D1D1F]" />
                 </div>
                 <button type="button" onClick={handleCalibrate} disabled={isSaving}
-                  className="mt-4 w-full h-11 rounded-full text-[15px] font-semibold text-white bg-[#5865F2] disabled:opacity-60">
+                  className="mt-4 w-full h-11 rounded-full text-[15px] font-semibold text-white bg-[#6366F1] disabled:opacity-60">
                   {isSaving ? "保存中…" : "保存校准"}
                 </button>
               </motion.div>

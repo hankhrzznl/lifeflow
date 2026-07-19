@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { useLiveQuery } from "dexie-react-hooks";
@@ -62,7 +62,9 @@ export default function HomePage() {
   const allTasks = useLiveQuery(() => getAllScheduleTasks(), [], [] as ScheduleTask[]);
   const todayTxs = useLiveQuery(() => getTransactionsByDate(today), [today], [] as Transaction[]);
   const todayWaterLogs = useLiveQuery(() => getWaterLogsByDate(today), [today], []);
-  const waterGoal = useLiveQuery(() => getWaterGoal(), [], undefined);
+  const [waterGoalData, setWaterGoalData] = useState<{ dailyTarget: number }>({ dailyTarget: 2000 });
+  useEffect(() => { getWaterGoal().then((g) => setWaterGoalData(g)).catch(() => {}); }, []);
+  const waterGoal = waterGoalData;
   const todayWorkout = useLiveQuery(() => getWorkoutSessionByDate(today), [today], undefined);
   const todaySleep = useLiveQuery(() => getSleepLogByDate(today), [today], undefined);
   const habits = useLiveQuery(() => getHabits(), [], [] as Habit[]);

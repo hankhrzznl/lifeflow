@@ -11,7 +11,7 @@ import { LEDGER_COVERS } from "../page";
 // ============================================================
 // 设计令牌（Apple 简约风）
 // ============================================================
-const ACCENT = "#5865F2";
+const ACCENT = "#6366F1";
 const TEXT_PRIMARY = "#1D1D1F";
 const TEXT_SECONDARY = "#86868B";
 const TEXT_PLACEHOLDER = "#AEAEB2";
@@ -125,7 +125,7 @@ export default function NewLedgerPage() {
               background: color,
               boxShadow:
                 coverIndex === i
-                  ? "0 0 0 2px #FFFFFF, 0 0 0 4px #5865F2"
+                  ? "0 0 0 2px #FFFFFF, 0 0 0 4px #6366F1"
                   : undefined,
             }}
           />
@@ -204,7 +204,7 @@ export default function NewLedgerPage() {
                 <button key={c.code} type="button" onClick={() => { setCurrency(c.code); setShowCurrencyPicker(false); }}
                   className="w-full h-[52px] px-5 flex items-center justify-between active:bg-black/5">
                   <span className="text-[15px] text-[#1D1D1F]">{c.label}</span>
-                  {currency === c.code && <div className="w-5 h-5 rounded-full bg-[#5865F2] flex items-center justify-center">
+                  {currency === c.code && <div className="w-5 h-5 rounded-full bg-[#6366F1] flex items-center justify-center">
                     <svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 6l3 3 5-6" stroke="#fff" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>
                   </div>}
                 </button>

@@ -13,7 +13,7 @@ import Dialog from "@/components/ui/Dialog";
 // ============================================================
 // 设计令牌
 // ============================================================
-const ACCENT = "#5865F2";
+const ACCENT = "#6366F1";
 const TEXT_PRIMARY = "#1D1D1F";
 const TEXT_SECONDARY = "#86868B";
 const TEXT_TERTIARY = "#AEAEB2";
@@ -30,7 +30,7 @@ function fmt(fen: number): string {
 }
 
 const ACCOUNT_COLOR_MAP: Record<string, string> = {
-  "微信钱包": "#34C759", "支付宝": "#007AFF", "银行卡": "#5856D6", "现金": "#FF9500",
+  "微信钱包": "#6366F1", "支付宝": "#007AFF", "银行卡": "#5856D6", "现金": "#FF9500",
 };
 function getAccountColor(name: string): string { return ACCOUNT_COLOR_MAP[name] || "#86868B"; }
 function getAccountFirstChar(name: string): string { return name.trim().charAt(0) || "钱"; }
@@ -249,7 +249,7 @@ export default function AssetsPage() {
         <div className="px-5 pt-5 pb-2 flex items-center justify-between">
           <button onClick={() => setShowAddSheet(false)} className="text-[15px] text-[#86868B]">取消</button>
           <span className="text-[17px] font-semibold text-[#1D1D1F]">{editingAccount ? "编辑账户" : "添加账户"}</span>
-          <button onClick={handleSaveAccount} className="text-[15px] font-semibold text-[#5865F2]">保存</button>
+          <button onClick={handleSaveAccount} className="text-[15px] font-semibold text-[#6366F1]">保存</button>
         </div>
 
         <div className="px-5 mt-4 space-y-4">
@@ -268,7 +268,7 @@ export default function AssetsPage() {
               {(["asset", "liability"] as const).map((t) => (
                 <button key={t} type="button" onClick={() => setFormType(t)}
                   className={`flex-1 h-11 rounded-[12px] text-[15px] font-medium ${
-                    formType === t ? "bg-[#5865F2] text-white" : "bg-[#F5F5F5] text-[#86868B]"
+                    formType === t ? "bg-[#6366F1] text-white" : "bg-[#F5F5F5] text-[#86868B]"
                   }`}>
                   {t === "asset" ? "资产" : "负债"}
                 </button>

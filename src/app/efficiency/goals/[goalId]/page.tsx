@@ -15,7 +15,7 @@ import { showToast } from "@/components/ui/Toast";
 // ============================================================
 // 设计令牌
 // ============================================================
-const ACCENT = "#5865F2";
+const ACCENT = "#6366F1";
 const MUTED = "#86868B";
 const BORDER = "#EBEBEB";
 const STRONG = "#C7C7CC";
@@ -156,7 +156,7 @@ export default function GoalDetailPage() {
         <button
           type="button"
           onClick={() => router.push(`/efficiency/goals/${goalId}/tasks/new`)}
-          className="flex-1 h-11 rounded-xl bg-[#5865F2] text-white text-[15px] font-semibold flex items-center justify-center gap-1.5"
+          className="flex-1 h-11 rounded-xl bg-[#6366F1] text-white text-[15px] font-semibold flex items-center justify-center gap-1.5"
         >
           <Plus className="w-4 h-4" />
           添加任务
@@ -266,7 +266,7 @@ function TaskRow({ task, onToggle, showDivider }: { task: ScheduleTask; onToggle
             {task.title}
           </p>
           {task.isImportant && !task.isCompleted && (
-            <span className="w-[6px] h-[6px] rounded-full flex-shrink-0 bg-[#5865F2]" />
+            <span className="w-[6px] h-[6px] rounded-full flex-shrink-0 bg-[#6366F1]" />
           )}
         </div>
         {task.note && (

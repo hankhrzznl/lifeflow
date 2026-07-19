@@ -14,7 +14,7 @@ import PillNav from "@/components/accounting/PillNav";
 // ============================================================
 // 设计令牌
 // ============================================================
-const ACCENT = "#5865F2";
+const ACCENT = "#6366F1";
 const MUTED = "#86868B";
 
 function fmtCompact(fen: number): string {
@@ -170,7 +170,7 @@ export default function AccountingPage() {
                         type="button"
                         onClick={() => { setMonthOffset(targetOffset); setMonthPanelOpen(false); }}
                         className={`w-full h-9 px-4 text-[13px] flex items-center ${
-                          active ? "bg-[#EEF2FF] text-[#5865F2] font-medium" : "text-[#1D1D1F]"
+                          active ? "bg-[#EEF2FF] text-[#6366F1] font-medium" : "text-[#1D1D1F]"
                         }`}
                       >
                         {opt.year}年{opt.month}月
@@ -245,7 +245,7 @@ export default function AccountingPage() {
         <Link href="/accounting/record">
           <motion.div
             whileTap={{ scale: 0.97 }}
-            className="h-11 px-5 rounded-full bg-[#5865F2] text-white text-[15px] font-semibold flex items-center gap-1.5 cursor-pointer"
+            className="h-11 px-5 rounded-full bg-[#6366F1] text-white text-[15px] font-semibold flex items-center gap-1.5 cursor-pointer"
           >
             <Plus className="w-4 h-4" strokeWidth={2.5} />
             记一笔

@@ -16,7 +16,7 @@ import type { WaterLog } from "@/lib/db/health.db";
 // ============================================================
 // 设计令牌
 // ============================================================
-const ACCENT = "#5865F2";
+const ACCENT = "#6366F1";
 const MUTED = "#86868B";
 
 // ─── 工具函数 ──────────────────────────────────────────────
@@ -209,12 +209,12 @@ export default function HealthPage() {
         <Link href="/health/water">
           <motion.div whileTap={{ scale: 0.98 }} className="flex items-center justify-between cursor-pointer">
             <div className="flex items-center gap-2.5">
-              <Droplets className="w-5 h-5 text-[#5865F2]" />
+              <Droplets className="w-5 h-5 text-[#6366F1]" />
               <span className="text-[24px] font-bold text-[#1D1D1F]">饮水</span>
             </div>
             <div>
-              <span className="text-[24px] font-bold text-[#5865F2]">{fmtNum(waterTotal)}</span>
-              <span className="text-[15px] font-semibold text-[#5865F2]"> / {fmtNum(waterTarget)} ml</span>
+              <span className="text-[24px] font-bold text-[#6366F1]">{fmtNum(waterTotal)}</span>
+              <span className="text-[15px] font-semibold text-[#6366F1]"> / {fmtNum(waterTarget)} ml</span>
             </div>
           </motion.div>
         </Link>
@@ -225,7 +225,7 @@ export default function HealthPage() {
             initial={{ width: 0 }}
             animate={{ width: `${waterPct}%` }}
             transition={{ duration: 0.6, ease: "easeOut" }}
-            className="h-[6px] rounded-full bg-[#5865F2]"
+            className="h-[6px] rounded-full bg-[#6366F1]"
           />
         </div>
 
@@ -253,7 +253,7 @@ export default function HealthPage() {
         <Link href="/health/sleep">
           <motion.div whileTap={{ scale: 0.98 }} className="flex items-center justify-between cursor-pointer">
             <div className="flex items-center gap-2.5">
-              <Moon className="w-5 h-5 text-[#5865F2]" />
+              <Moon className="w-5 h-5 text-[#6366F1]" />
               <span className="text-[18px] font-bold text-[#1D1D1F]">睡眠</span>
             </div>
             <span className="text-[20px] font-bold text-[#1D1D1F]">
@@ -272,7 +272,7 @@ export default function HealthPage() {
                   initial={{ width: 0 }}
                   animate={{ width: `${sleepBarPct}%` }}
                   transition={{ duration: 0.6, ease: "easeOut" }}
-                  className="h-[6px] rounded-full bg-[#5865F2]"
+                  className="h-[6px] rounded-full bg-[#6366F1]"
                 />
               </div>
               <span className="text-[13px] text-[#86868B] shrink-0">目标 {sleepTarget}</span>
@@ -295,7 +295,7 @@ export default function HealthPage() {
         <Link href="/health/fitness">
           <motion.div whileTap={{ scale: 0.98 }} className="flex items-center justify-between cursor-pointer">
             <div className="flex items-center gap-2.5">
-              <Activity className="w-5 h-5 text-[#5865F2]" />
+              <Activity className="w-5 h-5 text-[#6366F1]" />
               <span className="text-[18px] font-bold text-[#1D1D1F]">训练</span>
             </div>
             <span className="text-[20px] font-bold text-[#1D1D1F]">
@@ -316,7 +316,7 @@ export default function HealthPage() {
               const firstSet = ex.sets[0];
               return (
                 <div key={i} className="flex items-center h-7">
-                  <div className="w-2 h-2 rounded-full flex-shrink-0 bg-[#5865F2]" />
+                  <div className="w-2 h-2 rounded-full flex-shrink-0 bg-[#6366F1]" />
                   <span className="ml-2.5 text-[15px] font-medium text-[#1D1D1F] truncate">{ex.exerciseName}</span>
                   <span className="ml-auto text-[15px] text-[#86868B] flex-shrink-0">
                     {ex.sets.length}组×{firstSet.weight}kg RPE {firstSet.rpe}
@@ -341,7 +341,7 @@ export default function HealthPage() {
                   height: maxWeekWater > 0 ? `${Math.max(4, Math.round((v / maxWeekWater) * 112))}px` : 0,
                 }}
                 transition={{ duration: 0.5, delay: i * 0.05 }}
-                className="w-[20px] rounded-[6px] bg-[#5865F2] flex-shrink-0"
+                className="w-[20px] rounded-[6px] bg-[#6366F1] flex-shrink-0"
               />
             ))}
           </div>

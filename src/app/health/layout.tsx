@@ -30,7 +30,7 @@ function PillNav() {
               whileTap={{ scale: 0.95 }}
               className={`h-8 px-4 rounded-full text-[13px] flex-shrink-0 inline-flex items-center ${
                 isActive
-                  ? "bg-[#5865F2] text-white font-semibold"
+                  ? "bg-[#6366F1] text-white font-semibold"
                   : "bg-[#F5F5F5] text-[#86868B]"
               }`}
             >
@@ -64,7 +64,7 @@ export default function HealthLayout({ children }: { children: React.ReactNode }
           <PillNav />
         </header>
       )}
-      <main className="w-full max-w-[430px] mx-auto pb-[100px]">{children}</main>
+      <main className="w-full max-w-[430px] mx-auto pb-[80px]">{children}</main>
     </div>
   );
 }

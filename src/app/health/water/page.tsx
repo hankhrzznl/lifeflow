@@ -10,7 +10,7 @@ import { showToast } from "@/components/ui/Toast";
 // ============================================================
 // 设计令牌
 // ============================================================
-const ACCENT = "#5865F2";
+const ACCENT = "#6366F1";
 const ACCENT_LIGHT = "#EEF2FF";
 
 const QUICK_AMOUNTS = [100, 200, 300, 500] as const;
@@ -156,7 +156,7 @@ export default function WaterPage() {
           initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
           className="bg-white rounded-[16px] border border-[#E5E5E5] p-4 flex flex-col items-center"
         >
-          <Droplets className="w-6 h-6 text-[#5865F2]" />
+          <Droplets className="w-6 h-6 text-[#6366F1]" />
           <span className="mt-3 text-[34px] font-bold text-[#1D1D1F]">
             {todayWaterTotal.toLocaleString()}ml
           </span>
@@ -168,7 +168,7 @@ export default function WaterPage() {
               initial={{ width: 0 }}
               animate={{ width: `${percent}%` }}
               transition={{ duration: 0.6, ease: "easeOut" }}
-              className="h-1 rounded-full bg-[#5865F2]"
+              className="h-1 rounded-full bg-[#6366F1]"
             />
           </div>
           <span className="mt-2.5 text-[13px] text-[#86868B]">
@@ -190,7 +190,7 @@ export default function WaterPage() {
               type="button" whileTap={{ scale: 0.95 }}
               disabled={addingMap[amount]}
               onClick={() => handleAdd(amount)}
-              className="flex-1 h-11 rounded-full inline-flex items-center justify-center text-[15px] font-medium bg-[#EEF2FF] text-[#5865F2] disabled:opacity-50"
+              className="flex-1 h-11 rounded-full inline-flex items-center justify-center text-[15px] font-medium bg-[#EEF2FF] text-[#6366F1] disabled:opacity-50"
             >
               +{amount}ml
             </motion.button>
@@ -212,9 +212,9 @@ export default function WaterPage() {
               <motion.button
                 type="button" whileTap={{ scale: 0.9 }}
                 onClick={() => handleTargetChange(dailyTarget - 100)}
-                className="w-7 h-7 rounded-full border-[1.5px] border-[#5865F2] bg-white flex items-center justify-center"
+                className="w-7 h-7 rounded-full border-[1.5px] border-[#6366F1] bg-white flex items-center justify-center"
               >
-                <Minus className="w-[14px] h-[14px] text-[#5865F2]" />
+                <Minus className="w-[14px] h-[14px] text-[#6366F1]" />
               </motion.button>
               <span className="text-[15px] font-semibold text-[#1D1D1F] min-w-[64px] text-center">
                 {dailyTarget}ml
@@ -222,9 +222,9 @@ export default function WaterPage() {
               <motion.button
                 type="button" whileTap={{ scale: 0.9 }}
                 onClick={() => handleTargetChange(dailyTarget + 100)}
-                className="w-7 h-7 rounded-full border-[1.5px] border-[#5865F2] bg-white flex items-center justify-center"
+                className="w-7 h-7 rounded-full border-[1.5px] border-[#6366F1] bg-white flex items-center justify-center"
               >
-                <Plus className="w-[14px] h-[14px] text-[#5865F2]" />
+                <Plus className="w-[14px] h-[14px] text-[#6366F1]" />
               </motion.button>
             </div>
           </div>

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
@@ -18,7 +18,7 @@ import {
 // ============================================================
 // 设计令牌（Apple 简约风）
 // ============================================================
-const ACCENT = "#5865F2";
+const ACCENT = "#6366F1";
 const MUTED = "#86868B";
 const BORDER = "#EBEBEB";
 const STRONG = "#C7C7CC";
@@ -169,7 +169,7 @@ export default function SchedulePage() {
           日程
         </span>
         <button type="button" onClick={() => setSheetOpen(true)} className="w-8 h-8 -mr-1 flex items-center justify-center">
-          <Plus className="w-6 h-6 text-[#5865F2]" />
+          <Plus className="w-6 h-6 text-[#6366F1]" />
         </button>
       </div>
 
@@ -210,13 +210,13 @@ export default function SchedulePage() {
                   {isSel ? (
                     <span className="relative w-9 h-9 flex items-center justify-center">
                       <span className="absolute w-9 h-9 rounded-full bg-[#EEF2FF]" />
-                      <span className="absolute w-7 h-7 rounded-full bg-[#5865F2] flex items-center justify-center">
+                      <span className="absolute w-7 h-7 rounded-full bg-[#6366F1] flex items-center justify-center">
                         <span className="text-[17px] font-medium text-white">{d.getDate()}</span>
                       </span>
                     </span>
                   ) : (
                     <span className="w-9 h-9 flex items-center justify-center">
-                      <span className={`text-[17px] font-medium ${isTdy ? "text-[#5865F2]" : "text-[#1D1D1F]"}`}>
+                      <span className={`text-[17px] font-medium ${isTdy ? "text-[#6366F1]" : "text-[#1D1D1F]"}`}>
                         {d.getDate()}
                       </span>
                     </span>
@@ -234,7 +234,7 @@ export default function SchedulePage() {
           {selectedDateObj.getMonth() + 1}月{selectedDateObj.getDate()}日 周{WEEK_DAYS[selectedDateObj.getDay() === 0 ? 6 : selectedDateObj.getDay() - 1]}
         </span>
         {(weekOffset !== 0 || !isToday) && (
-          <button type="button" onClick={goToday} className="text-[13px] text-[#5865F2]">
+          <button type="button" onClick={goToday} className="text-[13px] text-[#6366F1]">
             回到今天
           </button>
         )}
@@ -297,7 +297,7 @@ export default function SchedulePage() {
                     {task.title}
                   </p>
                   {task.isImportant && !task.isCompleted && (
-                    <span className="w-[6px] h-[6px] rounded-full flex-shrink-0 bg-[#5865F2]" />
+                    <span className="w-[6px] h-[6px] rounded-full flex-shrink-0 bg-[#6366F1]" />
                   )}
                 </div>
                 <div className="flex items-center gap-2 mt-1">
@@ -307,7 +307,7 @@ export default function SchedulePage() {
                     </span>
                   )}
                   {task.progressType === "progress" && task.targetValue ? (
-                    <span className="inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded-md bg-[#EEF2FF] text-[#5865F2]">
+                    <span className="inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded-md bg-[#EEF2FF] text-[#6366F1]">
                       <TrendingUp className="w-3 h-3" />目标 {task.targetValue}{task.targetUnit || ""}
                     </span>
                   ) : null}
@@ -363,7 +363,7 @@ export default function SchedulePage() {
                   <div className="flex items-center gap-1.5">
                     <p className="text-[17px] truncate text-[#1D1D1F]">{task.title}</p>
                     {task.isImportant && (
-                      <span className="w-[6px] h-[6px] rounded-full flex-shrink-0 bg-[#5865F2]" />
+                      <span className="w-[6px] h-[6px] rounded-full flex-shrink-0 bg-[#6366F1]" />
                     )}
                   </div>
                   <div className="flex items-center gap-2 mt-1">

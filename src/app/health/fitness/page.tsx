@@ -13,7 +13,7 @@ import { ChevronLeft, Dumbbell, Minus, Plus, X, Trash2, Star } from "lucide-reac
 // ============================================================
 // 设计令牌
 // ============================================================
-const ACCENT = "#5865F2";
+const ACCENT = "#6366F1";
 const INK = "#1D1D1F";
 const MUTED = "#86868B";
 const FAINT = "#AEAEB2";
@@ -22,7 +22,7 @@ const CARD_BORDER = "#EBEBEB";
 const FILL = "#F5F5F7";
 const INPUT_BORDER = "#E2E2E4";
 const DASH = "#D2D2D7";
-const DOT_COLORS = ["#D97706", "#5865F2", "#E11D48", "#059669"];
+const DOT_COLORS = ["#D97706", "#6366F1", "#E11D48", "#059669"];
 const DANGER = "#FF3B30";
 
 // ─── 工具 ──────────────────────────────────────────────────
@@ -171,7 +171,7 @@ export default function FitnessPage() {
         </button>
         <span className="absolute left-1/2 -translate-x-1/2 text-[20px] font-semibold text-[#1D1D1F]">训练</span>
         <button type="button" onClick={() => setRecordOpen(true)}
-          className="text-[16px] font-medium text-[#5865F2]">记录训练</button>
+          className="text-[16px] font-medium text-[#6366F1]">记录训练</button>
       </div>
 
       <div className="px-5 pt-5 flex flex-col gap-3">
@@ -280,7 +280,7 @@ export default function FitnessPage() {
                                     <span>{set.weight}kg × {set.reps}次</span>
                                     <span>·</span>
                                     <span>RPE {set.rpe}</span>
-                                    {set.isPR && <Star className="w-3.5 h-3.5 text-[#5865F2]" />}
+                                    {set.isPR && <Star className="w-3.5 h-3.5 text-[#6366F1]" />}
                                   </div>
                                 ))}
                                 <button
@@ -502,7 +502,7 @@ function RecordSheet({
 
         {/* 保存 */}
         <button type="button" onClick={handleSave} disabled={saving}
-          className="mt-6 w-full h-[50px] rounded-[10px] bg-[#5865F2] text-white text-[16px] font-semibold disabled:opacity-60">
+          className="mt-6 w-full h-[50px] rounded-[10px] bg-[#6366F1] text-white text-[16px] font-semibold disabled:opacity-60">
           {saving ? "保存中…" : "保存"}
         </button>
       </div>
@@ -521,7 +521,7 @@ function RecordSheet({
             ))}
           </select>
           <button type="button" onClick={handleCustomAdd}
-            className="mt-4 w-full h-[50px] rounded-[10px] bg-[#5865F2] text-white text-[16px] font-semibold">
+            className="mt-4 w-full h-[50px] rounded-[10px] bg-[#6366F1] text-white text-[16px] font-semibold">
             创建动作
           </button>
         </div>

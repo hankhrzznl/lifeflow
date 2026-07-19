@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Suspense, useEffect, useState, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -14,8 +14,8 @@ import { showToast } from "@/components/ui/Toast";
 // 设计令牌
 // ============================================================
 
-const ACCENT = "#5865F2";
-const NEW_COLORS = ["#5865F2", "#FF9500", "#34C759", "#E94057"];
+const ACCENT = "#6366F1";
+const NEW_COLORS = ["#6366F1", "#FF9500", "#34C759", "#E94057"];
 
 function getDefaultDeadline(): string {
   const d = new Date();
@@ -191,7 +191,7 @@ function CreateGoalInner() {
           <p className="text-[14px] text-[#86868B] mb-2">目标名称</p>
           <div
             className="h-12 rounded-[10px] bg-[#F5F5F7] px-4 flex items-center"
-            style={focused ? { boxShadow: "0 0 0 1px #5865F2" } : undefined}
+            style={focused ? { boxShadow: "0 0 0 1px #6366F1" } : undefined}
           >
             <input
               type="text"
@@ -294,7 +294,7 @@ function CreateGoalInner() {
                 type="button"
                 onClick={() => setTargetCount((n) => Math.max(1, n - 1))}
                 disabled={targetCount <= 1}
-                className="w-8 h-8 rounded-full bg-[#5865F2] flex items-center justify-center transition-opacity"
+                className="w-8 h-8 rounded-full bg-[#6366F1] flex items-center justify-center transition-opacity"
                 style={{ opacity: targetCount <= 1 ? 0.4 : 1 }}
               >
                 <Minus className="w-4 h-4 text-white" />
@@ -303,7 +303,7 @@ function CreateGoalInner() {
                 whileTap={{ scale: 0.9 }}
                 type="button"
                 onClick={() => setTargetCount((n) => Math.min(999, n + 1))}
-                className="w-8 h-8 rounded-full bg-[#5865F2] flex items-center justify-center"
+                className="w-8 h-8 rounded-full bg-[#6366F1] flex items-center justify-center"
               >
                 <Plus className="w-4 h-4 text-white" />
               </motion.button>
@@ -358,7 +358,7 @@ function CreateGoalInner() {
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-[#5865F2]" />
+                <Sparkles className="w-5 h-5 text-[#6366F1]" />
                 <span className="text-[15px] font-medium text-[#1D1D1F]">智能拆解</span>
               </div>
               <Toggle on={useAI} onToggle={() => setUseAI((v) => !v)} />
@@ -381,8 +381,8 @@ function CreateGoalInner() {
       >
         {strategyInfo && (
           <div className="flex items-center gap-2 mb-3 px-1">
-            <Sparkles className="w-4 h-4 text-[#5865F2]" />
-            <span className="text-sm font-medium text-[#5865F2]">{strategyInfo.label}</span>
+            <Sparkles className="w-4 h-4 text-[#6366F1]" />
+            <span className="text-sm font-medium text-[#6366F1]">{strategyInfo.label}</span>
             <span className="text-xs text-gray-400">置信度 {strategyInfo.confidence}%</span>
           </div>
         )}
@@ -391,7 +391,7 @@ function CreateGoalInner() {
             <div key={i} className="flex items-start gap-3 p-3 rounded-xl bg-gray-50">
               <div
                 className="w-1.5 h-1.5 rounded-full mt-2 flex-shrink-0"
-                style={{ backgroundColor: task.isImportant ? "#FF9500" : "#5865F2" }}
+                style={{ backgroundColor: task.isImportant ? "#FF9500" : "#6366F1" }}
               />
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium text-gray-900 truncate">{task.title}</div>
@@ -410,7 +410,7 @@ function CreateGoalInner() {
             setPreviewOpen(false);
             router.push("/efficiency");
           }}
-          className="w-full py-3 rounded-xl text-white font-medium text-sm bg-[#5865F2]"
+          className="w-full py-3 rounded-xl text-white font-medium text-sm bg-[#6366F1]"
         >
           确认并保存 ({previewTasks.length} 个任务)
         </button>

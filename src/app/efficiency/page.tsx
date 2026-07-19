@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
@@ -12,7 +12,7 @@ import { efficiencyDB, type Goal } from "@/lib/db/efficiency.db";
 import { showToast } from "@/components/ui/Toast";
 
 // ─── 设计令牌 ────────────────────────────────────────────────
-const ACCENT = "#5865F2";
+const ACCENT = "#6366F1";
 const DANGER = "#FF3B30";
 const GREEN = "#34C759";
 
@@ -222,7 +222,7 @@ export default function EfficiencyPage() {
         <motion.button
           whileTap={{ scale: 0.95 }}
           onClick={() => router.push("/efficiency/create")}
-          className="h-[40px] px-5 rounded-full bg-[#5865F2] text-white text-[15px] font-semibold flex items-center gap-1"
+          className="h-[40px] px-5 rounded-full bg-[#6366F1] text-white text-[15px] font-semibold flex items-center gap-1"
         >
           <Plus className="w-4 h-4" />
           新建目标
@@ -256,7 +256,7 @@ export default function EfficiencyPage() {
           <motion.button
             whileTap={{ scale: 0.95 }}
             onClick={() => router.push("/efficiency/create")}
-            className="mt-[24px] h-[40px] px-5 rounded-full bg-[#5865F2] text-white text-[15px] font-semibold flex items-center gap-1"
+            className="mt-[24px] h-[40px] px-5 rounded-full bg-[#6366F1] text-white text-[15px] font-semibold flex items-center gap-1"
           >
             <Plus className="w-4 h-4" />
             新建目标
@@ -325,7 +325,7 @@ export default function EfficiencyPage() {
                           transition={{ duration: 0.2, delay: 0.05, ease: "easeOut" }}
                           onClick={(e) => { e.stopPropagation(); handleQuickAction(goal, "edit"); }}
                           aria-label="编辑"
-                          className="w-[44px] h-[44px] rounded-full bg-[#5865F2] flex items-center justify-center"
+                          className="w-[44px] h-[44px] rounded-full bg-[#6366F1] flex items-center justify-center"
                           style={{ marginTop: goal.status === "active" || goal.status === "paused" ? 8 : 0 }}
                         >
                           <Pencil className="w-5 h-5 text-white" />

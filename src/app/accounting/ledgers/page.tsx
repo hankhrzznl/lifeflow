@@ -12,7 +12,7 @@ import { showToast } from "@/components/ui/Toast";
 // ============================================================
 // 设计令牌
 // ============================================================
-const ACCENT = "#5865F2";
+const ACCENT = "#6366F1";
 const TEXT_PRIMARY = "#1D1D1F";
 const TEXT_SECONDARY = "#86868B";
 const BORDER_NAV = "#E5E5E5";
@@ -137,7 +137,7 @@ export default function LedgersPage() {
                     <div className="min-w-0">
                       <p className="text-[17px] font-semibold truncate flex items-center gap-1" style={{ color: TEXT_PRIMARY }}>
                         {ledger.name}
-                        {isDefault && <span className="text-[11px] px-1.5 py-0.5 rounded-full bg-[#EEF2FF] text-[#5865F2] font-normal">默认</span>}
+                        {isDefault && <span className="text-[11px] px-1.5 py-0.5 rounded-full bg-[#EEF2FF] text-[#6366F1] font-normal">默认</span>}
                       </p>
                       <p className="text-[13px]" style={{ color: TEXT_SECONDARY }}>{ledger.currency}</p>
                     </div>
@@ -180,7 +180,7 @@ export default function LedgersPage() {
             </div>
             <div className="px-5 mt-6">
               <button type="button" onClick={handleSetDefault}
-                className="w-full h-11 rounded-[12px] text-[15px] font-semibold text-white bg-[#5865F2]">
+                className="w-full h-11 rounded-[12px] text-[15px] font-semibold text-white bg-[#6366F1]">
                 设为默认账本
               </button>
             </div>

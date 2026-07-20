@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import {
   BookOpen, Clock, FolderKanban, Wallet, Droplets,
   Moon, Dumbbell, Pill, Move, CheckCircle, Timer, Clock9,
-  StickyNote, CalendarDays,
+  StickyNote, CalendarDays, Settings,
 } from "lucide-react";
 
 // ============================================================
@@ -45,6 +45,12 @@ const groups = [
       { icon: Clock9, label: "倒数日", desc: "重要日子", href: "/more/countdown", span: false },
       { icon: StickyNote, label: "备忘录", desc: "灵感记录", href: "/more/notes", span: false },
       { icon: CalendarDays, label: "日历", desc: "日程一览", href: "/more/calendar", span: true },
+    ],
+  },
+  {
+    title: "系统",
+    items: [
+      { icon: Settings, label: "设置", desc: "偏好与数据", href: "/settings", span: false },
     ],
   },
 ];

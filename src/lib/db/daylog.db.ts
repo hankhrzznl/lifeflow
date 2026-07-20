@@ -12,6 +12,7 @@ export interface Item {
   id: string;              // uuid
   taskId?: string;         // FK → ScheduleTask.id（tasks 拆解出的事项）
   goalId?: string;         // 冗余 FK，便于过滤
+  projectId?: string;      // FK → Project，从 task 继承
   date: string;            // YYYY-MM-DD
 
   // 计划时间（来自课程/作息模板或用户手动输入）
@@ -30,6 +31,10 @@ export interface Item {
   icon: string;            // lucide icon name
   location?: string;       // 上课地点等
   cost?: number;           // 花费（分），>=0
+  water?: number;          // 饮水量（毫升）
+  sleepQuality?: number;   // 睡眠评分 1-5
+  workoutNote?: string;    // 训练备注
+  streak?: number;         // 连续打卡天数
   note?: string;
 
   isCompleted: boolean;

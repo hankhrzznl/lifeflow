@@ -191,32 +191,6 @@ export default function TodayTimeline() {
 
   return (
     <div>
-      {/* 日期选择器 */}
-      <div className="flex items-center justify-between mb-3">
-        <button onClick={() => setDate(shiftDate(date, -1))}
-          className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100">
-          <ChevronLeft className="w-5 h-5 text-gray-400" />
-        </button>
-        <div className="text-center">
-          <h2 className="text-lg font-bold text-gray-900">{formatDateFull(date)}</h2>
-          {date === getTodayStr() && (
-            <span className="text-xs text-indigo-500 font-medium">今天</span>
-          )}
-        </div>
-        <button onClick={() => setDate(shiftDate(date, 1))}
-          className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100">
-          <ChevronRight className="w-5 h-5 text-gray-400" />
-        </button>
-      </div>
-
-      {/* 跳回今天 */}
-      {date !== getTodayStr() && (
-        <button onClick={() => setDate(getTodayStr())}
-          className="w-full text-center text-xs text-indigo-500 mb-3 hover:text-indigo-700">
-          回到今天
-        </button>
-      )}
-
       {noTemplate ? (
         <div className="text-center py-16">
           <AlertCircle className="w-10 h-10 text-gray-300 mx-auto mb-3" strokeWidth={1.5} />

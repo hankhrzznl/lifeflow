@@ -68,7 +68,6 @@ function CreateGoalInner() {
   const [title, setTitle] = useState("");
   const [color, setColor] = useState(NEW_COLORS[0]);
   const [projectId, setProjectId] = useState(incomingProjectId || "");
-  const [targetCount, setTargetCount] = useState(5);
   const [deadline, setDeadline] = useState(getDefaultDeadline());
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
@@ -80,18 +79,6 @@ function CreateGoalInner() {
   const [previewTasks, setPreviewTasks] = useState<Omit<ScheduleTask, "id" | "createdAt">[]>([]);
   const [previewGoalId, setPreviewGoalId] = useState("");
   const [strategyInfo, setStrategyInfo] = useState<{ label: string; confidence: number } | null>(null);
-
-  const [tag, setTag] = useState("");
-  const [showTagSheet, setShowTagSheet] = useState(false);
-
-  const PRESET_TAGS = [
-    { label: "工作", emoji: "💼" },
-    { label: "学习", emoji: "📚" },
-    { label: "生活", emoji: "🏠" },
-    { label: "健康", emoji: "💪" },
-    { label: "社交", emoji: "👥" },
-    { label: "旅行", emoji: "✈️" },
-  ];
 
   const projects = useLiveQuery(() => getAllProjects(), [], [] as Project[]);
 
@@ -105,7 +92,6 @@ function CreateGoalInner() {
         setTitle(goal.title);
         setColor(goal.color || NEW_COLORS[0]);
         setProjectId(goal.projectId || "");
-        setTargetCount(goal.targetCount || 5);
         setDeadline(goal.deadline || getDefaultDeadline());
         setNote(goal.note || "");
       } else {
@@ -127,8 +113,7 @@ function CreateGoalInner() {
         color,
         deadline,
         goalType: "count" as const,
-        targetCount,
-        note: (tag ? `[${tag}] ` : "") + note.trim(),
+        note: note.trim(),
         projectId: projectId || undefined,
       };
 
@@ -154,7 +139,7 @@ function CreateGoalInner() {
       setSaving(false);
       showToast({ type: "error", message: "保存失败" });
     }
-  }, [canSubmit, isEdit, editId, title, color, deadline, targetCount, note, projectId, useAI, addGoal, loadGoals, router]);
+  }, [canSubmit, isEdit, editId, title, color, deadline, note, projectId, useAI, addGoal, loadGoals, router]);
 
   if (!loaded) return null;
 
@@ -219,18 +204,6 @@ function CreateGoalInner() {
           transition={{ delay: 0.05 }}
           className="bg-white rounded-[8px] border border-[#EBEBEB] px-4 pt-4 pb-[18px]"
         >
-          <div
-            className="flex items-center justify-between cursor-pointer"
-            onClick={() => setShowTagSheet(true)}
-          >
-            <span className="text-[14px] text-[#86868B]">项目标签</span>
-            <div className="flex items-center gap-1">
-              {tag !== "" && (
-                <span className="text-[15px] text-[#1D1D1F]">{PRESET_TAGS.find((t) => t.label === tag)?.emoji} {tag}</span>
-              )}
-              <ChevronRight className="w-4 h-4 text-[#86868B]" />
-            </div>
-          </div>
           {/* 色点行 + 横线 */}
           <div className="relative mt-[30px] flex items-center gap-4">
             <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-px bg-[#EBEBEB]" />
@@ -274,44 +247,7 @@ function CreateGoalInner() {
           )}
         </motion.div>
 
-        {/* 卡片 3 · 目标类型 */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="bg-white rounded-[8px] border border-[#EBEBEB] px-4 pt-4 pb-4"
-        >
-          <p className="text-[14px] text-[#86868B] mb-4">完成次数</p>
-
-          {/* 步进器行 */}
-          <div className="flex items-center justify-between mt-5">
-            <span className="text-[17px] text-[#1D1D1F]">
-              完成 <span className="font-semibold">{targetCount}</span> 次
-            </span>
-            <div className="flex items-center gap-3">
-              <motion.button
-                whileTap={{ scale: 0.9 }}
-                type="button"
-                onClick={() => setTargetCount((n) => Math.max(1, n - 1))}
-                disabled={targetCount <= 1}
-                className="w-8 h-8 rounded-full bg-[#6366F1] flex items-center justify-center transition-opacity"
-                style={{ opacity: targetCount <= 1 ? 0.4 : 1 }}
-              >
-                <Minus className="w-4 h-4 text-white" />
-              </motion.button>
-              <motion.button
-                whileTap={{ scale: 0.9 }}
-                type="button"
-                onClick={() => setTargetCount((n) => Math.min(999, n + 1))}
-                className="w-8 h-8 rounded-full bg-[#6366F1] flex items-center justify-center"
-              >
-                <Plus className="w-4 h-4 text-white" />
-              </motion.button>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* 卡片 4 · 截止日期 */}
+        {/* 卡片 3 · 截止日期 */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
@@ -416,29 +352,6 @@ function CreateGoalInner() {
         </button>
       </BottomSheet>
 
-      {/* ===== 项目标签选择 ===== */}
-      <BottomSheet
-        open={showTagSheet}
-        onClose={() => setShowTagSheet(false)}
-        title="选择项目标签"
-      >
-        <div className="space-y-2">
-          {PRESET_TAGS.map((t) => (
-            <button
-              key={t.label}
-              type="button"
-              onClick={() => {
-                setTag(t.label);
-                setShowTagSheet(false);
-              }}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-gray-50"
-            >
-              <span className="text-xl">{t.emoji}</span>
-              <span className="text-[15px] text-[#1D1D1F]">{t.label}</span>
-            </button>
-          ))}
-        </div>
-      </BottomSheet>
     </div>
   );
 }

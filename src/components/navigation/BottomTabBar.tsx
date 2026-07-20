@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Target, CheckSquare, Package } from "lucide-react";
+import { Home, Target, CheckSquare, CalendarDays, Package } from "lucide-react";
 
 // ─── 全站统一底导 ────────────────────────────────────────────
-// 4-tab：首页 / 效率 / 事项 / 更多
+// 5-tab：首页 / 效率 / 事项 / 日程 / 更多
 // 全屏流程页隐藏
 
 const FULLSCREEN_PREFIXES = [
@@ -19,6 +19,7 @@ const tabs = [
   { label: "首页", path: "/", icon: Home },
   { label: "效率", path: "/efficiency", icon: Target },
   { label: "事项", path: "/tasks", icon: CheckSquare },
+  { label: "日程", path: "/schedule", icon: CalendarDays },
   { label: "更多", path: "/more", icon: Package },
 ] as const;
 
@@ -32,7 +33,7 @@ export default function BottomTabBar() {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-[#E5E5E5]">
-      <div className="w-full max-w-[430px] mx-auto grid grid-cols-6 h-[49px]">
+      <div className="w-full max-w-[430px] mx-auto grid grid-cols-5 h-[49px]">
         {tabs.map((tab) => {
           const active = isActive(tab.path);
           return (

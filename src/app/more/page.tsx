@@ -1,13 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { Wallet, Droplets, Moon, Dumbbell, CalendarCheck, Timer, Clock, StickyNote, CalendarDays } from "lucide-react";
+import { Wallet, Droplets, Moon, Dumbbell, CalendarCheck, Timer, Clock, StickyNote, CalendarDays, GraduationCap, BedDouble, FolderKanban } from "lucide-react";
 
 // ============================================================
 // 更多 — 分组卡片入口
 // ============================================================
 
 const groups = [
+  {
+    title: "日程管理",
+    items: [
+      { icon: GraduationCap, label: "课程表", desc: "每周课程安排", href: "/more/schedule/courses", color: "#007AFF" },
+      { icon: BedDouble, label: "作息", desc: "日常作息模板", href: "/more/schedule/routines", color: "#5856D6" },
+      { icon: FolderKanban, label: "项目管理", desc: "项目标签管理", href: "/more/projects", color: "#6366F1" },
+    ],
+  },
   {
     title: "财务",
     items: [

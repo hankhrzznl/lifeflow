@@ -13,6 +13,7 @@ export interface Goal {
   goalType?: 'count' | 'habit';   // 目标类型，默认 'count'
   targetCount?: number;           // 完成 N 次，默认 5
   note?: string;                  // 备注，默认 ''
+  color?: string;                 // 项目标签颜色，默认 #5865F2
   createdAt: number;
 }
 

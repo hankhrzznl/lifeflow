@@ -4,17 +4,21 @@ import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Plus, CheckCircle2, Pause, Play, SquarePen, Copy, Trash2, Pencil, Target,
+  Plus, CheckCircle2, Pause, Play, SquarePen, Copy, Trash2, Pencil,
 } from "lucide-react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { useEfficiencyStore } from "@/lib/store/efficiencyStore";
-import { efficiencyDB, type Goal, type Project, getAllProjects } from "@/lib/db/efficiency.db";
+import { efficiencyDB, type Goal, getAllProjects } from "@/lib/db/efficiency.db";
 import { showToast } from "@/components/ui/Toast";
 
 // ─── 设计令牌 ────────────────────────────────────────────────
-const ACCENT = "#6366F1";
+const ACCENT = "#5865F2";
 const DANGER = "#FF3B30";
 const GREEN = "#34C759";
+const TEXT_PRIMARY = "#1D1D1F";
+const TEXT_SECONDARY = "#86868B";
+const TEXT_TERTIARY = "#AEAEB2";
+const BORDER = "#E5E5E5";
 
 function todayStr(): string {
   const d = new Date();
@@ -31,7 +35,7 @@ function MiniRing({ pct }: { pct: number }) {
 
   return (
     <svg width={size} height={size} className="flex-shrink-0">
-      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#E5E5E5" strokeWidth={sw} />
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={BORDER} strokeWidth={sw} />
       <motion.circle
         cx={size / 2} cy={size / 2} r={r}
         fill="none" stroke={ACCENT} strokeWidth={sw} strokeLinecap="round"
@@ -45,7 +49,7 @@ function MiniRing({ pct }: { pct: number }) {
   );
 }
 
-// ─── 分隔线 ──────────────────────────────────────────────────
+// ─── 分割线 ──────────────────────────────────────────────────
 function Divider() {
   return <div className="mx-4" style={{ borderBottom: "0.5px solid #F5F5F5" }} />;
 }
@@ -60,20 +64,12 @@ export default function EfficiencyPage() {
   const [sheetGoal, setSheetGoal] = useState<Goal | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  // ─── Project 筛选 ──────────────────────────────────────────
-  const projects = useLiveQuery(() => getAllProjects(), [], [] as Project[]);
-  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  // ─── Project 颜色映射 ──────────────────────────────────────
+  const projects = useLiveQuery(() => getAllProjects(), [], []);
 
-  // ─── 过滤后的 Goals ────────────────────────────────────────
-  const filteredGoals = useMemo(() => {
-    if (selectedProjectId === null) return goals;
-    return goals.filter((g) => g.projectId === selectedProjectId);
-  }, [goals, selectedProjectId]);
-
-  // ─── Project 颜色查找表 ────────────────────────────────────
   const projectColorMap = useMemo(() => {
     const map = new Map<string, string>();
-    for (const p of (projects ?? [])) {
+    for (const p of projects ?? []) {
       map.set(p.id, p.color);
     }
     return map;
@@ -107,17 +103,10 @@ export default function EfficiencyPage() {
   );
 
   const handleQuickAction = useCallback(
-    async (goal: Goal, action: "pause" | "edit" | "delete") => {
+    async (goal: Goal, action: "pause" | "edit") => {
       setQuickGoalId(null);
       if (action === "edit") {
         router.push(`/efficiency/create?id=${goal.id}`);
-        return;
-      }
-      if (action === "delete") {
-        if (window.confirm("确定删除这个目标吗？此操作不可恢复。")) {
-          await deleteGoal(goal.id);
-          showToast({ type: "success", message: "已删除" });
-        }
         return;
       }
       if (goal.status === "paused") {
@@ -128,7 +117,7 @@ export default function EfficiencyPage() {
         showToast({ message: "已暂停", type: "info" });
       }
     },
-    [router, updateGoalStatus, deleteGoal],
+    [router, updateGoalStatus],
   );
 
   useEffect(() => { loadGoals(); }, [loadGoals]);
@@ -158,11 +147,11 @@ export default function EfficiencyPage() {
 
   // ─── 分组 ──────────────────────────────────────────────────
   const { activeGoals, completedGoals } = useMemo(() => {
-    const active = filteredGoals
+    const active = goals
       .filter((g) => g.status === "active" || g.status === "paused")
       .sort((a, b) => b.createdAt - a.createdAt);
 
-    const completed = filteredGoals
+    const completed = goals
       .filter((g) => g.status === "completed")
       .sort((a, b) => {
         const aTime = a.completedAt ?? 0;
@@ -172,7 +161,16 @@ export default function EfficiencyPage() {
       });
 
     return { activeGoals: active, completedGoals: completed };
-  }, [filteredGoals]);
+  }, [goals]);
+
+  // ─── 本月完成数 ────────────────────────────────────────────
+  const monthlyCompleted = useMemo(() => {
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+    return goals.filter(
+      (g) => g.status === "completed" && (g.completedAt ?? 0) >= monthStart,
+    ).length;
+  }, [goals]);
 
   // ─── 操作弹层 ──────────────────────────────────────────────
   const closeSheet = useCallback(() => {
@@ -219,74 +217,45 @@ export default function EfficiencyPage() {
 
   // ─── 渲染 ──────────────────────────────────────────────────
 
-  // 空态
   const showEmpty = !loading && activeGoals.length === 0 && completedGoals.length === 0;
 
   return (
     <div>
       {/* ===== Header ===== */}
-      <div className="px-5 pt-[var(--safe-area-top)] pb-2 flex items-center justify-between">
-        <div>
-          <h1 className="text-[34px] font-bold text-[var(--color-text-primary)]">目标</h1>
-          <p className="text-[15px] mt-1 text-[var(--color-text-secondary)]">项目 · 目标 · 任务</p>
-        </div>
-        <button
-          type="button"
-          onClick={() => router.push(`/efficiency/create${selectedProjectId ? `?projectId=${selectedProjectId}` : ""}`)}
-          className="w-10 h-10 rounded-full bg-[var(--color-surface-card)] border border-[var(--lifeflow-border)] flex items-center justify-center shadow-card"
-        >
-          <Plus className="w-5 h-5 text-[var(--lifeflow-primary)]" />
-        </button>
+      <div className="px-4 pt-[56px]">
+        <h1 className="text-[34px] font-bold" style={{ color: TEXT_PRIMARY }}>效率</h1>
       </div>
 
-      {/* ===== Project 标签筛选 ===== */}
-      <div className="px-5 pt-3 pb-4 flex items-center gap-2 overflow-x-auto no-scrollbar">
-        <button
+      {/* ===== Main Action Row ===== */}
+      <div className="px-4 mt-[24px] flex items-center justify-between">
+        <span className="text-[15px]" style={{ color: TEXT_SECONDARY }}>
+          <span className="text-[17px] font-bold" style={{ color: TEXT_PRIMARY }}>
+            本月完成 {monthlyCompleted}
+          </span>
+          {" "}个目标
+        </span>
+        <motion.button
           type="button"
-          onClick={() => setSelectedProjectId(null)}
-          className={`shrink-0 h-9 px-4 rounded-full text-[15px] font-medium ${
-            selectedProjectId === null
-              ? "bg-[var(--lifeflow-primary)] text-[var(--color-text-inverse)]"
-              : "bg-[var(--color-surface-card)] text-[var(--color-text-secondary)] border border-[var(--lifeflow-border)]"
-          }`}
-          style={selectedProjectId === null ? { boxShadow: "var(--shadow-tab-center)" } : undefined}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => router.push("/efficiency/create")}
+          className="h-[40px] px-5 rounded-full flex items-center gap-1"
+          style={{ backgroundColor: ACCENT }}
         >
-          全部
-        </button>
-        {(projects ?? []).map((p) => {
-          const isSelected = selectedProjectId === p.id;
-          return (
-            <button
-              key={p.id}
-              type="button"
-              onClick={() => setSelectedProjectId(p.id)}
-              className={`shrink-0 h-9 px-4 rounded-full text-[15px] font-medium ${
-                isSelected
-                  ? "text-[var(--color-text-inverse)]"
-                  : "bg-[var(--color-surface-card)] text-[var(--color-text-secondary)] border border-[var(--lifeflow-border)]"
-              }`}
-              style={
-                isSelected
-                  ? { backgroundColor: p.color, boxShadow: "var(--shadow-tab-center)" }
-                  : undefined
-              }
-            >
-              {p.name}
-            </button>
-          );
-        })}
+          <Plus className="w-[16px] h-[16px] text-white mr-1" />
+          <span className="text-white text-[15px] font-semibold">新建目标</span>
+        </motion.button>
       </div>
 
-      {/* ===== 骨架屏 ===== */}
+      {/* ===== Loading Skeleton ===== */}
       {loading && (
         <div className="px-4 mt-[16px] flex flex-col gap-3">
           {[1, 2].map((i) => (
             <div
               key={i}
-              className="bg-white rounded-[16px] border border-[#E5E5E5] p-4 flex items-center gap-3 animate-pulse"
+              className="bg-white rounded-[16px] border border-[#E5E5E5] p-4 flex items-center gap-[12px] animate-pulse"
             >
-              <div className="w-2 h-2 rounded-full bg-[#F5F5F5]" />
-              <div className="flex-1 flex flex-col gap-1">
+              <div className="w-[8px] h-[8px] rounded-full bg-[#F5F5F5] shrink-0" />
+              <div className="flex-1 min-w-0 flex flex-col gap-[4px]">
                 <div className="h-5 w-1/2 bg-[#F5F5F5] rounded" />
                 <div className="h-[14px] w-1/3 bg-[#F5F5F5] rounded" />
               </div>
@@ -296,40 +265,43 @@ export default function EfficiencyPage() {
         </div>
       )}
 
-      {/* ===== 空态 ===== */}
+      {/* ===== Empty State ===== */}
       {showEmpty && (
-        <div className="card-standard p-8 flex flex-col items-center text-center gap-5">
-          <div className="w-20 h-20 rounded-full bg-[var(--color-surface-secondary)] flex items-center justify-center">
-            <Target className="h-10 w-10 text-[var(--color-text-disabled)]" />
-          </div>
-          <div>
-            <p className="text-[17px] font-medium text-[var(--color-text-secondary)]">开始创建一个目标吧！</p>
-            <p className="text-[14px] text-[var(--color-text-disabled)] mt-1">
-              从项目开始，分解为目标和任务，让每一步都有迹可循
-            </p>
-          </div>
-          <button
+        <div className="flex flex-col items-center pt-[80px]">
+          <p className="text-[15px]" style={{ color: TEXT_TERTIARY }}>开始创建一个目标吧！</p>
+          <motion.button
             type="button"
+            whileTap={{ scale: 0.95 }}
             onClick={() => router.push("/efficiency/create")}
-            className="h-11 px-7 rounded-full text-[16px] font-semibold bg-[var(--lifeflow-primary)] text-[var(--color-text-inverse)]"
-            style={{ boxShadow: "var(--shadow-tab-center)" }}
+            className="mt-[24px] h-[40px] px-5 rounded-full flex items-center gap-1"
+            style={{ backgroundColor: ACCENT }}
           >
-            创建目标
-          </button>
+            <Plus className="w-[16px] h-[16px] text-white mr-1" />
+            <span className="text-white text-[15px] font-semibold">新建目标</span>
+          </motion.button>
         </div>
       )}
 
       {/* ===== 进行中分组 ===== */}
       {activeGoals.length > 0 && (
         <>
-          <div className="px-4 mt-[16px] flex flex-col gap-3">
+          <h2
+            className="px-4 mt-[32px] mb-[12px] text-[20px] font-bold"
+            style={{ color: TEXT_PRIMARY }}
+          >
+            进行中
+          </h2>
+          <div className="px-4 flex flex-col gap-3">
             {activeGoals.map((goal, i) => {
               const stats = todayTaskStats.get(goal.id) ?? { done: 0, total: 0 };
               const pct =
                 stats.total > 0
                   ? Math.round((stats.done / stats.total) * 100)
                   : Math.min(100, Math.max(0, goal.progress));
-              const color = projectColorMap.get(goal.projectId || "") || "#FFFFFF";
+              const dotColor =
+                (goal as any).color ||
+                projectColorMap.get(goal.projectId || "") ||
+                ACCENT;
               const quickActive = quickGoalId === goal.id;
 
               return (
@@ -349,27 +321,22 @@ export default function EfficiencyPage() {
                         style={{ right: 8, top: "50%", transform: "translateY(-50%)" }}
                       >
                         {(goal.status === "active" || goal.status === "paused") && (
-                          <>
-                            <motion.button
-                              type="button"
-                              initial={{ opacity: 0, x: 12 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              exit={{ opacity: 0, x: 12 }}
-                              transition={{ duration: 0.2, ease: "easeOut" }}
-                              onClick={(e) => { e.stopPropagation(); handleQuickAction(goal, "pause"); }}
-                              aria-label={goal.status === "paused" ? "恢复" : "暂停"}
-                              className="w-[44px] h-[44px] rounded-full bg-white border border-[#E5E5E5] flex items-center justify-center"
-                            >
-                              {goal.status === "paused" ? (
-                                <Play className="w-5 h-5 text-[#1D1D1F]" />
-                              ) : (
-                                <Pause className="w-5 h-5 text-[#1D1D1F]" />
-                              )}
-                            </motion.button>
-                            <span className="text-[11px] text-[#86868B] mt-1">
-                              {goal.status === "paused" ? "恢复" : "暂停"}
-                            </span>
-                          </>
+                          <motion.button
+                            type="button"
+                            initial={{ opacity: 0, x: 12 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: 12 }}
+                            transition={{ duration: 0.2, ease: "easeOut" }}
+                            onClick={(e) => { e.stopPropagation(); handleQuickAction(goal, "pause"); }}
+                            aria-label={goal.status === "paused" ? "恢复" : "暂停"}
+                            className="w-[44px] h-[44px] rounded-full bg-white border border-[#E5E5E5] flex items-center justify-center"
+                          >
+                            {goal.status === "paused" ? (
+                              <Play className="w-5 h-5" style={{ color: TEXT_PRIMARY }} />
+                            ) : (
+                              <Pause className="w-5 h-5" style={{ color: TEXT_PRIMARY }} />
+                            )}
+                          </motion.button>
                         )}
                         <motion.button
                           type="button"
@@ -379,32 +346,21 @@ export default function EfficiencyPage() {
                           transition={{ duration: 0.2, delay: 0.05, ease: "easeOut" }}
                           onClick={(e) => { e.stopPropagation(); handleQuickAction(goal, "edit"); }}
                           aria-label="编辑"
-                          className="w-[44px] h-[44px] rounded-full bg-[#6366F1] flex items-center justify-center"
-                          style={{ marginTop: goal.status === "active" || goal.status === "paused" ? 8 : 0 }}
+                          className="w-[44px] h-[44px] rounded-full flex items-center justify-center"
+                          style={{
+                            backgroundColor: ACCENT,
+                            marginTop: goal.status === "active" || goal.status === "paused" ? 8 : 0,
+                          }}
                         >
                           <Pencil className="w-5 h-5 text-white" />
                         </motion.button>
-                        <span className="text-[11px] text-[#86868B] mt-1">编辑</span>
-                        <motion.button
-                          type="button"
-                          initial={{ opacity: 0, x: 12 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          exit={{ opacity: 0, x: 12 }}
-                          transition={{ duration: 0.2, delay: 0.1, ease: "easeOut" }}
-                          onClick={(e) => { e.stopPropagation(); handleQuickAction(goal, "delete"); }}
-                          aria-label="删除"
-                          className="w-[44px] h-[44px] rounded-full flex items-center justify-center mt-[8px]"
-                          style={{ backgroundColor: "#FF3B30" }}
-                        >
-                          <Trash2 className="w-5 h-5 text-white" />
-                        </motion.button>
-                        <span className="text-[11px] text-[#86868B] mt-1">删除</span>
                       </div>
                     )}
                   </AnimatePresence>
 
                   {/* 卡片本体 */}
                   <motion.div
+                    whileTap={{ scale: 0.98 }}
                     animate={{
                       scale: quickActive ? 0.98 : 1,
                       opacity: quickActive ? 0.9 : 1,
@@ -415,23 +371,17 @@ export default function EfficiencyPage() {
                     onPointerUp={cancelPress}
                     onPointerLeave={cancelPress}
                     onClick={() => handleCardClick(goal)}
-                    className="bg-white rounded-[16px] border border-[#E5E5E5] p-4 flex items-center gap-3 cursor-pointer select-none"
+                    className="bg-white rounded-[16px] border border-[#E5E5E5] p-4 flex items-center gap-[12px] cursor-pointer select-none"
                   >
                     <div
-                      className="w-2 h-2 rounded-full flex-shrink-0"
-                      style={{ backgroundColor: color }}
+                      className="w-[8px] h-[8px] rounded-full shrink-0"
+                      style={{ backgroundColor: dotColor }}
                     />
-                    <div className="flex-1 min-w-0 flex flex-col gap-1">
-                      <span className="text-[17px] font-semibold text-[#1D1D1F] truncate">{goal.title}</span>
-                      {goal.deadline && (
-                        (() => {
-                          const daysLeft = Math.ceil((new Date(goal.deadline).getTime() - Date.now()) / 86400000);
-                          return daysLeft > 0 ? <div className="text-[11px]" style={{color:"#8E8E93"}}>还剩 {daysLeft} 天</div>
-                            : daysLeft === 0 ? <div className="text-[11px]" style={{color:"#FF9500"}}>今天截止</div>
-                            : <div className="text-[11px]" style={{color:"#FF3B30"}}>已超 {Math.abs(daysLeft)} 天</div>;
-                        })()
-                      )}
-                      <span className="text-[13px] text-[#86868B]">
+                    <div className="flex-1 min-w-0 flex flex-col gap-[4px]">
+                      <span className="text-[17px] font-semibold truncate" style={{ color: TEXT_PRIMARY }}>
+                        {goal.title}
+                      </span>
+                      <span className="text-[13px]" style={{ color: TEXT_SECONDARY }}>
                         {stats.total > 0
                           ? `今日任务 · ${stats.done}/${stats.total} 项`
                           : "今日无任务"}
@@ -449,7 +399,12 @@ export default function EfficiencyPage() {
       {/* ===== 已完成分组 ===== */}
       {completedGoals.length > 0 && (
         <>
-          <h2 className="px-4 mt-[32px] mb-[12px] text-[20px] font-bold text-[#1D1D1F]">已完成</h2>
+          <h2
+            className="px-4 mt-[32px] mb-[12px] text-[20px] font-bold"
+            style={{ color: TEXT_PRIMARY }}
+          >
+            已完成
+          </h2>
           <div className="px-4 flex flex-col gap-3">
             {completedGoals.map((goal, i) => {
               const completeLabel = goal.completedAt
@@ -465,17 +420,22 @@ export default function EfficiencyPage() {
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.05, duration: 0.35, ease: "easeOut" }}
-                  className="bg-white rounded-[16px] border border-[#E5E5E5] p-4 flex items-center gap-3 cursor-pointer select-none"
+                  className="bg-white rounded-[16px] border border-[#E5E5E5] p-4 flex items-center gap-[12px] cursor-pointer select-none"
                   onClick={() => { setSheetGoal(goal); setConfirmDelete(false); }}
                 >
-                  <div className="w-2 h-2 rounded-full flex-shrink-0 bg-[#AEAEB2]" />
-                  <div className="flex-1 min-w-0 flex flex-col gap-1">
-                    <span className="text-[17px] font-medium text-[#AEAEB2] line-through truncate">
+                  <div className="w-[8px] h-[8px] rounded-full shrink-0" style={{ backgroundColor: TEXT_TERTIARY }} />
+                  <div className="flex-1 min-w-0 flex flex-col gap-[4px]">
+                    <span
+                      className="text-[17px] font-medium line-through truncate"
+                      style={{ color: TEXT_TERTIARY }}
+                    >
                       {goal.title}
                     </span>
-                    <span className="text-[13px] text-[#AEAEB2]">{completeLabel}</span>
+                    <span className="text-[13px]" style={{ color: TEXT_TERTIARY }}>
+                      {completeLabel}
+                    </span>
                   </div>
-                  <CheckCircle2 className="w-6 h-6 flex-shrink-0 text-[#34C759]" strokeWidth={2} />
+                  <CheckCircle2 className="w-[24px] h-[24px] shrink-0" style={{ color: GREEN }} strokeWidth={2} />
                 </motion.div>
               );
             })}
@@ -517,7 +477,9 @@ export default function EfficiencyPage() {
 
               {/* 目标名 */}
               <div className="px-4 pb-2">
-                <p className="text-[13px] text-[#86868B] truncate">{sheetGoal.title}</p>
+                <p className="text-[13px] truncate" style={{ color: TEXT_SECONDARY }}>
+                  {sheetGoal.title}
+                </p>
               </div>
               <Divider />
 
@@ -578,11 +540,11 @@ function ActionSheetItem({
     >
       <Icon
         className="w-[22px] h-[22px] mr-3 flex-shrink-0"
-        style={{ color: danger ? DANGER : "#86868B" }}
+        style={{ color: danger ? DANGER : TEXT_SECONDARY }}
       />
       <span
         className="text-[15px]"
-        style={{ color: danger ? DANGER : "#1D1D1F" }}
+        style={{ color: danger ? DANGER : TEXT_PRIMARY }}
       >
         {label}
       </span>

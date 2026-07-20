@@ -1,12 +1,11 @@
-﻿﻿"use client";
+"use client";
 
 import { Suspense, useEffect, useState, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { ChevronRight, Minus, Plus, Sparkles } from "lucide-react";
 import { useEfficiencyStore } from "@/lib/store/efficiencyStore";
-import { useLiveQuery } from "dexie-react-hooks";
-import { efficiencyDB, getAllProjects, type ScheduleTask, type Project } from "@/lib/db/efficiency.db";
+import { efficiencyDB, type ScheduleTask } from "@/lib/db/efficiency.db";
 import BottomSheet from "@/components/common/BottomSheet";
 import { plannerBrain } from "@/lib/brains/planner";
 import { showToast } from "@/components/ui/Toast";
@@ -15,7 +14,8 @@ import { showToast } from "@/components/ui/Toast";
 // 设计令牌
 // ============================================================
 
-const ACCENT = "#6366F1";
+const ACCENT = "#5865F2";
+const DOT_COLORS = ["#5865F2", "#FF9500", "#34C759", "#E94057"];
 
 function getDefaultDeadline(): string {
   const d = new Date();
@@ -59,13 +59,14 @@ function CreateGoalInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const editId = searchParams.get("id");
-  const incomingProjectId = searchParams.get("projectId");
   const isEdit = Boolean(editId);
 
   const { addGoal, confirmBreakdown, loadGoals } = useEfficiencyStore();
 
   const [title, setTitle] = useState("");
-  const [projectId, setProjectId] = useState(incomingProjectId || "");
+  const [color, setColor] = useState(ACCENT);
+  const [goalType, setGoalType] = useState<"count" | "habit">("count");
+  const [targetCount, setTargetCount] = useState(5);
   const [deadline, setDeadline] = useState(getDefaultDeadline());
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
@@ -78,8 +79,6 @@ function CreateGoalInner() {
   const [previewGoalId, setPreviewGoalId] = useState("");
   const [strategyInfo, setStrategyInfo] = useState<{ label: string; confidence: number } | null>(null);
 
-  const projects = useLiveQuery(() => getAllProjects(), [], [] as Project[]);
-
   // ─── 编辑模式：载入现有目标 ───
   useEffect(() => {
     if (!editId) return;
@@ -88,12 +87,11 @@ function CreateGoalInner() {
       if (cancelled) return;
       if (goal) {
         setTitle(goal.title);
+        setColor(goal.color || ACCENT);
+        setGoalType(goal.goalType || "count");
+        setTargetCount(goal.targetCount || 5);
         setDeadline(goal.deadline || getDefaultDeadline());
         setNote(goal.note || "");
-        if (goal.projectId) {
-          setProjectId(goal.projectId);
-        }
-        // 如果没有 projectId，等 project 列表加载后由默认 effect 补上
       } else {
         showToast({ type: "error", message: "目标不存在" });
       }
@@ -101,15 +99,6 @@ function CreateGoalInner() {
     });
     return () => { cancelled = true; };
   }, [editId]);
-
-  // ─── 新建模式：默认选中「无项目」 ───
-  useEffect(() => {
-    if (isEdit || incomingProjectId) return;
-    if (projects.length > 0 && !projectId) {
-      const none = projects.find((p) => p.name === "无项目");
-      if (none) setProjectId(none.id);
-    }
-  }, [isEdit, incomingProjectId, projects, projectId]);
 
   const canSubmit = title.trim().length > 0 && !saving;
 
@@ -119,10 +108,11 @@ function CreateGoalInner() {
     try {
       const data = {
         title: title.trim(),
+        color,
         deadline,
-        goalType: "count" as const,
+        goalType,
+        targetCount,
         note: note.trim(),
-        projectId: projectId || undefined,
       };
 
       if (isEdit && editId) {
@@ -147,7 +137,7 @@ function CreateGoalInner() {
       setSaving(false);
       showToast({ type: "error", message: "保存失败" });
     }
-  }, [canSubmit, isEdit, editId, title, deadline, note, projectId, useAI, addGoal, loadGoals, router]);
+  }, [canSubmit, isEdit, editId, title, color, deadline, goalType, targetCount, note, useAI, addGoal, loadGoals, router]);
 
   if (!loaded) return null;
 
@@ -184,12 +174,12 @@ function CreateGoalInner() {
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-[8px] border border-[#EBEBEB] px-4 py-4"
+          className="bg-white rounded-[8px] border border-[#EBEBEB] px-4 pt-4 pb-4"
         >
           <p className="text-[14px] text-[#86868B] mb-2">目标名称</p>
           <div
             className="h-12 rounded-[10px] bg-[#F5F5F7] px-4 flex items-center"
-            style={focused ? { boxShadow: "0 0 0 1px #6366F1" } : undefined}
+            style={focused ? { boxShadow: "0 0 0 1px #5865F2" } : undefined}
           >
             <input
               type="text"
@@ -205,27 +195,111 @@ function CreateGoalInner() {
           </div>
         </motion.div>
 
-        {/* 卡片 2 · 所属项目 */}
+        {/* 卡片 2 · 项目标签 (Color) */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.05 }}
           className="bg-white rounded-[8px] border border-[#EBEBEB] px-4 py-4"
         >
-          <p className="text-[14px] text-[#86868B] mb-2">所属项目</p>
-          <select
-            value={projectId}
-            onChange={(e) => setProjectId(e.target.value)}
-            className="w-full outline-none text-[15px] text-[#1D1D1F]"
-            style={{ background: "#F2F2F7", borderRadius: "8px", height: "40px", padding: "0 12px" }}
+          <div
+            className="flex items-center justify-between cursor-pointer"
+            onClick={() => showToast({ type: "info", message: "功能开发中" })}
           >
-            {(projects ?? []).map((p) => (
-              <option key={p.id} value={p.id}>{p.name}</option>
+            <span className="text-[14px] text-[#86868B]">项目标签</span>
+            <ChevronRight className="w-4 h-4 text-[#86868B]" />
+          </div>
+          <div className="h-px bg-[#EBEBEB] my-3" />
+          <div className="flex items-center gap-2">
+            {DOT_COLORS.map((c) => (
+              <motion.button
+                key={c}
+                type="button"
+                whileTap={{ scale: 0.85 }}
+                onClick={() => setColor(c)}
+                className="w-2 h-2 rounded-full"
+                style={{
+                  backgroundColor: c,
+                  boxShadow:
+                    color === c
+                      ? `0 0 0 2px #FFFFFF, 0 0 0 4px ${c}`
+                      : undefined,
+                }}
+              />
             ))}
-          </select>
+          </div>
         </motion.div>
 
-        {/* 卡片 3 · 截止日期 */}
+        {/* 卡片 3 · 目标类型 */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="bg-white rounded-[8px] border border-[#EBEBEB] px-4 py-4"
+        >
+          <p className="text-[14px] text-[#86868B] mb-3">目标类型</p>
+
+          {/* Segmented control */}
+          <div className="h-10 rounded-[10px] bg-[#F5F5F7] p-[2px] flex">
+            <button
+              type="button"
+              onClick={() => setGoalType("count")}
+              className="flex-1 flex items-center justify-center text-[14px] rounded-[8px] transition-colors"
+              style={{
+                background: goalType === "count" ? "#EEF0FF" : "transparent",
+                color: goalType === "count" ? ACCENT : "#86868B",
+                fontWeight: goalType === "count" ? 500 : 400,
+              }}
+            >
+              次数目标
+            </button>
+            <button
+              type="button"
+              onClick={() => setGoalType("habit")}
+              className="flex-1 flex items-center justify-center text-[14px] rounded-[8px] transition-colors"
+              style={{
+                background: goalType === "habit" ? "#EEF0FF" : "transparent",
+                color: goalType === "habit" ? ACCENT : "#86868B",
+                fontWeight: goalType === "habit" ? 500 : 400,
+              }}
+            >
+              习惯目标
+            </button>
+          </div>
+
+          {/* Stepper */}
+          <div className="flex items-center justify-between mt-4">
+            <p className="text-[17px] text-[#1D1D1F]">
+              完成{" "}
+              <span className="font-semibold">{targetCount}</span>{" "}
+              次
+            </p>
+            <div className="flex items-center gap-3">
+              <motion.button
+                type="button"
+                whileTap={{ scale: 0.85 }}
+                onClick={() => setTargetCount((v) => Math.max(1, v - 1))}
+                disabled={targetCount <= 1}
+                className="w-8 h-8 rounded-full bg-[#5865F2] flex items-center justify-center"
+                style={{ opacity: targetCount <= 1 ? 0.4 : 1 }}
+              >
+                <Minus className="w-4 h-4 text-white" />
+              </motion.button>
+              <motion.button
+                type="button"
+                whileTap={{ scale: 0.85 }}
+                onClick={() => setTargetCount((v) => Math.min(999, v + 1))}
+                disabled={targetCount >= 999}
+                className="w-8 h-8 rounded-full bg-[#5865F2] flex items-center justify-center"
+                style={{ opacity: targetCount >= 999 ? 0.4 : 1 }}
+              >
+                <Plus className="w-4 h-4 text-white" />
+              </motion.button>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* 卡片 4 · 截止日期 */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
@@ -272,7 +346,7 @@ function CreateGoalInner() {
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-[#6366F1]" />
+                <Sparkles className="w-5 h-5 text-[#5865F2]" />
                 <span className="text-[15px] font-medium text-[#1D1D1F]">智能拆解</span>
               </div>
               <Toggle on={useAI} onToggle={() => setUseAI((v) => !v)} />
@@ -295,8 +369,8 @@ function CreateGoalInner() {
       >
         {strategyInfo && (
           <div className="flex items-center gap-2 mb-3 px-1">
-            <Sparkles className="w-4 h-4 text-[#6366F1]" />
-            <span className="text-sm font-medium text-[#6366F1]">{strategyInfo.label}</span>
+            <Sparkles className="w-4 h-4 text-[#5865F2]" />
+            <span className="text-sm font-medium text-[#5865F2]">{strategyInfo.label}</span>
             <span className="text-xs text-gray-400">置信度 {strategyInfo.confidence}%</span>
           </div>
         )}
@@ -305,7 +379,7 @@ function CreateGoalInner() {
             <div key={i} className="flex items-start gap-3 p-3 rounded-xl bg-gray-50">
               <div
                 className="w-1.5 h-1.5 rounded-full mt-2 flex-shrink-0"
-                style={{ backgroundColor: task.isImportant ? "#FF9500" : "#6366F1" }}
+                style={{ backgroundColor: task.isImportant ? "#FF9500" : ACCENT }}
               />
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium text-gray-900 truncate">{task.title}</div>
@@ -324,12 +398,12 @@ function CreateGoalInner() {
             setPreviewOpen(false);
             router.push("/efficiency");
           }}
-          className="w-full py-3 rounded-xl text-white font-medium text-sm bg-[#6366F1]"
+          className="w-full py-3 rounded-xl text-white font-medium text-sm"
+          style={{ background: ACCENT }}
         >
           确认并保存 ({previewTasks.length} 个任务)
         </button>
       </BottomSheet>
-
     </div>
   );
 }

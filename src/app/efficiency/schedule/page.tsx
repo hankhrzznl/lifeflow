@@ -229,22 +229,6 @@ export default function SchedulePage() {
           <TimelineView date={selectedDate} />
         ) : (
           <>
-            {/* 日期标题 + 回到今天 */}
-            <div className="flex items-center justify-between mb-3">
-              {(() => {
-                const sd = new Date(selectedDate + "T00:00:00");
-                const weekdays = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
-                return (
-                  <span className="text-[15px] font-semibold text-[#1D1D1F]">
-                    {formatDate(sd)} {weekdays[sd.getDay()]}
-                  </span>
-                );
-              })()}
-              {selectedDate !== todayStr && (
-                <button onClick={goToday} className="text-[13px] text-[#6366F1]">回到今天</button>
-              )}
-            </div>
-
             {/* 任务列表 */}
             {sortedTasks.length === 0 ? (
               <div className="text-center py-16">

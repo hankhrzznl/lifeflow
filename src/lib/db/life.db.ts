@@ -56,6 +56,12 @@ export class LifeDB extends Dexie {
       notes: '&id, date',
       focusSessions: '&id, date',
     });
+    this.version(2).stores({
+      habits: '&id, name',
+      countdowns: '&id, name, date',
+      notes: '&id, date',
+      focusSessions: '&id, date',
+    });
   }
 }
 

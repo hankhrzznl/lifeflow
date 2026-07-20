@@ -1,4 +1,4 @@
-﻿﻿"use client";
+﻿"use client";
 
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
@@ -157,10 +157,7 @@ export default function EfficiencyPage() {
   }, [scheduleTasks]);
 
   // ─── 分组 ──────────────────────────────────────────────────
-  const { activeGoals, completedGoals, monthCompletedCount } = useMemo(() => {
-    const now = new Date();
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
-
+  const { activeGoals, completedGoals } = useMemo(() => {
     const active = filteredGoals
       .filter((g) => g.status === "active" || g.status === "paused")
       .sort((a, b) => b.createdAt - a.createdAt);
@@ -174,11 +171,7 @@ export default function EfficiencyPage() {
         return b.createdAt - a.createdAt;
       });
 
-    const monthCount = filteredGoals.filter(
-      (g) => g.status === "completed" && g.completedAt && g.completedAt >= monthStart,
-    ).length;
-
-    return { activeGoals: active, completedGoals: completed, monthCompletedCount: monthCount };
+    return { activeGoals: active, completedGoals: completed };
   }, [filteredGoals]);
 
   // ─── 操作弹层 ──────────────────────────────────────────────
@@ -269,29 +262,9 @@ export default function EfficiencyPage() {
         })}
       </div>
 
-      {/* ===== 主操作行 ===== */}
-      <div className="px-4 mt-[24px] flex items-center justify-between">
-        <div className="text-[15px] text-[#86868B]">
-          本月完成{" "}
-          <span className="text-[17px] font-bold text-[#1D1D1F] tabular-nums">
-            {monthCompletedCount}
-          </span>{" "}
-          个目标
-        </div>
-        <motion.button
-          whileTap={{ scale: 0.95 }}
-          onClick={() => router.push(`/efficiency/create${selectedProjectId ? `?projectId=${selectedProjectId}` : ""}`)}
-          className="h-[40px] px-5 rounded-full bg-[#6366F1] text-white text-[15px] font-semibold flex items-center gap-1"
-        >
-          <Plus className="w-4 h-4" />
-          新建目标
-        </motion.button>
-      </div>
-
       {/* ===== 骨架屏 ===== */}
       {loading && (
-        <div className="px-4 mt-[32px] flex flex-col gap-3">
-          <div className="h-8 w-20 bg-[#F5F5F5] rounded animate-pulse mb-1" />
+        <div className="px-4 mt-[16px] flex flex-col gap-3">
           {[1, 2].map((i) => (
             <div
               key={i}
@@ -312,22 +285,13 @@ export default function EfficiencyPage() {
       {showEmpty && (
         <div className="flex flex-col items-center pt-[80px]">
           <p className="text-[15px] text-[#AEAEB2]">开始创建一个目标吧！</p>
-          <motion.button
-            whileTap={{ scale: 0.95 }}
-            onClick={() => router.push("/efficiency/create")}
-            className="mt-[24px] h-[40px] px-5 rounded-full bg-[#6366F1] text-white text-[15px] font-semibold flex items-center gap-1"
-          >
-            <Plus className="w-4 h-4" />
-            新建目标
-          </motion.button>
         </div>
       )}
 
       {/* ===== 进行中分组 ===== */}
       {activeGoals.length > 0 && (
         <>
-          <h2 className="px-4 mt-[32px] mb-[12px] text-[20px] font-bold text-[#1D1D1F]">进行中</h2>
-          <div className="px-4 flex flex-col gap-3">
+          <div className="px-4 mt-[16px] flex flex-col gap-3">
             {activeGoals.map((goal, i) => {
               const stats = todayTaskStats.get(goal.id) ?? { done: 0, total: 0 };
               const pct =
@@ -492,6 +456,21 @@ export default function EfficiencyPage() {
       {quickGoalId && (
         <div className="fixed inset-0 z-30" onClick={() => setQuickGoalId(null)} />
       )}
+
+      {/* ===== 悬浮新建按钮 ===== */}
+      <motion.button
+        whileTap={{ scale: 0.9 }}
+        onClick={() => router.push(`/efficiency/create${selectedProjectId ? `?projectId=${selectedProjectId}` : ""}`)}
+        className="fixed z-20 w-14 h-14 rounded-full flex items-center justify-center"
+        style={{
+          right: 20,
+          bottom: `calc(24px + var(--bottom-nav-height))`,
+          background: ACCENT,
+          boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+        }}
+      >
+        <Plus className="w-6 h-6 text-white" strokeWidth={2.5} />
+      </motion.button>
 
       {/* ===== 目标操作弹层 ===== */}
       <AnimatePresence>

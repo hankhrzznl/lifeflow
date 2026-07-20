@@ -249,7 +249,7 @@ export default function SleepPage() {
       {/* ===== 页头 ===== */}
       <div className="sticky top-0 z-20 bg-white border-b border-[#EBEBEB]">
         <div className="h-11 px-4 flex items-center justify-center relative max-w-[430px] mx-auto">
-          <button type="button" onClick={() => router.push("/health")}
+          <button type="button" onClick={() => router.push("/more")}
             className="absolute left-4 w-10 h-10 -ml-2 flex items-center justify-center">
             <ChevronLeft className="w-6 h-6 text-[#515154]" />
           </button>

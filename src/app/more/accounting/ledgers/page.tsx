@@ -95,7 +95,7 @@ export default function LedgersPage() {
           <ChevronLeft className="w-6 h-6" style={{ color: TEXT_PRIMARY }} />
         </button>
         <span className="text-[17px] font-semibold" style={{ color: TEXT_PRIMARY }}>账本</span>
-        <button type="button" onClick={() => router.push("/accounting/ledgers/new")}
+        <button type="button" onClick={() => router.push("/more/accounting/ledgers/new")}
           className="inline-flex items-center justify-center w-8 h-8 -mr-2">
           <Plus className="w-6 h-6" style={{ color: ACCENT }} />
         </button>

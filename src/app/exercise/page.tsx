@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import MusclePage from "@/app/health/components/MusclePage";
+import MusclePage from "@/components/health/MusclePage";
 
 export default function ExercisePage() {
   const router = useRouter();
@@ -11,7 +11,7 @@ export default function ExercisePage() {
       <div className="mx-auto max-w-5xl px-5 pt-8 pb-24 md:px-8 md:pt-10">
         <div className="mb-8">
           <button
-            onClick={() => router.push("/health")}
+            onClick={() => router.push("/more")}
             className="text-sm text-gray-400 hover:text-gray-200 transition-colors mb-3"
           >
             ← 返回健康中心

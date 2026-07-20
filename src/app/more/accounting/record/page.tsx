@@ -89,7 +89,7 @@ export default function RecordPage() {
         note: note.trim() || undefined,
       });
       showToast({ type: "success", message: "已保存" });
-      router.push("/accounting");
+      router.push("/more/accounting");
     } catch {
       showToast({ type: "error", message: "保存失败" });
     } finally { setSaving(false); }
@@ -107,7 +107,7 @@ export default function RecordPage() {
     >
       {/* ===== 顶部导航栏 ===== */}
       <div className="relative flex items-center justify-between px-4 h-[44px] mt-3 border-b border-[#E5E5E5]">
-        <button type="button" onClick={() => router.push("/accounting")}
+        <button type="button" onClick={() => router.push("/more/accounting")}
           className="text-[17px] text-[#86868B] active:opacity-50">取消</button>
         <span className="absolute left-1/2 -translate-x-1/2 text-[17px] font-semibold text-[#1D1D1F]">记一笔</span>
         <span className="w-10" />

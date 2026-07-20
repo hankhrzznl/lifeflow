@@ -245,7 +245,7 @@ export default function AccountingPage() {
             ? `今日 ${todayStats.count} 笔 · 支出 ¥${fmtCompact(todayStats.expense)}`
             : !isEmpty ? `本月共 ${txs.length} 笔` : "暂无记录"}
         </span>
-        <Link href="/accounting/record">
+        <Link href="/more/accounting/record">
           <motion.div
             whileTap={{ scale: 0.97 }}
             className="h-11 px-5 rounded-full bg-[#6366F1] text-white text-[15px] font-semibold flex items-center gap-1.5 cursor-pointer"

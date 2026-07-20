@@ -116,14 +116,14 @@ export default function GlobalSettingsPage() {
                 />
                 <StationNavItem
                   label="记账 (Accounting)"
-                  path="/accounting/settings"
+                  path="/more/accounting/settings"
                   icon={Wallet}
                   color="text-sys-green"
                   bg="bg-green-50"
                 />
                 <StationNavItem
                   label="健康 (Health)"
-                  path="/health/settings"
+                  path="/more/health/settings"
                   icon={Heart}
                   color="text-sys-orange"
                   bg="bg-orange-50"

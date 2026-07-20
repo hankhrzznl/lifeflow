@@ -2,16 +2,16 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Target, CheckSquare, Wallet, Heart, Package } from "lucide-react";
+import { Home, Target, CheckSquare, Package } from "lucide-react";
 
-// ─── 全站统一底导，仅全屏流程页隐藏 ──────────────────────────
-// 6-tab：首页 / 效率 / 事项 / 记账 / 健康 / 更多
+// ─── 全站统一底导 ────────────────────────────────────────────
+// 4-tab：首页 / 效率 / 事项 / 更多
 // 全屏流程页隐藏
 
 const FULLSCREEN_PREFIXES = [
-  "/accounting/record",
-  "/accounting/ledgers",
-  "/accounting/search",
+  "/more/accounting/record",
+  "/more/accounting/ledgers",
+  "/more/accounting/search",
   "/efficiency/create",
 ];
 
@@ -19,8 +19,6 @@ const tabs = [
   { label: "首页", path: "/", icon: Home },
   { label: "效率", path: "/efficiency", icon: Target },
   { label: "事项", path: "/tasks", icon: CheckSquare },
-  { label: "记账", path: "/accounting", icon: Wallet },
-  { label: "健康", path: "/health", icon: Heart },
   { label: "更多", path: "/more", icon: Package },
 ] as const;
 

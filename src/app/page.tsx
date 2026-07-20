@@ -120,9 +120,9 @@ export default function HomePage() {
         className="grid grid-cols-2 gap-3">
         {[
           { label: "今日待办", value: `${incompleteTasks.length} 件`, color: "#6366F1", href: "/tasks" },
-          { label: "今日支出", value: `¥${formatYuan(todayExpense)}`, color: todayExpense > 0 ? "#FF3B30" : "#000", href: "/accounting" },
+          { label: "今日支出", value: `¥${formatYuan(todayExpense)}`, color: todayExpense > 0 ? "#FF3B30" : "#000", href: "/more/accounting" },
           { label: "重要紧急", value: `${q1Count} 件`, color: "#FF3B30", href: "/tasks" },
-          { label: "健康完成", value: `${healthScore}%`, color: "#FF9500", href: "/health" },
+          { label: "健康完成", value: `${healthScore}%`, color: "#FF9500", href: "/more" },
         ].map((item) => (
           <Link key={item.label} href={item.href}>
             <div className="rounded-xl bg-white p-4 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
@@ -138,7 +138,7 @@ export default function HomePage() {
         className="flex gap-3">
         {[
           { icon: CheckSquare, label: "添加事项", href: "/tasks", bg: "#6366F1" },
-          { icon: Wallet, label: "记一笔", href: "/accounting/record", bg: "#34C759" },
+          { icon: Wallet, label: "记一笔", href: "/more/accounting/record", bg: "#34C759" },
           { icon: Timer, label: "专注", href: "/more/focus", bg: "#FF9500" },
           { icon: CalendarCheck, label: "打卡", href: "/more/habits", bg: "#AF52DE" },
         ].map((item) => (
@@ -196,7 +196,7 @@ export default function HomePage() {
             <Wallet className="w-5 h-5" style={{ color: "#34C759" }} />
             <span className="text-[17px] font-semibold">今日收支</span>
           </div>
-          <Link href="/accounting" className="text-[13px]" style={{ color: "#34C759" }}>查看全部 →</Link>
+          <Link href="/more/accounting" className="text-[13px]" style={{ color: "#34C759" }}>查看全部 →</Link>
         </div>
         <div className="flex gap-4">
           <div className="flex-1 rounded-lg p-3" style={{ background: "#34C75910" }}>
@@ -218,7 +218,7 @@ export default function HomePage() {
             <Heart className="w-5 h-5" style={{ color: "#FF9500" }} />
             <span className="text-[17px] font-semibold">健康概览</span>
           </div>
-          <Link href="/health" className="text-[13px]" style={{ color: "#FF9500" }}>详情 →</Link>
+          <Link href="/more" className="text-[13px]" style={{ color: "#FF9500" }}>详情 →</Link>
         </div>
         <div className="flex gap-3">
           <div className="flex-1 rounded-lg p-3 text-center" style={{ background: "#007AFF10" }}>

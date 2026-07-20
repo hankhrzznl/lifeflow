@@ -139,7 +139,7 @@ export default function WaterPage() {
       <div className="bg-white border-b border-[#F5F5F5]">
         <div className="h-[44px] px-4 flex items-center justify-center relative max-w-[430px] mx-auto">
           <button
-            type="button" onClick={() => router.push("/health")}
+            type="button" onClick={() => router.push("/more")}
             className="absolute left-4 w-10 h-10 -ml-2 flex items-center justify-center"
           >
             <ChevronLeft className="w-6 h-6 text-[#1D1D1F]" />

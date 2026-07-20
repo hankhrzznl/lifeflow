@@ -152,7 +152,7 @@ export default function ChartPage() {
     <div className="min-h-screen bg-[#FAFAFA]">
       {/* ===== 页头 ===== */}
       <div className="flex items-center relative h-14 px-2 border-b border-[#F5F5F5]">
-        <button type="button" onClick={() => router.push("/accounting")}
+        <button type="button" onClick={() => router.push("/more/accounting")}
           className="w-11 h-11 flex items-center justify-center">
           <ChevronLeft className="w-6 h-6 text-[#1D1D1F]" />
         </button>

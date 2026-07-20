@@ -157,7 +157,7 @@ export default function AssetsPage() {
     <div className="min-h-screen">
       {/* 导航条 */}
       <div className="h-[44px] flex items-center px-4 mt-3">
-        <button type="button" onClick={() => router.push("/accounting")}
+        <button type="button" onClick={() => router.push("/more/accounting")}
           className="inline-flex items-center justify-center w-[44px] h-[44px] -ml-1">
           <ChevronLeft className="w-[28px] h-[28px]" style={{ color: TEXT_PRIMARY }} />
         </button>

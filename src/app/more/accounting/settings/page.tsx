@@ -251,7 +251,7 @@ export default function SettingsPage() {
           </button>
           <div style={{ borderTop: `0.5px solid ${BORDER_CARD}` }} />
 
-          <button type="button" onClick={() => router.push("/accounting/categories")}
+          <button type="button" onClick={() => router.push("/more/accounting/categories")}
             className="h-[56px] flex items-center justify-between px-4 w-full active:opacity-50">
             <span className="text-[17px]" style={{ color: INK }}>分类管理</span>
             <ChevronRight className="w-5 h-5" style={{ color: CHEVRON }} />

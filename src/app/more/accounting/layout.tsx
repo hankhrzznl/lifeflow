@@ -10,9 +10,9 @@ import { usePathname } from "next/navigation";
 export default function AccountingLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isFullscreen =
-    pathname.startsWith("/accounting/record") ||
-    pathname.startsWith("/accounting/ledgers") ||
-    pathname.startsWith("/accounting/search");
+    pathname.startsWith("/more/accounting/record") ||
+    pathname.startsWith("/more/accounting/ledgers") ||
+    pathname.startsWith("/more/accounting/search");
 
   return (
     <div className="min-h-screen bg-[#FAFAFA]">

@@ -165,7 +165,7 @@ export default function FitnessPage() {
     <div className="pb-8">
       {/* ===== 页头 ===== */}
       <div className="h-12 px-5 flex items-center justify-between bg-white border-b border-[#EBEBEB] sticky top-0 z-20">
-        <button type="button" onClick={() => router.push("/health")}
+        <button type="button" onClick={() => router.push("/more")}
           className="-ml-2 w-9 h-9 flex items-center justify-center">
           <ChevronLeft className="w-[22px] h-[22px] text-[#1D1D1F]" />
         </button>

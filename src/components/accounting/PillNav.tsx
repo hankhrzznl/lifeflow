@@ -10,10 +10,10 @@ import { motion } from "framer-motion";
 // ============================================================
 
 const pills = [
-  { label: "明细", path: "/accounting" },
-  { label: "图表", path: "/accounting/chart" },
-  { label: "资产", path: "/accounting/assets" },
-  { label: "我的", path: "/accounting/settings" },
+  { label: "明细", path: "/more/accounting" },
+  { label: "图表", path: "/more/accounting/chart" },
+  { label: "资产", path: "/more/accounting/assets" },
+  { label: "我的", path: "/more/accounting/settings" },
 ];
 
 export default function PillNav() {
@@ -22,8 +22,8 @@ export default function PillNav() {
     <nav className="flex gap-2 px-4">
       {pills.map((p) => {
         const active =
-          p.path === "/accounting"
-            ? pathname === "/accounting"
+          p.path === "/more/accounting"
+            ? pathname === "/more/accounting"
             : pathname.startsWith(p.path);
         return (
           <Link key={p.path} href={p.path}>

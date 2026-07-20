@@ -59,7 +59,7 @@ export default function NewLedgerPage() {
         note: note.trim() || undefined,
       });
       showToast({ type: "success", message: "已创建" });
-      router.replace("/accounting/ledgers");
+      router.replace("/more/accounting/ledgers");
     } catch {
       showToast({ type: "error", message: "创建失败" });
     } finally {

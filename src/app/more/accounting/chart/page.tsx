@@ -11,7 +11,7 @@ import type { Transaction, Category } from "@/lib/db/accounting.db";
 // ============================================================
 // 设计令牌（Apple 简约风）
 // ============================================================
-const ACCENT = "#6366F1";
+const ACCENT = "#5865F2";
 const BAR_LIGHT = "#C7D2FE";
 const BAR_ZERO = "#E5E5E5";
 const SHADOW_CARD = "0 1px 4px rgba(0,0,0,0.04)";
@@ -158,7 +158,7 @@ export default function ChartPage() {
         </button>
         <span className="absolute left-1/2 -translate-x-1/2 text-[17px] font-semibold text-[#1D1D1F]">图表</span>
         <button type="button" onClick={toggleView}
-          className="ml-auto h-8 px-4 rounded-full bg-[#6366F1] text-white text-[13px] font-semibold">
+          className="ml-auto h-8 px-4 rounded-full bg-[#5865F2] text-white text-[13px] font-semibold">
           {isMonth ? "月" : "年"}
         </button>
       </div>
@@ -206,10 +206,10 @@ export default function ChartPage() {
                       className="w-4 rounded-full"
                       style={{
                         background: val > 0 ? (isTodayCol ? ACCENT : BAR_LIGHT) : BAR_ZERO,
-                        boxShadow: isTodayCol ? "0 0 0 3px #FFFFFF, 0 0 0 5px #6366F1" : undefined,
+                        boxShadow: isTodayCol ? "0 0 0 3px #FFFFFF, 0 0 0 5px #5865F2" : undefined,
                       }}
                     />
-                    <span className={`mt-2 text-[11px] ${isTodayCol ? "text-[#6366F1] font-semibold" : "text-[#AEAEB2]"}`}>
+                    <span className={`mt-2 text-[11px] ${isTodayCol ? "text-[#5865F2] font-semibold" : "text-[#AEAEB2]"}`}>
                       {new Date(dateStr).getDate()}
                     </span>
                   </div>
@@ -241,7 +241,7 @@ export default function ChartPage() {
                           initial={{ width: 0 }}
                           animate={{ width: `${pct}%` }}
                           transition={{ duration: 0.5, delay: i * 0.03 }}
-                          className="h-full rounded-full bg-[#6366F1]"
+                          className="h-full rounded-full bg-[#5865F2]"
                         />
                       </div>
                       <span className="text-[15px] font-semibold text-[#1D1D1F] shrink-0">¥{fmtCompact(item.amount)}</span>
@@ -319,7 +319,7 @@ export default function ChartPage() {
                       className="w-3 rounded-full"
                       style={{ background: val > 0 ? (isCurrentMonth ? ACCENT : BAR_LIGHT) : BAR_ZERO }}
                     />
-                    <span className={`mt-2 text-[10px] ${isCurrentMonth ? "text-[#6366F1]" : "text-[#AEAEB2]"}`}>
+                    <span className={`mt-2 text-[10px] ${isCurrentMonth ? "text-[#5865F2]" : "text-[#AEAEB2]"}`}>
                       {i + 1}月
                     </span>
                   </div>
@@ -351,7 +351,7 @@ export default function ChartPage() {
                           initial={{ width: 0 }}
                           animate={{ width: `${pct}%` }}
                           transition={{ duration: 0.5, delay: i * 0.03 }}
-                          className="h-full rounded-full bg-[#6366F1]"
+                          className="h-full rounded-full bg-[#5865F2]"
                         />
                       </div>
                       <span className="text-[15px] font-semibold text-[#1D1D1F] shrink-0">¥{fmtCompact(item.amount)}</span>

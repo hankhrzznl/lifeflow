@@ -14,7 +14,7 @@ import { showToast } from "@/components/ui/Toast";
 // ============================================================
 // 设计令牌（Apple 简约风）
 // ============================================================
-const ACCENT = "#6366F1";
+const ACCENT = "#5865F2";
 
 function todayStr(): string {
   const d = new Date();
@@ -129,7 +129,7 @@ export default function RecordPage() {
               <button
                 key={t} type="button" onClick={() => setType(t)}
                 className={`relative h-9 px-6 rounded-full text-[15px] transition-colors ${
-                  active ? "text-[#6366F1] font-semibold" : "text-[#86868B]"
+                  active ? "text-[#5865F2] font-semibold" : "text-[#86868B]"
                 }`}
               >
                 {active && (
@@ -176,7 +176,7 @@ export default function RecordPage() {
                 <motion.div
                   animate={selected ? { scale: 1.08 } : { scale: 1 }}
                   transition={{ type: "spring", stiffness: 500, damping: 25 }}
-                  className={selected ? "ring-2 ring-[#6366F1] ring-offset-2 rounded-full" : ""}
+                  className={selected ? "ring-2 ring-[#5865F2] ring-offset-2 rounded-full" : ""}
                 >
                   <CategoryIcon icon={c.icon} color={c.color} size={44} iconSize={22} />
                 </motion.div>

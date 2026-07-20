@@ -15,8 +15,8 @@ export default function AccountingLayout({ children }: { children: React.ReactNo
     pathname.startsWith("/more/accounting/search");
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA]">
-      <main className={`w-full max-w-[430px] mx-auto ${isFullscreen ? "" : "pb-[80px]"}`}>
+    <div className="min-h-screen bg-[#F8F8F8]">
+      <main className={`w-full max-w-[430px] mx-auto ${isFullscreen ? "" : "pb-[107px]"}`}>
         {children}
       </main>
     </div>

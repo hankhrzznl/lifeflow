@@ -1,21 +1,21 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence, type PanInfo } from "framer-motion";
 import {
-  Check, Trash2, ChevronLeft, ChevronRight, CalendarDays,
+  Check, Plus, ChevronLeft, ChevronRight, CalendarDays, Clock,
+  TrendingUp, X,
 } from "lucide-react";
 import { useEfficiencyStore } from "@/lib/store/efficiencyStore";
 import type { ScheduleTask } from "@/lib/db/efficiency.db";
 import { getScheduleTasksByDate } from "@/lib/db/efficiency.db";
 import { showToast } from "@/components/ui/Toast";
-import TimelineView from "@/components/efficiency/TimelineView";
 
 // ============================================================
 // 设计令牌
 // ============================================================
-const ACCENT = "#6366F1";
-
+const ACCENT = "#5865F2";
 const WEEK_DAYS = ["一", "二", "三", "四", "五", "六", "日"];
 
 // ============================================================
@@ -38,29 +38,226 @@ function getWeekMonday(baseDate: Date, weekOffset: number): Date {
 const todayStr = toDateStr(new Date());
 
 // ============================================================
-// Segmented Control
+// 任务行组件
 // ============================================================
-function SegmentedControl({ selected, onChange }: {
-  selected: "timeline" | "tasks";
-  onChange: (v: "timeline" | "tasks") => void;
+function TaskRow({
+  task,
+  onToggle,
+  onLongPress,
+}: {
+  task: ScheduleTask;
+  onToggle: () => void;
+  onLongPress: () => void;
 }) {
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleTouchStart = () => {
+    longPressTimer.current = setTimeout(onLongPress, 500);
+  };
+  const handleTouchEnd = () => {
+    if (longPressTimer.current) clearTimeout(longPressTimer.current);
+  };
+
   return (
-    <div className="mx-5 flex bg-[#F2F2F7] rounded-lg p-0.5">
-      {(["timeline", "tasks"] as const).map((key) => (
-        <button
-          key={key}
-          type="button"
-          onClick={() => onChange(key)}
-          className={`flex-1 h-8 rounded-md text-[13px] font-medium transition-all ${
-            selected === key
-              ? "bg-white text-[#1D1D1F] shadow-sm"
-              : "text-[#86868B]"
-          }`}
-        >
-          {key === "timeline" ? "时间轴" : "任务"}
-        </button>
-      ))}
+    <div
+      className="flex items-center gap-3 px-4 min-h-[54px] py-2"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      onTouchMove={handleTouchEnd}
+      onContextMenu={(e) => { e.preventDefault(); onLongPress(); }}
+    >
+      {/* 勾选圆 */}
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); onToggle(); }}
+        className="shrink-0"
+        while-tap={{ scale: 0.95 } as never}
+      >
+        {task.isCompleted ? (
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            className="w-6 h-6 rounded-full bg-[#5865F2] flex items-center justify-center"
+          >
+            <Check className="w-[14px] h-[14px] text-white" strokeWidth={3} />
+          </motion.div>
+        ) : (
+          <div className="w-6 h-6 rounded-full border-2 border-[#C7C7CC] bg-white" />
+        )}
+      </button>
+
+      {/* 内容 */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1.5">
+          <p className={`text-[17px] truncate ${task.isCompleted ? "line-through text-[#AEAEB2]" : "text-[#1D1D1F]"}`}>
+            {task.title}
+          </p>
+          {task.isImportant && !task.isCompleted && (
+            <span className="w-[6px] h-[6px] rounded-full bg-[#5865F2] shrink-0" />
+          )}
+        </div>
+        {(task.plannedTime > 0 || task.progressType === "progress" || task.note) && (
+          <div className="mt-1 flex gap-2 flex-wrap">
+            {task.plannedTime > 0 && (
+              <span className="inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded-md bg-[#F5F5F5] text-[#86868B]">
+                <Clock className="w-3 h-3" />
+                {task.plannedTime}分钟
+              </span>
+            )}
+            {task.progressType === "progress" && task.targetValue != null && (
+              <span className="inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded-md bg-[#EEF2FF] text-[#5865F2]">
+                <TrendingUp className="w-3 h-3" />
+                目标 {task.targetValue}{task.targetUnit || ""}
+              </span>
+            )}
+            {task.note && (
+              <span className="text-[13px] text-[#86868B] truncate max-w-[180px]">{task.note}</span>
+            )}
+          </div>
+        )}
+      </div>
     </div>
+  );
+}
+
+// ============================================================
+// 创建任务 Sheet
+// ============================================================
+function CreateTaskSheet({
+  open,
+  onClose,
+  selectedDate,
+}: {
+  open: boolean;
+  onClose: () => void;
+  selectedDate: string;
+}) {
+  const { addScheduleTask, loadScheduleTasks } = useEfficiencyStore();
+  const [title, setTitle] = useState("");
+  const [note, setNote] = useState("");
+  const [plannedTime, setPlannedTime] = useState(30);
+  const [isImportant, setIsImportant] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    if (!title.trim()) { showToast({ type: "warning", message: "请输入任务名称" }); return; }
+    setSaving(true);
+    try {
+      await addScheduleTask({
+        goalId: null,
+        title: title.trim(),
+        note,
+        type: "single",
+        date: selectedDate,
+        isCompleted: false,
+        plannedTime,
+        actualTime: 0,
+        isImportant,
+      });
+      await loadScheduleTasks(selectedDate);
+      showToast({ type: "success", message: "任务已保存" });
+      setTitle(""); setNote(""); setPlannedTime(30); setIsImportant(false);
+      onClose();
+    } catch {
+      showToast({ type: "error", message: "保存失败" });
+    }
+    setSaving(false);
+  };
+
+  return (
+    <AnimatePresence>
+      {open && (
+        <>
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="fixed inset-0 z-50 bg-black/40"
+          />
+          <motion.div
+            initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
+            transition={{ duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
+            className="fixed bottom-0 left-0 right-0 z-[60] bg-[#FAFAFA] rounded-t-[20px] max-h-[85vh] overflow-y-auto"
+            style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+          >
+            <div className="flex justify-center pt-2 pb-1">
+              <div className="w-9 h-1 rounded-full bg-[#D4D4D4]" />
+            </div>
+
+            {/* 页头 */}
+            <div className="flex items-center justify-between px-5 h-12">
+              <button onClick={onClose} className="text-[17px] text-[#86868B]">取消</button>
+              <span className="text-[17px] font-semibold text-[#1D1D1F]">新建任务</span>
+              <button
+                onClick={handleSave}
+                disabled={saving || !title.trim()}
+                className="text-[17px] font-medium"
+                style={{ color: title.trim() ? ACCENT : "#9F9FA0", opacity: saving ? 0.5 : 1 }}
+              >
+                保存
+              </button>
+            </div>
+
+            {/* 表单 */}
+            <div className="px-5 pt-2 pb-6 flex flex-col gap-4">
+              {/* 任务名称 */}
+              <div>
+                <label className="text-[13px] text-[#86868B] mb-1.5 block">任务名称</label>
+                <input
+                  type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="输入任务名称"
+                  className="w-full h-11 rounded-[10px] bg-[#F5F5F7] px-4 text-[15px] text-[#1D1D1F] outline-none placeholder:text-[#9F9FA0]"
+                  autoFocus
+                />
+              </div>
+
+              {/* 备注 */}
+              <div>
+                <label className="text-[13px] text-[#86868B] mb-1.5 block">备注</label>
+                <input
+                  type="text"
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  placeholder="添加备注"
+                  className="w-full h-11 rounded-[10px] bg-[#F5F5F7] px-4 text-[15px] text-[#1D1D1F] outline-none placeholder:text-[#9F9FA0]"
+                />
+              </div>
+
+              {/* 计划时长 */}
+              <div>
+                <label className="text-[13px] text-[#86868B] mb-1.5 block">计划时长（分钟）</label>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setPlannedTime((v) => Math.max(5, v - 15))}
+                    className="w-8 h-8 rounded-full bg-[#5865F2] flex items-center justify-center"
+                  >
+                    <span className="text-white text-lg leading-none">−</span>
+                  </button>
+                  <span className="text-[17px] font-semibold text-[#1D1D1F] min-w-[48px] text-center">{plannedTime}</span>
+                  <button
+                    onClick={() => setPlannedTime((v) => Math.min(480, v + 15))}
+                    className="w-8 h-8 rounded-full bg-[#5865F2] flex items-center justify-center"
+                  >
+                    <span className="text-white text-lg leading-none">+</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* 重要标记 */}
+              <button
+                onClick={() => setIsImportant(!isImportant)}
+                className={`flex items-center gap-2 self-start px-4 h-9 rounded-full text-[15px] ${
+                  isImportant ? "bg-[#EEF2FF] text-[#5865F2]" : "bg-[#F5F5F7] text-[#86868B]"
+                }`}
+              >
+                <span className="text-lg">!</span> 重要
+              </button>
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
   );
 }
 
@@ -68,10 +265,8 @@ function SegmentedControl({ selected, onChange }: {
 // 主组件
 // ============================================================
 export default function SchedulePage() {
+  const router = useRouter();
   const { scheduleTasks, selectedDate, loadScheduleTasks, toggleScheduleTask, removeScheduleTask } = useEfficiencyStore();
-
-  // ── 视图切换 ──
-  const [view, setView] = useState<"timeline" | "tasks">("timeline");
 
   // ── 周日历条 ──
   const [weekOffset, setWeekOffset] = useState(0);
@@ -80,24 +275,15 @@ export default function SchedulePage() {
     return Array.from({ length: 7 }, (_, i) => addDays(mon, i));
   }, [weekOffset]);
 
-  // 当前周所属月份
-  const weekMonthLabel = useMemo(() => {
-    const mon = weekDates[0];
-    return `${mon.getFullYear()}年${mon.getMonth() + 1}月`;
-  }, [weekDates]);
-
   // 如果 selectedDate 不在当前可见周内，自动切到对应周
   useEffect(() => {
     if (!selectedDate) return;
     const sd = new Date(selectedDate + "T00:00:00");
-    const dayOfWeek = sd.getDay();
-    const monOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-    const monday = addDays(sd, monOffset);
+    const monday = addDays(sd, sd.getDay() === 0 ? -6 : 1 - sd.getDay());
     const currentMonday = getWeekMonday(new Date(), weekOffset);
     const diffDays = Math.round((monday.getTime() - currentMonday.getTime()) / 86400000);
     if (diffDays !== 0) {
-      const newOffset = weekOffset + Math.round(diffDays / 7);
-      setWeekOffset(newOffset);
+      setWeekOffset((o) => o + Math.round(diffDays / 7));
     }
   }, [selectedDate]);
 
@@ -112,11 +298,7 @@ export default function SchedulePage() {
     }
   }, []);
 
-  // ── 任务列表 ──
-  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState(false);
-
-  // 排序：未完成在上，重要在上
+  // ── 任务列表排序 ──
   const sortedTasks = useMemo(() => {
     return [...(scheduleTasks ?? [])].sort((a, b) => {
       if (a.isCompleted !== b.isCompleted) return a.isCompleted ? 1 : -1;
@@ -125,7 +307,7 @@ export default function SchedulePage() {
     });
   }, [scheduleTasks]);
 
-  // 即将到来
+  // ── 即将到来 ──
   const [upcoming, setUpcoming] = useState<{ date: string; tasks: ScheduleTask[] }[]>([]);
   const refreshUpcoming = useCallback(async (fromDate: string) => {
     const result: { date: string; tasks: ScheduleTask[] }[] = [];
@@ -134,8 +316,12 @@ export default function SchedulePage() {
       const ds = toDateStr(d);
       const tasks = await getScheduleTasksByDate(ds);
       if (tasks.length > 0) {
-        result.push({ date: ds, tasks });
-        if (result.length >= 3) break;
+        const sorted = tasks.sort((a, b) => {
+          if (a.isCompleted !== b.isCompleted) return a.isCompleted ? 1 : -1;
+          return a.createdAt - b.createdAt;
+        });
+        result.push({ date: ds, tasks: sorted.slice(0, 3) });
+        if (result.length >= 1) break;
       }
     }
     setUpcoming(result);
@@ -146,9 +332,20 @@ export default function SchedulePage() {
   }, [selectedDate, refreshUpcoming]);
 
   // ── 任务操作 ──
-  const handleToggle = useCallback(async (task: ScheduleTask) => {
-    await toggleScheduleTask(task.id);
+  const handleToggle = useCallback(async (taskId: string) => {
+    await toggleScheduleTask(taskId);
   }, [toggleScheduleTask]);
+
+  const handleRefreshAfterOp = useCallback(async () => {
+    if (selectedDate) {
+      await loadScheduleTasks(selectedDate);
+      refreshUpcoming(selectedDate);
+    }
+  }, [selectedDate, loadScheduleTasks, refreshUpcoming]);
+
+  // ── 删除 ──
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const handleDeleteConfirm = useCallback(async () => {
     if (!deleteTarget) return;
@@ -156,171 +353,177 @@ export default function SchedulePage() {
     showToast({ type: "success", message: "已删除" });
     setDeleteTarget(null);
     setConfirmDelete(false);
-  }, [deleteTarget, removeScheduleTask]);
+    handleRefreshAfterOp();
+  }, [deleteTarget, removeScheduleTask, handleRefreshAfterOp]);
 
-  const formatDate = (d: Date) => `${d.getMonth() + 1}月${d.getDate()}日`;
+  // ── 创建任务 Sheet ──
+  const [showCreateSheet, setShowCreateSheet] = useState(false);
 
-  // ── 空状态组件 ──
-  const EmptyState = () => (
-    <div className="flex flex-col items-center justify-center py-20">
-      <div className="w-16 h-16 rounded-full bg-[var(--color-surface-secondary)] flex items-center justify-center mb-4">
-        <CalendarDays className="w-7 h-7 text-[var(--color-text-disabled)]" strokeWidth={1.5} />
-      </div>
-      <p className="text-[16px] font-medium text-[var(--color-text-secondary)] mb-1">
-        当日暂无安排
-      </p>
-      <p className="text-caption">添加日程以开始规划你的时间</p>
-    </div>
-  );
+  // ── 格式化 ──
+  const formatDateChinese = (date: Date) => {
+    const weekDays = ["日", "一", "二", "三", "四", "五", "六"];
+    return `${date.getMonth() + 1}月${date.getDate()}日 周${weekDays[date.getDay()]}`;
+  };
+  const formatDateShort = (d: Date) => `${d.getMonth() + 1}月${d.getDate()}日`;
 
-  // ── 渲染 ──
+  const selectedDateObj = selectedDate ? new Date(selectedDate + "T00:00:00") : new Date();
+  const isSelectedToday = toDateStr(selectedDateObj) === todayStr;
+
   return (
     <div className="min-h-screen bg-[#FAFAFA]" style={{ maxWidth: 430, margin: "0 auto" }}>
       {/* ===== Header ===== */}
-      <div className="px-5 pt-8 pb-3">
-        <h1 className="text-title-large" style={{ color: "var(--color-text-primary)" }}>
+      <div className="flex items-center justify-between px-4 h-14 bg-[#FAFAFA]">
+        <button
+          type="button"
+          onClick={() => router.push("/efficiency")}
+          className="w-8 h-8 -ml-1 flex items-center justify-center"
+        >
+          <ChevronLeft className="w-6 h-6 text-[#1D1D1F]" />
+        </button>
+        <span className="text-[18px] font-semibold text-[#1D1D1F] absolute left-1/2 -translate-x-1/2">
           日程
-        </h1>
-        <p className="text-label mt-1">时间轴任务</p>
+        </span>
+        <button
+          type="button"
+          onClick={() => setShowCreateSheet(true)}
+          className="w-8 h-8 -mr-1 flex items-center justify-center"
+        >
+          <Plus className="w-6 h-6 text-[#5865F2]" />
+        </button>
       </div>
 
-      {/* ===== Week Calendar Strip ===== */}
-      <div className="px-5 mb-6">
-        <motion.div className="card-standard p-4 select-none" onPanEnd={handleDragEnd}>
-          {/* 月份导航 */}
-          <div className="flex items-center justify-between mb-3">
-            <button
-              type="button"
-              onClick={() => setWeekOffset((o) => o - 1)}
-              className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[var(--color-surface-secondary)] transition-colors"
-            >
-              <ChevronLeft className="w-4 h-4 text-[var(--color-text-secondary)]" strokeWidth={2} />
-            </button>
-            <span className="text-[15px] font-semibold text-[var(--color-text-primary)]">
-              {weekMonthLabel}
-            </span>
-            <button
-              type="button"
-              onClick={() => setWeekOffset((o) => o + 1)}
-              className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[var(--color-surface-secondary)] transition-colors"
-            >
-              <ChevronRight className="w-4 h-4 text-[var(--color-text-secondary)]" strokeWidth={2} />
-            </button>
+      {/* ===== Week Strip ===== */}
+      <motion.div className="px-4 select-none" onPanEnd={handleDragEnd}>
+        {/* 星期行 + chevrons */}
+        <div className="flex items-center">
+          <button
+            type="button"
+            onClick={() => setWeekOffset((o) => o - 1)}
+            className="w-8 h-8 flex items-center justify-center shrink-0"
+          >
+            <ChevronLeft className="w-4 h-4 text-[#AEAEB2]" />
+          </button>
+          <div className="grid grid-cols-7 flex-1 h-7">
+            {WEEK_DAYS.map((d) => (
+              <span key={d} className="text-[13px] text-[#86868B] text-center self-center">
+                {d}
+              </span>
+            ))}
           </div>
+          <button
+            type="button"
+            onClick={() => setWeekOffset((o) => o + 1)}
+            className="w-8 h-8 flex items-center justify-center shrink-0"
+          >
+            <ChevronRight className="w-4 h-4 text-[#AEAEB2]" />
+          </button>
+        </div>
 
-          {/* 7 日条 */}
-          <div className="grid grid-cols-7 text-center">
-            {weekDates.map((date, idx) => {
-              const ds = toDateStr(date);
-              const isToday = ds === todayStr;
-              const isActive = ds === selectedDate;
-              return (
-                <button
-                  key={ds}
-                  type="button"
-                  onClick={() => handleSelectDay(date)}
-                  className="flex flex-col items-center gap-1"
-                >
-                  <span className="text-[11px] text-[var(--color-text-secondary)]">
-                    {WEEK_DAYS[idx]}
-                  </span>
-                  <span
-                    className={`w-9 h-9 flex items-center justify-center rounded-full text-[15px] font-medium transition-colors ${
-                      isActive
-                        ? "bg-[var(--lifeflow-primary)] text-white"
-                        : isToday
-                        ? "text-[var(--lifeflow-primary)] font-bold"
-                        : "text-[var(--color-text-primary)]"
-                    }`}
-                  >
+        {/* 日期行 */}
+        <div className="grid grid-cols-7 h-[52px]">
+          {weekDates.map((date) => {
+            const ds = toDateStr(date);
+            const isToday = ds === todayStr;
+            const isActive = ds === selectedDate;
+            return (
+              <button
+                key={ds}
+                type="button"
+                onClick={() => handleSelectDay(date)}
+                className="flex items-center justify-center"
+              >
+                {isActive ? (
+                  <div className="relative flex items-center justify-center">
+                    <span className="absolute w-[36px] h-[36px] rounded-full bg-[#EEF2FF]" />
+                    <span className="relative w-[28px] h-[28px] rounded-full bg-[#5865F2] flex items-center justify-center">
+                      <span className="text-[17px] font-medium text-white">{date.getDate()}</span>
+                    </span>
+                  </div>
+                ) : (
+                  <span className={`text-[17px] font-medium ${isToday ? "text-[#5865F2]" : "text-[#1D1D1F]"}`}>
                     {date.getDate()}
                   </span>
-                </button>
-              );
-            })}
-          </div>
-        </motion.div>
-      </div>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </motion.div>
 
-      {/* ===== Segmented Control ===== */}
-      <SegmentedControl selected={view} onChange={setView} />
-
-      {/* ===== 内容区 ===== */}
-      <div className="px-5 mt-4">
-        {view === "timeline" ? (
-          <>
-            {sortedTasks.length === 0 ? (
-              <EmptyState />
-            ) : (
-              <TimelineView date={selectedDate} />
-            )}
-          </>
-        ) : (
-          <>
-            {/* 任务列表 */}
-            {sortedTasks.length === 0 ? (
-              <EmptyState />
-            ) : (
-              <div className="flex flex-col gap-2">
-                {sortedTasks.map((task) => (
-                  <div
-                    key={task.id}
-                    className="bg-white rounded-xl border border-[#EBEBEB] p-3.5 flex items-center gap-3"
-                  >
-                    <button
-                      type="button"
-                      onClick={() => handleToggle(task)}
-                      className="w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center transition-colors"
-                      style={{
-                        border: task.isCompleted ? "none" : "2px solid #C7C7CC",
-                        background: task.isCompleted ? ACCENT : "#FFFFFF",
-                      }}
-                    >
-                      {task.isCompleted && <Check className="w-[14px] h-[14px] text-white" strokeWidth={3} />}
-                    </button>
-                    <div className="flex-1 min-w-0">
-                      <p className={`text-[15px] truncate ${task.isCompleted ? "line-through text-[#AEAEB2]" : "text-[#1D1D1F]"}`}>
-                        {task.title}
-                      </p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        {task.plannedTime > 0 && (
-                          <span className="text-[12px] text-[#86868B]">{task.plannedTime}分钟</span>
-                        )}
-                        {task.isImportant && (
-                          <span className="text-[12px] text-[#FF9500]">重要</span>
-                        )}
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => { setDeleteTarget(task.id); setConfirmDelete(false); }}
-                      className="w-7 h-7 flex items-center justify-center"
-                    >
-                      <Trash2 className="w-4 h-4 text-[#C7C7CC]" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* 即将到来 */}
-            {upcoming.length > 0 && (
-              <div className="mt-6">
-                <h3 className="text-[13px] font-semibold text-[#86868B] mb-2">即将到来</h3>
-                <div className="flex flex-col gap-2">
-                  {upcoming.map((u) => (
-                    <div key={u.date} className="bg-white rounded-xl border border-[#EBEBEB] p-3.5">
-                      <p className="text-[13px] text-[#86868B] mb-1">{formatDate(new Date(u.date + "T00:00:00"))}</p>
-                      {u.tasks.map((t) => (
-                        <p key={t.id} className="text-[15px] text-[#1D1D1F] truncate">{t.title}</p>
-                      ))}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </>
+      {/* ===== Date Title Row ===== */}
+      <div className="flex items-center justify-between px-4 mt-5">
+        <span className="text-[16px] font-bold text-[#1D1D1F]">
+          {formatDateChinese(selectedDateObj)}
+        </span>
+        {(weekOffset !== 0 || !isSelectedToday) && (
+          <button
+            onClick={() => {
+              setWeekOffset(0);
+              loadScheduleTasks(todayStr);
+            }}
+            className="text-[13px] text-[#5865F2]"
+          >
+            回到今天
+          </button>
         )}
       </div>
+
+      {/* ===== 当日任务分组卡 ===== */}
+      <div className="px-4 mt-3">
+        {sortedTasks.length === 0 ? (
+          <div className="flex flex-col items-center py-16">
+            <CalendarDays className="w-10 h-10 text-[#E5E5E5]" />
+            <p className="text-[15px] text-[#86868B] mt-3">
+              {isSelectedToday ? "今天没有任务" : "这一天没有任务"}
+            </p>
+          </div>
+        ) : (
+          <div className="bg-white rounded-2xl border border-[#F0F0F0] overflow-hidden">
+            {sortedTasks.map((task, idx) => (
+              <div key={task.id}>
+                {idx > 0 && <div className="h-px bg-[#EBEBEB] ml-[52px]" />}
+                <TaskRow
+                  task={task}
+                  onToggle={async () => {
+                    await handleToggle(task.id);
+                    handleRefreshAfterOp();
+                  }}
+                  onLongPress={() => { setDeleteTarget(task.id); setConfirmDelete(false); }}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ===== 即将到来 ===== */}
+      {upcoming.length > 0 && (
+        <div className="px-4 mt-6">
+          <h3 className="text-[18px] font-semibold text-[#86868B] mb-2">即将到来</h3>
+          {upcoming.map((u) => (
+            <div key={u.date} className="bg-white rounded-2xl border border-[#F0F0F0] overflow-hidden">
+              <div className="px-4 min-h-[44px] flex items-center">
+                <span className="text-[13px] text-[#86868B]">
+                  {formatDateChinese(new Date(u.date + "T00:00:00"))}
+                </span>
+              </div>
+              {u.tasks.map((t, i) => (
+                <div key={t.id}>
+                  <div className="h-px bg-[#EBEBEB] ml-[52px]" />
+                  <TaskRow
+                    task={t}
+                    onToggle={async () => {
+                      await handleToggle(t.id);
+                      handleRefreshAfterOp();
+                    }}
+                    onLongPress={() => { setDeleteTarget(t.id); setConfirmDelete(false); }}
+                  />
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* ===== 删除确认弹窗 ===== */}
       <AnimatePresence>
@@ -334,7 +537,7 @@ export default function SchedulePage() {
             <motion.div
               initial={{ y: "100%", x: "-50%" }} animate={{ y: 0, x: "-50%" }} exit={{ y: "100%", x: "-50%" }}
               transition={{ duration: 0.4, ease: [0.32, 0.72, 0, 1] }}
-              className="fixed left-1/2 bottom-0 w-full max-w-[430px] bg-white z-[60] rounded-t-[24px]"
+              className="fixed left-1/2 bottom-0 w-full max-w-[430px] bg-white z-[60] rounded-t-[20px]"
               style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
             >
               <div className="flex justify-center pt-2 pb-3">
@@ -355,7 +558,7 @@ export default function SchedulePage() {
                   <div className="flex gap-3">
                     <button
                       onClick={() => setDeleteTarget(null)}
-                      className="flex-1 py-3 rounded-xl bg-[#F2F2F7] text-[#86868B] text-[15px] font-medium"
+                      className="flex-1 py-3 rounded-xl bg-[#F5F5F5] text-[#86868B] text-[15px] font-medium"
                     >
                       取消
                     </button>
@@ -372,6 +575,13 @@ export default function SchedulePage() {
           </>
         )}
       </AnimatePresence>
+
+      {/* ===== 创建任务 Sheet ===== */}
+      <CreateTaskSheet
+        open={showCreateSheet}
+        onClose={() => setShowCreateSheet(false)}
+        selectedDate={selectedDate || todayStr}
+      />
 
       <div className="h-4" />
     </div>

@@ -31,7 +31,7 @@ export default function PillNav() {
               whileTap={{ scale: 0.95 }}
               className={`h-8 px-4 rounded-full text-[13px] flex items-center justify-center flex-shrink-0 ${
                 active
-                  ? "bg-[#1D1D1F] text-white font-semibold"
+                  ? "bg-[#5865F2] text-white font-semibold"
                   : "bg-white border border-[#F0F0F0] text-[#86868B]"
               }`}
             >

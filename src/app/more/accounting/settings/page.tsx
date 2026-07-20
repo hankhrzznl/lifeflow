@@ -19,7 +19,7 @@ import {
 // ============================================================
 // 设计令牌
 // ============================================================
-const ACCENT = "#6366F1";
+const ACCENT = "#5865F2";
 const INK = "#1D1D1F";
 const MUTED = "#86868B";
 const CHEVRON = "#C7C7CC";
@@ -81,7 +81,7 @@ function ActionSheet({ open, onClose, title, options, onSelect }: {
             <button key={o.value} type="button" onClick={() => { onSelect(o.value); onClose(); }}
               className="w-full h-[52px] px-5 flex items-center justify-between active:bg-black/5">
               <span className="text-[15px] text-[#1D1D1F]">{o.label}</span>
-              {o.selected && <div className="w-5 h-5 rounded-full bg-[#6366F1] flex items-center justify-center">
+              {o.selected && <div className="w-5 h-5 rounded-full bg-[#5865F2] flex items-center justify-center">
                 <svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 6l3 3 5-6" stroke="#fff" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>
               </div>}
             </button>

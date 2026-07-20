@@ -11,16 +11,8 @@ import { showToast } from "@/components/ui/Toast";
 import Dialog from "@/components/ui/Dialog";
 
 // ============================================================
-// 设计令牌
+// 设计令牌（CSS 变量）
 // ============================================================
-const ACCENT = "#5865F2";
-const TEXT_PRIMARY = "#1D1D1F";
-const TEXT_SECONDARY = "#86868B";
-const TEXT_TERTIARY = "#AEAEB2";
-const BORDER_CARD = "#E5E5E5";
-const BORDER_DIVIDER = "#F5F5F5";
-const BADGE_BG = "#EEF2FF";
-const DANGER = "#FF3B30";
 
 function fmt(fen: number): string {
   const absFen = Math.abs(fen);
@@ -159,34 +151,34 @@ export default function AssetsPage() {
       <div className="h-[44px] flex items-center px-4 mt-3">
         <button type="button" onClick={() => router.push("/more/accounting")}
           className="inline-flex items-center justify-center w-[44px] h-[44px] -ml-1">
-          <ChevronLeft className="w-[28px] h-[28px]" style={{ color: TEXT_PRIMARY }} />
+          <ChevronLeft className="w-[28px] h-[28px]" style={{ color: "var(--color-text-primary)" }} />
         </button>
         <div className="flex-1 flex items-center justify-center">
-          <span className="text-[17px] font-semibold" style={{ color: TEXT_PRIMARY }}>资产</span>
+          <span className="text-[17px] font-semibold" style={{ color: "var(--color-text-primary)" }}>资产</span>
         </div>
         <button type="button" onClick={openAddSheet}
           className="inline-flex items-center justify-center w-[44px] h-[44px] -mr-1">
-          <Plus className="w-[24px] h-[24px]" style={{ color: ACCENT }} />
+          <Plus className="w-[24px] h-[24px]" style={{ color: "var(--lifeflow-primary)" }} />
         </button>
       </div>
 
       {/* 净资产卡 */}
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}
         className="mx-4 mt-[20px]">
-        <div className="rounded-xl p-[24px] flex flex-col items-center" style={{ background: "#FFFFFF", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-          <span className="text-[13px]" style={{ color: TEXT_SECONDARY }}>净资产</span>
-          <span className="text-[34px] font-bold leading-none mt-[8px]" style={{ color: TEXT_PRIMARY }}>{fmt(netWorth)}</span>
-          <div className="mt-[16px] h-[32px] px-4 rounded-full flex items-center justify-center gap-1" style={{ background: BADGE_BG }}>
-            {isFlowPositive && <TrendingUp className="w-[16px] h-[16px]" style={{ color: ACCENT }} />}
-            {isFlowNegative && <TrendingDown className="w-[16px] h-[16px]" style={{ color: ACCENT }} />}
-            <span className="text-[14px] font-medium" style={{ color: ACCENT }}>{flowLabel}</span>
+        <div className="rounded-xl p-[24px] flex flex-col items-center" style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}>
+          <span className="text-[13px]" style={{ color: "var(--color-text-secondary)" }}>净资产</span>
+          <span className="text-[34px] font-bold leading-none mt-[8px]" style={{ color: "var(--color-text-primary)" }}>{fmt(netWorth)}</span>
+          <div className="mt-[16px] h-[32px] px-4 rounded-full flex items-center justify-center gap-1" style={{ background: "var(--lifeflow-brand-50)" }}>
+            {isFlowPositive && <TrendingUp className="w-[16px] h-[16px]" style={{ color: "var(--lifeflow-primary)" }} />}
+            {isFlowNegative && <TrendingDown className="w-[16px] h-[16px]" style={{ color: "var(--lifeflow-primary)" }} />}
+            <span className="text-[14px] font-medium" style={{ color: "var(--lifeflow-primary)" }}>{flowLabel}</span>
           </div>
         </div>
       </motion.div>
 
       {!hasAccounts && (
         <div className="py-[24px] text-center">
-          <span className="text-[13px]" style={{ color: TEXT_TERTIARY }}>暂无账户，点击下方添加</span>
+          <span className="text-[13px]" style={{ color: "var(--color-text-disabled)" }}>暂无账户，点击下方添加</span>
         </div>
       )}
 
@@ -194,10 +186,10 @@ export default function AssetsPage() {
       {hasAccounts && (
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: 0.05 }}
           className="mx-4 mt-[16px]">
-          <div className="rounded-xl overflow-hidden" style={{ background: "#FFFFFF", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-            <div className="px-[20px] h-[56px] flex items-center justify-between" style={{ borderBottom: `0.5px solid ${BORDER_DIVIDER}` }}>
-              <span className="text-[17px] font-semibold" style={{ color: TEXT_PRIMARY }}>账户</span>
-              <span className="text-[13px]" style={{ color: TEXT_SECONDARY }}>共 {accounts!.length} 个账户</span>
+          <div className="rounded-xl overflow-hidden" style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}>
+            <div className="px-[20px] h-[56px] flex items-center justify-between" style={{ borderBottom: "0.5px solid var(--lifeflow-border)" }}>
+              <span className="text-[17px] font-semibold" style={{ color: "var(--color-text-primary)" }}>账户</span>
+              <span className="text-[13px]" style={{ color: "var(--color-text-secondary)" }}>共 {accounts!.length} 个账户</span>
             </div>
             {accounts!.map((acc) => {
               const color = getAccountColor(acc.name);
@@ -208,26 +200,26 @@ export default function AssetsPage() {
                 <motion.button key={acc.id} type="button" whileTap={{ scale: 0.98 }}
                   onClick={() => openEditSheet(acc)}
                   className="flex items-center gap-[12px] px-[20px] h-[72px] w-full text-left"
-                  style={{ borderBottom: `0.5px solid ${BORDER_DIVIDER}` }}>
+                  style={{ borderBottom: "0.5px solid var(--lifeflow-border)" }}>
                   <div className="w-[44px] h-[44px] rounded-[12px] flex items-center justify-center shrink-0" style={{ background: color }}>
                     <span className="text-[17px] font-semibold text-white">{firstChar}</span>
                   </div>
                   <div className="flex-1 min-w-0 flex flex-col gap-0.5">
-                    <span className="text-[17px] font-semibold truncate" style={{ color: TEXT_PRIMARY }}>{acc.name}</span>
-                    <span className="text-[13px]" style={{ color: TEXT_SECONDARY }}>{getAccountTypeLabel(acc.type)}</span>
+                    <span className="text-[17px] font-semibold truncate" style={{ color: "var(--color-text-primary)" }}>{acc.name}</span>
+                    <span className="text-[13px]" style={{ color: "var(--color-text-secondary)" }}>{getAccountTypeLabel(acc.type)}</span>
                   </div>
-                  <span className="text-[17px] font-semibold shrink-0" style={{ color: TEXT_PRIMARY }}>{displayAmount}</span>
+                  <span className="text-[17px] font-semibold shrink-0" style={{ color: "var(--color-text-primary)" }}>{displayAmount}</span>
                 </motion.button>
               );
             })}
-            <div className="px-[20px] py-[16px] flex justify-between" style={{ borderTop: `0.5px solid ${BORDER_DIVIDER}` }}>
+            <div className="px-[20px] py-[16px] flex justify-between" style={{ borderTop: "0.5px solid var(--lifeflow-border)" }}>
               <div className="flex flex-col gap-1 items-start">
-                <span className="text-[13px]" style={{ color: TEXT_SECONDARY }}>总资产</span>
-                <span className="text-[17px] font-bold" style={{ color: TEXT_PRIMARY }}>{fmt(totalAssets)}</span>
+                <span className="text-[13px]" style={{ color: "var(--color-text-secondary)" }}>总资产</span>
+                <span className="text-[17px] font-bold" style={{ color: "var(--color-text-primary)" }}>{fmt(totalAssets)}</span>
               </div>
               <div className="flex flex-col gap-1 items-end">
-                <span className="text-[13px]" style={{ color: TEXT_SECONDARY }}>总负债</span>
-                <span className="text-[17px] font-bold" style={{ color: TEXT_PRIMARY }}>-{fmt(Math.abs(totalLiabilities))}</span>
+                <span className="text-[13px]" style={{ color: "var(--color-text-secondary)" }}>总负债</span>
+                <span className="text-[17px] font-bold" style={{ color: "var(--color-text-primary)" }}>-{fmt(Math.abs(totalLiabilities))}</span>
               </div>
             </div>
           </div>
@@ -238,38 +230,43 @@ export default function AssetsPage() {
       <div className="mx-4 mt-[16px] mb-[24px]">
         <motion.button type="button" whileTap={{ scale: 0.98 }} onClick={openAddSheet}
           className="h-[56px] rounded-[16px] w-full flex items-center justify-center gap-1"
-          style={{ background: "#FFFFFF", border: `1.5px dashed ${BORDER_CARD}` }}>
-          <Plus className="w-[16px] h-[16px]" style={{ color: TEXT_SECONDARY }} />
-          <span className="text-[15px]" style={{ color: TEXT_SECONDARY }}>添加账户</span>
+          style={{ background: "var(--color-surface-card)", border: "1.5px dashed var(--lifeflow-border)" }}>
+          <Plus className="w-[16px] h-[16px]" style={{ color: "var(--color-text-secondary)" }} />
+          <span className="text-[15px]" style={{ color: "var(--color-text-secondary)" }}>添加账户</span>
         </motion.button>
       </div>
 
       {/* ===== 新增/编辑 Sheet ===== */}
       <BottomSheet open={showAddSheet} onClose={() => setShowAddSheet(false)}>
         <div className="px-5 pt-5 pb-2 flex items-center justify-between">
-          <button onClick={() => setShowAddSheet(false)} className="text-[15px] text-[#86868B]">取消</button>
-          <span className="text-[17px] font-semibold text-[#1D1D1F]">{editingAccount ? "编辑账户" : "添加账户"}</span>
-          <button onClick={handleSaveAccount} className="text-[15px] font-semibold text-[#5865F2]">保存</button>
+          <button onClick={() => setShowAddSheet(false)} className="text-[15px]" style={{ color: "var(--color-text-secondary)" }}>取消</button>
+          <span className="text-[17px] font-semibold" style={{ color: "var(--color-text-primary)" }}>{editingAccount ? "编辑账户" : "添加账户"}</span>
+          <button onClick={handleSaveAccount} className="text-[15px] font-semibold" style={{ color: "var(--lifeflow-primary)" }}>保存</button>
         </div>
 
         <div className="px-5 mt-4 space-y-4">
           {/* 名称 */}
           <div>
-            <label className="text-[13px] text-[#86868B] block mb-1">账户名称</label>
+            <label className="text-[13px] block mb-1" style={{ color: "var(--color-text-secondary)" }}>账户名称</label>
             <input type="text" value={formName} onChange={(e) => setFormName(e.target.value)}
               placeholder="如 招商银行"
-              className="w-full h-11 px-4 rounded-[12px] bg-[#F5F5F5] text-[15px] text-[#1D1D1F] placeholder-[#AEAEB2] outline-none" />
+              className="w-full h-11 px-4 rounded-[12px] text-[15px] outline-none"
+              style={{ background: "var(--lifeflow-border)", color: "var(--color-text-primary)" }} />
           </div>
 
           {/* 类型 */}
           <div>
-            <label className="text-[13px] text-[#86868B] block mb-1">类型</label>
+            <label className="text-[13px] block mb-1" style={{ color: "var(--color-text-secondary)" }}>类型</label>
             <div className="flex gap-3">
               {(["asset", "liability"] as const).map((t) => (
                 <button key={t} type="button" onClick={() => setFormType(t)}
                   className={`flex-1 h-11 rounded-[12px] text-[15px] font-medium ${
-                    formType === t ? "bg-[#5865F2] text-white" : "bg-[#F5F5F5] text-[#86868B]"
-                  }`}>
+                    formType === t ? "text-white" : ""
+                  }`}
+                  style={{
+                    background: formType === t ? "var(--lifeflow-primary)" : "var(--lifeflow-border)",
+                    color: formType === t ? "#FFFFFF" : "var(--color-text-secondary)",
+                  }}>
                   {t === "asset" ? "资产" : "负债"}
                 </button>
               ))}
@@ -278,18 +275,20 @@ export default function AssetsPage() {
 
           {/* 余额 */}
           <div>
-            <label className="text-[13px] text-[#86868B] block mb-1">
+            <label className="text-[13px] block mb-1" style={{ color: "var(--color-text-secondary)" }}>
               {formType === "asset" ? "当前余额" : "负债金额"}
             </label>
             <input type="number" value={formBalance} onChange={(e) => setFormBalance(e.target.value)}
               placeholder="0.00" step="0.01"
-              className="w-full h-11 px-4 rounded-[12px] bg-[#F5F5F5] text-[15px] text-[#1D1D1F] placeholder-[#AEAEB2] outline-none" />
+              className="w-full h-11 px-4 rounded-[12px] text-[15px] outline-none"
+              style={{ background: "var(--lifeflow-border)", color: "var(--color-text-primary)" }} />
           </div>
 
           {/* 编辑模式下显示删除 */}
           {editingAccount && (
             <button type="button" onClick={() => setShowDeleteDialog(true)}
-              className="w-full h-11 rounded-[12px] text-[15px] font-medium text-[#FF3B30] bg-[#FFF0F0] mt-4">
+              className="w-full h-11 rounded-[12px] text-[15px] font-medium mt-4"
+              style={{ color: "var(--state-error)", background: "#FFF0F0" }}>
               删除账户
             </button>
           )}

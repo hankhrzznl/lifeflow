@@ -84,25 +84,32 @@ export default function TasksPage() {
   }, [newTitle, addQuadrant, today]);
 
   return (
-    <div className="px-4 pt-8 pb-[100px]">
+    <div className="mx-auto px-4 pt-8 pb-[100px]" style={{ maxWidth: 430 }}>
       {/* ===== Header ===== */}
       <div className="mb-6">
-        <h1 className="text-[28px] font-bold tracking-[-0.022em] text-[var(--color-text-primary)]">
+        <h1 className="text-[28px] font-bold tracking-[-0.022em]" style={{ color: "var(--color-text-primary)" }}>
           事项
         </h1>
-        <p className="text-[14px] font-medium text-[var(--color-text-secondary)] mt-1.5">
+        <p className="text-[14px] font-medium mt-1.5" style={{ color: "var(--color-text-secondary)" }}>
           {todayTasks.length} 件待办 · {completedCount} 件已完成
         </p>
       </div>
 
       {/* ===== 快捷添加 ===== */}
       {showAdd ? (
-        <div className="rounded-xl bg-white p-4 mb-4 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
+        <div
+          className="rounded-[20px] p-4 mb-4"
+          style={{
+            backgroundColor: "var(--color-surface-card)",
+            boxShadow: "var(--shadow-card)",
+          }}
+        >
           <input
             type="text" value={newTitle} onChange={(e) => setNewTitle(e.target.value)}
             placeholder="输入事项标题..."
             autoFocus
-            className="w-full text-[17px] outline-none mb-3 bg-transparent text-[var(--color-text-primary)] placeholder:text-[var(--color-text-disabled)]"
+            className="w-full text-[17px] outline-none mb-3 bg-transparent"
+            style={{ color: "var(--color-text-primary)" }}
             onKeyDown={(e) => { if (e.key === "Enter") handleAdd(); }}
           />
           <div className="flex gap-2 mb-3">
@@ -111,7 +118,7 @@ export default function TasksPage() {
                 onClick={() => setAddQuadrant(q.key)}
                 className="px-3 py-1 rounded-full text-[12px] font-medium transition-colors"
                 style={{
-                  background: addQuadrant === q.key ? q.color : `${q.color}10`,
+                  background: addQuadrant === q.key ? q.color : `${q.color}16`,
                   color: addQuadrant === q.key ? "#FFF" : q.color,
                 }}>
                 {q.label}
@@ -120,15 +127,25 @@ export default function TasksPage() {
           </div>
           <div className="flex gap-2">
             <button type="button" onClick={() => { setShowAdd(false); setNewTitle(""); }}
-              className="flex-1 h-10 rounded-lg text-[15px]" style={{ background: "#F2F2F7", color: "#8E8E93" }}>取消</button>
+              className="flex-1 h-10 rounded-lg text-[15px]"
+              style={{ backgroundColor: "var(--lifeflow-background)", color: "var(--color-text-secondary)" }}>
+              取消
+            </button>
             <button type="button" onClick={handleAdd} disabled={adding || !newTitle.trim()}
-              className="flex-1 h-10 rounded-lg text-[15px] font-semibold text-white" style={{ background: "#6366F1", opacity: newTitle.trim() ? 1 : 0.5 }}>添加</button>
+              className="flex-1 h-10 rounded-lg text-[15px] font-semibold text-white"
+              style={{ backgroundColor: "var(--lifeflow-primary)", opacity: newTitle.trim() ? 1 : 0.5 }}>
+              添加
+            </button>
           </div>
         </div>
       ) : (
         <button type="button" onClick={() => setShowAdd(true)}
           className="w-full h-11 flex items-center justify-center gap-2 rounded-xl mb-4 text-[15px] font-medium"
-          style={{ background: "#6366F110", color: "#6366F1", border: "1px dashed #6366F140" }}>
+          style={{
+            backgroundColor: "var(--lifeflow-brand-50)",
+            color: "var(--lifeflow-primary)",
+            border: "1px dashed var(--lifeflow-primary)",
+          }}>
           <Plus className="w-4 h-4" />添加事项
         </button>
       )}
@@ -141,7 +158,11 @@ export default function TasksPage() {
             <motion.div key={q.key}
               initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
               transition={{ delay: QUADRANTS.indexOf(q) * 0.05 }}
-              className="rounded-[20px] overflow-hidden bg-[var(--color-surface-card)] shadow-[var(--shadow-card)]">
+              className="rounded-[20px] overflow-hidden"
+              style={{
+                backgroundColor: "var(--color-surface-card)",
+                boxShadow: "var(--shadow-card)",
+              }}>
               {/* Color bar */}
               <div className="h-1" style={{ background: q.colorBar }} />
               {/* Inner content */}
@@ -150,11 +171,11 @@ export default function TasksPage() {
                   className="text-[15px] font-semibold mb-1"
                   style={{ color: q.colorBar }}
                 >{q.label}</div>
-                <div className="text-[12px] font-medium text-[var(--color-text-secondary)] mb-1">
+                <div className="text-[12px] font-medium mb-1" style={{ color: "var(--color-text-secondary)" }}>
                   {q.desc} · {items.length}件
                 </div>
                 {items.length === 0 ? (
-                  <div className="text-[26px] font-light text-[var(--color-text-disabled)]">空</div>
+                  <div className="text-[26px] font-light" style={{ color: "var(--color-text-disabled)" }}>空</div>
                 ) : (
                   <div className="w-full space-y-0.5 mt-2">
                     {items.map((t) => (
@@ -162,7 +183,7 @@ export default function TasksPage() {
                         className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-left"
                         onClick={() => toggleTask(t)}>
                         <Circle className="w-3.5 h-3.5 shrink-0" style={{ color: q.colorBar }} />
-                        <span className="flex-1 text-[13px] truncate text-[var(--color-text-primary)]">{t.title}</span>
+                        <span className="flex-1 text-[13px] truncate" style={{ color: "var(--color-text-primary)" }}>{t.title}</span>
                       </button>
                     ))}
                   </div>

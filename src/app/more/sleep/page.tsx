@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ChevronRight, Minus, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, Minus, Plus, Moon, BarChart3 } from "lucide-react";
 import { useHealthStore } from "@/lib/store/healthStore";
 import {
   getSleepLogs,
@@ -241,7 +241,7 @@ export default function SleepPage() {
 
     const points = days
       .filter((d) => d.actualTime !== null)
-      .map((d, i) => {
+      .map((d) => {
         const idx = days.indexOf(d);
         return {
           x: (idx / 29) * 100,
@@ -288,20 +288,15 @@ export default function SleepPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#FAFAFA]">
-        <header className="sticky top-0 z-20 bg-white border-b border-[#EBEBEB] h-11 flex items-center">
-          <button
-            onClick={() => router.push("/more")}
-            className="ml-4 w-6 h-6 flex items-center justify-center"
-          >
-            <ChevronLeft className="w-6 h-6 text-[#515154]" />
-          </button>
+      <div className="min-h-screen" style={{ background: "var(--lifeflow-background)" }}>
+        <header className="sticky top-0 z-30 flex items-center gap-3 px-4 py-3" style={{ background: "var(--lifeflow-background)" }}>
+          <div className="inline-flex h-8 w-8 items-center justify-center rounded-lg" style={{ background: "var(--color-surface-card)", border: "1px solid var(--lifeflow-border)" }} />
         </header>
-        <div className="px-5 pt-5 flex flex-col gap-4">
+        <div className="px-4 pt-1 pb-10 space-y-4">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="bg-white rounded-[10px] border border-[#EBEBEB] p-5 animate-pulse">
-              <div className="h-5 w-1/3 rounded bg-[#F5F5F7]" />
-              <div className="h-8 w-2/3 mt-3 rounded bg-[#F5F5F7]" />
+            <div key={i} className="animate-pulse p-5" style={{ background: "var(--color-surface-card)", borderRadius: "20px", boxShadow: "var(--shadow-card)" }}>
+              <div className="h-5 w-1/3 rounded" style={{ background: "var(--lifeflow-muted)" }} />
+              <div className="h-8 w-2/3 mt-3 rounded" style={{ background: "var(--lifeflow-muted)" }} />
             </div>
           ))}
         </div>
@@ -312,49 +307,55 @@ export default function SleepPage() {
   /* ────────── Render ────────── */
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA] pb-10">
+    <div className="min-h-screen pb-10" style={{ background: "var(--lifeflow-background)" }}>
       {/* ─── Header ─── */}
-      <header className="sticky top-0 z-20 bg-white border-b border-[#EBEBEB] h-11 flex items-center relative">
+      <header className="sticky top-0 z-30 flex items-center gap-3 px-4 py-3" style={{ background: "var(--lifeflow-background)" }}>
         <button
           onClick={() => router.push("/more")}
-          className="ml-4 w-6 h-6 flex items-center justify-center"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-lg shrink-0"
+          style={{ background: "var(--color-surface-card)", border: "1px solid var(--lifeflow-border)" }}
           aria-label="返回"
         >
-          <ChevronLeft className="w-6 h-6 text-[#515154]" />
+          <ChevronLeft className="h-4 w-4" style={{ color: "var(--color-text-primary)" }} />
         </button>
-        <h1 className="absolute left-1/2 -translate-x-1/2 text-[18px] font-semibold text-[#1D1D1F]">
+        <h1 className="flex-1 text-center text-[17px] font-semibold tracking-[-0.018em]" style={{ color: "var(--color-text-primary)", marginRight: "32px" }}>
           睡眠
         </h1>
       </header>
 
-      <div className="px-5 pt-4 flex flex-col gap-4">
-        {/* ─── Card 1 — Sleep Time Scale ─── */}
+      <div className="px-4 pt-1 pb-10 space-y-4">
+        {/* ─── Sleep Stats Card ─── */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
-          className="bg-white rounded-[10px] border border-[#EBEBEB] px-5 pt-6 pb-6"
+          className="p-5"
+          style={{ background: "var(--color-surface-card)", borderRadius: "20px", boxShadow: "var(--shadow-card)" }}
         >
-          {/* 2 columns */}
-          <div className="flex items-center justify-center gap-0">
-            <div className="flex flex-col items-center flex-1">
-              <span className="text-[13px] text-[#86868B] mb-1">昨晚入睡</span>
-              <span className="text-[26px] font-bold text-[#1D1D1F] leading-none">
-                {actualTime ?? "--:--"}
-              </span>
+          <div className="flex items-center gap-4">
+            {/* Moon Icon */}
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full" style={{ background: "var(--lifeflow-brand-50)" }}>
+              <Moon className="h-6 w-6" style={{ color: "var(--lifeflow-primary)" }} />
             </div>
-            <div className="w-px h-[51px] bg-[#EBEBEB]" />
-            <div className="flex flex-col items-center flex-1">
-              <span className="text-[13px] text-[#86868B] mb-1">目标入睡</span>
-              <span className="text-[26px] font-bold text-[#D2D2D7] leading-none">
-                {targetTime}
-              </span>
+            {/* Sleep Data */}
+            <div className="min-w-0 flex-1">
+              <p className="text-[13px] font-medium" style={{ color: "var(--color-text-secondary)", letterSpacing: "-0.01em" }}>
+                昨晚睡眠
+              </p>
+              <p className="text-[17px] font-semibold truncate leading-[1.3]" style={{ color: actualTime ? "var(--color-text-primary)" : "var(--color-text-secondary)" }}>
+                {actualTime ? `${actualTime} 入睡` : "暂无记录"}
+              </p>
+            </div>
+            {/* Target */}
+            <div className="shrink-0 text-right">
+              <p className="text-[13px] font-medium" style={{ color: "var(--color-text-secondary)", letterSpacing: "-0.01em" }}>目标</p>
+              <p className="text-[20px] font-bold" style={{ color: "var(--color-text-primary)" }}>8h</p>
             </div>
           </div>
 
           {/* Time scale track */}
-          <div className="mt-6">
-            <div className="relative h-[6px] rounded-full bg-[#EBEBED]">
+          <div className="mt-5">
+            <div className="relative h-[6px] rounded-full" style={{ background: "var(--lifeflow-muted)" }}>
               {/* target dashed line */}
               {(() => {
                 const targetPct = ((targetNorm - windowStart) / (windowEnd - windowStart)) * 100;
@@ -363,7 +364,7 @@ export default function SleepPage() {
                     className="absolute top-0 h-full w-px"
                     style={{
                       left: `${targetPct}%`,
-                      background: "repeating-linear-gradient(to bottom, #5865F2 0px, #5865F2 3px, transparent 3px, transparent 6px)",
+                      background: `repeating-linear-gradient(to bottom, var(--lifeflow-primary) 0px, var(--lifeflow-primary) 3px, transparent 3px, transparent 6px)`,
                     }}
                   />
                 );
@@ -371,9 +372,10 @@ export default function SleepPage() {
               {/* Actual dot */}
               {actualTime && (
                 <div
-                  className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-[12px] h-[12px] rounded-full bg-[#5865F2] shadow-[0_0_0_3px_white]"
+                  className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-[12px] h-[12px] rounded-full shadow-[0_0_0_3px_white]"
                   style={{
                     left: `${((normalizeMinutes(actualTime) - windowStart) / (windowEnd - windowStart)) * 100}%`,
+                    background: "var(--lifeflow-primary)",
                   }}
                 />
               )}
@@ -381,10 +383,10 @@ export default function SleepPage() {
 
             {/* Labels */}
             <div className="mt-2 flex justify-between">
-              <span className="text-[13px] text-[#AEAEB2]">
+              <span className="text-[13px]" style={{ color: "var(--color-text-disabled)" }}>
                 {minutesToTime(windowStart)}
               </span>
-              <span className="text-[13px] text-[#AEAEB2]">
+              <span className="text-[13px]" style={{ color: "var(--color-text-disabled)" }}>
                 {minutesToTime(windowEnd)}
               </span>
             </div>
@@ -392,39 +394,119 @@ export default function SleepPage() {
 
           {/* Status */}
           {actualTime ? (
-            <p className="mt-4 text-[13px] text-[#86868B] text-center">
+            <p className="mt-4 text-[13px] text-center" style={{ color: "var(--color-text-secondary)" }}>
               {minutesDiff! > 0
                 ? `比目标晚 ${minutesDiff} 分钟`
                 : minutesDiff! < 0
                   ? `比目标早 ${Math.abs(minutesDiff!)} 分钟`
                   : "正好达标"}
             </p>
-          ) : (
-            <div className="mt-4 flex flex-col items-center gap-3">
-              <p className="text-[13px] text-[#86868B]">暂无昨晚入睡记录</p>
-              <button
-                type="button"
-                onClick={handleLogSleep}
-                disabled={isSaving}
-                className="w-full h-11 rounded-full bg-[#5865F2] text-white text-[16px] font-medium"
-              >
-                {isSaving ? "记录中…" : "记录入睡时间"}
-              </button>
-            </div>
-          )}
+          ) : null}
         </motion.div>
 
-        {/* ─── Card 2 — Consecutive Days ─── */}
+        {/* ─── Record Sleep Button ─── */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.05, duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
-          className="bg-white rounded-[10px] border border-[#EBEBEB] px-5 pt-6 pb-6"
         >
-          <p className="text-[17px] font-bold text-[#1D1D1F] text-center">
+          <button
+            type="button"
+            onClick={handleLogSleep}
+            disabled={isSaving}
+            className="w-full py-3.5 rounded-full text-white text-base font-semibold tracking-[-0.018em] active:opacity-90 transition-opacity disabled:opacity-50"
+            style={{ background: "var(--lifeflow-primary)" }}
+          >
+            {isSaving ? "记录中…" : actualTime ? "更新入睡时间" : "记录睡眠"}
+          </button>
+        </motion.div>
+
+        {/* ─── 早睡分析 Card ─── */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1, duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
+        >
+          <h2 className="text-base font-semibold mb-3 px-0.5" style={{ color: "var(--color-text-primary)" }}>早睡分析</h2>
+          <div className="p-6 flex flex-col items-center justify-center" style={{ background: "var(--color-surface-card)", borderRadius: "20px", boxShadow: "var(--shadow-card)", minHeight: "160px" }}>
+            {trendChart.points.length > 1 ? (
+              <div className="w-full">
+                <div className="flex">
+                  {/* Y-axis labels */}
+                  <div className="flex flex-col justify-between h-[140px] pr-2" style={{ paddingBottom: 20 }}>
+                    <span className="text-[11px] leading-none" style={{ color: "var(--color-text-disabled)" }}>{trendChart.yAbove}</span>
+                    <span className="text-[11px] leading-none font-medium" style={{ color: "var(--lifeflow-primary)" }}>{trendChart.yTargetLabel}</span>
+                    <span className="text-[11px] leading-none" style={{ color: "var(--color-text-disabled)" }}>{trendChart.yBelow}</span>
+                  </div>
+                  {/* Plot area */}
+                  <div className="flex-1 relative" style={{ height: 140, paddingBottom: 20 }}>
+                    <svg
+                      className="absolute inset-0 w-full h-full overflow-visible"
+                      preserveAspectRatio="none"
+                    >
+                      {/* Target dashed line */}
+                      <line
+                        x1="0"
+                        y1={`${trendChart.targetY}%`}
+                        x2="100%"
+                        y2={`${trendChart.targetY}%`}
+                        stroke="var(--lifeflow-brand-200)"
+                        strokeWidth="1"
+                        strokeDasharray="4 4"
+                      />
+                      {/* Polyline */}
+                      {trendChart.points.length > 1 && (
+                        <polyline
+                          points={trendChart.polylinePoints}
+                          fill="none"
+                          stroke="var(--lifeflow-primary)"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      )}
+                      {/* Data dots */}
+                      {trendChart.points.map((p, i) => (
+                        <circle
+                          key={i}
+                          cx={`${p.x}%`}
+                          cy={`${p.y}%`}
+                          r="2.5"
+                          fill="var(--lifeflow-primary)"
+                        />
+                      ))}
+                    </svg>
+                  </div>
+                </div>
+                {/* X-axis labels */}
+                <div className="flex justify-between mt-1">
+                  <span className="text-[11px]" style={{ color: "var(--color-text-disabled)" }}>{trendChart.firstDate}</span>
+                  <span className="text-[11px]" style={{ color: "var(--color-text-disabled)" }}>{trendChart.midDate}</span>
+                  <span className="text-[11px]" style={{ color: "var(--color-text-disabled)" }}>{trendChart.lastDate}</span>
+                </div>
+              </div>
+            ) : (
+              <>
+                <BarChart3 className="h-10 w-10 mb-3" style={{ color: "var(--color-text-disabled)" }} />
+                <p className="text-[13px] font-medium text-center" style={{ color: "var(--color-text-secondary)" }}>暂无睡眠数据</p>
+                <p className="text-[12px] mt-1 text-center" style={{ color: "var(--color-text-disabled)" }}>记录几晚睡眠后，查看入睡趋势分析</p>
+              </>
+            )}
+          </div>
+        </motion.div>
+
+        {/* ─── Consecutive Days Card ─── */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.12, duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
+          className="p-5"
+          style={{ background: "var(--color-surface-card)", borderRadius: "20px", boxShadow: "var(--shadow-card)" }}
+        >
+          <p className="text-[17px] font-bold text-center" style={{ color: "var(--color-text-primary)" }}>
             连续 {consecutiveDays} 天达成目标
           </p>
-          <p className="text-[13px] text-[#86868B] text-center mt-1">
+          <p className="text-[13px] text-center mt-1" style={{ color: "var(--color-text-secondary)" }}>
             {consecutiveDays > 0 ? "保持好习惯" : "从今天开始吧"}
           </p>
 
@@ -435,54 +517,64 @@ export default function SleepPage() {
                 <div
                   className={`w-6 h-6 rounded-full flex items-center justify-center text-[12px] font-medium ${
                     dot.type === "on-time"
-                      ? "bg-[#5865F2] text-white"
+                      ? ""
                       : dot.type === "today-no-record"
-                        ? "bg-white border-2 border-[#5865F2] text-[#5865F2]"
-                        : "bg-[#EBEBED] text-[#AEAEB2]"
+                        ? ""
+                        : ""
                   }`}
+                  style={
+                    dot.type === "on-time"
+                      ? { background: "var(--lifeflow-primary)", color: "#fff" }
+                      : dot.type === "today-no-record"
+                        ? { background: "#fff", border: "2px solid var(--lifeflow-primary)", color: "var(--lifeflow-primary)" }
+                        : { background: "var(--lifeflow-muted)", color: "var(--color-text-disabled)" }
+                  }
                 >
                   {dot.type === "on-time" ? "✓" : ""}
                 </div>
-                <span className="text-[11px] text-[#AEAEB2]">{dot.label}</span>
+                <span className="text-[11px]" style={{ color: "var(--color-text-disabled)" }}>{dot.label}</span>
               </div>
             ))}
           </div>
         </motion.div>
 
-        {/* ─── Card 3 — Sleep Target ─── */}
+        {/* ─── Sleep Target Card ─── */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1, duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
-          className="bg-white rounded-[10px] border border-[#EBEBEB] px-5 pt-6 pb-6"
+          transition={{ delay: 0.14, duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
+          className="p-5"
+          style={{ background: "var(--color-surface-card)", borderRadius: "20px", boxShadow: "var(--shadow-card)" }}
         >
-          <h2 className="text-[18px] font-bold text-[#1D1D1F]">入睡目标</h2>
+          <h2 className="text-[17px] font-semibold" style={{ color: "var(--color-text-primary)" }}>入睡目标</h2>
 
           {/* Stepper */}
           <div className="mt-5 flex items-center justify-center gap-6">
             <button
               type="button"
               onClick={() => handleStepTarget(-5)}
-              className="w-8 h-8 rounded-full border-2 border-[#5865F2] bg-white flex items-center justify-center"
+              className="w-8 h-8 rounded-full border-2 flex items-center justify-center"
+              style={{ borderColor: "var(--lifeflow-primary)", background: "var(--color-surface-card)" }}
             >
-              <Minus className="w-4 h-4 text-[#5865F2]" />
+              <Minus className="w-4 h-4" style={{ color: "var(--lifeflow-primary)" }} />
             </button>
-            <span className="text-[34px] font-bold text-[#1D1D1F] leading-none tabular-nums">
+            <span className="text-[34px] font-bold leading-none tabular-nums" style={{ color: "var(--color-text-primary)" }}>
               {targetTime}
             </span>
             <button
               type="button"
               onClick={() => handleStepTarget(5)}
-              className="w-8 h-8 rounded-full border-2 border-[#5865F2] bg-white flex items-center justify-center"
+              className="w-8 h-8 rounded-full border-2 flex items-center justify-center"
+              style={{ borderColor: "var(--lifeflow-primary)", background: "var(--color-surface-card)" }}
             >
-              <Plus className="w-4 h-4 text-[#5865F2]" />
+              <Plus className="w-4 h-4" style={{ color: "var(--lifeflow-primary)" }} />
             </button>
           </div>
 
           {/* Reminder advance */}
           <div className="mt-6">
             <div className="flex items-center justify-between">
-              <span className="text-[13px] text-[#86868B]">提醒提前量</span>
+              <span className="text-[13px]" style={{ color: "var(--color-text-secondary)" }}>提醒提前量</span>
               {/* iOS-style toggle switch */}
               <button
                 type="button"
@@ -491,9 +583,8 @@ export default function SleepPage() {
                     reminderEnabled: !sleepGoalV2.reminderEnabled,
                   })
                 }
-                className={`relative w-[51px] h-[31px] rounded-full transition-colors ${
-                  sleepGoalV2.reminderEnabled ? "bg-[#5865F2]" : "bg-[#D2D2D7]"
-                }`}
+                className="relative w-[51px] h-[31px] rounded-full transition-colors"
+                style={{ background: sleepGoalV2.reminderEnabled ? "var(--lifeflow-primary)" : "var(--color-text-disabled)" }}
               >
                 <motion.div
                   className="absolute top-[2px] w-[27px] h-[27px] rounded-full bg-white shadow-sm"
@@ -509,11 +600,12 @@ export default function SleepPage() {
                     key={val}
                     type="button"
                     onClick={() => handleReminderChange(val)}
-                    className={`h-9 px-4 rounded-full text-[13px] transition-colors ${
+                    className="h-9 px-4 rounded-full text-[13px] transition-colors"
+                    style={
                       sleepGoalV2.reminderAdvance === val
-                        ? "bg-[#EEF0FF] text-[#5865F2] font-medium"
-                        : "bg-[#F5F5F7] text-[#86868B]"
-                    }`}
+                        ? { background: "var(--lifeflow-brand-50)", color: "var(--lifeflow-primary)", fontWeight: 500 }
+                        : { background: "var(--lifeflow-muted)", color: "var(--color-text-secondary)" }
+                    }
                   >
                     {val}分钟
                   </button>
@@ -523,80 +615,12 @@ export default function SleepPage() {
           </div>
         </motion.div>
 
-        {/* ─── Card 4 — 30 Day Trend ─── */}
+        {/* ─── Manual Calibrate ─── */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15, duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
-          className="bg-white rounded-[10px] border border-[#EBEBEB] px-5 pt-6 pb-6"
-        >
-          <h2 className="text-[18px] font-bold text-[#1D1D1F]">30 天趋势</h2>
-
-          <div className="mt-6 flex">
-            {/* Y-axis labels */}
-            <div className="flex flex-col justify-between h-[180px] pr-2" style={{ paddingBottom: 20 }}>
-              <span className="text-[11px] text-[#AEAEB2] leading-none">{trendChart.yAbove}</span>
-              <span className="text-[11px] text-[#5865F2] leading-none font-medium">{trendChart.yTargetLabel}</span>
-              <span className="text-[11px] text-[#AEAEB2] leading-none">{trendChart.yBelow}</span>
-            </div>
-
-            {/* Plot area */}
-            <div className="flex-1 relative" style={{ height: 180, paddingBottom: 20 }}>
-              <svg
-                className="absolute inset-0 w-full h-full overflow-visible"
-                preserveAspectRatio="none"
-              >
-                {/* Target dashed line */}
-                <line
-                  x1="0"
-                  y1={`${trendChart.targetY}%`}
-                  x2="100%"
-                  y2={`${trendChart.targetY}%`}
-                  stroke="#CDD1FC"
-                  strokeWidth="1"
-                  strokeDasharray="4 4"
-                />
-
-                {/* Polyline */}
-                {trendChart.points.length > 1 && (
-                  <polyline
-                    points={trendChart.polylinePoints}
-                    fill="none"
-                    stroke="#5865F2"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                )}
-
-                {/* Data dots */}
-                {trendChart.points.map((p, i) => (
-                  <circle
-                    key={i}
-                    cx={`${p.x}%`}
-                    cy={`${p.y}%`}
-                    r="2.5"
-                    fill="#5865F2"
-                  />
-                ))}
-              </svg>
-            </div>
-          </div>
-
-          {/* X-axis labels */}
-          <div className="flex justify-between mt-1">
-            <span className="text-[11px] text-[#AEAEB2]">{trendChart.firstDate}</span>
-            <span className="text-[11px] text-[#AEAEB2]">{trendChart.midDate}</span>
-            <span className="text-[11px] text-[#AEAEB2]">{trendChart.lastDate}</span>
-          </div>
-        </motion.div>
-
-        {/* ─── Bottom — Manual Calibrate ─── */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2, duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
-          className="mt-8 mb-4"
+          transition={{ delay: 0.16, duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
+          className="mt-4 mb-4"
         >
           <button
             type="button"
@@ -609,8 +633,8 @@ export default function SleepPage() {
             }}
             className="w-full flex items-center justify-between py-2"
           >
-            <span className="text-[17px] text-[#AEAEB2]">手动校准</span>
-            <ChevronRight className="w-5 h-5 text-[#AEAEB2]" />
+            <span className="text-[17px]" style={{ color: "var(--color-text-disabled)" }}>手动校准</span>
+            <ChevronRight className="w-5 h-5" style={{ color: "var(--color-text-disabled)" }} />
           </button>
         </motion.div>
       </div>
@@ -633,23 +657,28 @@ export default function SleepPage() {
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
               transition={{ type: "spring", stiffness: 400, damping: 40 }}
-              className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[20px] px-5 pt-6 pb-10"
-              style={{ maxWidth: 430, margin: "0 auto" }}
+              className="fixed bottom-0 left-0 right-0 z-50 rounded-t-[20px] px-5 pt-6 pb-10"
+              style={{ maxWidth: 430, margin: "0 auto", background: "var(--color-surface-card)" }}
             >
-              <div className="w-9 h-1 rounded-full bg-[#D2D2D7] mx-auto mb-5" />
-              <h3 className="text-[18px] font-bold text-[#1D1D1F] mb-5">手动校准</h3>
+              <div className="w-9 h-1 rounded-full mx-auto mb-5" style={{ background: "var(--lifeflow-muted)" }} />
+              <h3 className="text-[17px] font-semibold mb-5" style={{ color: "var(--color-text-primary)" }}>手动校准</h3>
 
               {/* Date */}
-              <label className="text-[13px] text-[#86868B] mb-1.5 block">日期</label>
+              <label className="text-[13px] mb-1.5 block" style={{ color: "var(--color-text-secondary)" }}>日期</label>
               <input
                 type="date"
                 value={calDate}
                 onChange={(e) => setCalDate(e.target.value)}
-                className="w-full h-11 px-4 rounded-[10px] border border-[#EBEBEB] text-[16px] text-[#1D1D1F] bg-[#F5F5F7] mb-4 outline-none focus:border-[#5865F2]"
+                className="w-full h-11 px-4 rounded-[12px] text-[16px] outline-none mb-4 transition-colors"
+                style={{
+                  border: "1px solid var(--lifeflow-border)",
+                  color: "var(--color-text-primary)",
+                  background: "var(--lifeflow-input)",
+                }}
               />
 
               {/* Time */}
-              <label className="text-[13px] text-[#86868B] mb-1.5 block">入睡时间</label>
+              <label className="text-[13px] mb-1.5 block" style={{ color: "var(--color-text-secondary)" }}>入睡时间</label>
               <div className="flex items-center gap-2 mb-6">
                 <input
                   type="number"
@@ -657,23 +686,34 @@ export default function SleepPage() {
                   max={23}
                   value={calHour}
                   onChange={(e) => setCalHour(e.target.value.padStart(2, "0").slice(0, 2))}
-                  className="w-16 h-11 text-center rounded-[10px] border border-[#EBEBEB] text-[16px] text-[#1D1D1F] bg-[#F5F5F7] outline-none focus:border-[#5865F2]"
+                  className="w-16 h-11 text-center rounded-[12px] text-[16px] outline-none transition-colors"
+                  style={{
+                    border: "1px solid var(--lifeflow-border)",
+                    color: "var(--color-text-primary)",
+                    background: "var(--lifeflow-input)",
+                  }}
                 />
-                <span className="text-[16px] text-[#1D1D1F] font-bold">:</span>
+                <span className="text-[16px] font-bold" style={{ color: "var(--color-text-primary)" }}>:</span>
                 <input
                   type="number"
                   min={0}
                   max={59}
                   value={calMin}
                   onChange={(e) => setCalMin(e.target.value.padStart(2, "0").slice(0, 2))}
-                  className="w-16 h-11 text-center rounded-[10px] border border-[#EBEBEB] text-[16px] text-[#1D1D1F] bg-[#F5F5F7] outline-none focus:border-[#5865F2]"
+                  className="w-16 h-11 text-center rounded-[12px] text-[16px] outline-none transition-colors"
+                  style={{
+                    border: "1px solid var(--lifeflow-border)",
+                    color: "var(--color-text-primary)",
+                    background: "var(--lifeflow-input)",
+                  }}
                 />
               </div>
 
               <button
                 type="button"
                 onClick={handleCalibrateSave}
-                className="w-full h-11 rounded-full bg-[#5865F2] text-white text-[16px] font-medium"
+                className="w-full h-11 rounded-full text-white text-[16px] font-medium"
+                style={{ background: "var(--lifeflow-primary)" }}
               >
                 保存
               </button>

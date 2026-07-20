@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import BottomTabBar from "@/components/navigation/BottomTabBar";
+import { BottomNavController } from "@/components/navigation/BottomNavController";
 import { ToastContainer } from "@/components/ui/Toast";
 import ClientProviders from "@/components/ClientProviders";
 import SWProvider from "@/components/pwa/SWProvider";
@@ -43,7 +44,7 @@ export default function RootLayout({
             <main className="flex-1 overflow-auto min-h-screen" style={{ paddingBottom: "var(--bottom-nav-height)" }}>
               {children}
             </main>
-            <BottomTabBar />
+            <BottomNavController />
             <ToastContainer />
             <SWUpdateBanner />
             <StorageMonitor />

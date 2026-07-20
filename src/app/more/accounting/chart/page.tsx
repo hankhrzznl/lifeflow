@@ -9,12 +9,8 @@ import { getTransactionsByMonth, getTransactionsByYear, getTransactionsByDate, g
 import type { Transaction, Category } from "@/lib/db/accounting.db";
 
 // ============================================================
-// 设计令牌（Apple 简约风）
+// 设计令牌（CSS 变量）
 // ============================================================
-const ACCENT = "#5865F2";
-const BAR_LIGHT = "#C7D2FE";
-const BAR_ZERO = "#E5E5E5";
-const SHADOW_CARD = "0 1px 4px rgba(0,0,0,0.04)";
 
 function fmtCompact(fen: number): string {
   const yuan = fen / 100;
@@ -149,16 +145,16 @@ export default function ChartPage() {
   // 渲染
   // ============================================================
   return (
-    <div className="min-h-screen bg-[#FAFAFA]">
+    <div className="min-h-screen" style={{ background: "var(--lifeflow-background)" }}>
       {/* ===== 页头 ===== */}
-      <div className="flex items-center relative h-14 px-2 border-b border-[#F5F5F5]">
+      <div className="flex items-center relative h-14 px-2" style={{ borderBottom: "1px solid var(--lifeflow-border)" }}>
         <button type="button" onClick={() => router.push("/more/accounting")}
           className="w-11 h-11 flex items-center justify-center">
-          <ChevronLeft className="w-6 h-6 text-[#1D1D1F]" />
+          <ChevronLeft className="w-6 h-6" style={{ color: "var(--color-text-primary)" }} />
         </button>
-        <span className="absolute left-1/2 -translate-x-1/2 text-[17px] font-semibold text-[#1D1D1F]">图表</span>
+        <span className="absolute left-1/2 -translate-x-1/2 text-[17px] font-semibold" style={{ color: "var(--color-text-primary)" }}>图表</span>
         <button type="button" onClick={toggleView}
-          className="ml-auto h-8 px-4 rounded-full bg-[#5865F2] text-white text-[13px] font-semibold">
+          className="ml-auto h-8 px-4 rounded-full text-white text-[13px] font-semibold" style={{ background: "var(--lifeflow-primary)" }}>
           {isMonth ? "月" : "年"}
         </button>
       </div>
@@ -169,29 +165,29 @@ export default function ChartPage() {
           {/* 月份选择行 */}
           <div className="flex items-center justify-center gap-4 py-4">
             <button type="button" onClick={goPrevMonth} className="w-8 h-8 flex items-center justify-center">
-              <ChevronLeft className="w-5 h-5 text-[#AEAEB2]" />
+              <ChevronLeft className="w-5 h-5" style={{ color: "var(--color-text-disabled)" }} />
             </button>
-            <span className="text-[20px] font-semibold text-[#1D1D1F]">{currentYear}年{currentMonth}月</span>
+            <span className="text-[20px] font-semibold" style={{ color: "var(--color-text-primary)" }}>{currentYear}年{currentMonth}月</span>
             <button type="button" onClick={goNextMonth} className="w-8 h-8 flex items-center justify-center">
-              <ChevronRight className="w-5 h-5 text-[#AEAEB2]" />
+              <ChevronRight className="w-5 h-5" style={{ color: "var(--color-text-disabled)" }} />
             </button>
           </div>
 
           {/* 汇总双卡 */}
           <div className="flex gap-3 px-4">
-            <div className="flex-1 h-[108px] rounded-xl bg-white flex flex-col items-center justify-center gap-1.5" style={{ boxShadow: SHADOW_CARD }}>
-              <span className="text-[13px] text-[#86868B]">支出</span>
-              <span className="text-[28px] font-bold leading-none text-[#1D1D1F]">¥{fmtCompact(monthExpense)}</span>
+            <div className="flex-1 h-[108px] rounded-xl bg-white flex flex-col items-center justify-center gap-1.5" style={{ boxShadow: "var(--shadow-card)" }}>
+              <span className="text-[13px]" style={{ color: "var(--color-text-secondary)" }}>支出</span>
+              <span className="text-[28px] font-bold leading-none" style={{ color: "var(--color-text-primary)" }}>¥{fmtCompact(monthExpense)}</span>
             </div>
-            <div className="flex-1 h-[108px] rounded-xl bg-white flex flex-col items-center justify-center gap-1.5" style={{ boxShadow: SHADOW_CARD }}>
-              <span className="text-[13px] text-[#86868B]">收入</span>
-              <span className="text-[28px] font-bold leading-none text-[#1D1D1F]">¥{fmtCompact(monthIncome)}</span>
+            <div className="flex-1 h-[108px] rounded-xl bg-white flex flex-col items-center justify-center gap-1.5" style={{ boxShadow: "var(--shadow-card)" }}>
+              <span className="text-[13px]" style={{ color: "var(--color-text-secondary)" }}>收入</span>
+              <span className="text-[28px] font-bold leading-none" style={{ color: "var(--color-text-primary)" }}>¥{fmtCompact(monthIncome)}</span>
             </div>
           </div>
 
           {/* 每日支出·近7日 */}
-          <div className="mx-4 mt-3 rounded-xl bg-white p-5" style={{ boxShadow: SHADOW_CARD }}>
-            <h2 className="text-[17px] font-bold text-[#1D1D1F]">每日支出·近7日</h2>
+          <div className="mx-4 mt-3 rounded-xl bg-white p-5" style={{ boxShadow: "var(--shadow-card)" }}>
+            <h2 className="text-[17px] font-bold" style={{ color: "var(--color-text-primary)" }}>每日支出·近7日</h2>
             <div className="mt-4 h-[160px] flex items-end">
               {weekExpenses.map((val, i) => {
                 const dateStr = last7Days[i];
@@ -205,46 +201,46 @@ export default function ChartPage() {
                       transition={{ duration: 0.4, delay: i * 0.03 }}
                       className="w-4 rounded-full"
                       style={{
-                        background: val > 0 ? (isTodayCol ? ACCENT : BAR_LIGHT) : BAR_ZERO,
-                        boxShadow: isTodayCol ? "0 0 0 3px #FFFFFF, 0 0 0 5px #5865F2" : undefined,
+                        background: val > 0 ? (isTodayCol ? "var(--lifeflow-primary)" : "#C7D2FE") : "var(--lifeflow-border)",
+                        boxShadow: isTodayCol ? "0 0 0 3px #FFFFFF, 0 0 0 5px var(--lifeflow-primary)" : undefined,
                       }}
                     />
-                    <span className={`mt-2 text-[11px] ${isTodayCol ? "text-[#5865F2] font-semibold" : "text-[#AEAEB2]"}`}>
+                    <span className="mt-2 text-[11px]" style={{ color: isTodayCol ? "var(--lifeflow-primary)" : "var(--color-text-disabled)", fontWeight: isTodayCol ? 600 : 400 }}>
                       {new Date(dateStr).getDate()}
                     </span>
                   </div>
                 );
               })}
             </div>
-            <div className="mt-3 pt-3 border-t border-[#F5F5F5] flex justify-between text-[11px] text-[#AEAEB2]">
+            <div className="mt-3 pt-3 flex justify-between text-[11px]" style={{ borderTop: "1px solid var(--lifeflow-border)", color: "var(--color-text-disabled)" }}>
               <span>{new Date(last7Days[0]).getMonth() + 1}/{new Date(last7Days[0]).getDate()}</span>
               <span>{new Date(last7Days[6]).getMonth() + 1}/{new Date(last7Days[6]).getDate()}</span>
             </div>
           </div>
 
           {/* 类别排行 */}
-          <div className="mx-4 mt-3 rounded-xl bg-white p-5" style={{ boxShadow: SHADOW_CARD }}>
-            <h2 className="text-[17px] font-bold text-[#1D1D1F]">类别排行</h2>
+          <div className="mx-4 mt-3 rounded-xl bg-white p-5" style={{ boxShadow: "var(--shadow-card)" }}>
+            <h2 className="text-[17px] font-bold" style={{ color: "var(--color-text-primary)" }}>类别排行</h2>
             {monthCatRanking.length === 0 ? (
-              <div className="py-8 text-center text-[13px] text-[#AEAEB2]">当月暂无支出记录</div>
+              <div className="py-8 text-center text-[13px]" style={{ color: "var(--color-text-disabled)" }}>当月暂无支出记录</div>
             ) : (
               <div className="mt-2">
                 {monthCatRanking.map((item, i) => {
                   const pct = monthExpense > 0 ? Math.round((item.amount / monthExpense) * 100) : 0;
                   return (
-                    <div key={item.categoryId} className={`flex items-center gap-3 py-3 ${i > 0 ? "border-t border-[#F5F5F5]" : ""}`}>
+                    <div key={item.categoryId} className={`flex items-center gap-3 py-3 ${i > 0 ? "border-t" : ""}`} style={i > 0 ? { borderTop: "1px solid var(--lifeflow-border)" } : undefined}>
                       <div className="w-2 h-2 rounded-full shrink-0" style={{ background: item.color }} />
-                      <span className="text-[15px] font-medium text-[#1D1D1F] shrink-0">{item.name}</span>
-                      <span className="text-[13px] text-[#86868B] w-[42px] shrink-0">{pct}%</span>
-                      <div className="flex-1 h-[6px] rounded-full bg-[#F5F5F5] overflow-hidden">
+                      <span className="text-[15px] font-medium shrink-0" style={{ color: "var(--color-text-primary)" }}>{item.name}</span>
+                      <span className="text-[13px] w-[42px] shrink-0" style={{ color: "var(--color-text-secondary)" }}>{pct}%</span>
+                      <div className="flex-1 h-[6px] rounded-full overflow-hidden" style={{ background: "var(--lifeflow-border)" }}>
                         <motion.div
                           initial={{ width: 0 }}
                           animate={{ width: `${pct}%` }}
                           transition={{ duration: 0.5, delay: i * 0.03 }}
-                          className="h-full rounded-full bg-[#5865F2]"
+                          className="h-full rounded-full" style={{ background: "var(--lifeflow-primary)" }}
                         />
                       </div>
-                      <span className="text-[15px] font-semibold text-[#1D1D1F] shrink-0">¥{fmtCompact(item.amount)}</span>
+                      <span className="text-[15px] font-semibold shrink-0" style={{ color: "var(--color-text-primary)" }}>¥{fmtCompact(item.amount)}</span>
                     </div>
                   );
                 })}
@@ -253,20 +249,20 @@ export default function ChartPage() {
           </div>
 
           {/* 支出 Top 10 */}
-          <div className="mx-4 mt-3 mb-6 rounded-xl bg-white p-5" style={{ boxShadow: SHADOW_CARD }}>
-            <h2 className="text-[17px] font-bold text-[#1D1D1F]">支出 Top 10</h2>
+          <div className="mx-4 mt-3 mb-6 rounded-xl bg-white p-5" style={{ boxShadow: "var(--shadow-card)" }}>
+            <h2 className="text-[17px] font-bold" style={{ color: "var(--color-text-primary)" }}>支出 Top 10</h2>
             {monthTop10.length === 0 ? (
-              <div className="py-8 text-center text-[13px] text-[#AEAEB2]">当月暂无支出记录</div>
+              <div className="py-8 text-center text-[13px]" style={{ color: "var(--color-text-disabled)" }}>当月暂无支出记录</div>
             ) : (
               <div className="mt-2">
                 {monthTop10.map((tx, i) => {
                   const cat = tx.categoryId ? categoryMap.get(tx.categoryId) : undefined;
                   return (
-                    <div key={tx.id} className={`flex items-center gap-3 py-3 ${i > 0 ? "border-t border-[#F5F5F5]" : ""}`}>
-                      <span className="w-6 text-center text-[13px] font-medium text-[#AEAEB2]">{i + 1}</span>
+                    <div key={tx.id} className={`flex items-center gap-3 py-3 ${i > 0 ? "border-t" : ""}`} style={i > 0 ? { borderTop: "1px solid var(--lifeflow-border)" } : undefined}>
+                      <span className="w-6 text-center text-[13px] font-medium" style={{ color: "var(--color-text-disabled)" }}>{i + 1}</span>
                       <div className="w-2 h-2 rounded-full shrink-0" style={{ background: cat?.color || "#AEAEB2" }} />
-                      <span className="flex-1 truncate text-[15px] text-[#1D1D1F]">{tx.note || cat?.name || "未分类"}</span>
-                      <span className="text-[15px] font-medium text-[#1D1D1F] shrink-0">-¥{fmtCompact(tx.amount)}</span>
+                      <span className="flex-1 truncate text-[15px]" style={{ color: "var(--color-text-primary)" }}>{tx.note || cat?.name || "未分类"}</span>
+                      <span className="text-[15px] font-medium shrink-0" style={{ color: "var(--color-text-primary)" }}>-¥{fmtCompact(tx.amount)}</span>
                     </div>
                   );
                 })}
@@ -282,30 +278,30 @@ export default function ChartPage() {
           {/* 年份选择行 */}
           <div className="flex items-center justify-center gap-4 py-4">
             <button type="button" onClick={goPrevYear} className="w-8 h-8 flex items-center justify-center">
-              <ChevronLeft className="w-5 h-5 text-[#AEAEB2]" />
+              <ChevronLeft className="w-5 h-5" style={{ color: "var(--color-text-disabled)" }} />
             </button>
-            <span className="text-[20px] font-semibold text-[#1D1D1F]">{yearViewYear}年</span>
+            <span className="text-[20px] font-semibold" style={{ color: "var(--color-text-primary)" }}>{yearViewYear}年</span>
             <button type="button" onClick={goNextYear} disabled={yearViewYear >= nowYear}
               className={`w-8 h-8 flex items-center justify-center ${yearViewYear >= nowYear ? "opacity-0" : ""}`}>
-              <ChevronRight className="w-5 h-5 text-[#AEAEB2]" />
+              <ChevronRight className="w-5 h-5" style={{ color: "var(--color-text-disabled)" }} />
             </button>
           </div>
 
           {/* 汇总双卡 */}
           <div className="flex gap-3 px-4">
-            <div className="flex-1 h-[108px] rounded-xl bg-white flex flex-col items-center justify-center gap-1.5" style={{ boxShadow: SHADOW_CARD }}>
-              <span className="text-[13px] text-[#86868B]">支出</span>
-              <span className="text-[28px] font-bold leading-none text-[#1D1D1F]">¥{fmtCompact(yearExpense)}</span>
+            <div className="flex-1 h-[108px] rounded-xl bg-white flex flex-col items-center justify-center gap-1.5" style={{ boxShadow: "var(--shadow-card)" }}>
+              <span className="text-[13px]" style={{ color: "var(--color-text-secondary)" }}>支出</span>
+              <span className="text-[28px] font-bold leading-none" style={{ color: "var(--color-text-primary)" }}>¥{fmtCompact(yearExpense)}</span>
             </div>
-            <div className="flex-1 h-[108px] rounded-xl bg-white flex flex-col items-center justify-center gap-1.5" style={{ boxShadow: SHADOW_CARD }}>
-              <span className="text-[13px] text-[#86868B]">收入</span>
-              <span className="text-[28px] font-bold leading-none text-[#1D1D1F]">¥{fmtCompact(yearIncome)}</span>
+            <div className="flex-1 h-[108px] rounded-xl bg-white flex flex-col items-center justify-center gap-1.5" style={{ boxShadow: "var(--shadow-card)" }}>
+              <span className="text-[13px]" style={{ color: "var(--color-text-secondary)" }}>收入</span>
+              <span className="text-[28px] font-bold leading-none" style={{ color: "var(--color-text-primary)" }}>¥{fmtCompact(yearIncome)}</span>
             </div>
           </div>
 
-          {/* 每月支出·{year}年（待设计补充后校准） */}
-          <div className="mx-4 mt-3 rounded-xl bg-white p-5" style={{ boxShadow: SHADOW_CARD }}>
-            <h2 className="text-[17px] font-bold text-[#1D1D1F]">每月支出·{yearViewYear}年</h2>
+          {/* 每月支出·{year}年 */}
+          <div className="mx-4 mt-3 rounded-xl bg-white p-5" style={{ boxShadow: "var(--shadow-card)" }}>
+            <h2 className="text-[17px] font-bold" style={{ color: "var(--color-text-primary)" }}>每月支出·{yearViewYear}年</h2>
             <div className="mt-4 h-[160px] flex items-end">
               {monthlyBuckets.map((val, i) => {
                 const isCurrentMonth = yearViewYear === nowYear && i === nowMonth - 1;
@@ -317,44 +313,44 @@ export default function ChartPage() {
                       animate={{ height: h }}
                       transition={{ duration: 0.4, delay: i * 0.02 }}
                       className="w-3 rounded-full"
-                      style={{ background: val > 0 ? (isCurrentMonth ? ACCENT : BAR_LIGHT) : BAR_ZERO }}
+                      style={{ background: val > 0 ? (isCurrentMonth ? "var(--lifeflow-primary)" : "#C7D2FE") : "var(--lifeflow-border)" }}
                     />
-                    <span className={`mt-2 text-[10px] ${isCurrentMonth ? "text-[#5865F2]" : "text-[#AEAEB2]"}`}>
+                    <span className="mt-2 text-[10px]" style={{ color: isCurrentMonth ? "var(--lifeflow-primary)" : "var(--color-text-disabled)" }}>
                       {i + 1}月
                     </span>
                   </div>
                 );
               })}
             </div>
-            <div className="mt-3 pt-3 border-t border-[#F5F5F5] flex justify-between text-[11px] text-[#AEAEB2]">
+            <div className="mt-3 pt-3 flex justify-between text-[11px]" style={{ borderTop: "1px solid var(--lifeflow-border)", color: "var(--color-text-disabled)" }}>
               <span>1月</span>
               <span>12月</span>
             </div>
           </div>
 
           {/* 类别排行 */}
-          <div className="mx-4 mt-3 mb-6 rounded-xl bg-white p-5" style={{ boxShadow: SHADOW_CARD }}>
-            <h2 className="text-[17px] font-bold text-[#1D1D1F]">类别排行</h2>
+          <div className="mx-4 mt-3 mb-6 rounded-xl bg-white p-5" style={{ boxShadow: "var(--shadow-card)" }}>
+            <h2 className="text-[17px] font-bold" style={{ color: "var(--color-text-primary)" }}>类别排行</h2>
             {yearCatRanking.length === 0 ? (
-              <div className="py-8 text-center text-[13px] text-[#AEAEB2]">全年暂无支出记录</div>
+              <div className="py-8 text-center text-[13px]" style={{ color: "var(--color-text-disabled)" }}>全年暂无支出记录</div>
             ) : (
               <div className="mt-2">
                 {yearCatRanking.map((item, i) => {
                   const pct = yearExpense > 0 ? Math.round((item.amount / yearExpense) * 100) : 0;
                   return (
-                    <div key={item.categoryId} className={`flex items-center gap-3 py-3 ${i > 0 ? "border-t border-[#F5F5F5]" : ""}`}>
+                    <div key={item.categoryId} className={`flex items-center gap-3 py-3 ${i > 0 ? "border-t" : ""}`} style={i > 0 ? { borderTop: "1px solid var(--lifeflow-border)" } : undefined}>
                       <div className="w-2 h-2 rounded-full shrink-0" style={{ background: item.color }} />
-                      <span className="text-[15px] font-medium text-[#1D1D1F] shrink-0">{item.name}</span>
-                      <span className="text-[13px] text-[#86868B] w-[42px] shrink-0">{pct}%</span>
-                      <div className="flex-1 h-[6px] rounded-full bg-[#F5F5F5] overflow-hidden">
+                      <span className="text-[15px] font-medium shrink-0" style={{ color: "var(--color-text-primary)" }}>{item.name}</span>
+                      <span className="text-[13px] w-[42px] shrink-0" style={{ color: "var(--color-text-secondary)" }}>{pct}%</span>
+                      <div className="flex-1 h-[6px] rounded-full overflow-hidden" style={{ background: "var(--lifeflow-border)" }}>
                         <motion.div
                           initial={{ width: 0 }}
                           animate={{ width: `${pct}%` }}
                           transition={{ duration: 0.5, delay: i * 0.03 }}
-                          className="h-full rounded-full bg-[#5865F2]"
+                          className="h-full rounded-full" style={{ background: "var(--lifeflow-primary)" }}
                         />
                       </div>
-                      <span className="text-[15px] font-semibold text-[#1D1D1F] shrink-0">¥{fmtCompact(item.amount)}</span>
+                      <span className="text-[15px] font-semibold shrink-0" style={{ color: "var(--color-text-primary)" }}>¥{fmtCompact(item.amount)}</span>
                     </div>
                   );
                 })}

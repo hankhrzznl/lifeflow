@@ -13,9 +13,8 @@ import { getScheduleTasksByDate } from "@/lib/db/efficiency.db";
 import { showToast } from "@/components/ui/Toast";
 
 // ============================================================
-// 设计令牌
+// 常量
 // ============================================================
-const ACCENT = "#5865F2";
 const WEEK_DAYS = ["一", "二", "三", "四", "五", "六", "日"];
 
 // ============================================================
@@ -77,41 +76,54 @@ function TaskRow({
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
-            className="w-6 h-6 rounded-full bg-[#5865F2] flex items-center justify-center"
+            className="w-6 h-6 rounded-full flex items-center justify-center"
+            style={{ backgroundColor: "var(--lifeflow-primary)" }}
           >
             <Check className="w-[14px] h-[14px] text-white" strokeWidth={3} />
           </motion.div>
         ) : (
-          <div className="w-6 h-6 rounded-full border-2 border-[#C7C7CC] bg-white" />
+          <div className="w-6 h-6 rounded-full border-2 bg-white" style={{ borderColor: "var(--color-text-disabled)" }} />
         )}
       </button>
 
       {/* 内容 */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5">
-          <p className={`text-[17px] truncate ${task.isCompleted ? "line-through text-[#AEAEB2]" : "text-[#1D1D1F]"}`}>
+          <p
+            className="text-[17px] truncate"
+            style={{
+              color: task.isCompleted ? "var(--color-text-disabled)" : "var(--color-text-primary)",
+              textDecoration: task.isCompleted ? "line-through" : "none",
+            }}
+          >
             {task.title}
           </p>
           {task.isImportant && !task.isCompleted && (
-            <span className="w-[6px] h-[6px] rounded-full bg-[#5865F2] shrink-0" />
+            <span className="w-[6px] h-[6px] rounded-full shrink-0" style={{ backgroundColor: "var(--lifeflow-primary)" }} />
           )}
         </div>
         {(task.plannedTime > 0 || task.progressType === "progress" || task.note) && (
           <div className="mt-1 flex gap-2 flex-wrap">
             {task.plannedTime > 0 && (
-              <span className="inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded-md bg-[#F5F5F5] text-[#86868B]">
+              <span
+                className="inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded-md"
+                style={{ backgroundColor: "var(--lifeflow-background)", color: "var(--color-text-secondary)" }}
+              >
                 <Clock className="w-3 h-3" />
                 {task.plannedTime}分钟
               </span>
             )}
             {task.progressType === "progress" && task.targetValue != null && (
-              <span className="inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded-md bg-[#EEF2FF] text-[#5865F2]">
+              <span
+                className="inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded-md"
+                style={{ backgroundColor: "var(--lifeflow-brand-50)", color: "var(--lifeflow-primary)" }}
+              >
                 <TrendingUp className="w-3 h-3" />
                 目标 {task.targetValue}{task.targetUnit || ""}
               </span>
             )}
             {task.note && (
-              <span className="text-[13px] text-[#86868B] truncate max-w-[180px]">{task.note}</span>
+              <span className="text-[13px] truncate max-w-[180px]" style={{ color: "var(--color-text-secondary)" }}>{task.note}</span>
             )}
           </div>
         )}
@@ -176,8 +188,11 @@ function CreateTaskSheet({
           <motion.div
             initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
             transition={{ duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
-            className="fixed bottom-0 left-0 right-0 z-[60] bg-[#FAFAFA] rounded-t-[20px] max-h-[85vh] overflow-y-auto"
-            style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+            className="fixed bottom-0 left-0 right-0 z-[60] rounded-t-[20px] max-h-[85vh] overflow-y-auto"
+            style={{
+              backgroundColor: "var(--color-surface-card)",
+              paddingBottom: "env(safe-area-inset-bottom)",
+            }}
           >
             <div className="flex justify-center pt-2 pb-1">
               <div className="w-9 h-1 rounded-full bg-[#D4D4D4]" />
@@ -185,13 +200,16 @@ function CreateTaskSheet({
 
             {/* 页头 */}
             <div className="flex items-center justify-between px-5 h-12">
-              <button onClick={onClose} className="text-[17px] text-[#86868B]">取消</button>
-              <span className="text-[17px] font-semibold text-[#1D1D1F]">新建任务</span>
+              <button onClick={onClose} className="text-[17px]" style={{ color: "var(--color-text-secondary)" }}>取消</button>
+              <span className="text-[17px] font-semibold" style={{ color: "var(--color-text-primary)" }}>新建任务</span>
               <button
                 onClick={handleSave}
                 disabled={saving || !title.trim()}
                 className="text-[17px] font-medium"
-                style={{ color: title.trim() ? ACCENT : "#9F9FA0", opacity: saving ? 0.5 : 1 }}
+                style={{
+                  color: title.trim() ? "var(--lifeflow-primary)" : "var(--color-text-disabled)",
+                  opacity: saving ? 0.5 : 1,
+                }}
               >
                 保存
               </button>
@@ -201,43 +219,53 @@ function CreateTaskSheet({
             <div className="px-5 pt-2 pb-6 flex flex-col gap-4">
               {/* 任务名称 */}
               <div>
-                <label className="text-[13px] text-[#86868B] mb-1.5 block">任务名称</label>
+                <label className="text-[13px] mb-1.5 block" style={{ color: "var(--color-text-secondary)" }}>任务名称</label>
                 <input
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="输入任务名称"
-                  className="w-full h-11 rounded-[10px] bg-[#F5F5F7] px-4 text-[15px] text-[#1D1D1F] outline-none placeholder:text-[#9F9FA0]"
+                  className="w-full h-11 rounded-[10px] px-4 text-[15px] outline-none"
+                  style={{
+                    backgroundColor: "var(--lifeflow-background)",
+                    color: "var(--color-text-primary)",
+                  }}
                   autoFocus
                 />
               </div>
 
               {/* 备注 */}
               <div>
-                <label className="text-[13px] text-[#86868B] mb-1.5 block">备注</label>
+                <label className="text-[13px] mb-1.5 block" style={{ color: "var(--color-text-secondary)" }}>备注</label>
                 <input
                   type="text"
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
                   placeholder="添加备注"
-                  className="w-full h-11 rounded-[10px] bg-[#F5F5F7] px-4 text-[15px] text-[#1D1D1F] outline-none placeholder:text-[#9F9FA0]"
+                  className="w-full h-11 rounded-[10px] px-4 text-[15px] outline-none"
+                  style={{
+                    backgroundColor: "var(--lifeflow-background)",
+                    color: "var(--color-text-primary)",
+                  }}
                 />
               </div>
 
               {/* 计划时长 */}
               <div>
-                <label className="text-[13px] text-[#86868B] mb-1.5 block">计划时长（分钟）</label>
+                <label className="text-[13px] mb-1.5 block" style={{ color: "var(--color-text-secondary)" }}>计划时长（分钟）</label>
                 <div className="flex items-center gap-3">
                   <button
                     onClick={() => setPlannedTime((v) => Math.max(5, v - 15))}
-                    className="w-8 h-8 rounded-full bg-[#5865F2] flex items-center justify-center"
+                    className="w-8 h-8 rounded-full flex items-center justify-center"
+                    style={{ backgroundColor: "var(--lifeflow-primary)" }}
                   >
                     <span className="text-white text-lg leading-none">−</span>
                   </button>
-                  <span className="text-[17px] font-semibold text-[#1D1D1F] min-w-[48px] text-center">{plannedTime}</span>
+                  <span className="text-[17px] font-semibold min-w-[48px] text-center" style={{ color: "var(--color-text-primary)" }}>{plannedTime}</span>
                   <button
                     onClick={() => setPlannedTime((v) => Math.min(480, v + 15))}
-                    className="w-8 h-8 rounded-full bg-[#5865F2] flex items-center justify-center"
+                    className="w-8 h-8 rounded-full flex items-center justify-center"
+                    style={{ backgroundColor: "var(--lifeflow-primary)" }}
                   >
                     <span className="text-white text-lg leading-none">+</span>
                   </button>
@@ -247,9 +275,11 @@ function CreateTaskSheet({
               {/* 重要标记 */}
               <button
                 onClick={() => setIsImportant(!isImportant)}
-                className={`flex items-center gap-2 self-start px-4 h-9 rounded-full text-[15px] ${
-                  isImportant ? "bg-[#EEF2FF] text-[#5865F2]" : "bg-[#F5F5F7] text-[#86868B]"
-                }`}
+                className="flex items-center gap-2 self-start px-4 h-9 rounded-full text-[15px]"
+                style={{
+                  backgroundColor: isImportant ? "var(--lifeflow-brand-50)" : "var(--lifeflow-background)",
+                  color: isImportant ? "var(--lifeflow-primary)" : "var(--color-text-secondary)",
+                }}
               >
                 <span className="text-lg">!</span> 重要
               </button>
@@ -364,23 +394,22 @@ export default function SchedulePage() {
     const weekDays = ["日", "一", "二", "三", "四", "五", "六"];
     return `${date.getMonth() + 1}月${date.getDate()}日 周${weekDays[date.getDay()]}`;
   };
-  const formatDateShort = (d: Date) => `${d.getMonth() + 1}月${d.getDate()}日`;
 
   const selectedDateObj = selectedDate ? new Date(selectedDate + "T00:00:00") : new Date();
   const isSelectedToday = toDateStr(selectedDateObj) === todayStr;
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA]" style={{ maxWidth: 430, margin: "0 auto" }}>
+    <div className="mx-auto" style={{ maxWidth: 430, minHeight: "100vh", backgroundColor: "var(--lifeflow-background)", paddingBottom: 100 }}>
       {/* ===== Header ===== */}
-      <div className="flex items-center justify-between px-4 h-14 bg-[#FAFAFA]">
+      <div className="flex items-center justify-between px-4 h-14" style={{ backgroundColor: "var(--lifeflow-background)" }}>
         <button
           type="button"
           onClick={() => router.push("/efficiency")}
           className="w-8 h-8 -ml-1 flex items-center justify-center"
         >
-          <ChevronLeft className="w-6 h-6 text-[#1D1D1F]" />
+          <ChevronLeft className="w-6 h-6" style={{ color: "var(--color-text-primary)" }} />
         </button>
-        <span className="text-[18px] font-semibold text-[#1D1D1F] absolute left-1/2 -translate-x-1/2">
+        <span className="text-[20px] font-bold absolute left-1/2 -translate-x-1/2" style={{ color: "var(--color-text-primary)" }}>
           日程
         </span>
         <button
@@ -388,7 +417,7 @@ export default function SchedulePage() {
           onClick={() => setShowCreateSheet(true)}
           className="w-8 h-8 -mr-1 flex items-center justify-center"
         >
-          <Plus className="w-6 h-6 text-[#5865F2]" />
+          <Plus className="w-6 h-6" style={{ color: "var(--lifeflow-primary)" }} />
         </button>
       </div>
 
@@ -401,11 +430,11 @@ export default function SchedulePage() {
             onClick={() => setWeekOffset((o) => o - 1)}
             className="w-8 h-8 flex items-center justify-center shrink-0"
           >
-            <ChevronLeft className="w-4 h-4 text-[#AEAEB2]" />
+            <ChevronLeft className="w-4 h-4" style={{ color: "var(--color-text-secondary)" }} />
           </button>
           <div className="grid grid-cols-7 flex-1 h-7">
             {WEEK_DAYS.map((d) => (
-              <span key={d} className="text-[13px] text-[#86868B] text-center self-center">
+              <span key={d} className="text-[13px] text-center self-center" style={{ color: "var(--color-text-secondary)" }}>
                 {d}
               </span>
             ))}
@@ -415,7 +444,7 @@ export default function SchedulePage() {
             onClick={() => setWeekOffset((o) => o + 1)}
             className="w-8 h-8 flex items-center justify-center shrink-0"
           >
-            <ChevronRight className="w-4 h-4 text-[#AEAEB2]" />
+            <ChevronRight className="w-4 h-4" style={{ color: "var(--color-text-secondary)" }} />
           </button>
         </div>
 
@@ -434,13 +463,22 @@ export default function SchedulePage() {
               >
                 {isActive ? (
                   <div className="relative flex items-center justify-center">
-                    <span className="absolute w-[36px] h-[36px] rounded-full bg-[#EEF2FF]" />
-                    <span className="relative w-[28px] h-[28px] rounded-full bg-[#5865F2] flex items-center justify-center">
+                    <span
+                      className="absolute w-[36px] h-[36px] rounded-full"
+                      style={{ backgroundColor: "var(--lifeflow-brand-50)" }}
+                    />
+                    <span
+                      className="relative w-[28px] h-[28px] rounded-full flex items-center justify-center"
+                      style={{ backgroundColor: "var(--lifeflow-primary)" }}
+                    >
                       <span className="text-[17px] font-medium text-white">{date.getDate()}</span>
                     </span>
                   </div>
                 ) : (
-                  <span className={`text-[17px] font-medium ${isToday ? "text-[#5865F2]" : "text-[#1D1D1F]"}`}>
+                  <span
+                    className="text-[17px] font-medium"
+                    style={{ color: isToday ? "var(--lifeflow-primary)" : "var(--color-text-primary)" }}
+                  >
                     {date.getDate()}
                   </span>
                 )}
@@ -452,7 +490,7 @@ export default function SchedulePage() {
 
       {/* ===== Date Title Row ===== */}
       <div className="flex items-center justify-between px-4 mt-5">
-        <span className="text-[16px] font-bold text-[#1D1D1F]">
+        <span className="text-[16px] font-bold" style={{ color: "var(--color-text-primary)" }}>
           {formatDateChinese(selectedDateObj)}
         </span>
         {(weekOffset !== 0 || !isSelectedToday) && (
@@ -461,7 +499,8 @@ export default function SchedulePage() {
               setWeekOffset(0);
               loadScheduleTasks(todayStr);
             }}
-            className="text-[13px] text-[#5865F2]"
+            className="text-[13px]"
+            style={{ color: "var(--lifeflow-primary)" }}
           >
             回到今天
           </button>
@@ -472,16 +511,23 @@ export default function SchedulePage() {
       <div className="px-4 mt-3">
         {sortedTasks.length === 0 ? (
           <div className="flex flex-col items-center py-16">
-            <CalendarDays className="w-10 h-10 text-[#E5E5E5]" />
-            <p className="text-[15px] text-[#86868B] mt-3">
-              {isSelectedToday ? "今天没有任务" : "这一天没有任务"}
+            <CalendarDays className="w-10 h-10" style={{ color: "var(--lifeflow-border)" }} />
+            <p className="text-[15px] mt-3" style={{ color: "var(--color-text-secondary)" }}>
+              当日暂无安排
             </p>
           </div>
         ) : (
-          <div className="bg-white rounded-2xl border border-[#F0F0F0] overflow-hidden">
+          <div
+            className="rounded-[20px] overflow-hidden"
+            style={{
+              backgroundColor: "var(--color-surface-card)",
+              border: "1px solid var(--lifeflow-border)",
+              boxShadow: "var(--shadow-card)",
+            }}
+          >
             {sortedTasks.map((task, idx) => (
               <div key={task.id}>
-                {idx > 0 && <div className="h-px bg-[#EBEBEB] ml-[52px]" />}
+                {idx > 0 && <div className="h-px ml-[52px]" style={{ backgroundColor: "var(--lifeflow-border)" }} />}
                 <TaskRow
                   task={task}
                   onToggle={async () => {
@@ -499,17 +545,25 @@ export default function SchedulePage() {
       {/* ===== 即将到来 ===== */}
       {upcoming.length > 0 && (
         <div className="px-4 mt-6">
-          <h3 className="text-[18px] font-semibold text-[#86868B] mb-2">即将到来</h3>
+          <h3 className="text-[18px] font-semibold mb-2" style={{ color: "var(--color-text-secondary)" }}>即将到来</h3>
           {upcoming.map((u) => (
-            <div key={u.date} className="bg-white rounded-2xl border border-[#F0F0F0] overflow-hidden">
+            <div
+              key={u.date}
+              className="rounded-[20px] overflow-hidden"
+              style={{
+                backgroundColor: "var(--color-surface-card)",
+                border: "1px solid var(--lifeflow-border)",
+                boxShadow: "var(--shadow-card)",
+              }}
+            >
               <div className="px-4 min-h-[44px] flex items-center">
-                <span className="text-[13px] text-[#86868B]">
+                <span className="text-[13px]" style={{ color: "var(--color-text-secondary)" }}>
                   {formatDateChinese(new Date(u.date + "T00:00:00"))}
                 </span>
               </div>
               {u.tasks.map((t, i) => (
                 <div key={t.id}>
-                  <div className="h-px bg-[#EBEBEB] ml-[52px]" />
+                  <div className="h-px ml-[52px]" style={{ backgroundColor: "var(--lifeflow-border)" }} />
                   <TaskRow
                     task={t}
                     onToggle={async () => {
@@ -537,14 +591,17 @@ export default function SchedulePage() {
             <motion.div
               initial={{ y: "100%", x: "-50%" }} animate={{ y: 0, x: "-50%" }} exit={{ y: "100%", x: "-50%" }}
               transition={{ duration: 0.4, ease: [0.32, 0.72, 0, 1] }}
-              className="fixed left-1/2 bottom-0 w-full max-w-[430px] bg-white z-[60] rounded-t-[20px]"
-              style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+              className="fixed left-1/2 bottom-0 w-full max-w-[430px] z-[60] rounded-t-[20px]"
+              style={{
+                backgroundColor: "var(--color-surface-card)",
+                paddingBottom: "env(safe-area-inset-bottom)",
+              }}
             >
               <div className="flex justify-center pt-2 pb-3">
                 <div className="w-9 h-1 rounded-full bg-[#D4D4D4]" />
               </div>
               <div className="px-4 pb-6">
-                <p className="text-[17px] font-semibold text-[#1D1D1F] mb-4">
+                <p className="text-[17px] font-semibold mb-4" style={{ color: "var(--color-text-primary)" }}>
                   {confirmDelete ? "确认删除？" : "删除任务"}
                 </p>
                 {!confirmDelete ? (
@@ -558,7 +615,8 @@ export default function SchedulePage() {
                   <div className="flex gap-3">
                     <button
                       onClick={() => setDeleteTarget(null)}
-                      className="flex-1 py-3 rounded-xl bg-[#F5F5F5] text-[#86868B] text-[15px] font-medium"
+                      className="flex-1 py-3 rounded-xl text-[15px] font-medium"
+                      style={{ backgroundColor: "var(--lifeflow-background)", color: "var(--color-text-secondary)" }}
                     >
                       取消
                     </button>

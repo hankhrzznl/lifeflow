@@ -12,9 +12,8 @@ import { CategoryIcon } from "@/components/accounting/CategoryIcon";
 import { showToast } from "@/components/ui/Toast";
 
 // ============================================================
-// 设计令牌（Apple 简约风）
+// 设计令牌（CSS 变量）
 // ============================================================
-const ACCENT = "#5865F2";
 
 function todayStr(): string {
   const d = new Date();
@@ -103,39 +102,42 @@ export default function RecordPage() {
   return (
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}
-      className="min-h-screen bg-white flex flex-col"
+      className="min-h-screen flex flex-col" style={{ background: "var(--color-surface-card)" }}
     >
       {/* ===== 顶部导航栏 ===== */}
-      <div className="relative flex items-center justify-between px-4 h-[44px] mt-3 border-b border-[#E5E5E5]">
+      <div className="relative flex items-center justify-between px-4 h-[44px] mt-3" style={{ borderBottom: "1px solid var(--lifeflow-border)" }}>
         <button type="button" onClick={() => router.push("/more/accounting")}
-          className="text-[17px] text-[#86868B] active:opacity-50">取消</button>
-        <span className="absolute left-1/2 -translate-x-1/2 text-[17px] font-semibold text-[#1D1D1F]">记一笔</span>
+          className="text-[17px] active:opacity-50" style={{ color: "var(--color-text-secondary)" }}>取消</button>
+        <span className="absolute left-1/2 -translate-x-1/2 text-[17px] font-semibold" style={{ color: "var(--color-text-primary)" }}>记一笔</span>
         <span className="w-10" />
       </div>
 
       {/* ===== 金额显示区 ===== */}
       <div className="text-center py-8">
-        <span className={`text-[64px] font-medium tracking-tight ${raw ? "text-[#1D1D1F]" : "text-[#AEAEB2]"}`}>
+        <span className="text-[64px] font-medium tracking-tight"
+          style={{ color: raw ? "var(--color-text-primary)" : "var(--color-text-disabled)" }}>
           ¥{displayAmount}
         </span>
       </div>
 
       {/* ===== 支出/收入 pill 分段控件 ===== */}
       <div className="flex justify-center pb-6">
-        <div className="inline-flex items-center rounded-full bg-[#F5F5F5] p-1 relative">
+        <div className="inline-flex items-center rounded-full p-1 relative" style={{ background: "var(--lifeflow-border)" }}>
           {(["expense", "income"] as const).map((t) => {
             const active = type === t;
             return (
               <button
                 key={t} type="button" onClick={() => setType(t)}
                 className={`relative h-9 px-6 rounded-full text-[15px] transition-colors ${
-                  active ? "text-[#5865F2] font-semibold" : "text-[#86868B]"
+                  active ? "font-semibold" : ""
                 }`}
+                style={{ color: active ? "var(--lifeflow-primary)" : "var(--color-text-secondary)" }}
               >
                 {active && (
                   <motion.div
                     layoutId="record-type-pill"
-                    className="absolute inset-0 rounded-full bg-[#EEF2FF]"
+                    className="absolute inset-0 rounded-full"
+                    style={{ background: "var(--lifeflow-brand-50)" }}
                     transition={{ type: "spring", stiffness: 500, damping: 30 }}
                   />
                 )}
@@ -151,22 +153,26 @@ export default function RecordPage() {
         <div className="grid grid-cols-3 gap-x-4 gap-y-6">
           {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((k) => (
             <button key={k} type="button" onClick={() => pressDigit(k)}
-              className="h-[64px] rounded-[16px] text-[28px] font-medium text-[#1D1D1F] active:bg-black/5 flex items-center justify-center">{k}</button>
+              className="h-[64px] rounded-[16px] text-[28px] font-medium active:bg-black/5 flex items-center justify-center"
+              style={{ color: "var(--color-text-primary)" }}>{k}</button>
           ))}
           <button type="button" onClick={() => showToast({ type: "info", message: "直接输入数字即可，末两位是分" })}
-            className="h-[64px] rounded-[16px] text-[28px] font-medium text-[#1D1D1F] active:bg-black/5 flex items-center justify-center">.</button>
+            className="h-[64px] rounded-[16px] text-[28px] font-medium active:bg-black/5 flex items-center justify-center"
+            style={{ color: "var(--color-text-primary)" }}>.</button>
           <button type="button" onClick={() => pressDigit("0")}
-            className="h-[64px] rounded-[16px] text-[28px] font-medium text-[#1D1D1F] active:bg-black/5 flex items-center justify-center">0</button>
+            className="h-[64px] rounded-[16px] text-[28px] font-medium active:bg-black/5 flex items-center justify-center"
+            style={{ color: "var(--color-text-primary)" }}>0</button>
           <button type="button" onClick={pressDelete} aria-label="删除"
-            className="h-[64px] rounded-[16px] bg-[#F5F5F5] flex items-center justify-center active:opacity-50">
-            <Delete className="w-6 h-6 text-[#86868B]" />
+            className="h-[64px] rounded-[16px] flex items-center justify-center active:opacity-50"
+            style={{ background: "var(--lifeflow-border)" }}>
+            <Delete className="w-6 h-6" style={{ color: "var(--color-text-secondary)" }} />
           </button>
         </div>
       </div>
 
       {/* ===== 选择分类 ===== */}
       <div className="px-4 pt-8">
-        <h2 className="text-[17px] font-semibold text-[#1D1D1F] mb-4">选择分类</h2>
+        <h2 className="text-[17px] font-semibold mb-4" style={{ color: "var(--color-text-primary)" }}>选择分类</h2>
         <div className="grid grid-cols-4" style={{ gap: "12px 9px" }}>
           {visibleCategories.map((c) => {
             const selected = selectedCategory?.id === c.id;
@@ -176,12 +182,13 @@ export default function RecordPage() {
                 <motion.div
                   animate={selected ? { scale: 1.08 } : { scale: 1 }}
                   transition={{ type: "spring", stiffness: 500, damping: 25 }}
-                  className={selected ? "ring-2 ring-[#5865F2] ring-offset-2 rounded-full" : ""}
+                  className={selected ? "ring-2 ring-offset-2 rounded-full" : ""}
+                  style={selected ? { boxShadow: "0 0 0 2px var(--lifeflow-primary)" } : undefined}
                 >
                   <CategoryIcon icon={c.icon} color={c.color} size={44} iconSize={22} />
                 </motion.div>
                 <span className="text-[13px] mt-2"
-                  style={{ color: selected ? ACCENT : "#86868B", fontWeight: selected ? 600 : 400 }}>
+                  style={{ color: selected ? "var(--lifeflow-primary)" : "var(--color-text-secondary)", fontWeight: selected ? 600 : 400 }}>
                   {c.name}
                 </span>
               </button>
@@ -194,11 +201,11 @@ export default function RecordPage() {
       <div className="flex-1" />
 
       {/* ===== 底部操作栏 ===== */}
-      <div className="sticky bottom-0 bg-white border-t border-[#E5E5E5] px-4 py-3 flex items-center gap-3">
+      <div className="sticky bottom-0 px-4 py-3 flex items-center gap-3" style={{ background: "var(--color-surface-card)", borderTop: "1px solid var(--lifeflow-border)" }}>
         {/* 日期 chip */}
-        <div className="h-10 px-4 rounded-full bg-[#F5F5F5] flex items-center gap-1.5 relative">
-          <Calendar className="w-4 h-4 text-[#86868B]" />
-          <span className="text-[14px] text-[#1D1D1F]">{dateLabel}</span>
+        <div className="h-10 px-4 rounded-full flex items-center gap-1.5 relative" style={{ background: "var(--lifeflow-border)" }}>
+          <Calendar className="w-4 h-4" style={{ color: "var(--color-text-secondary)" }} />
+          <span className="text-[14px]" style={{ color: "var(--color-text-primary)" }}>{dateLabel}</span>
           <input type="date" value={date} max={todayStr()}
             onChange={(e) => e.target.value && setDate(e.target.value)}
             className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" />
@@ -207,9 +214,9 @@ export default function RecordPage() {
         {/* 备注 chip + 内联输入 */}
         <div className="relative">
           <button type="button" onClick={() => { setShowNoteInput(true); setTimeout(() => noteRef.current?.focus(), 50); }}
-            className="h-10 px-4 rounded-full bg-[#F5F5F5] flex items-center gap-1.5">
-            <Pencil className="w-4 h-4 text-[#86868B]" />
-            <span className={`text-[14px] ${note ? "text-[#1D1D1F] truncate max-w-[120px]" : "text-[#86868B]"}`}>
+            className="h-10 px-4 rounded-full flex items-center gap-1.5" style={{ background: "var(--lifeflow-border)" }}>
+            <Pencil className="w-4 h-4" style={{ color: "var(--color-text-secondary)" }} />
+            <span className="text-[14px]" style={{ color: note ? "var(--color-text-primary)" : "var(--color-text-secondary)" }}>
               {note || "添加备注"}
             </span>
           </button>
@@ -225,7 +232,8 @@ export default function RecordPage() {
                   onBlur={() => setShowNoteInput(false)}
                   onKeyDown={(e) => { if (e.key === "Enter") setShowNoteInput(false); }}
                   placeholder="添加备注"
-                  className="h-11 px-4 rounded-[12px] bg-[#F5F5F5] text-[15px] text-[#1D1D1F] placeholder-[#86868B] outline-none w-full"
+                  className="h-11 px-4 rounded-[12px] text-[15px] outline-none w-full"
+                  style={{ background: "var(--lifeflow-border)", color: "var(--color-text-primary)" }}
                 />
               </motion.div>
             )}
@@ -237,7 +245,7 @@ export default function RecordPage() {
           type="button" whileTap={{ scale: 0.95 }}
           onClick={handleSave} disabled={!canSave || saving}
           className="ml-auto h-12 px-8 rounded-full text-[16px] font-semibold text-white disabled:opacity-60"
-          style={{ background: canSave ? ACCENT : "#C7D2FE" }}
+          style={{ background: canSave ? "var(--lifeflow-primary)" : "#C7D2FE" }}
         >
           {saving ? "保存中…" : "保存"}
         </motion.button>

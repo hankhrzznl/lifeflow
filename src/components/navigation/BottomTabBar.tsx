@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Target, Wallet, Heart } from "lucide-react";
+import { Home, Target, CheckSquare, Calendar, Grid3x3 } from "lucide-react";
 
-// 全站统一 4-tab 底部导航：首页/效率/记账/健康
-// 仅全屏流程页隐藏底导，其余所有路由一律显示
+// 全站统一 5-tab 底部导航：首页/目标/事项/日程/更多
+// 仅全屏流程页隐藏底导
 
 const FULLSCREEN_PREFIXES = [
   "/more/accounting/record",
@@ -16,13 +16,11 @@ const FULLSCREEN_PREFIXES = [
 
 const tabs = [
   { label: "首页", path: "/", icon: Home },
-  { label: "效率", path: "/efficiency", icon: Target },
-  { label: "记账", path: "/more/accounting", icon: Wallet },
-  { label: "健康", path: "/more", icon: Heart },
+  { label: "目标", path: "/efficiency", icon: Target },
+  { label: "事项", path: "/tasks", icon: CheckSquare },
+  { label: "日程", path: "/efficiency/schedule", icon: Calendar },
+  { label: "更多", path: "/more", icon: Grid3x3 },
 ] as const;
-
-const ACTIVE_COLOR = "#5865F2";
-const INACTIVE_COLOR = "#AEAEB2";
 
 export default function BottomTabBar() {
   const pathname = usePathname();
@@ -31,32 +29,38 @@ export default function BottomTabBar() {
 
   const isActive = (path: string) => {
     if (path === "/") return pathname === "/";
+    if (path === "/efficiency") return pathname === "/efficiency" || pathname.startsWith("/efficiency/") && pathname !== "/efficiency/schedule" && !pathname.startsWith("/efficiency/schedule/");
+    if (path === "/efficiency/schedule") return pathname === "/efficiency/schedule" || pathname.startsWith("/efficiency/schedule/");
     if (path === "/more") return pathname === "/more" || (pathname.startsWith("/more/") && !pathname.startsWith("/more/accounting"));
-    if (path === "/more/accounting") return pathname === "/more/accounting" || pathname.startsWith("/more/accounting/");
     return pathname === path || pathname.startsWith(path + "/");
   };
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-[#E5E5E5]">
-      <div className="max-w-[430px] mx-auto grid grid-cols-4 h-[49px]">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-[var(--color-surface-card)] border-t border-[var(--lifeflow-border)] h-[83px] pb-[34px]">
+      <div className="max-w-[430px] mx-auto flex items-start justify-around pt-2 px-4">
         {tabs.map((tab) => {
           const active = isActive(tab.path);
-          const color = active ? ACTIVE_COLOR : INACTIVE_COLOR;
           return (
             <Link
               key={tab.path}
               href={tab.path}
-              className="flex flex-col items-center justify-center gap-[3px] no-underline"
+              className="flex flex-col items-center gap-1 min-w-[44px] no-underline"
             >
-              <tab.icon className="w-6 h-6 shrink-0" style={{ color }} strokeWidth={2} />
-              <span className="text-[11px] font-medium leading-none" style={{ color }}>
+              <tab.icon
+                className="w-6 h-6"
+                style={{ color: active ? "var(--lifeflow-primary)" : "var(--color-text-secondary)" }}
+                strokeWidth={2}
+              />
+              <span
+                className="text-[10px] font-medium"
+                style={{ color: active ? "var(--lifeflow-primary)" : "var(--color-text-secondary)" }}
+              >
                 {tab.label}
               </span>
             </Link>
           );
         })}
       </div>
-      <div style={{ height: "env(safe-area-inset-bottom)" }} />
     </nav>
   );
 }

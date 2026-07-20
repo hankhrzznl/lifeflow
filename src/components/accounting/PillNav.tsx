@@ -29,11 +29,11 @@ export default function PillNav() {
           <Link key={p.path} href={p.path}>
             <motion.span
               whileTap={{ scale: 0.95 }}
-              className={`h-8 px-4 rounded-full text-[13px] flex items-center justify-center flex-shrink-0 ${
-                active
-                  ? "bg-[#5865F2] text-white font-semibold"
-                  : "bg-white border border-[#F0F0F0] text-[#86868B]"
-              }`}
+              className="h-8 px-4 rounded-full text-[13px] flex items-center justify-center flex-shrink-0"
+              style={active
+                ? { background: "var(--lifeflow-primary)", color: "white", fontWeight: 600 }
+                : { background: "var(--color-surface-card)", border: "1px solid var(--lifeflow-border)", color: "var(--color-text-secondary)" }
+              }
             >
               {p.label}
             </motion.span>

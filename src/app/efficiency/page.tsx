@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Plus, CheckCircle2, Pause, Play, SquarePen, Copy, Trash2, Pencil,
+  Plus, CheckCircle2, Pause, Play, SquarePen, Copy, Trash2, Pencil, Target,
 } from "lucide-react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { useEfficiencyStore } from "@/lib/store/efficiencyStore";
@@ -12,13 +12,11 @@ import { efficiencyDB, type Goal, getAllProjects } from "@/lib/db/efficiency.db"
 import { showToast } from "@/components/ui/Toast";
 
 // ─── 设计令牌 ────────────────────────────────────────────────
-const ACCENT = "#5865F2";
 const DANGER = "#FF3B30";
 const GREEN = "#34C759";
-const TEXT_PRIMARY = "#1D1D1F";
-const TEXT_SECONDARY = "#86868B";
-const TEXT_TERTIARY = "#AEAEB2";
-const BORDER = "#E5E5E5";
+
+// ─── 分类筛选 ────────────────────────────────────────────────
+const CATEGORIES = ["全部", "学习", "健康", "琐事", "长期主义", "娱乐"];
 
 function todayStr(): string {
   const d = new Date();
@@ -35,10 +33,10 @@ function MiniRing({ pct }: { pct: number }) {
 
   return (
     <svg width={size} height={size} className="flex-shrink-0">
-      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={BORDER} strokeWidth={sw} />
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--lifeflow-border)" strokeWidth={sw} />
       <motion.circle
         cx={size / 2} cy={size / 2} r={r}
-        fill="none" stroke={ACCENT} strokeWidth={sw} strokeLinecap="round"
+        fill="none" stroke="var(--lifeflow-primary)" strokeWidth={sw} strokeLinecap="round"
         strokeDasharray={circ}
         initial={{ strokeDashoffset: circ }}
         animate={{ strokeDashoffset: circ - (circ * clamped) / 100 }}
@@ -51,7 +49,7 @@ function MiniRing({ pct }: { pct: number }) {
 
 // ─── 分割线 ──────────────────────────────────────────────────
 function Divider() {
-  return <div className="mx-4" style={{ borderBottom: "0.5px solid #F5F5F5" }} />;
+  return <div className="mx-4" style={{ borderBottom: "0.5px solid var(--lifeflow-border)" }} />;
 }
 
 // ─── 主组件 ──────────────────────────────────────────────────
@@ -63,6 +61,7 @@ export default function EfficiencyPage() {
 
   const [sheetGoal, setSheetGoal] = useState<Goal | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [activeCategory, setActiveCategory] = useState("全部");
 
   // ─── Project 颜色映射 ──────────────────────────────────────
   const projects = useLiveQuery(() => getAllProjects(), [], []);
@@ -220,31 +219,37 @@ export default function EfficiencyPage() {
   const showEmpty = !loading && activeGoals.length === 0 && completedGoals.length === 0;
 
   return (
-    <div>
+    <div className="mx-auto relative" style={{ maxWidth: 430, minHeight: "100vh", paddingBottom: 100 }}>
       {/* ===== Header ===== */}
       <div className="px-4 pt-[56px]">
-        <h1 className="text-[34px] font-bold" style={{ color: TEXT_PRIMARY }}>效率</h1>
+        <h1 className="text-[34px] font-bold" style={{ color: "var(--color-text-primary)" }}>目标</h1>
+        <p className="text-[15px] mt-1" style={{ color: "var(--color-text-secondary)" }}>
+          项目 · 目标 · 任务
+        </p>
       </div>
 
-      {/* ===== Main Action Row ===== */}
-      <div className="px-4 mt-[24px] flex items-center justify-between">
-        <span className="text-[15px]" style={{ color: TEXT_SECONDARY }}>
-          <span className="text-[17px] font-bold" style={{ color: TEXT_PRIMARY }}>
-            本月完成 {monthlyCompleted}
-          </span>
-          {" "}个目标
-        </span>
-        <motion.button
-          type="button"
-          whileTap={{ scale: 0.95 }}
-          onClick={() => router.push("/efficiency/create")}
-          className="h-[40px] px-5 rounded-full flex items-center gap-1"
-          style={{ backgroundColor: ACCENT }}
-        >
-          <Plus className="w-[16px] h-[16px] text-white mr-1" />
-          <span className="text-white text-[15px] font-semibold">新建目标</span>
-        </motion.button>
+      {/* ===== Category Filter Pills ===== */}
+      <div className="px-4 mt-5 flex gap-2 overflow-x-auto scrollbar-hide">
+        {CATEGORIES.map((cat) => {
+          const isActive = activeCategory === cat;
+          return (
+            <button
+              key={cat}
+              type="button"
+              onClick={() => setActiveCategory(cat)}
+              className="shrink-0 px-4 h-[34px] rounded-full text-[14px] font-medium transition-colors"
+              style={{
+                backgroundColor: isActive ? "var(--lifeflow-primary)" : "var(--lifeflow-background)",
+                color: isActive ? "#FFFFFF" : "var(--color-text-secondary)",
+              }}
+            >
+              {cat}
+            </button>
+          );
+        })}
       </div>
+
+
 
       {/* ===== Loading Skeleton ===== */}
       {loading && (
@@ -252,14 +257,19 @@ export default function EfficiencyPage() {
           {[1, 2].map((i) => (
             <div
               key={i}
-              className="bg-white rounded-[16px] border border-[#E5E5E5] p-4 flex items-center gap-[12px] animate-pulse"
+              className="rounded-[20px] p-4 flex items-center gap-[12px] animate-pulse"
+              style={{
+                backgroundColor: "var(--color-surface-card)",
+                border: "1px solid var(--lifeflow-border)",
+                boxShadow: "var(--shadow-card)",
+              }}
             >
-              <div className="w-[8px] h-[8px] rounded-full bg-[#F5F5F5] shrink-0" />
+              <div className="w-[8px] h-[8px] rounded-full shrink-0" style={{ backgroundColor: "var(--lifeflow-border)" }} />
               <div className="flex-1 min-w-0 flex flex-col gap-[4px]">
-                <div className="h-5 w-1/2 bg-[#F5F5F5] rounded" />
-                <div className="h-[14px] w-1/3 bg-[#F5F5F5] rounded" />
+                <div className="h-5 w-1/2 rounded" style={{ backgroundColor: "var(--lifeflow-background)" }} />
+                <div className="h-[14px] w-1/3 rounded" style={{ backgroundColor: "var(--lifeflow-background)" }} />
               </div>
-              <div className="w-6 h-6 rounded-full bg-[#F5F5F5]" />
+              <div className="w-6 h-6 rounded-full" style={{ backgroundColor: "var(--lifeflow-background)" }} />
             </div>
           ))}
         </div>
@@ -268,17 +278,11 @@ export default function EfficiencyPage() {
       {/* ===== Empty State ===== */}
       {showEmpty && (
         <div className="flex flex-col items-center pt-[80px]">
-          <p className="text-[15px]" style={{ color: TEXT_TERTIARY }}>开始创建一个目标吧！</p>
-          <motion.button
-            type="button"
-            whileTap={{ scale: 0.95 }}
-            onClick={() => router.push("/efficiency/create")}
-            className="mt-[24px] h-[40px] px-5 rounded-full flex items-center gap-1"
-            style={{ backgroundColor: ACCENT }}
-          >
-            <Plus className="w-[16px] h-[16px] text-white mr-1" />
-            <span className="text-white text-[15px] font-semibold">新建目标</span>
-          </motion.button>
+          <div className="w-14 h-14 rounded-full flex items-center justify-center" style={{ background: "var(--lifeflow-muted)" }}>
+            <Target className="w-7 h-7" style={{ color: "var(--color-text-disabled)" }} />
+          </div>
+          <p className="text-[15px] mt-4" style={{ color: "var(--color-text-disabled)" }}>开始创建一个目标吧！</p>
+          <p className="text-[13px] mt-1" style={{ color: "var(--color-text-disabled)" }}>从项目开始，分解为目标和任务，让每一步都有迹可循</p>
         </div>
       )}
 
@@ -287,7 +291,7 @@ export default function EfficiencyPage() {
         <>
           <h2
             className="px-4 mt-[32px] mb-[12px] text-[20px] font-bold"
-            style={{ color: TEXT_PRIMARY }}
+            style={{ color: "var(--color-text-primary)" }}
           >
             进行中
           </h2>
@@ -301,7 +305,7 @@ export default function EfficiencyPage() {
               const dotColor =
                 (goal as any).color ||
                 projectColorMap.get(goal.projectId || "") ||
-                ACCENT;
+                "var(--lifeflow-primary)";
               const quickActive = quickGoalId === goal.id;
 
               return (
@@ -329,12 +333,16 @@ export default function EfficiencyPage() {
                             transition={{ duration: 0.2, ease: "easeOut" }}
                             onClick={(e) => { e.stopPropagation(); handleQuickAction(goal, "pause"); }}
                             aria-label={goal.status === "paused" ? "恢复" : "暂停"}
-                            className="w-[44px] h-[44px] rounded-full bg-white border border-[#E5E5E5] flex items-center justify-center"
+                            className="w-[44px] h-[44px] rounded-full flex items-center justify-center"
+                            style={{
+                              backgroundColor: "var(--color-surface-card)",
+                              border: "1px solid var(--lifeflow-border)",
+                            }}
                           >
                             {goal.status === "paused" ? (
-                              <Play className="w-5 h-5" style={{ color: TEXT_PRIMARY }} />
+                              <Play className="w-5 h-5" style={{ color: "var(--color-text-primary)" }} />
                             ) : (
-                              <Pause className="w-5 h-5" style={{ color: TEXT_PRIMARY }} />
+                              <Pause className="w-5 h-5" style={{ color: "var(--color-text-primary)" }} />
                             )}
                           </motion.button>
                         )}
@@ -348,7 +356,7 @@ export default function EfficiencyPage() {
                           aria-label="编辑"
                           className="w-[44px] h-[44px] rounded-full flex items-center justify-center"
                           style={{
-                            backgroundColor: ACCENT,
+                            backgroundColor: "var(--lifeflow-primary)",
                             marginTop: goal.status === "active" || goal.status === "paused" ? 8 : 0,
                           }}
                         >
@@ -371,17 +379,22 @@ export default function EfficiencyPage() {
                     onPointerUp={cancelPress}
                     onPointerLeave={cancelPress}
                     onClick={() => handleCardClick(goal)}
-                    className="bg-white rounded-[16px] border border-[#E5E5E5] p-4 flex items-center gap-[12px] cursor-pointer select-none"
+                    className="rounded-[20px] p-4 flex items-center gap-[12px] cursor-pointer select-none"
+                    style={{
+                      backgroundColor: "var(--color-surface-card)",
+                      border: "1px solid var(--lifeflow-border)",
+                      boxShadow: "var(--shadow-card)",
+                    }}
                   >
                     <div
                       className="w-[8px] h-[8px] rounded-full shrink-0"
                       style={{ backgroundColor: dotColor }}
                     />
                     <div className="flex-1 min-w-0 flex flex-col gap-[4px]">
-                      <span className="text-[17px] font-semibold truncate" style={{ color: TEXT_PRIMARY }}>
+                      <span className="text-[17px] font-semibold truncate" style={{ color: "var(--color-text-primary)" }}>
                         {goal.title}
                       </span>
-                      <span className="text-[13px]" style={{ color: TEXT_SECONDARY }}>
+                      <span className="text-[13px]" style={{ color: "var(--color-text-secondary)" }}>
                         {stats.total > 0
                           ? `今日任务 · ${stats.done}/${stats.total} 项`
                           : "今日无任务"}
@@ -401,7 +414,7 @@ export default function EfficiencyPage() {
         <>
           <h2
             className="px-4 mt-[32px] mb-[12px] text-[20px] font-bold"
-            style={{ color: TEXT_PRIMARY }}
+            style={{ color: "var(--color-text-primary)" }}
           >
             已完成
           </h2>
@@ -420,18 +433,23 @@ export default function EfficiencyPage() {
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.05, duration: 0.35, ease: "easeOut" }}
-                  className="bg-white rounded-[16px] border border-[#E5E5E5] p-4 flex items-center gap-[12px] cursor-pointer select-none"
+                  className="rounded-[20px] p-4 flex items-center gap-[12px] cursor-pointer select-none"
+                  style={{
+                    backgroundColor: "var(--color-surface-card)",
+                    border: "1px solid var(--lifeflow-border)",
+                    boxShadow: "var(--shadow-card)",
+                  }}
                   onClick={() => { setSheetGoal(goal); setConfirmDelete(false); }}
                 >
-                  <div className="w-[8px] h-[8px] rounded-full shrink-0" style={{ backgroundColor: TEXT_TERTIARY }} />
+                  <div className="w-[8px] h-[8px] rounded-full shrink-0" style={{ backgroundColor: "var(--color-text-disabled)" }} />
                   <div className="flex-1 min-w-0 flex flex-col gap-[4px]">
                     <span
                       className="text-[17px] font-medium line-through truncate"
-                      style={{ color: TEXT_TERTIARY }}
+                      style={{ color: "var(--color-text-disabled)" }}
                     >
                       {goal.title}
                     </span>
-                    <span className="text-[13px]" style={{ color: TEXT_TERTIARY }}>
+                    <span className="text-[13px]" style={{ color: "var(--color-text-disabled)" }}>
                       {completeLabel}
                     </span>
                   </div>
@@ -447,6 +465,24 @@ export default function EfficiencyPage() {
       {quickGoalId && (
         <div className="fixed inset-0 z-30" onClick={() => setQuickGoalId(null)} />
       )}
+
+      {/* ===== FAB 按钮 ===== */}
+      <button
+        type="button"
+        onClick={() => router.push("/efficiency/create")}
+        className="fixed z-40 flex items-center justify-center"
+        style={{
+          width: 56,
+          height: 56,
+          borderRadius: "50%",
+          backgroundColor: "var(--lifeflow-primary)",
+          bottom: "calc(var(--tab-bar-height) + 16px)",
+          right: "max(16px, calc((100% - 430px) / 2 + 16px))",
+          boxShadow: "0 4px 16px rgba(37, 99, 235, 0.35)",
+        }}
+      >
+        <Plus className="w-7 h-7 text-white" />
+      </button>
 
       {/* ===== 目标操作弹层 ===== */}
       <AnimatePresence>
@@ -464,8 +500,9 @@ export default function EfficiencyPage() {
               animate={{ y: 0, x: "-50%" }}
               exit={{ y: "100%", x: "-50%" }}
               transition={{ duration: 0.4, ease: [0.32, 0.72, 0, 1] }}
-              className="fixed left-1/2 bottom-0 w-full max-w-[430px] bg-white z-[60]"
+              className="fixed left-1/2 bottom-0 w-full max-w-[430px] z-[60]"
               style={{
+                backgroundColor: "var(--color-surface-card)",
                 borderRadius: "24px 24px 0 0",
                 paddingBottom: "env(safe-area-inset-bottom)",
               }}
@@ -477,7 +514,7 @@ export default function EfficiencyPage() {
 
               {/* 目标名 */}
               <div className="px-4 pb-2">
-                <p className="text-[13px] truncate" style={{ color: TEXT_SECONDARY }}>
+                <p className="text-[13px] truncate" style={{ color: "var(--color-text-secondary)" }}>
                   {sheetGoal.title}
                 </p>
               </div>
@@ -540,11 +577,11 @@ function ActionSheetItem({
     >
       <Icon
         className="w-[22px] h-[22px] mr-3 flex-shrink-0"
-        style={{ color: danger ? DANGER : TEXT_SECONDARY }}
+        style={{ color: danger ? DANGER : "var(--color-text-secondary)" }}
       />
       <span
         className="text-[15px]"
-        style={{ color: danger ? DANGER : TEXT_PRIMARY }}
+        style={{ color: danger ? DANGER : "var(--color-text-primary)" }}
       >
         {label}
       </span>

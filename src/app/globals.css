@@ -1,88 +1,134 @@
 @import "tailwindcss";
 
 /* ============================================================ */
-/* LifeFlow — Apple 简约设计系统                                */
-/* 单色基底 + 靛蓝 #5865F2 单强调色                              */
-/* 铁律：金额全黑 neutral-900，语义色仅用于图标底色与8px圆点     */
-/* 无深色模式、无AI悬浮球                                       */
+/* LifeFlow — Warm Gray + Blue Professional Design System       */
+/* Primary: #2563EB (Blue — trust, focus, efficiency)           */
+/* Base: Warm gray neutral background with breathing space       */
 /* ============================================================ */
 
 :root {
-  /* ---- 新设计令牌 ---- */
-  --color-bg-page: #FAFAFA;
-  --color-bg-card: #FFFFFF;
-  --color-bg-fill: #EEF2FF;
-  --color-accent: #5865F2;
-  --color-text-primary: #1D1D1F;
-  --color-text-secondary: #86868B;
-  --color-text-tertiary: #AEAEB2;
-  --color-border: #E5E5E5;
-  --color-separator: #F5F5F5;
+  /* ---- Brand Colors (Blue) ---- */
+  --lifeflow-brand: #2563EB;
+  --lifeflow-brand-50: #EFF6FF;
+  --lifeflow-brand-100: #DBEAFE;
+  --lifeflow-brand-200: #BFDBFE;
+  --lifeflow-brand-300: #93C5FD;
+  --lifeflow-brand-400: #60A5FA;
+  --lifeflow-brand-500: #3B82F6;
+  --lifeflow-brand-600: #2563EB;
+  --lifeflow-brand-700: #1D4ED8;
+  --lifeflow-brand-800: #1E40AF;
+  --lifeflow-brand-900: #1E3A8A;
 
   /* ---- Semantic Aliases ---- */
-  --background: var(--color-bg-page);
-  --foreground: var(--color-text-primary);
-  --color-background: var(--color-bg-page);
-  --color-foreground: var(--color-text-primary);
-  --bg-primary: var(--color-bg-page);
-  --bg-secondary: var(--color-bg-card);
-  --text-primary: var(--color-text-primary);
-  --text-secondary: var(--color-text-secondary);
-  --card-bg: var(--color-bg-card);
-  --card-border: var(--color-border);
-  --muted: var(--color-separator);
-  --muted-foreground: var(--color-text-secondary);
-  --border: var(--color-border);
-  --ring: var(--color-accent);
+  --lifeflow-background: #F8F8F7;
+  --lifeflow-foreground: #1C1C1E;
+  --lifeflow-card: #FFFFFF;
+  --lifeflow-card-foreground: #1C1C1E;
+  --lifeflow-popover: #FFFFFF;
+  --lifeflow-popover-foreground: #1C1C1E;
+  --lifeflow-primary: #2563EB;
+  --lifeflow-primary-foreground: #FFFFFF;
+  --lifeflow-muted: #F0F0ED;
+  --lifeflow-muted-foreground: #8E8E93;
+  --lifeflow-border: #E8E8EA;
+  --lifeflow-input: #F0F0ED;
+  --lifeflow-ring: #2563EB;
+
+  /* ---- Surface Colors ---- */
+  --color-surface-primary: #F8F8F7;
+  --color-surface-secondary: #F0F0ED;
+  --color-surface-card: #FFFFFF;
+  --color-surface-keyboard: #FFFFFF;
+
+  /* ---- New Design Tokens (primary) ---- */
+  --background: var(--lifeflow-background);
+  --foreground: var(--lifeflow-foreground);
+  --color-background: var(--lifeflow-background);
+  --color-foreground: var(--lifeflow-foreground);
+  --bg-primary: var(--lifeflow-background);
+  --bg-secondary: var(--lifeflow-card);
+  --text-primary: var(--lifeflow-foreground);
+  --text-secondary: var(--lifeflow-muted-foreground);
+  --card-bg: var(--lifeflow-card);
+  --card-border: var(--lifeflow-border);
+  --muted: var(--lifeflow-muted);
+  --muted-foreground: var(--lifeflow-muted-foreground);
+  --border: var(--lifeflow-border);
+  --ring: var(--lifeflow-ring);
+  --color-accent: var(--lifeflow-primary);
+
+  /* ---- Functional Colors ---- */
+  --color-expense: #FF3B30;
+  --color-income: #34C759;
+  --color-currency-symbol: #F59E0B;
   --destructive: #FF3B30;
 
-  /* ---- Font Stack ---- */
-  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif;
-  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", "PingFang SC", sans-serif;
+  /* ---- State Colors ---- */
+  --state-success: #34C759;
+  --state-warning: #F59E0B;
+  --state-error: #FF3B30;
+  --state-info: #2563EB;
 
-  /* ---- Radius ---- */
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 20px;
-  --radius-2xl: 24px;
-  --radius-full: 9999px;
+  /* ---- Text Colors ---- */
+  --color-text-primary: #1C1C1E;
+  --color-text-secondary: #8E8E93;
+  --color-text-disabled: #C7C7CC;
+  --color-text-inverse: #FFFFFF;
 
-  /* ---- Shadow ---- */
-  --shadow-card: 0 1px 4px rgba(0, 0, 0, 0.04);
-  --shadow-card-elevated: 0 2px 8px rgba(0, 0, 0, 0.06);
+  /* ---- Shadow (Card floating / layering) ---- */
+  --shadow-card: 0 1px 1px rgba(0, 0, 0, 0.02), 0 2px 16px rgba(0, 0, 0, 0.04);
+  --shadow-card-elevated: 0 2px 2px rgba(0, 0, 0, 0.03), 0 4px 24px rgba(0, 0, 0, 0.06);
+  --shadow-banner: 0 1px 1px rgba(0, 0, 0, 0.02), 0 2px 8px rgba(0, 0, 0, 0.04);
+  --shadow-tab-center: 0 2px 2px rgba(37, 99, 235, 0.12), 0 4px 16px rgba(37, 99, 235, 0.2);
   --shadow-modal: 0 4px 24px rgba(0, 0, 0, 0.12);
 
-  /* ---- Layout ---- */
-  --bottom-nav-height: calc(49px + env(safe-area-inset-bottom));
-  --tab-bar-height: calc(49px + env(safe-area-inset-bottom));
+  /* ---- Radius (Large rounded — Sleepcore style) ---- */
+  --radius-sm: 12px;
+  --radius-md: 20px;
+  --radius-lg: 24px;
+  --radius-xl: 24px;
+  --radius-2xl: 28px;
+  --radius-full: 9999px;
+
+  /* ---- Typography ---- */
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", "PingFang SC", sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", "PingFang SC", sans-serif;
 
   /* ---- Animation ---- */
   --easing-spring: cubic-bezier(0.32, 0.72, 0, 1);
   --duration-standard: 400ms;
   --duration-fast: 250ms;
+  --duration-instant: 100ms;
+
+  /* ---- Spacing ---- */
+  --safe-area-top: 59px;
+  --safe-area-bottom: 34px;
+  --tab-bar-height: 83px;
+  --nav-bar-height: 44px;
+  --bottom-nav-height: calc(83px + env(safe-area-inset-bottom));
 }
 
 /* ---- Tailwind Theme ---- */
 @theme inline {
-  --color-background: var(--color-bg-page);
-  --color-foreground: var(--color-text-primary);
-  --color-card: var(--color-bg-card);
-  --color-card-foreground: var(--color-text-primary);
-  --color-popover: var(--color-bg-card);
-  --color-popover-foreground: var(--color-text-primary);
-  --color-primary: var(--color-accent);
-  --color-primary-foreground: #FFFFFF;
-  --color-muted: var(--color-separator);
-  --color-muted-foreground: var(--color-text-secondary);
-  --color-border: var(--color-border);
-  --color-input: var(--color-separator);
-  --color-ring: var(--color-accent);
+  --color-background: var(--lifeflow-background);
+  --color-foreground: var(--lifeflow-foreground);
+  --color-card: var(--lifeflow-card);
+  --color-card-foreground: var(--lifeflow-card-foreground);
+  --color-popover: var(--lifeflow-popover);
+  --color-popover-foreground: var(--lifeflow-popover-foreground);
+  --color-primary: var(--lifeflow-primary);
+  --color-primary-foreground: var(--lifeflow-primary-foreground);
+  --color-muted: var(--lifeflow-muted);
+  --color-muted-foreground: var(--lifeflow-muted-foreground);
+  --color-border: var(--lifeflow-border);
+  --color-input: var(--lifeflow-input);
+  --color-ring: var(--lifeflow-ring);
   --radius-sm: var(--radius-sm);
   --radius-md: var(--radius-md);
   --radius-lg: var(--radius-lg);
-  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif;
-  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", "PingFang SC", sans-serif;
+  --font-sans: var(--font-sans);
+  --font-display: var(--font-display);
 }
 
 /* ---- Base Styles ---- */
@@ -90,12 +136,13 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
+  font-size: 17px;
+  font-weight: 400;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overscroll-behavior-y: none;
   -webkit-tap-highlight-color: transparent;
-  font-size: 17px;
-  line-height: 1.5;
   letter-spacing: -0.022em;
 }
 
@@ -104,10 +151,10 @@ body {
 }
 
 ::selection {
-  background: rgba(79, 70, 229, 0.15);
+  background: rgba(37, 99, 235, 0.15);
 }
 
-/* ---- Utility Classes ---- */
+/* ---- Typography Utility Classes ---- */
 .text-title-large {
   font-size: 34px;
   font-weight: 700;
@@ -122,40 +169,97 @@ body {
   letter-spacing: -0.018em;
 }
 
+.text-amount-large {
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: -0.022em;
+}
+
+.text-amount-medium {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.022em;
+}
+
+.text-amount-small {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.018em;
+}
+
 .text-label {
   font-size: 13px;
   font-weight: 500;
-  color: var(--color-text-secondary);
+  color: var(--muted-foreground);
   letter-spacing: -0.01em;
 }
 
 .text-caption {
   font-size: 12px;
   font-weight: 400;
-  color: var(--color-text-tertiary);
+  color: var(--color-text-disabled);
   letter-spacing: 0;
 }
 
+.text-link {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--lifeflow-primary);
+}
+
+.text-expense {
+  color: var(--color-expense);
+}
+
+.text-income {
+  color: var(--color-income);
+}
+
+.text-brand {
+  color: var(--lifeflow-primary);
+}
+
+/* ---- Component Utility Classes ---- */
 .card-standard {
-  background: var(--color-bg-card);
-  border-radius: var(--radius-xl);
+  background: var(--color-surface-card);
+  border-radius: var(--radius-md);
   box-shadow: var(--shadow-card);
 }
 
 .card-large {
-  background: var(--color-bg-card);
-  border-radius: var(--radius-2xl);
+  background: var(--color-surface-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card-elevated);
+}
+
+.card-xl {
+  background: var(--color-surface-card);
+  border-radius: 28px;
   box-shadow: var(--shadow-card-elevated);
 }
 
 .pill-button {
   border-radius: var(--radius-full);
-  border: 1px solid var(--color-border);
-  background: var(--color-bg-card);
+  border: 1px solid var(--lifeflow-border);
+  background: var(--color-surface-card);
   padding: 8px 16px;
   font-size: 15px;
   font-weight: 500;
   color: var(--color-text-primary);
+}
+
+.divider {
+  height: 0.5px;
+  background: var(--lifeflow-border);
+  margin: 0;
+}
+
+.bg-brand {
+  background: var(--lifeflow-primary);
+}
+
+.bg-surface-secondary {
+  background: var(--color-surface-secondary);
 }
 
 /* ---- Animations ---- */
@@ -212,9 +316,9 @@ body {
 .skeleton {
   background: linear-gradient(
     90deg,
-    var(--color-bg-card) 25%,
-    var(--color-separator) 50%,
-    var(--color-bg-card) 75%
+    var(--lifeflow-card) 25%,
+    var(--lifeflow-muted) 50%,
+    var(--lifeflow-card) 75%
   );
   background-size: 200% 100%;
   animation: shimmer 1.5s ease-in-out infinite;
@@ -222,10 +326,9 @@ body {
 }
 
 /* ============================================================ */
-/* 过渡兼容层：deprecated，禁止新增引用；各页面份完成后统一删除    */
+/* Transition compatibility layer — keep for backward compat     */
 /* ============================================================ */
 :root {
-  /* --- iOS 系统色（旧） --- */
   --sys-blue: #007AFF;
   --sys-green: #34C759;
   --sys-orange: #FF9500;
@@ -233,58 +336,4 @@ body {
   --sys-pink: #FF2D55;
   --sys-purple: #AF52DE;
   --sys-gray: #8E8E93;
-
-  /* --- 子站主题色（旧） --- */
-  --eff-primary: #5856D6;
-  --eff-bg: #F5F5F7;
-  --fin-primary: #34C759;
-  --fin-bg: #F5F5F7;
-  --health-primary: #FF9500;
-  --health-bg: #F5F5F7;
-  --main-primary: #5856D6;
-
-  /* --- 品牌别名（旧） --- */
-  --lifeflow-brand: #2563EB;
-  --lifeflow-brand-50: #EFF6FF;
-  --lifeflow-brand-100: #DBEAFE;
-  --lifeflow-brand-200: #BFDBFE;
-  --lifeflow-brand-300: #93C5FD;
-  --lifeflow-brand-400: #60A5FA;
-  --lifeflow-brand-500: #3B82F6;
-  --lifeflow-brand-600: #2563EB;
-  --lifeflow-brand-700: #1D4ED8;
-  --lifeflow-brand-800: #1E40AF;
-  --lifeflow-brand-900: #1E3A8A;
-
-  --lifeflow-background: #F8F8F7;
-  --lifeflow-foreground: #1C1C1E;
-  --lifeflow-card: #FFFFFF;
-  --lifeflow-card-foreground: #1C1C1E;
-  --lifeflow-popover: #FFFFFF;
-  --lifeflow-popover-foreground: #1C1C1E;
-  --lifeflow-primary: #2563EB;
-  --lifeflow-primary-foreground: #FFFFFF;
-  --lifeflow-muted: #F0F0ED;
-  --lifeflow-muted-foreground: #8E8E93;
-  --lifeflow-border: #E8E8EA;
-  --lifeflow-input: #F0F0ED;
-  --lifeflow-ring: #2563EB;
-
-  --color-surface-primary: #F8F8F7;
-  --color-surface-secondary: #F0F0ED;
-  --color-surface-card: #FFFFFF;
-  --color-expense: #FF3B30;
-  --color-income: #34C759;
-  --state-success: #34C759;
-  --state-warning: #F59E0B;
-  --state-error: #FF3B30;
-  --state-info: #2563EB;
-  --color-text-disabled: #C7C7CC;
-  --color-text-inverse: #FFFFFF;
-  --lifeflow-radius-small: 12px;
-  --lifeflow-radius-medium: 20px;
-  --lifeflow-radius-large: 24px;
-  --lifeflow-radius-full: 9999px;
-  --safe-area-top: 59px;
-  --safe-area-bottom: 34px;
 }

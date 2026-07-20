@@ -143,14 +143,12 @@ export default function WaterPage() {
 
   if (pageLoading) {
     return (
-      <div className="min-h-screen bg-[#FAFAFA] max-w-[430px] mx-auto pb-[100px]">
-        <div className="bg-white border-b border-[#F5F5F5]">
-          <div className="flex items-center px-4 h-11">
-            <div className="w-8 h-8" />
-          </div>
-        </div>
-        <div className="px-4 pt-5 flex flex-col items-center gap-5">
-          <div className="w-48 h-48 rounded-full animate-pulse bg-[#F5F5F5]" />
+      <div className="min-h-screen" style={{ background: "var(--lifeflow-background)" }}>
+        <header className="flex items-center h-11 px-4">
+          <div className="inline-flex h-8 w-8 items-center justify-center rounded-lg" style={{ background: "var(--color-surface-card)", border: "1px solid var(--lifeflow-border)" }} />
+        </header>
+        <div className="px-4 pt-4 flex flex-col items-center gap-5">
+          <div className="w-48 h-48 rounded-full animate-pulse" style={{ background: "var(--lifeflow-muted)" }} />
         </div>
       </div>
     );
@@ -159,84 +157,164 @@ export default function WaterPage() {
   /* ────────── Render ────────── */
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA] max-w-[430px] mx-auto pb-[100px]">
-      {/* Header */}
-      <div className="bg-white h-11 border-b border-[#F5F5F5] relative flex items-center">
+    <div className="min-h-screen pb-12" style={{ background: "var(--lifeflow-background)" }}>
+      {/* ─── Header ─── */}
+      <header className="flex items-center h-11 px-4">
         <button
           type="button"
           onClick={() => router.push("/more")}
-          className="ml-4 inline-flex items-center justify-center"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-lg shrink-0"
+          style={{ background: "var(--color-surface-card)", border: "1px solid var(--lifeflow-border)" }}
+          aria-label="返回"
         >
-          <ChevronLeft className="w-6 h-6 text-[#1D1D1F]" />
+          <ChevronLeft className="h-5 w-5" style={{ color: "var(--color-text-primary)" }} />
         </button>
-        <h1 className="absolute left-1/2 -translate-x-1/2 text-[17px] font-semibold text-[#1D1D1F]">
-          喝水
+        <h1 className="flex-1 text-center text-[17px] font-semibold tracking-[-0.018em]" style={{ color: "var(--color-text-primary)" }}>
+          饮水
         </h1>
-      </div>
+        <div className="w-8" />
+      </header>
 
-      <div className="px-4 pt-5 flex flex-col gap-5">
-        {/* ─── Hero Card ─── */}
+      {/* ─── Circular Progress Card ─── */}
+      <div className="px-4 pt-4">
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
-          className="bg-white rounded-[16px] border border-[#E5E5E5] p-4 flex flex-col items-center"
+          className="flex flex-col items-center p-6"
+          style={{ background: "var(--color-surface-card)", borderRadius: "20px", boxShadow: "var(--shadow-card)" }}
         >
-          <Droplets className="w-6 h-6 text-[#5865F2]" />
-
-          <span className="text-[34px] font-bold text-[#1D1D1F] mt-2">
-            {todayWaterTotal}ml
-          </span>
-          <span className="text-[13px] text-[#86868B] mt-0.5">
-            目标 {dailyTarget}ml
-          </span>
-
-          {/* Progress bar */}
-          <div className="w-full h-1 rounded-full bg-[#F5F5F5] mt-3 overflow-hidden">
-            <motion.div
-              className="h-1 rounded-full bg-[#5865F2]"
-              initial={{ width: 0 }}
-              animate={{ width: `${Math.min(100, percent)}%` }}
-              transition={{ duration: 0.6, ease: [0.32, 0.72, 0, 1] }}
-            />
+          <div className="relative flex items-center justify-center" style={{ width: 196, height: 196 }}>
+            <svg
+              width="196"
+              height="196"
+              viewBox="0 0 196 196"
+              style={{ transform: "rotate(-90deg)" }}
+            >
+              {/* Track */}
+              <circle
+                cx="98"
+                cy="98"
+                r="86"
+                fill="none"
+                stroke="var(--lifeflow-muted)"
+                strokeWidth="10"
+              />
+              {/* Progress */}
+              <circle
+                cx="98"
+                cy="98"
+                r="86"
+                fill="none"
+                stroke="var(--lifeflow-primary)"
+                strokeWidth="10"
+                strokeDasharray={circumference}
+                strokeDashoffset={dashOffset}
+                strokeLinecap="round"
+                style={{ transition: "stroke-dashoffset 0.6s cubic-bezier(0.32, 0.72, 0, 1)" }}
+              />
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+              <Droplets className="h-9 w-9" style={{ color: "var(--lifeflow-primary)" }} />
+              <span className="text-[28px] font-bold mt-1 tracking-[-0.022em]" style={{ color: "var(--color-text-primary)" }}>
+                {todayWaterTotal} ml
+              </span>
+            </div>
           </div>
-
-          <span className="text-[13px] text-[#86868B] mt-2">
-            {remaining > 0
-              ? `还差 ${remaining}ml · ${cupsRemaining} 杯`
-              : "今日目标已达成"}
-          </span>
+          <p className="text-[13px] font-medium mt-2" style={{ color: "var(--color-text-secondary)", letterSpacing: "-0.01em" }}>
+            今日目标 {dailyTarget} ml
+          </p>
         </motion.div>
+      </div>
 
-        {/* ─── Quick Drink Pills ─── */}
+      {/* ─── Quick-add Buttons ─── */}
+      <div className="px-4 pt-5">
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.05, duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
-          className="flex gap-2"
+          className="grid grid-cols-4 gap-3"
         >
-          {QUICK_AMOUNTS.map((amount) => (
-            <motion.button
-              key={amount}
-              type="button"
-              whileTap={{ scale: 0.95 }}
-              disabled={addingMap[amount]}
-              onClick={() => handleAdd(amount)}
-              className="flex-1 h-11 rounded-full bg-[#EEF2FF] text-[15px] font-medium text-[#5865F2] disabled:opacity-50"
-            >
-              +{amount}ml
-            </motion.button>
-          ))}
+          {QUICK_AMOUNTS.map((amount) => {
+            const isAccent = amount === 500;
+            return (
+              <motion.button
+                key={amount}
+                type="button"
+                whileTap={{ scale: 0.96 }}
+                disabled={addingMap[amount]}
+                onClick={() => handleAdd(amount)}
+                className="inline-flex items-center justify-center py-2.5 rounded-full text-sm font-semibold tracking-[-0.018em] whitespace-nowrap disabled:opacity-50"
+                style={{
+                  background: isAccent ? "var(--lifeflow-primary)" : "var(--lifeflow-brand-50)",
+                  color: isAccent ? "var(--lifeflow-primary-foreground)" : "var(--lifeflow-primary)",
+                }}
+              >
+                +{amount} ml
+              </motion.button>
+            );
+          })}
         </motion.div>
+      </div>
 
-        {/* ─── Goal Settings Card ─── */}
+      {/* ─── Today's Log ─── */}
+      <div className="px-4 pt-5">
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1, duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
-          className="bg-white rounded-[16px] border border-[#E5E5E5] p-4"
+          className="p-4"
+          style={{ background: "var(--color-surface-card)", borderRadius: "20px", boxShadow: "var(--shadow-card)" }}
         >
-          <h2 className="text-[17px] font-semibold text-[#1D1D1F]">目标设置</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-base font-semibold" style={{ color: "var(--color-text-primary)" }}>今日记录</h2>
+            <span className="text-[13px] font-medium" style={{ color: "var(--color-text-secondary)", letterSpacing: "-0.01em" }}>
+              共 {sortedLogs.length} 次
+            </span>
+          </div>
+
+          {sortedLogs.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-10">
+              <Droplets className="h-10 w-10" style={{ color: "var(--color-text-disabled)" }} />
+              <p className="text-[13px] font-medium mt-3" style={{ color: "var(--color-text-secondary)" }}>还没有饮水记录</p>
+              <p className="text-[12px] mt-1" style={{ color: "var(--color-text-disabled)" }}>点击上方按钮快速记录</p>
+            </div>
+          ) : (
+            <div className="mt-2">
+              {sortedLogs.map((entry, i) => (
+                <div
+                  key={entry.id}
+                  className="flex items-center justify-between h-[42px]"
+                  style={{ borderTop: i > 0 ? "1px solid var(--lifeflow-border)" : undefined }}
+                  onMouseDown={() => handlePressStart(entry.id)}
+                  onMouseUp={handlePressEnd}
+                  onMouseLeave={handlePressEnd}
+                  onTouchStart={() => handlePressStart(entry.id)}
+                  onTouchEnd={handlePressEnd}
+                >
+                  <span className="text-[13px]" style={{ color: "var(--color-text-secondary)" }}>
+                    {formatTimestamp(entry.timestamp)}
+                  </span>
+                  <span className="text-[15px] font-semibold" style={{ color: "var(--color-text-primary)" }}>
+                    +{entry.amount}ml
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </motion.div>
+      </div>
+
+      {/* ─── Goal Settings Card ─── */}
+      <div className="px-4 pt-4">
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15, duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
+          className="p-4"
+          style={{ background: "var(--color-surface-card)", borderRadius: "20px", boxShadow: "var(--shadow-card)" }}
+        >
+          <h2 className="text-[17px] font-semibold" style={{ color: "var(--color-text-primary)" }}>目标设置</h2>
 
           {/* Daily target stepper */}
           <div className="mt-3 flex items-center justify-center gap-6">
@@ -244,25 +322,27 @@ export default function WaterPage() {
               type="button"
               whileTap={{ scale: 0.9 }}
               onClick={() => handleStepperChange(-1)}
-              className="w-7 h-7 rounded-full border-[1.5px] border-[#5865F2] bg-white flex items-center justify-center"
+              className="w-7 h-7 rounded-full border-[1.5px] flex items-center justify-center"
+              style={{ borderColor: "var(--lifeflow-primary)", background: "var(--color-surface-card)" }}
             >
-              <Minus className="w-3.5 h-3.5 text-[#5865F2]" />
+              <Minus className="w-3.5 h-3.5" style={{ color: "var(--lifeflow-primary)" }} />
             </motion.button>
-            <span className="text-[20px] font-bold text-[#1D1D1F] min-w-[80px] text-center">
+            <span className="text-[20px] font-bold min-w-[80px] text-center" style={{ color: "var(--color-text-primary)" }}>
               {dailyTarget}ml
             </span>
             <motion.button
               type="button"
               whileTap={{ scale: 0.9 }}
               onClick={() => handleStepperChange(1)}
-              className="w-7 h-7 rounded-full border-[1.5px] border-[#5865F2] bg-white flex items-center justify-center"
+              className="w-7 h-7 rounded-full border-[1.5px] flex items-center justify-center"
+              style={{ borderColor: "var(--lifeflow-primary)", background: "var(--color-surface-card)" }}
             >
-              <Plus className="w-3.5 h-3.5 text-[#5865F2]" />
+              <Plus className="w-3.5 h-3.5" style={{ color: "var(--lifeflow-primary)" }} />
             </motion.button>
           </div>
 
           {/* Divider */}
-          <div className="my-3 h-px bg-[#F5F5F5]" />
+          <div className="my-3" style={{ height: "0.5px", background: "var(--lifeflow-border)" }} />
 
           {/* Cup size */}
           <div className="flex gap-2">
@@ -272,24 +352,27 @@ export default function WaterPage() {
                 type="button"
                 whileTap={{ scale: 0.95 }}
                 onClick={() => handleCupSizeChange(size)}
-                className={`h-8 px-4 rounded-full text-[13px] font-medium transition-colors ${
-                  cupSize === size
-                    ? "bg-[#EEF2FF] text-[#5865F2]"
-                    : "bg-transparent text-[#86868B]"
-                }`}
+                className="h-8 px-4 rounded-full text-[13px] font-medium transition-colors"
+                style={{
+                  background: cupSize === size ? "var(--lifeflow-brand-50)" : "transparent",
+                  color: cupSize === size ? "var(--lifeflow-primary)" : "var(--color-text-secondary)",
+                }}
               >
                 {size}ml
               </motion.button>
             ))}
           </div>
         </motion.div>
+      </div>
 
-        {/* ─── Reminder Card ─── */}
+      {/* ─── Reminder Card ─── */}
+      <div className="px-4 pt-4">
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15, duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
-          className="bg-white rounded-[16px] border border-[#E5E5E5] p-4"
+          transition={{ delay: 0.2, duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
+          className="p-4"
+          style={{ background: "var(--color-surface-card)", borderRadius: "20px", boxShadow: "var(--shadow-card)" }}
         >
           {/* Interval pills */}
           <div className="flex gap-2">
@@ -299,11 +382,11 @@ export default function WaterPage() {
                 type="button"
                 whileTap={{ scale: 0.95 }}
                 onClick={() => handleIntervalChange(opt.value)}
-                className={`h-8 px-4 rounded-full text-[13px] font-medium transition-colors ${
-                  waterGoal?.reminderInterval === opt.value
-                    ? "bg-[#EEF2FF] text-[#5865F2]"
-                    : "bg-transparent text-[#86868B]"
-                }`}
+                className="h-8 px-4 rounded-full text-[13px] font-medium transition-colors"
+                style={{
+                  background: waterGoal?.reminderInterval === opt.value ? "var(--lifeflow-brand-50)" : "transparent",
+                  color: waterGoal?.reminderInterval === opt.value ? "var(--lifeflow-primary)" : "var(--color-text-secondary)",
+                }}
               >
                 {opt.label}
               </motion.button>
@@ -311,13 +394,13 @@ export default function WaterPage() {
           </div>
 
           {/* Divider */}
-          <div className="my-3 h-px bg-[#F5F5F5]" />
+          <div className="my-3" style={{ height: "0.5px", background: "var(--lifeflow-border)" }} />
 
           {/* Night mode */}
           <div className="flex items-center justify-between">
             <div className="flex flex-col">
-              <span className="text-[15px] text-[#1D1D1F]">夜间免打扰</span>
-              <span className="text-[13px] text-[#86868B]">22:00 - 08:00</span>
+              <span className="text-[15px]" style={{ color: "var(--color-text-primary)" }}>夜间免打扰</span>
+              <span className="text-[13px]" style={{ color: "var(--color-text-secondary)" }}>22:00 - 08:00</span>
             </div>
             <button
               type="button"
@@ -328,7 +411,7 @@ export default function WaterPage() {
               <motion.div
                 className="absolute inset-0 rounded-full"
                 animate={{
-                  backgroundColor: waterGoal?.nightMode ? "#5865F2" : "#E5E5E5",
+                  backgroundColor: waterGoal?.nightMode ? "var(--lifeflow-primary)" : "var(--lifeflow-border)",
                 }}
                 transition={{ duration: 0.2 }}
               />
@@ -343,42 +426,6 @@ export default function WaterPage() {
             </button>
           </div>
         </motion.div>
-
-        {/* ─── Today Records Card ─── */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2, duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
-          className="bg-white rounded-[16px] border border-[#E5E5E5] p-4"
-        >
-          <h2 className="text-[17px] font-semibold text-[#1D1D1F]">今日记录</h2>
-
-          {sortedLogs.length === 0 ? (
-            <p className="mt-3 text-[13px] text-[#86868B]">今日暂无饮水记录</p>
-          ) : (
-            <div className="mt-2">
-              {sortedLogs.map((entry, i) => (
-                <div
-                  key={entry.id}
-                  className="flex items-center justify-between h-[42px]"
-                  style={{ borderTop: i > 0 ? "1px solid #F5F5F5" : undefined }}
-                  onMouseDown={() => handlePressStart(entry.id)}
-                  onMouseUp={handlePressEnd}
-                  onMouseLeave={handlePressEnd}
-                  onTouchStart={() => handlePressStart(entry.id)}
-                  onTouchEnd={handlePressEnd}
-                >
-                  <span className="text-[13px] text-[#86868B]">
-                    {formatTimestamp(entry.timestamp)}
-                  </span>
-                  <span className="text-[15px] font-semibold text-[#1D1D1F]">
-                    +{entry.amount}ml
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </motion.div>
       </div>
 
       {/* ─── Delete confirm modal ─── */}
@@ -392,10 +439,11 @@ export default function WaterPage() {
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="bg-white rounded-[16px] p-5 mx-8 w-full max-w-[280px]"
+            className="p-5 mx-8 w-full max-w-[280px]"
+            style={{ background: "var(--color-surface-card)", borderRadius: "20px", boxShadow: "var(--shadow-card-elevated)" }}
             onClick={(e) => e.stopPropagation()}
           >
-            <p className="text-[15px] font-semibold text-[#1D1D1F] text-center">
+            <p className="text-[15px] font-semibold text-center" style={{ color: "var(--color-text-primary)" }}>
               确定删除这条饮水记录？
             </p>
             <div className="flex gap-3 mt-4">
@@ -403,7 +451,8 @@ export default function WaterPage() {
                 type="button"
                 whileTap={{ scale: 0.95 }}
                 onClick={() => setDeleteTarget(null)}
-                className="flex-1 h-10 rounded-full bg-[#F5F5F5] text-[15px] text-[#1D1D1F] font-medium"
+                className="flex-1 h-10 rounded-full text-[15px] font-medium"
+                style={{ background: "var(--lifeflow-muted)", color: "var(--color-text-primary)" }}
               >
                 取消
               </motion.button>
@@ -411,7 +460,8 @@ export default function WaterPage() {
                 type="button"
                 whileTap={{ scale: 0.95 }}
                 onClick={handleConfirmDelete}
-                className="flex-1 h-10 rounded-full bg-[#FF3B30] text-[15px] text-white font-medium"
+                className="flex-1 h-10 rounded-full text-[15px] text-white font-medium"
+                style={{ background: "#FF3B30" }}
               >
                 删除
               </motion.button>

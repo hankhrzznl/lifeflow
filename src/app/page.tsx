@@ -4,19 +4,13 @@ import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { useLiveQuery } from "dexie-react-hooks";
-import {
-  Target,
-  PlusCircle,
-  ChevronRight,
-  Droplets,
-  Moon,
-} from "lucide-react";
+import { Target, Wallet, Heart, ChevronRight, Check } from "lucide-react";
 import { efficiencyDB, getScheduleTasksByDate } from "@/lib/db/efficiency.db";
 import type { Goal, ScheduleTask } from "@/lib/db/efficiency.db";
 import { accountingDB } from "@/lib/db/accounting.db";
-import type { Transaction, Category } from "@/lib/db/accounting.db";
+import type { Transaction } from "@/lib/db/accounting.db";
 import { healthDB, getWaterGoal } from "@/lib/db/health.db";
-import type { WaterLog, WaterGoal, SleepLog, WorkoutSession } from "@/lib/db/health.db";
+import type { WaterLog, WaterGoal } from "@/lib/db/health.db";
 
 // ============================================================
 
@@ -30,21 +24,13 @@ function formatDateChinese(date: Date): string {
   return `${date.getMonth() + 1}月${date.getDate()}日 周${weekDays[date.getDay()]}`;
 }
 
-function timeToMinutes(t: string): number {
-  const [h, m] = t.split(":").map(Number);
-  return h * 60 + m;
-}
-
 // ============================================================
 
 export default function HomePage() {
   const today = todayStr();
   const now = new Date();
-  const hour = now.getHours();
-  const greeting = hour >= 6 && hour < 12 ? "早上好" : hour >= 12 && hour < 18 ? "下午好" : "晚上好";
 
   // ── Data queries ──
-
   const todayTasks = useLiveQuery(() => getScheduleTasksByDate(today), [today], [] as ScheduleTask[]);
   const goals = useLiveQuery(() => efficiencyDB.goals.toArray(), [], [] as Goal[]);
   const transactions = useLiveQuery(
@@ -52,7 +38,6 @@ export default function HomePage() {
     [today],
     [] as Transaction[],
   );
-  const categories = useLiveQuery(() => accountingDB.categories.toArray(), [], [] as Category[]);
   const waterLogs = useLiveQuery(
     () => healthDB.waterLogs.where("date").equals(today).toArray(),
     [today],
@@ -62,327 +47,200 @@ export default function HomePage() {
   useEffect(() => {
     getWaterGoal().then((g) => setWaterGoal(g)).catch(() => {});
   }, []);
-  const sleepLogs = useLiveQuery(() => healthDB.sleepLogs.toArray(), [], [] as SleepLog[]);
-  const workouts = useLiveQuery(
-    () => healthDB.workoutSessions.where("date").equals(today).toArray(),
-    [today],
-    [] as WorkoutSession[],
-  );
 
   // ── Derived ──
-
-  // Goals progress
   const totalGoals = goals.length;
   const completedGoals = goals.filter((g) => g.status === "completed").length;
-  const goalsPct = totalGoals > 0 ? Math.round((completedGoals / totalGoals) * 100) : 0;
 
-  // Accounting
   const totalExpense = transactions.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0);
   const totalIncome = transactions.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0);
   const netIncome = Math.round((totalIncome - totalExpense) / 100);
-  const expenseCount = transactions.filter((t) => t.type === "expense").length;
 
-  // Water
   const waterTotal = waterLogs.reduce((s, l) => s + l.amount, 0);
   const waterTarget = waterGoal?.dailyTarget ?? 2000;
-  const waterPct = waterTarget > 0 ? Math.min(100, Math.round((waterTotal / waterTarget) * 100)) : 0;
-  const waterDisplay = waterTotal >= 1000
-    ? `${(waterTotal / 1000).toFixed(1)}L`
-    : `${waterTotal}ml`;
 
-  // Sleep
-  const latestSleep = useMemo(() => {
-    if (sleepLogs.length === 0) return null;
-    const sorted = [...sleepLogs].sort((a, b) => b.date.localeCompare(a.date));
-    return sorted[0];
-  }, [sleepLogs]);
-  const sleepHours = latestSleep
-    ? (() => {
-        const sleepMin = timeToMinutes(latestSleep.actualTime);
-        const wakeMin = 7 * 60; // assume wake at 7:00
-        const diff = sleepMin <= wakeMin ? wakeMin - sleepMin : (wakeMin + 24 * 60) - sleepMin;
-        return (diff / 60).toFixed(1) + "h";
-      })()
-    : "--";
-  const sleepQuality = latestSleep
-    ? latestSleep.isOnTime
-      ? "良好"
-      : latestSleep.minutesDiff > 0
-        ? "较晚"
-        : "较早"
-    : "--";
+  // Tasks: today's incomplete tasks
+  const incompleteTasks = useMemo(() => {
+    return todayTasks.filter((t) => !t.isCompleted).slice(0, 4);
+  }, [todayTasks]);
 
-  // Helper: get category name by id
-  const catMap = useMemo(() => {
-    const map: Record<string, string> = {};
-    categories.forEach((c) => { map[c.id] = c.name; });
-    return map;
-  }, [categories]);
+  // Done tasks
+  const completedTasks = useMemo(() => {
+    return todayTasks.filter((t) => t.isCompleted).slice(0, 2);
+  }, [todayTasks]);
 
-  // Helper: goal color map
-  const goalColorMap = useMemo(() => {
-    const map: Record<string, string> = {};
-    goals.forEach((g) => {
-      // Goal doesn't have a color field directly, lookup via project
-      // Use default #5865F2 if no color
-      map[g.id] = "#5865F2";
-    });
+  // Future/upcoming tasks (tomorrow)
+  const upcomingTasks = useMemo(() => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowStr = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, "0")}-${String(tomorrow.getDate()).padStart(2, "0")}`;
+    return []; // We'll show static upcoming items for now
+  }, []);
+
+  // Get goal name by id
+  const goalMap = useMemo(() => {
+    const map: Record<string, Goal> = {};
+    goals.forEach((g) => { map[g.id] = g; });
     return map;
   }, [goals]);
 
-  // Incomplete today tasks
-  const incompleteTasks = useMemo(() => {
-    return todayTasks.filter((t) => !t.isCompleted).slice(0, 5);
-  }, [todayTasks]);
-
-  // Today transactions (max 2)
-  const showTxs = useMemo(() => transactions.slice(0, 2), [transactions]);
-
-  // Ring geometry
-  const ringRadius = 19;
-  const ringCircumference = 2 * Math.PI * ringRadius;
+  function getPriorityLabel(quadrant?: string, isImportant?: boolean) {
+    if (quadrant === "q1" || isImportant) return { text: "高优先级", color: "var(--state-warning)" };
+    if (quadrant === "q2") return { text: "中优先级", color: "var(--color-text-secondary)" };
+    return { text: "普通", color: "var(--color-text-secondary)" };
+  }
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA]">
-      <div className="mx-auto max-w-[430px] px-4 pt-12 pb-28 flex flex-col gap-4">
-
-        {/* ===== 1. Page Header (Greeting) ===== */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, ease: "easeOut" }}
+    <main className="px-4 pt-14 pb-[100px] max-w-[430px] mx-auto">
+      {/* Header */}
+      <header className="flex items-center justify-between mb-1">
+        <h1 className="text-title-nav" style={{ color: "var(--color-text-primary)" }}>LifeFlow</h1>
+        <button
+          className="w-10 h-10 rounded-full border flex items-center justify-center"
+          style={{ borderColor: "var(--lifeflow-border)", background: "var(--color-surface-card)" }}
         >
-          <div className="text-[13px] text-[#86868B]">{formatDateChinese(now)}</div>
-          <h1 className="text-[34px] font-bold text-[#1D1D1F] leading-tight tracking-tight">
-            {greeting}
-          </h1>
-        </motion.div>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-secondary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+          </svg>
+        </button>
+      </header>
+      <p className="text-label mb-6">{formatDateChinese(now)}</p>
 
-        {/* ===== 2. Decorative Separator ===== */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.05, duration: 0.4, ease: "easeOut" }}
-          className="flex flex-col items-center gap-1"
-        >
-          <div className="h-px w-full bg-[#E5E5E5]" />
-          <div className="h-px w-full bg-[#E5E5E5]" />
-          <div className="h-px w-full bg-[#E5E5E5]" />
-          <div className="text-[13px] text-[#AEAEB2] mt-1">三条线，一张网</div>
-        </motion.div>
-
-        {/* ===== 3. Today Overview Card ===== */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1, duration: 0.4, ease: "easeOut" }}
-          className="bg-white rounded-[20px] border border-[#F5F5F5] p-5"
-        >
-          <div className="grid grid-cols-3">
-            {/* Column 1 - Today Goals */}
-            <div className="flex flex-col items-center gap-1.5">
-              <div className="text-[13px] text-[#86868B]">今日目标</div>
-              <div className="text-[28px] font-bold text-[#1D1D1F] leading-none">
-                {completedGoals}/{totalGoals}
-              </div>
-              <div className="w-full max-w-[56px] h-1 rounded-full bg-[#E5E5E5] overflow-hidden">
-                <motion.div
-                  className="h-full rounded-full bg-[#5865F2]"
-                  initial={{ width: 0 }}
-                  animate={{ width: `${goalsPct}%` }}
-                  transition={{ duration: 0.6, ease: "easeOut" }}
-                />
-              </div>
+      {/* Today Overview Cards — horizontal scroll */}
+      <div className="flex flex-nowrap overflow-x-auto gap-3 mb-6 no-scrollbar">
+        {/* Today Goals */}
+        <Link href="/efficiency" className="flex-shrink-0 w-[156px] rounded-[20px] p-4 flex flex-col gap-2" style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}>
+          <div className="flex items-center justify-between">
+            <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ background: "var(--lifeflow-brand-50)" }}>
+              <Target className="w-[18px] h-[18px]" style={{ color: "var(--lifeflow-primary)" }} />
             </div>
-
-            {/* Column 2 - Today Income/Expense */}
-            <div className="flex flex-col items-center gap-1.5">
-              <div className="text-[13px] text-[#86868B]">今日收支</div>
-              <div className="text-[28px] font-bold text-[#1D1D1F] leading-none">
-                ¥{netIncome}
-              </div>
-              <div className="text-[12px] text-[#AEAEB2]">
-                支出 {expenseCount} 笔
-              </div>
-            </div>
-
-            {/* Column 3 - Today Health */}
-            <div className="flex flex-col items-center gap-1.5">
-              <div className="text-[13px] text-[#86868B]">今日健康</div>
-              <svg width="44" height="44" viewBox="0 0 44 44">
-                <circle
-                  cx="22"
-                  cy="22"
-                  r={ringRadius}
-                  fill="none"
-                  stroke="#E5E5E5"
-                  strokeWidth="4"
-                />
-                <motion.circle
-                  cx="22"
-                  cy="22"
-                  r={ringRadius}
-                  fill="none"
-                  stroke="#5865F2"
-                  strokeWidth="4"
-                  strokeLinecap="round"
-                  strokeDasharray={ringCircumference}
-                  initial={{ strokeDashoffset: ringCircumference }}
-                  animate={{
-                    strokeDashoffset: ringCircumference - (ringCircumference * waterPct) / 100,
-                  }}
-                  transition={{ duration: 0.8, ease: "easeOut" }}
-                  transform="rotate(-90 22 22)"
-                />
-              </svg>
-            </div>
+            <ChevronRight className="w-4 h-4" style={{ color: "var(--color-text-disabled)" }} />
           </div>
-        </motion.div>
-
-        {/* ===== 4. Quick Action Row ===== */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15, duration: 0.4, ease: "easeOut" }}
-          className="grid grid-cols-2 gap-3"
-        >
-          <motion.div whileTap={{ scale: 0.97 }}>
-            <Link
-              href="/efficiency/create"
-              className="bg-[#EEF2FF] h-16 rounded-[16px] flex items-center justify-center gap-2"
-            >
-              <Target className="w-[22px] h-[22px] text-[#5865F2]" />
-              <span className="text-[15px] font-semibold text-[#5865F2]">添加目标</span>
-            </Link>
-          </motion.div>
-          <motion.div whileTap={{ scale: 0.97 }}>
-            <Link
-              href="/more/accounting/record"
-              className="bg-[#EEF2FF] h-16 rounded-[16px] flex items-center justify-center gap-2"
-            >
-              <PlusCircle className="w-[22px] h-[22px] text-[#5865F2]" />
-              <span className="text-[15px] font-semibold text-[#5865F2]">记一笔</span>
-            </Link>
-          </motion.div>
-        </motion.div>
-
-        {/* ===== 5a. Efficiency Card ===== */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2, duration: 0.4, ease: "easeOut" }}
-          className="bg-white rounded-[20px] border border-[#F5F5F5] p-5"
-        >
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-[20px] font-bold text-[#1D1D1F]">效率</h2>
-            <Link href="/efficiency" className="flex items-center gap-0.5 text-[15px] text-[#5865F2]">
-              查看全部
-              <ChevronRight className="w-4 h-4" />
-            </Link>
+          <div>
+            <p className="text-caption">今日目标</p>
+            <p className="text-amount-small" style={{ color: "var(--color-text-primary)" }}>{completedGoals}/{totalGoals}</p>
           </div>
+        </Link>
 
-          {incompleteTasks.length === 0 ? (
-            <div className="text-[14px] text-[#AEAEB2] py-2">暂无待办事项</div>
-          ) : (
-            <div className="flex flex-col gap-2.5">
-              {incompleteTasks.map((task) => {
-                const taskGoal = task.goalId ? goals.find((g) => g.id === task.goalId) : null;
-                const dotColor = goalColorMap[task.goalId ?? ""] ?? "#5865F2";
-                const dateLabel = task.date ?? "";
-                return (
-                  <div key={task.id} className="flex items-center gap-2.5">
-                    <span
-                      className="w-2 h-2 rounded-full shrink-0"
-                      style={{ backgroundColor: dotColor }}
-                    />
-                    <span className="flex-1 text-[15px] text-[#1D1D1F] truncate">
-                      {task.title}
-                    </span>
-                    {dateLabel && (
-                      <span className="text-[13px] text-[#AEAEB2] shrink-0">{dateLabel}</span>
-                    )}
-                  </div>
-                );
-              })}
+        {/* Today Income/Expense */}
+        <Link href="/more/accounting" className="flex-shrink-0 w-[156px] rounded-[20px] p-4 flex flex-col gap-2" style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}>
+          <div className="flex items-center justify-between">
+            <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ background: "var(--lifeflow-brand-50)" }}>
+              <Wallet className="w-[18px] h-[18px]" style={{ color: "var(--lifeflow-primary)" }} />
             </div>
-          )}
-        </motion.div>
-
-        {/* ===== 5b. Accounting Card ===== */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.25, duration: 0.4, ease: "easeOut" }}
-          className="bg-white rounded-[20px] border border-[#F5F5F5] p-5"
-        >
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-[20px] font-bold text-[#1D1D1F]">记账</h2>
-            <Link href="/more/accounting" className="flex items-center gap-0.5 text-[15px] text-[#5865F2]">
-              查看全部
-              <ChevronRight className="w-4 h-4" />
-            </Link>
+            <ChevronRight className="w-4 h-4" style={{ color: "var(--color-text-disabled)" }} />
           </div>
-
-          {showTxs.length === 0 ? (
-            <div className="text-[14px] text-[#AEAEB2] py-2">今日暂无收支记录</div>
-          ) : (
-            <div className="flex flex-col gap-2.5">
-              {showTxs.map((tx) => {
-                const catName = tx.categoryId ? catMap[tx.categoryId] : null;
-                const label = tx.note || catName || (tx.type === "income" ? "收入" : "支出");
-                return (
-                  <div key={tx.id} className="flex items-center justify-between">
-                    <span className="text-[15px] text-[#1D1D1F] truncate">{label}</span>
-                    <span className="text-[15px] font-semibold text-[#1D1D1F] shrink-0 ml-3">
-                      ¥{Math.round(tx.amount / 100)}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </motion.div>
-
-        {/* ===== 5c. Health Card ===== */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3, duration: 0.4, ease: "easeOut" }}
-          className="bg-white rounded-[20px] border border-[#F5F5F5] p-5"
-        >
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-[20px] font-bold text-[#1D1D1F]">健康</h2>
-            <Link href="/more" className="flex items-center gap-0.5 text-[15px] text-[#5865F2]">
-              查看全部
-              <ChevronRight className="w-4 h-4" />
-            </Link>
+          <div>
+            <p className="text-caption">今日收支</p>
+            <p className="text-amount-small" style={{ color: "var(--color-text-primary)" }}>
+              {netIncome >= 0 ? "+" : ""}{netIncome}
+            </p>
           </div>
+        </Link>
 
-          <div className="flex items-stretch">
-            {/* Water column */}
-            <div className="flex-1 flex flex-col items-center gap-1">
-              <Droplets className="w-5 h-5 text-[#5865F2] mb-0.5" />
-              <div className="text-[13px] text-[#86868B]">今日饮水</div>
-              <div className="text-[17px] font-semibold text-[#1D1D1F]">{waterDisplay}</div>
-              <div className="text-[12px] text-[#AEAEB2]">
-                目标 {(waterTarget >= 1000 ? (waterTarget / 1000).toFixed(1) + "L" : waterTarget + "ml")}
-              </div>
+        {/* Today Health */}
+        <Link href="/more" className="flex-shrink-0 w-[156px] rounded-[20px] p-4 flex flex-col gap-2" style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}>
+          <div className="flex items-center justify-between">
+            <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ background: "var(--lifeflow-brand-50)" }}>
+              <Heart className="w-[18px] h-[18px]" style={{ color: "var(--lifeflow-primary)" }} />
             </div>
-
-            {/* Vertical divider */}
-            <div className="w-px bg-[#E5E5E5] mx-3" />
-
-            {/* Sleep column */}
-            <div className="flex-1 flex flex-col items-center gap-1">
-              <Moon className="w-5 h-5 text-[#5865F2] mb-0.5" />
-              <div className="text-[13px] text-[#86868B]">昨晚睡眠</div>
-              <div className="text-[17px] font-semibold text-[#1D1D1F]">{sleepHours}</div>
-              <div className="text-[12px] text-[#AEAEB2]">质量 {sleepQuality}</div>
-            </div>
+            <ChevronRight className="w-4 h-4" style={{ color: "var(--color-text-disabled)" }} />
           </div>
-        </motion.div>
-
+          <div>
+            <p className="text-caption">今日健康</p>
+            <p className="text-amount-small" style={{ color: "var(--color-text-primary)" }}>
+              {waterTotal >= 1000 ? `${(waterTotal / 1000).toFixed(1)}L` : `${waterTotal}ml`}
+            </p>
+          </div>
+        </Link>
       </div>
-    </div>
+
+      {/* Task List Section */}
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <h2 className="text-[18px] font-semibold tracking-[-0.018em]" style={{ color: "var(--color-text-primary)" }}>今日任务</h2>
+            <span className="text-[12px] font-semibold px-2 py-0.5 rounded-full" style={{ background: "var(--lifeflow-brand-50)", color: "var(--lifeflow-primary)" }}>
+              {todayTasks.length}
+            </span>
+          </div>
+          <Link href="/tasks" className="text-[13px] font-medium" style={{ color: "var(--lifeflow-primary)" }}>查看全部</Link>
+        </div>
+
+        {incompleteTasks.length === 0 && completedTasks.length === 0 ? (
+          <div className="rounded-[20px] p-8 flex flex-col items-center gap-2" style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}>
+            <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ background: "var(--lifeflow-muted)" }}>
+              <Target className="w-6 h-6" style={{ color: "var(--color-text-disabled)" }} />
+            </div>
+            <p className="text-[14px]" style={{ color: "var(--color-text-secondary)" }}>暂无任务</p>
+            <Link href="/efficiency/create" className="text-[14px] font-medium" style={{ color: "var(--lifeflow-primary)" }}>
+              + 创建任务
+            </Link>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {incompleteTasks.map((task) => {
+              const priority = getPriorityLabel(task.quadrant, task.isImportant);
+              const taskGoal = task.goalId ? goalMap[task.goalId] : null;
+              return (
+                <div key={task.id} className="rounded-[20px] p-4 flex items-center gap-3" style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}>
+                  <div className="w-[22px] h-[22px] rounded-full border-2 flex items-center justify-center flex-shrink-0" style={{ borderColor: "var(--lifeflow-primary)" }}>
+                    <div className="w-[10px] h-[10px] rounded-full" style={{ background: "var(--lifeflow-primary)" }} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[15px] font-medium truncate" style={{ color: "var(--color-text-primary)" }}>{task.title}</p>
+                    {taskGoal && <p className="text-[12px] truncate" style={{ color: "var(--color-text-secondary)" }}>{taskGoal.title}</p>}
+                  </div>
+                  <div className="flex-shrink-0 text-right">
+                    {task.plannedTime > 0 && (
+                      <p className="text-[13px] font-medium whitespace-nowrap" style={{ color: "var(--color-text-secondary)" }}>{task.plannedTime}min</p>
+                    )}
+                    <p className="text-[11px] font-medium whitespace-nowrap" style={{ color: priority.color }}>{priority.text}</p>
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* Completed tasks */}
+            {completedTasks.map((task) => (
+              <div key={task.id} className="rounded-[20px] p-4 flex items-center gap-3" style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)", opacity: 0.6 }}>
+                <div className="w-[22px] h-[22px] rounded-full border-2 flex items-center justify-center flex-shrink-0" style={{ borderColor: "var(--color-text-disabled)" }}>
+                  <Check className="w-[14px] h-[14px]" style={{ color: "var(--color-text-disabled)" }} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[15px] font-medium truncate line-through" style={{ color: "var(--color-text-disabled)" }}>{task.title}</p>
+                  <p className="text-[12px] truncate" style={{ color: "var(--color-text-disabled)" }}>已完成</p>
+                </div>
+                <div className="flex-shrink-0 text-right">
+                  <p className="text-[11px] font-medium whitespace-nowrap" style={{ color: "var(--color-text-disabled)" }}>已完成</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Upcoming Section */}
+      <div className="mb-20">
+        <div className="flex items-center gap-2 mb-3">
+          <h2 className="text-[18px] font-semibold tracking-[-0.018em]" style={{ color: "var(--color-text-primary)" }}>即将开始</h2>
+        </div>
+
+        <div className="flex flex-col gap-3">
+          <div className="rounded-[20px] p-4 flex items-center gap-3" style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}>
+            <div className="w-[22px] h-[22px] rounded-full border-2 flex items-center justify-center flex-shrink-0" style={{ borderColor: "var(--lifeflow-primary)" }} />
+            <div className="flex-1 min-w-0">
+              <p className="text-[15px] font-medium truncate" style={{ color: "var(--color-text-primary)" }}>查看明天日程</p>
+              <p className="text-[12px] truncate" style={{ color: "var(--color-text-secondary)" }}>规划明天的任务和安排</p>
+            </div>
+            <div className="flex-shrink-0 text-right">
+              <Link href="/efficiency/schedule" className="inline-block text-[11px] font-medium px-2 py-0.5 rounded-full whitespace-nowrap" style={{ background: "var(--lifeflow-brand-50)", color: "var(--lifeflow-primary)" }}>
+                日程
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
   );
 }

@@ -1,10 +1,10 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import AccountingTabBar from "@/components/navigation/AccountingTabBar";
 
 // ============================================================
-// 记账子站容器
-// 底部导航由 01 的全站 4-tab BottomTabBar 提供
+// 记账子站容器 — 带专用底部 Tab 导航
 // ============================================================
 
 export default function AccountingLayout({ children }: { children: React.ReactNode }) {
@@ -15,10 +15,11 @@ export default function AccountingLayout({ children }: { children: React.ReactNo
     pathname.startsWith("/more/accounting/search");
 
   return (
-    <div className="min-h-screen bg-[#F8F8F8]">
-      <main className={`w-full max-w-[430px] mx-auto ${isFullscreen ? "" : "pb-[107px]"}`}>
+    <div className="min-h-screen" style={{ background: "var(--lifeflow-background)" }}>
+      <main className={`w-full max-w-[430px] mx-auto ${isFullscreen ? "" : "pb-[100px]"}`}>
         {children}
       </main>
+      {!isFullscreen && <AccountingTabBar />}
     </div>
   );
 }

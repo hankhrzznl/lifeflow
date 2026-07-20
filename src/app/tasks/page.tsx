@@ -14,10 +14,10 @@ import { showToast } from "@/components/ui/Toast";
 // ============================================================
 
 const QUADRANTS = [
-  { key: "q1", label: "重要且紧急", desc: "立即去做", color: "#FF3B30", bg: "#FF3B3010" },
-  { key: "q2", label: "重要不紧急", desc: "计划去做", color: "#007AFF", bg: "#007AFF10" },
-  { key: "q3", label: "不重要紧急", desc: "委托他人", color: "#FF9500", bg: "#FF950010" },
-  { key: "q4", label: "不重要不紧急", desc: "尽量不做", color: "#8E8E93", bg: "#8E8E9310" },
+  { key: "q1", label: "重要且紧急", desc: "立即去做", colorBar: "var(--state-error)", color: "#FF3B30" },
+  { key: "q2", label: "重要不紧急", desc: "计划去做", colorBar: "var(--lifeflow-primary)", color: "#2563EB" },
+  { key: "q3", label: "不重要紧急", desc: "委托他人", colorBar: "var(--state-warning)", color: "#F59E0B" },
+  { key: "q4", label: "不重要不紧急", desc: "尽量不做", colorBar: "var(--color-text-disabled)", color: "#C7C7CC" },
 ] as const;
 
 function todayStr(): string {
@@ -31,7 +31,6 @@ export default function TasksPage() {
   const [addQuadrant, setAddQuadrant] = useState<"q1" | "q2" | "q3" | "q4">("q2");
   const [newTitle, setNewTitle] = useState("");
   const [adding, setAdding] = useState(false);
-  const [expandedQuadrant, setExpandedQuadrant] = useState<string | null>("q1");
 
   const allTasks = useLiveQuery(() => getAllScheduleTasks(), [], [] as ScheduleTask[]);
   const today = todayStr();
@@ -50,6 +49,10 @@ export default function TasksPage() {
   const todayTasks = useMemo(() => {
     return (allTasks ?? []).filter((t) => t.date === today && !t.isCompleted);
   }, [allTasks, today]);
+
+  const completedCount = useMemo(() => {
+    return allTasks ? allTasks.filter((t) => t.isCompleted).length : 0;
+  }, [allTasks]);
 
   const toggleTask = useCallback(async (task: ScheduleTask) => {
     await updateScheduleTask(task.id, { isCompleted: !task.isCompleted });
@@ -81,15 +84,15 @@ export default function TasksPage() {
   }, [newTitle, addQuadrant, today]);
 
   return (
-    <div className="px-4 pt-5 pb-6">
-      {/* ===== 页头 ===== */}
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h1 className="text-[34px] font-bold tracking-[-0.02em] leading-tight">事项</h1>
-          <p className="text-[15px] mt-1" style={{ color: "#8E8E93" }}>
-            {todayTasks.length} 件待办 · {allTasks ? allTasks.filter((t) => t.isCompleted).length : 0} 件已完成
-          </p>
-        </div>
+    <div className="px-4 pt-8 pb-[100px]">
+      {/* ===== Header ===== */}
+      <div className="mb-6">
+        <h1 className="text-[28px] font-bold tracking-[-0.022em] text-[var(--color-text-primary)]">
+          事项
+        </h1>
+        <p className="text-[14px] font-medium text-[var(--color-text-secondary)] mt-1.5">
+          {todayTasks.length} 件待办 · {completedCount} 件已完成
+        </p>
       </div>
 
       {/* ===== 快捷添加 ===== */}
@@ -99,16 +102,16 @@ export default function TasksPage() {
             type="text" value={newTitle} onChange={(e) => setNewTitle(e.target.value)}
             placeholder="输入事项标题..."
             autoFocus
-            className="w-full text-[17px] outline-none mb-3"
+            className="w-full text-[17px] outline-none mb-3 bg-transparent text-[var(--color-text-primary)] placeholder:text-[var(--color-text-disabled)]"
             onKeyDown={(e) => { if (e.key === "Enter") handleAdd(); }}
           />
           <div className="flex gap-2 mb-3">
             {QUADRANTS.map((q) => (
               <button key={q.key} type="button"
                 onClick={() => setAddQuadrant(q.key)}
-                className="px-3 py-1 rounded-full text-[12px] font-medium"
+                className="px-3 py-1 rounded-full text-[12px] font-medium transition-colors"
                 style={{
-                  background: addQuadrant === q.key ? q.color : q.bg,
+                  background: addQuadrant === q.key ? q.color : `${q.color}10`,
                   color: addQuadrant === q.key ? "#FFF" : q.color,
                 }}>
                 {q.label}
@@ -130,7 +133,7 @@ export default function TasksPage() {
         </button>
       )}
 
-      {/* ===== 四象限网格 ===== */}
+      {/* ===== 四象限 2x2 Grid ===== */}
       <div className="grid grid-cols-2 gap-3">
         {QUADRANTS.map((q) => {
           const items = grouped[q.key] || [];
@@ -138,28 +141,31 @@ export default function TasksPage() {
             <motion.div key={q.key}
               initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
               transition={{ delay: QUADRANTS.indexOf(q) * 0.05 }}
-              className="rounded-xl overflow-hidden" style={{ background: q.bg }}>
-              {/* 区头 */}
-              <button type="button" onClick={() => setExpandedQuadrant(expandedQuadrant === q.key ? null : q.key)}
-                className="w-full flex items-center justify-between px-3 py-3" style={{ background: `${q.color}20` }}>
-                <div className="text-left">
-                  <div className="text-[14px] font-semibold" style={{ color: q.color }}>{q.label}</div>
-                  <div className="text-[11px]" style={{ color: q.color, opacity: 0.7 }}>{q.desc} · {items.length}件</div>
+              className="rounded-[20px] overflow-hidden bg-[var(--color-surface-card)] shadow-[var(--shadow-card)]">
+              {/* Color bar */}
+              <div className="h-1" style={{ background: q.colorBar }} />
+              {/* Inner content */}
+              <div className="p-4 flex flex-col items-center justify-center min-h-[142px]">
+                <div
+                  className="text-[15px] font-semibold mb-1"
+                  style={{ color: q.colorBar }}
+                >{q.label}</div>
+                <div className="text-[12px] font-medium text-[var(--color-text-secondary)] mb-1">
+                  {q.desc} · {items.length}件
                 </div>
-              </button>
-              {/* 事项列表 */}
-              <div className="px-2 pb-2">
                 {items.length === 0 ? (
-                  <div className="py-4 text-center text-[13px]" style={{ color: "#8E8E93" }}>空</div>
+                  <div className="text-[26px] font-light text-[var(--color-text-disabled)]">空</div>
                 ) : (
-                  items.map((t) => (
-                    <button key={t.id} type="button"
-                      className="w-full flex items-center gap-2 px-2 py-2.5 rounded-lg hover:bg-white/50 transition-colors text-left"
-                      onClick={() => toggleTask(t)}>
-                      <Circle className="w-4 h-4 shrink-0" style={{ color: q.color }} />
-                      <span className="flex-1 text-[14px] truncate" style={{ color: "#000" }}>{t.title}</span>
-                    </button>
-                  ))
+                  <div className="w-full space-y-0.5 mt-2">
+                    {items.map((t) => (
+                      <button key={t.id} type="button"
+                        className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-left"
+                        onClick={() => toggleTask(t)}>
+                        <Circle className="w-3.5 h-3.5 shrink-0" style={{ color: q.colorBar }} />
+                        <span className="flex-1 text-[13px] truncate text-[var(--color-text-primary)]">{t.title}</span>
+                      </button>
+                    ))}
+                  </div>
                 )}
               </div>
             </motion.div>

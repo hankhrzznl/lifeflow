@@ -1,18 +1,22 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Droplets, Moon, Wallet, Flame } from "lucide-react";
+import {
+  Wallet,
+  Target, ChevronRight, CheckSquare, Calendar, Heart,
+  CheckCircle, Timer, CalendarDays, StickyNote, LayoutGrid
+} from "lucide-react";
 import { getTransactionsByDate } from "@/lib/db/accounting.db";
 import type { Transaction } from "@/lib/db/accounting.db";
 import { getWaterLogsByDate, getWaterGoal, getWorkoutSessionByDate, getSleepLogByDate } from "@/lib/db/health.db";
-import { getHabits, toggleHabitDay } from "@/lib/db/life.db";
+import { getHabits } from "@/lib/db/life.db";
 import type { Habit } from "@/lib/db/life.db";
 
 // ============================================================
-// 首页仪表盘 — 精简版：问候 + 收支 + 健康 + 习惯
+// 首页仪表盘 — 问候 + 今日摘要 + 快捷功能入口
 // ============================================================
 
 function todayStr(): string {
@@ -29,6 +33,26 @@ function timeToMinutes(t: string): number {
   const [h, m] = t.split(":").map(Number);
   return h * 60 + m;
 }
+
+function formatDateChinese(date: Date): string {
+  const weekDays = ["日", "一", "二", "三", "四", "五", "六"];
+  return `${date.getMonth() + 1}月${date.getDate()}日 周${weekDays[date.getDay()]}`;
+}
+
+// ============================================================
+
+const QUICK_MODULES = [
+  { label: "目标管理", icon: Target, href: "/efficiency" },
+  { label: "事项清单", icon: CheckSquare, href: "/tasks" },
+  { label: "日程安排", icon: Calendar, href: "/efficiency/schedule" },
+  { label: "记账", icon: Wallet, href: "/more/accounting" },
+  { label: "健康", icon: Heart, href: "/more" },
+  { label: "习惯打卡", icon: CheckCircle, href: "/more/habits" },
+  { label: "专注计时", icon: Timer, href: "/focus" },
+  { label: "倒数日", icon: CalendarDays, href: "/more/countdown" },
+  { label: "备忘录", icon: StickyNote, href: "/more/notes" },
+  { label: "更多工具", icon: LayoutGrid, href: "/more" },
+];
 
 // ============================================================
 
@@ -55,129 +79,109 @@ export default function HomePage() {
   const sleepHours = todaySleep ? `${Math.floor(timeToMinutes(todaySleep.actualTime) / 60)}h` : "--";
   const trained = !!todayWorkout;
 
-  const toggleHabit = useCallback(async (habit: Habit) => {
-    await toggleHabitDay(habit.id, today);
-  }, [today]);
+  const completedHabits = useMemo(() => {
+    if (!habits || habits.length === 0) return 0;
+    return habits.filter((h) => h.days[today]).length;
+  }, [habits, today]);
 
-  const hour = new Date().getHours();
+  const now = new Date();
+  const hour = now.getHours();
   const greeting = hour < 6 ? "凌晨好" : hour < 9 ? "早上好" : hour < 12 ? "上午好" : hour < 14 ? "中午好" : hour < 18 ? "下午好" : "晚上好";
 
+  // ── Section 2 摘要数据 ──
+  const summaryStrips = [
+    {
+      label: "今日目标",
+      icon: Target,
+      value: habits && habits.length > 0
+        ? `${completedHabits}/${habits.length} 完成`
+        : "暂无目标",
+      href: "/efficiency",
+    },
+    {
+      label: "今日收支",
+      icon: Wallet,
+      value: `收入 ¥${fmtCompact(todayIncome)} · 支出 ¥${fmtCompact(todayExpense)}`,
+      href: "/more/accounting",
+    },
+    {
+      label: "今日健康",
+      icon: Heart,
+      value: `睡眠 ${sleepHours} · 饮水 ${waterPct}% · 训练${trained ? "✓" : "--"}`,
+      href: "/more",
+    },
+  ];
+
   return (
-    <div className="px-4 pt-5 pb-6 flex flex-col gap-4">
-      {/* ===== 问候（缩小） ===== */}
-      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-        className="rounded-2xl px-5 py-4 text-white" style={{ background: "linear-gradient(135deg, #6366F1, #8B5CF6)" }}>
-        <div className="flex items-center justify-between">
-          <div>
-            <span className="text-[15px] opacity-90">{greeting}</span>
-            <span className="text-[13px] opacity-70 ml-2">三条线，一张网</span>
-          </div>
-          <span className="text-[13px] opacity-60">{today}</span>
-        </div>
+    <div>
+      {/* ===== Section 1: Header / Date Greeting ===== */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: "easeOut" }}
+        className="px-5 pt-4 pb-6"
+      >
+        <div className="text-label">{formatDateChinese(now)}</div>
+        <h1 className="text-title-large" style={{ color: "var(--color-text-primary)" }}>
+          {greeting}
+        </h1>
       </motion.div>
 
-      {/* ===== 今日收支 ===== */}
-      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
-        className="rounded-xl bg-white p-4 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <Wallet className="w-5 h-5" style={{ color: "#34C759" }} />
-            <span className="text-[17px] font-semibold">今日收支</span>
-          </div>
-          <Link href="/more/accounting" className="text-[13px]" style={{ color: "#34C759" }}>查看全部 →</Link>
-        </div>
-        <div className="flex gap-4">
-          <div className="flex-1 rounded-lg p-3" style={{ background: "#34C75910" }}>
-            <div className="text-[13px]" style={{ color: "#8E8E93" }}>收入</div>
-            <div className="text-[20px] font-bold mt-1" style={{ color: "#007AFF" }}>¥{fmtCompact(todayIncome)}</div>
-          </div>
-          <div className="flex-1 rounded-lg p-3" style={{ background: "#FF3B3010" }}>
-            <div className="text-[13px]" style={{ color: "#8E8E93" }}>支出</div>
-            <div className="text-[20px] font-bold mt-1" style={{ color: "#FF3B30" }}>¥{fmtCompact(todayExpense)}</div>
-          </div>
-        </div>
-      </motion.div>
-
-      {/* ===== 健康概览 ===== */}
-      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-        className="rounded-xl bg-white p-4 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <Heart className="w-5 h-5" style={{ color: "#FF9500" }} />
-            <span className="text-[17px] font-semibold">健康概览</span>
-          </div>
-          <Link href="/more" className="text-[13px]" style={{ color: "#FF9500" }}>详情 →</Link>
-        </div>
-        <div className="flex gap-3">
-          <div className="flex-1 rounded-lg p-3 text-center" style={{ background: "#007AFF10" }}>
-            <Droplets className="w-5 h-5 mx-auto mb-1" style={{ color: "#007AFF" }} />
-            <div className="text-[15px] font-bold" style={{ color: "#007AFF" }}>{waterPct}%</div>
-            <div className="text-[12px]" style={{ color: "#8E8E93" }}>饮水</div>
-          </div>
-          <div className="flex-1 rounded-lg p-3 text-center" style={{ background: "#5856D610" }}>
-            <Moon className="w-5 h-5 mx-auto mb-1" style={{ color: "#5856D6" }} />
-            <div className="text-[15px] font-bold" style={{ color: "#5856D6" }}>{sleepHours}</div>
-            <div className="text-[12px]" style={{ color: "#8E8E93" }}>睡眠</div>
-          </div>
-          <div className="flex-1 rounded-lg p-3 text-center" style={{ background: "#FF950010" }}>
-            <Flame className="w-5 h-5 mx-auto mb-1" style={{ color: trained ? "#FF9500" : "#C7C7CC" }} />
-            <div className="text-[15px] font-bold" style={{ color: trained ? "#FF9500" : "#C7C7CC" }}>{trained ? "✓" : "--"}</div>
-            <div className="text-[12px]" style={{ color: "#8E8E93" }}>训练</div>
-          </div>
-        </div>
-      </motion.div>
-
-      {/* ===== 习惯打卡 ===== */}
-      {habits && habits.length > 0 && (
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
-          className="rounded-xl bg-white p-4 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-[17px] font-semibold">习惯打卡</span>
-            <Link href="/more/habits" className="text-[13px]" style={{ color: "#8E8E93" }}>详情 →</Link>
-          </div>
-          <div className="flex gap-3">
-            {habits.slice(0, 5).map((h) => {
-              const done = h.days[today];
-              return (
-                <button key={h.id} type="button" onClick={() => toggleHabit(h)}
-                  className="flex-1 flex flex-col items-center gap-1 py-2 rounded-lg"
-                  style={{ background: `${h.color}10` }}>
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-lg ${done ? "opacity-100" : "opacity-40"}`}
-                    style={{ background: done ? h.color : "transparent", border: done ? "none" : `2px solid ${h.color}40` }}>
-                    <span>{getHabitEmoji(h.name)}</span>
+      {/* ===== Section 2: Today's Summary Strips ===== */}
+      <div className="flex flex-col gap-3 px-5 pb-8">
+        {summaryStrips.map((strip, i) => (
+          <motion.div
+            key={strip.label}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 + i * 0.05, duration: 0.4, ease: "easeOut" }}
+          >
+            <Link href={strip.href} className="block">
+              <div className="card-standard flex items-center gap-3 px-5 py-4">
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                  style={{ background: "var(--lifeflow-brand-50)" }}
+                >
+                  <strip.icon className="w-5 h-5" style={{ color: "var(--lifeflow-brand)" }} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[15px] font-medium" style={{ color: "var(--color-text-primary)" }}>
+                    {strip.label}
                   </div>
-                  <span className="text-[11px] font-medium" style={{ color: done ? "#000" : "#C7C7CC" }}>{h.name}</span>
-                </button>
-              );
-            })}
-          </div>
-        </motion.div>
-      )}
+                  <div
+                    className="text-[13px] truncate"
+                    style={{ color: "var(--color-text-secondary)" }}
+                  >
+                    {strip.value}
+                  </div>
+                </div>
+                <ChevronRight className="w-5 h-5 shrink-0" style={{ color: "var(--color-text-disabled)" }} />
+              </div>
+            </Link>
+          </motion.div>
+        ))}
+      </div>
 
-      {(!habits || habits.length === 0) && (
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
-          className="rounded-xl bg-white p-4 shadow-[0_1px_4px_rgba(0,0,0,0.04)] text-center">
-          <p className="text-[15px]" style={{ color: "#AEAEB2" }}>还没有习惯，去添加一个吧</p>
-          <Link href="/more/habits" className="text-[13px] mt-1 inline-block" style={{ color: "#6366F1" }}>前往设置 →</Link>
-        </motion.div>
-      )}
+      {/* ===== Section 3: Quick Module Grid ===== */}
+      <div className="grid grid-cols-2 gap-3 px-5 pb-16">
+        {QUICK_MODULES.map((mod, i) => (
+          <motion.div
+            key={mod.label}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 + i * 0.04, duration: 0.4, ease: "easeOut" }}
+          >
+            <Link href={mod.href} className="block">
+              <div className="card-standard flex flex-col items-start justify-center px-4 h-[72px]">
+                <mod.icon className="h-5 w-5 mb-1.5" style={{ color: "var(--lifeflow-brand)" }} />
+                <span className="text-[15px] font-medium" style={{ color: "var(--color-text-primary)" }}>
+                  {mod.label}
+                </span>
+              </div>
+            </Link>
+          </motion.div>
+        ))}
+      </div>
     </div>
-  );
-}
-
-// ─── 工具 ────────────────────────────────────────────────────
-
-function getHabitEmoji(name: string): string {
-  const map: Record<string, string> = {
-    "早起6:30": "🌅", "阅读30分钟": "📖", "运动": "🏃", "冥想10分钟": "🧘", "喝水8杯": "💧",
-  };
-  return map[name] || "✅";
-}
-
-function Heart(props: { className?: string; style?: React.CSSProperties }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" {...props}>
-      <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
-    </svg>
   );
 }

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence, type PanInfo } from "framer-motion";
 import {
-  Check, Trash2,
+  Check, Trash2, ChevronLeft, ChevronRight, CalendarDays,
 } from "lucide-react";
 import { useEfficiencyStore } from "@/lib/store/efficiencyStore";
 import type { ScheduleTask } from "@/lib/db/efficiency.db";
@@ -45,7 +45,7 @@ function SegmentedControl({ selected, onChange }: {
   onChange: (v: "timeline" | "tasks") => void;
 }) {
   return (
-    <div className="mx-4 flex bg-[#F2F2F7] rounded-lg p-0.5">
+    <div className="mx-5 flex bg-[#F2F2F7] rounded-lg p-0.5">
       {(["timeline", "tasks"] as const).map((key) => (
         <button
           key={key}
@@ -79,6 +79,12 @@ export default function SchedulePage() {
     const mon = getWeekMonday(new Date(), weekOffset);
     return Array.from({ length: 7 }, (_, i) => addDays(mon, i));
   }, [weekOffset]);
+
+  // 当前周所属月份
+  const weekMonthLabel = useMemo(() => {
+    const mon = weekDates[0];
+    return `${mon.getFullYear()}年${mon.getMonth() + 1}月`;
+  }, [weekDates]);
 
   // 如果 selectedDate 不在当前可见周内，自动切到对应周
   useEffect(() => {
@@ -154,64 +160,106 @@ export default function SchedulePage() {
 
   const formatDate = (d: Date) => `${d.getMonth() + 1}月${d.getDate()}日`;
 
+  // ── 空状态组件 ──
+  const EmptyState = () => (
+    <div className="flex flex-col items-center justify-center py-20">
+      <div className="w-16 h-16 rounded-full bg-[var(--color-surface-secondary)] flex items-center justify-center mb-4">
+        <CalendarDays className="w-7 h-7 text-[var(--color-text-disabled)]" strokeWidth={1.5} />
+      </div>
+      <p className="text-[16px] font-medium text-[var(--color-text-secondary)] mb-1">
+        当日暂无安排
+      </p>
+      <p className="text-caption">添加日程以开始规划你的时间</p>
+    </div>
+  );
+
   // ── 渲染 ──
   return (
     <div className="min-h-screen bg-[#FAFAFA]" style={{ maxWidth: 430, margin: "0 auto" }}>
       {/* ===== Header ===== */}
-      <div className="flex items-center h-14 px-4 justify-center">
-        <span className="text-[17px] font-semibold text-[#1D1D1F]">日程</span>
+      <div className="px-5 pt-8 pb-3">
+        <h1 className="text-title-large" style={{ color: "var(--color-text-primary)" }}>
+          日程
+        </h1>
+        <p className="text-label mt-1">时间轴任务</p>
+      </div>
+
+      {/* ===== Week Calendar Strip ===== */}
+      <div className="px-5 mb-6">
+        <motion.div className="card-standard p-4 select-none" onPanEnd={handleDragEnd}>
+          {/* 月份导航 */}
+          <div className="flex items-center justify-between mb-3">
+            <button
+              type="button"
+              onClick={() => setWeekOffset((o) => o - 1)}
+              className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[var(--color-surface-secondary)] transition-colors"
+            >
+              <ChevronLeft className="w-4 h-4 text-[var(--color-text-secondary)]" strokeWidth={2} />
+            </button>
+            <span className="text-[15px] font-semibold text-[var(--color-text-primary)]">
+              {weekMonthLabel}
+            </span>
+            <button
+              type="button"
+              onClick={() => setWeekOffset((o) => o + 1)}
+              className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[var(--color-surface-secondary)] transition-colors"
+            >
+              <ChevronRight className="w-4 h-4 text-[var(--color-text-secondary)]" strokeWidth={2} />
+            </button>
+          </div>
+
+          {/* 7 日条 */}
+          <div className="grid grid-cols-7 text-center">
+            {weekDates.map((date, idx) => {
+              const ds = toDateStr(date);
+              const isToday = ds === todayStr;
+              const isActive = ds === selectedDate;
+              return (
+                <button
+                  key={ds}
+                  type="button"
+                  onClick={() => handleSelectDay(date)}
+                  className="flex flex-col items-center gap-1"
+                >
+                  <span className="text-[11px] text-[var(--color-text-secondary)]">
+                    {WEEK_DAYS[idx]}
+                  </span>
+                  <span
+                    className={`w-9 h-9 flex items-center justify-center rounded-full text-[15px] font-medium transition-colors ${
+                      isActive
+                        ? "bg-[var(--lifeflow-primary)] text-white"
+                        : isToday
+                        ? "text-[var(--lifeflow-primary)] font-bold"
+                        : "text-[var(--color-text-primary)]"
+                    }`}
+                  >
+                    {date.getDate()}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </motion.div>
       </div>
 
       {/* ===== Segmented Control ===== */}
       <SegmentedControl selected={view} onChange={setView} />
 
-      {/* ===== 周日历条 ===== */}
-      <motion.div className="px-4 mt-3 select-none" onPanEnd={handleDragEnd}>
-        {/* 星期 */}
-        <div className="grid grid-cols-7 text-center text-[12px] text-[#86868B] mb-1">
-          {WEEK_DAYS.map((d) => <span key={d}>{d}</span>)}
-        </div>
-        {/* 日期 */}
-        <div className="grid grid-cols-7 text-center">
-          {weekDates.map((date) => {
-            const ds = toDateStr(date);
-            const isToday = ds === todayStr;
-            const isActive = ds === selectedDate;
-            return (
-              <button
-                key={ds}
-                type="button"
-                onClick={() => handleSelectDay(date)}
-                className="flex flex-col items-center justify-center py-1.5"
-              >
-                <span
-                  className={`w-8 h-8 flex items-center justify-center rounded-full text-[15px] font-medium transition-colors ${
-                    isActive
-                      ? "bg-[#6366F1] text-white"
-                      : isToday
-                      ? "text-[#6366F1] font-bold"
-                      : "text-[#1D1D1F]"
-                  }`}
-                >
-                  {date.getDate()}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </motion.div>
-
       {/* ===== 内容区 ===== */}
-      <div className="px-4 mt-4">
+      <div className="px-5 mt-4">
         {view === "timeline" ? (
-          <TimelineView date={selectedDate} />
+          <>
+            {sortedTasks.length === 0 ? (
+              <EmptyState />
+            ) : (
+              <TimelineView date={selectedDate} />
+            )}
+          </>
         ) : (
           <>
             {/* 任务列表 */}
             {sortedTasks.length === 0 ? (
-              <div className="text-center py-16">
-                <p className="text-[15px] text-[#AEAEB2]">当日暂无任务</p>
-              </div>
+              <EmptyState />
             ) : (
               <div className="flex flex-col gap-2">
                 {sortedTasks.map((task) => (

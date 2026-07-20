@@ -1,10 +1,10 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Plus, CheckCircle2, Pause, Play, SquarePen, Copy, Trash2, Pencil,
+  Plus, CheckCircle2, Pause, Play, SquarePen, Copy, Trash2, Pencil, Target,
 } from "lucide-react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { useEfficiencyStore } from "@/lib/store/efficiencyStore";
@@ -225,36 +225,51 @@ export default function EfficiencyPage() {
   return (
     <div>
       {/* ===== Header ===== */}
-      <div className="px-4 pt-5">
-        <h1 className="text-[34px] font-bold text-[#1D1D1F]">目标</h1>
-        <p className="text-[15px] mt-1" style={{ color: "#8E8E93" }}>项目 · 目标 · 任务</p>
+      <div className="px-5 pt-[var(--safe-area-top)] pb-2 flex items-center justify-between">
+        <div>
+          <h1 className="text-[34px] font-bold text-[var(--color-text-primary)]">目标</h1>
+          <p className="text-[15px] mt-1 text-[var(--color-text-secondary)]">项目 · 目标 · 任务</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => router.push(`/efficiency/create${selectedProjectId ? `?projectId=${selectedProjectId}` : ""}`)}
+          className="w-10 h-10 rounded-full bg-[var(--color-surface-card)] border border-[var(--lifeflow-border)] flex items-center justify-center shadow-card"
+        >
+          <Plus className="w-5 h-5 text-[var(--lifeflow-primary)]" />
+        </button>
       </div>
 
       {/* ===== Project 标签筛选 ===== */}
-      <div className="px-4 mt-3 flex items-center gap-2 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
+      <div className="px-5 pt-3 pb-4 flex items-center gap-2 overflow-x-auto no-scrollbar">
         <button
           type="button"
           onClick={() => setSelectedProjectId(null)}
-          className={`shrink-0 h-8 px-3 rounded-full text-[13px] font-medium transition-colors ${
+          className={`shrink-0 h-9 px-4 rounded-full text-[15px] font-medium ${
             selectedProjectId === null
-              ? "bg-[#6366F1] text-white"
-              : "bg-[#F5F5F5] text-[#86868B]"
+              ? "bg-[var(--lifeflow-primary)] text-[var(--color-text-inverse)]"
+              : "bg-[var(--color-surface-card)] text-[var(--color-text-secondary)] border border-[var(--lifeflow-border)]"
           }`}
+          style={selectedProjectId === null ? { boxShadow: "var(--shadow-tab-center)" } : undefined}
         >
           全部
         </button>
         {(projects ?? []).map((p) => {
-          const isNone = p.name === "无项目";
           const isSelected = selectedProjectId === p.id;
           return (
             <button
               key={p.id}
               type="button"
               onClick={() => setSelectedProjectId(p.id)}
-              className={`shrink-0 h-8 px-3 rounded-full text-[13px] font-medium transition-colors ${
-                isSelected ? "text-white" : "bg-[#F5F5F5] text-[#86868B]"
+              className={`shrink-0 h-9 px-4 rounded-full text-[15px] font-medium ${
+                isSelected
+                  ? "text-[var(--color-text-inverse)]"
+                  : "bg-[var(--color-surface-card)] text-[var(--color-text-secondary)] border border-[var(--lifeflow-border)]"
               }`}
-              style={{ background: isSelected ? (isNone ? "#1D1D1F" : p.color) : undefined }}
+              style={
+                isSelected
+                  ? { backgroundColor: p.color, boxShadow: "var(--shadow-tab-center)" }
+                  : undefined
+              }
             >
               {p.name}
             </button>
@@ -283,8 +298,24 @@ export default function EfficiencyPage() {
 
       {/* ===== 空态 ===== */}
       {showEmpty && (
-        <div className="flex flex-col items-center pt-[80px]">
-          <p className="text-[15px] text-[#AEAEB2]">开始创建一个目标吧！</p>
+        <div className="card-standard p-8 flex flex-col items-center text-center gap-5">
+          <div className="w-20 h-20 rounded-full bg-[var(--color-surface-secondary)] flex items-center justify-center">
+            <Target className="h-10 w-10 text-[var(--color-text-disabled)]" />
+          </div>
+          <div>
+            <p className="text-[17px] font-medium text-[var(--color-text-secondary)]">开始创建一个目标吧！</p>
+            <p className="text-[14px] text-[var(--color-text-disabled)] mt-1">
+              从项目开始，分解为目标和任务，让每一步都有迹可循
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => router.push("/efficiency/create")}
+            className="h-11 px-7 rounded-full text-[16px] font-semibold bg-[var(--lifeflow-primary)] text-[var(--color-text-inverse)]"
+            style={{ boxShadow: "var(--shadow-tab-center)" }}
+          >
+            创建目标
+          </button>
         </div>
       )}
 
@@ -456,21 +487,6 @@ export default function EfficiencyPage() {
       {quickGoalId && (
         <div className="fixed inset-0 z-30" onClick={() => setQuickGoalId(null)} />
       )}
-
-      {/* ===== 悬浮新建按钮 ===== */}
-      <motion.button
-        whileTap={{ scale: 0.9 }}
-        onClick={() => router.push(`/efficiency/create${selectedProjectId ? `?projectId=${selectedProjectId}` : ""}`)}
-        className="fixed z-20 w-14 h-14 rounded-full flex items-center justify-center"
-        style={{
-          right: 20,
-          bottom: `calc(24px + var(--bottom-nav-height))`,
-          background: ACCENT,
-          boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-        }}
-      >
-        <Plus className="w-6 h-6 text-white" strokeWidth={2.5} />
-      </motion.button>
 
       {/* ===== 目标操作弹层 ===== */}
       <AnimatePresence>

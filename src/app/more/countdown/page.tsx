@@ -50,78 +50,159 @@ export default function CountdownPage() {
   }, [countdowns]);
 
   return (
-    <div className="px-4 pt-5 pb-6">
-      <div className="flex items-center gap-2 mb-4">
-        <button type="button" onClick={() => router.push("/more")} className="w-8 h-8 -ml-1 flex items-center justify-center">
-          <ChevronLeft className="w-6 h-6 text-black" />
+    <div className="pb-[100px]">
+      {/* Header */}
+      <div className="flex items-center px-4 pt-3 pb-2">
+        <button
+          type="button"
+          onClick={() => router.push("/more")}
+          className="inline-flex h-8 w-8 items-center justify-center rounded-lg"
+          style={{
+            background: "var(--color-surface-card)",
+            border: "1px solid var(--lifeflow-border)",
+          }}
+        >
+          <ChevronLeft className="w-4 h-4" style={{ color: "var(--color-text-primary)" }} />
         </button>
-        <h1 className="text-[34px] font-bold tracking-[-0.02em] leading-tight flex-1">倒数日</h1>
+        <h1 className="text-title-nav flex-1 text-center" style={{ color: "var(--color-text-primary)" }}>
+          倒数日
+        </h1>
+        <div className="w-8" />
       </div>
-      <p className="text-[15px] mb-4" style={{ color: "#8E8E93" }}>重要日子 · 倒计时提醒</p>
 
-      {showAdd ? (
-        <div className="rounded-xl bg-white p-4 mb-4 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
-          <div className="flex gap-2 mb-3">
-            <input type="text" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="事件名称" autoFocus
-              className="flex-1 text-[17px] outline-none" />
-            <div className="flex gap-1">
+      <div className="px-4 pt-5">
+        {/* Add form or button */}
+        {showAdd ? (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="card-standard p-4 mb-4"
+          >
+            <input
+              type="text" value={newName} onChange={(e) => setNewName(e.target.value)}
+              placeholder="事件名称" autoFocus
+              className="w-full text-[16px] outline-none bg-transparent"
+              style={{ color: "var(--color-text-primary)" }}
+            />
+            <div className="flex gap-1 mt-3">
               {ICONS.map((icon) => (
-                <button key={icon} onClick={() => setNewIcon(icon)}
-                  className={`w-8 h-8 rounded-full text-lg ${newIcon === icon ? "bg-[#6366F1]20 ring-2 ring-[#6366F1]" : ""}`}>{icon}</button>
+                <button
+                  key={icon}
+                  onClick={() => setNewIcon(icon)}
+                  className="w-8 h-8 rounded-full text-lg"
+                  style={{
+                    background: newIcon === icon ? "var(--lifeflow-brand-50)" : "transparent",
+                    outline: newIcon === icon ? "2px solid var(--lifeflow-primary)" : "none",
+                    outlineOffset: 2,
+                  }}
+                >
+                  {icon}
+                </button>
               ))}
             </div>
-          </div>
-          <input type="date" value={newDate} onChange={(e) => setNewDate(e.target.value)}
-            className="w-full h-10 rounded-lg px-3 text-[15px] outline-none mb-3" style={{ background: "#F2F2F7" }} />
-          <div className="flex gap-2">
-            <button onClick={() => { setShowAdd(false); setNewName(""); setNewDate(""); }}
-              className="flex-1 h-10 rounded-lg text-[15px]" style={{ background: "#F2F2F7", color: "#8E8E93" }}>取消</button>
-            <button onClick={handleAdd} disabled={!newName.trim() || !newDate}
-              className="flex-1 h-10 rounded-lg text-[15px] font-semibold text-white"
-              style={{ background: "#6366F1", opacity: newName.trim() && newDate ? 1 : 0.5 }}>添加</button>
-          </div>
-        </div>
-      ) : (
-        <button onClick={() => setShowAdd(true)}
-          className="w-full h-11 flex items-center justify-center gap-2 rounded-xl mb-4 text-[15px] font-medium"
-          style={{ background: "#6366F110", color: "#6366F1", border: "1px dashed #6366F140" }}>
-          <Plus className="w-4 h-4" />添加倒数日
-        </button>
-      )}
-
-      <div className="flex flex-col gap-3">
-        {sorted.map((c, i) => {
-          const days = daysBetween(today, c.date);
-          const isPast = days < 0;
-          return (
-            <motion.div key={c.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}
-              className="rounded-xl bg-white p-4 shadow-[0_1px_4px_rgba(0,0,0,0.04)] flex items-center gap-4">
-              <div className="text-3xl">{c.icon}</div>
-              <div className="flex-1 min-w-0">
-                <div className="text-[17px] font-semibold truncate">{c.name}</div>
-                <div className="text-[13px]" style={{ color: "#8E8E93" }}>{c.date}</div>
-              </div>
-              <div className="text-right shrink-0">
-                <div className="text-[24px] font-bold" style={{ color: isPast ? "#8E8E93" : "#6366F1" }}>
-                  {isPast ? `${Math.abs(days)}天前` : days === 0 ? "今天" : `${days}天`}
-                </div>
-                <div className="text-[12px]" style={{ color: "#8E8E93" }}>{isPast ? "" : "后"}</div>
-              </div>
-              <button onClick={() => handleDelete(c.id)} className="w-5 h-5">
-                <Trash2 className="w-4 h-4" style={{ color: "#C7C7CC" }} />
+            <input
+              type="date"
+              value={newDate}
+              onChange={(e) => setNewDate(e.target.value)}
+              className="w-full h-10 rounded-lg px-3 text-[15px] outline-none mt-3"
+              style={{ background: "var(--color-surface-secondary)", border: "1px solid var(--lifeflow-border)" }}
+            />
+            <div className="flex gap-2 mt-3">
+              <button
+                onClick={() => { setShowAdd(false); setNewName(""); setNewDate(""); }}
+                className="flex-1 h-10 rounded-lg text-[15px]"
+                style={{ background: "var(--color-surface-secondary)", color: "var(--color-text-secondary)" }}
+              >
+                取消
               </button>
-            </motion.div>
-          );
-        })}
-      </div>
+              <button
+                onClick={handleAdd}
+                disabled={!newName.trim() || !newDate}
+                className="flex-1 h-10 rounded-lg text-[15px] font-semibold text-white"
+                style={{ background: "var(--lifeflow-primary)", opacity: newName.trim() && newDate ? 1 : 0.5 }}
+              >
+                添加
+              </button>
+            </div>
+          </motion.div>
+        ) : (
+          <button
+            onClick={() => setShowAdd(true)}
+            className="w-full h-11 flex items-center justify-center gap-2 rounded-[20px] mb-4 text-[15px] font-medium"
+            style={{
+              background: "var(--lifeflow-brand-50)",
+              color: "var(--lifeflow-primary)",
+              border: "1px dashed var(--lifeflow-primary)",
+              borderColor: "var(--lifeflow-brand-200)",
+            }}
+          >
+            <Plus className="w-4 h-4" />
+            添加倒数日
+          </button>
+        )}
 
-      {(countdowns ?? []).length === 0 && (
-        <div className="text-center py-12">
-          <p className="text-[34px] mb-3">📅</p>
-          <p className="text-[17px] font-semibold mb-1">还没有倒数日</p>
-          <p className="text-[15px]" style={{ color: "#8E8E93" }}>添加重要的日子开始倒计时</p>
+        {/* List */}
+        <div className="flex flex-col gap-3">
+          {sorted.map((c, i) => {
+            const days = daysBetween(today, c.date);
+            const isPast = days < 0;
+            return (
+              <motion.div
+                key={c.id}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.04 }}
+                className="card-standard p-4 flex items-center gap-4"
+              >
+                <div className="text-3xl">{c.icon}</div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[16px] font-semibold truncate" style={{ color: "var(--color-text-primary)" }}>
+                    {c.name}
+                  </div>
+                  <div className="text-[13px] mt-0.5" style={{ color: "var(--color-text-secondary)" }}>{c.date}</div>
+                </div>
+                <div className="text-right shrink-0">
+                  <div
+                    className="text-[24px] font-bold"
+                    style={{ color: isPast ? "var(--color-text-disabled)" : "var(--lifeflow-primary)" }}
+                  >
+                    {isPast ? `${Math.abs(days)}天前` : days === 0 ? "今天" : `${days}天`}
+                  </div>
+                  <div className="text-[12px]" style={{ color: "var(--color-text-secondary)" }}>
+                    {isPast ? "" : "后"}
+                  </div>
+                </div>
+                <button onClick={() => handleDelete(c.id)} className="w-5 h-5">
+                  <Trash2 className="w-4 h-4" style={{ color: "var(--color-text-disabled)" }} />
+                </button>
+              </motion.div>
+            );
+          })}
         </div>
-      )}
+
+        {/* Empty state */}
+        {(countdowns ?? []).length === 0 && !showAdd && (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="card-standard p-10 flex flex-col items-center mt-2"
+          >
+            <p className="text-[17px] font-semibold" style={{ color: "var(--color-text-primary)" }}>
+              暂无重要日子
+            </p>
+            <p className="text-[14px] mt-1.5" style={{ color: "var(--color-text-secondary)" }}>
+              添加重要的日子开始倒计时
+            </p>
+            <button
+              onClick={() => setShowAdd(true)}
+              className="mt-5 h-10 px-6 rounded-full text-[15px] font-semibold text-white"
+              style={{ background: "var(--lifeflow-primary)" }}
+            >
+              添加倒数日
+            </button>
+          </motion.div>
+        )}
+      </div>
     </div>
   );
 }

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { ChevronLeft, Plus, Trash2, StickyNote } from "lucide-react";
+import { ChevronLeft, Plus, Trash2 } from "lucide-react";
 import { getNotes, addNote, updateNote, deleteNote } from "@/lib/db/life.db";
 import type { Note } from "@/lib/db/life.db";
 import { showToast } from "@/components/ui/Toast";
@@ -62,77 +62,166 @@ export default function NotesPage() {
   };
 
   return (
-    <div className="px-4 pt-5 pb-6">
-      <div className="flex items-center gap-2 mb-4">
-        <button type="button" onClick={() => router.push("/more")} className="w-8 h-8 -ml-1 flex items-center justify-center">
-          <ChevronLeft className="w-6 h-6 text-black" />
+    <div className="pb-[100px]">
+      {/* Header */}
+      <div className="flex items-center px-4 pt-3 pb-2">
+        <button
+          type="button"
+          onClick={() => router.push("/more")}
+          className="inline-flex h-8 w-8 items-center justify-center rounded-lg"
+          style={{
+            background: "var(--color-surface-card)",
+            border: "1px solid var(--lifeflow-border)",
+          }}
+        >
+          <ChevronLeft className="w-4 h-4" style={{ color: "var(--color-text-primary)" }} />
         </button>
-        <h1 className="text-[34px] font-bold tracking-[-0.02em] leading-tight flex-1">备忘录</h1>
+        <h1 className="text-title-nav flex-1 text-center" style={{ color: "var(--color-text-primary)" }}>
+          备忘录
+        </h1>
+        <div className="w-8" />
       </div>
-      <p className="text-[15px] mb-4" style={{ color: "#8E8E93" }}>灵感记录 · 随时备忘</p>
 
-      {showAdd ? (
-        <div className="rounded-xl bg-white p-4 mb-4 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
-          <input type="text" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="标题" autoFocus
-            className="w-full text-[17px] font-semibold outline-none mb-2" />
-          <textarea value={newContent} onChange={(e) => setNewContent(e.target.value)} placeholder="内容..." rows={4}
-            className="w-full text-[15px] outline-none resize-none mb-3" />
-          <div className="flex gap-2">
-            <button onClick={() => { setShowAdd(false); setNewTitle(""); setNewContent(""); }}
-              className="flex-1 h-10 rounded-lg text-[15px]" style={{ background: "#F2F2F7", color: "#8E8E93" }}>取消</button>
-            <button onClick={handleAdd} disabled={!newTitle.trim() || !newContent.trim()}
-              className="flex-1 h-10 rounded-lg text-[15px] font-semibold text-white"
-              style={{ background: "#6366F1", opacity: newTitle.trim() && newContent.trim() ? 1 : 0.5 }}>保存</button>
-          </div>
-        </div>
-      ) : (
-        <button onClick={() => setShowAdd(true)}
-          className="w-full h-11 flex items-center justify-center gap-2 rounded-xl mb-4 text-[15px] font-medium"
-          style={{ background: "#6366F110", color: "#6366F1", border: "1px dashed #6366F140" }}>
-          <Plus className="w-4 h-4" />新建备忘录
-        </button>
-      )}
+      <div className="px-4 pt-5">
+        {/* Add form or button */}
+        {showAdd ? (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="card-standard p-4 mb-4"
+          >
+            <input
+              type="text" value={newTitle} onChange={(e) => setNewTitle(e.target.value)}
+              placeholder="标题" autoFocus
+              className="w-full text-[16px] font-semibold outline-none bg-transparent"
+              style={{ color: "var(--color-text-primary)" }}
+            />
+            <textarea
+              value={newContent} onChange={(e) => setNewContent(e.target.value)}
+              placeholder="内容..." rows={4}
+              className="w-full text-[15px] outline-none resize-none mt-2 bg-transparent"
+              style={{ color: "var(--color-text-primary)" }}
+            />
+            <div className="flex gap-2 mt-3">
+              <button
+                onClick={() => { setShowAdd(false); setNewTitle(""); setNewContent(""); }}
+                className="flex-1 h-10 rounded-lg text-[15px]"
+                style={{ background: "var(--color-surface-secondary)", color: "var(--color-text-secondary)" }}
+              >
+                取消
+              </button>
+              <button
+                onClick={handleAdd}
+                disabled={!newTitle.trim() || !newContent.trim()}
+                className="flex-1 h-10 rounded-lg text-[15px] font-semibold text-white"
+                style={{
+                  background: "var(--lifeflow-primary)",
+                  opacity: newTitle.trim() && newContent.trim() ? 1 : 0.5,
+                }}
+              >
+                保存
+              </button>
+            </div>
+          </motion.div>
+        ) : (
+          <button
+            onClick={() => setShowAdd(true)}
+            className="w-full h-11 flex items-center justify-center gap-2 rounded-[20px] mb-4 text-[15px] font-medium"
+            style={{
+              background: "var(--lifeflow-brand-50)",
+              color: "var(--lifeflow-primary)",
+              border: "1px dashed var(--lifeflow-brand-200)",
+            }}
+          >
+            <Plus className="w-4 h-4" />
+            新建备忘录
+          </button>
+        )}
 
-      {loading ? null : notes.length === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-[34px] mb-3">📝</p>
-          <p className="text-[17px] font-semibold mb-1">还没有备忘录</p>
-          <p className="text-[15px]" style={{ color: "#8E8E93" }}>记录你的灵感和想法</p>
-        </div>
-      ) : (
-        <div className="flex flex-col gap-3">
-          {notes.map((n, i) => (
-            <motion.div key={n.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}
-              className="rounded-xl bg-white p-4 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
-              {editingId === n.id ? (
-                <>
-                  <input type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)}
-                    className="w-full text-[17px] font-semibold outline-none mb-2" />
-                  <textarea value={editContent} onChange={(e) => setEditContent(e.target.value)}
-                    className="w-full text-[15px] outline-none resize-none mb-2" rows={3} />
-                  <div className="flex gap-2">
-                    <button onClick={() => setEditingId(null)}
-                      className="h-9 px-4 rounded-lg text-[13px]" style={{ background: "#F2F2F7", color: "#8E8E93" }}>取消</button>
-                    <button onClick={() => handleUpdate(n.id)}
-                      className="h-9 px-4 rounded-lg text-[13px] font-medium text-white" style={{ background: "#6366F1" }}>保存</button>
+        {/* Notes list */}
+        {loading ? null : notes.length === 0 && !showAdd ? (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="card-standard p-10 flex flex-col items-center mt-2"
+          >
+            <p className="text-[17px] font-semibold" style={{ color: "var(--color-text-primary)" }}>
+              暂无笔记
+            </p>
+            <p className="text-[14px] mt-1.5" style={{ color: "var(--color-text-secondary)" }}>
+              记录你的灵感和想法
+            </p>
+            <button
+              onClick={() => setShowAdd(true)}
+              className="mt-5 h-10 px-6 rounded-full text-[15px] font-semibold text-white"
+              style={{ background: "var(--lifeflow-primary)" }}
+            >
+              写笔记
+            </button>
+          </motion.div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {notes.map((n, i) => (
+              <motion.div
+                key={n.id}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.04 }}
+                className="card-standard p-4"
+              >
+                {editingId === n.id ? (
+                  <>
+                    <input
+                      type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)}
+                      className="w-full text-[16px] font-semibold outline-none bg-transparent"
+                      style={{ color: "var(--color-text-primary)" }}
+                    />
+                    <textarea
+                      value={editContent} onChange={(e) => setEditContent(e.target.value)}
+                      className="w-full text-[15px] outline-none resize-none mt-2 bg-transparent" rows={3}
+                      style={{ color: "var(--color-text-primary)" }}
+                    />
+                    <div className="flex gap-2 mt-2">
+                      <button
+                        onClick={() => setEditingId(null)}
+                        className="h-9 px-4 rounded-lg text-[13px]"
+                        style={{ background: "var(--color-surface-secondary)", color: "var(--color-text-secondary)" }}
+                      >
+                        取消
+                      </button>
+                      <button
+                        onClick={() => handleUpdate(n.id)}
+                        className="h-9 px-4 rounded-lg text-[13px] font-medium text-white"
+                        style={{ background: "var(--lifeflow-primary)" }}
+                      >
+                        保存
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="relative">
+                    <button
+                      onClick={() => handleDelete(n.id)}
+                      className="absolute top-0 right-0 w-5 h-5 flex items-center justify-center"
+                    >
+                      <Trash2 className="w-4 h-4" style={{ color: "var(--color-text-disabled)" }} />
+                    </button>
+                    <button type="button" onClick={() => startEdit(n)} className="text-left w-full pr-6">
+                      <div className="text-[16px] font-semibold truncate" style={{ color: "var(--color-text-primary)" }}>
+                        {n.title}
+                      </div>
+                      <div className="text-[15px] mt-1 line-clamp-3" style={{ color: "var(--color-text-secondary)" }}>
+                        {n.content}
+                      </div>
+                      <div className="text-[12px] mt-2" style={{ color: "var(--color-text-disabled)" }}>{n.date}</div>
+                    </button>
                   </div>
-                </>
-              ) : (
-                <div className="relative">
-                  <button onClick={() => handleDelete(n.id)} className="absolute top-0 right-0 w-5 h-5 flex items-center justify-center">
-                    <Trash2 className="w-4 h-4" style={{ color: "#C7C7CC" }} />
-                  </button>
-                  <button type="button" onClick={() => startEdit(n)} className="text-left w-full pr-6">
-                    <div className="text-[17px] font-semibold truncate">{n.title}</div>
-                    <div className="text-[15px] mt-1 line-clamp-3" style={{ color: "#4A4A4A" }}>{n.content}</div>
-                    <div className="text-[12px] mt-2" style={{ color: "#C7C7CC" }}>{n.date}</div>
-                  </button>
-                </div>
-              )}
-            </motion.div>
-          ))}
-        </div>
-      )}
+                )}
+              </motion.div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -1,115 +1,230 @@
 @import "tailwindcss";
 
 /* ============================================================ */
-/* 设计系统：LifeFlow Apple 简约（单色基底 + 靛蓝 #5865F2 单强调）  */
-/* 铁律：所有金额一律全黑 #1D1D1F，语义色仅用于8px分类圆点+图标  */
+/* LifeFlow — Warm Gray + Blue Professional Design Tokens       */
+/* Primary: #2563EB (Blue — trust, focus, efficiency)           */
+/* Base: Warm gray neutral background with breathing space      */
 /* ============================================================ */
 
-@theme inline {
-  /* ── 新设计令牌（权威值）── */
-  --color-bg-page:      #FAFAFA;
-  --color-bg-card:      #FFFFFF;
-  --color-bg-fill:      #EEF2FF;
-  --color-accent:       #5865F2;
-  --color-text-primary:   #1D1D1F;
-  --color-text-secondary: #86868B;
-  --color-text-tertiary:  #AEAEB2;
-  --color-border:       #E5E5E5;
-  --color-separator:    #F5F5F5;
-
-  /* ── 语义色（仅用于图标底色与8px分类圆点，金额不许上色）── */
-  --color-success:       #34C759;
-  --color-success-light: #E6F9EC;
-  --color-warning:       #FF9500;
-  --color-warning-light: #FFF2E0;
-  --color-info:          #5865F2;
-  --color-info-light:    #EEF2FF;
-  --color-destructive:   #FF3B30;
-
-  /* ── 字体 ── */
-  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", sans-serif;
-  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
-
-  /* ── 阴影 ── */
-  --shadow-card:     0 1px 4px rgba(0,0,0,0.04);
-  --shadow-elevated: 0 2px 4px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.06);
-  --shadow-modal:    0 4px 24px rgba(0,0,0,0.08), 0 16px 48px rgba(0,0,0,0.04);
-  --shadow-nav:      0 -1px 3px rgba(0,0,0,0.02), 0 -4px 12px rgba(0,0,0,0.04);
-
-  /* ── 圆角 ── */
-  --radius-sm:   8px;
-  --radius-md:   12px;
-  --radius-lg:   16px;
-  --radius-xl:   20px;
-  --radius-2xl:  24px;
-  --radius-full: 9999px;
-
-  /* ── 动画缓动 ── */
-  --ease-spring: cubic-bezier(0.32, 0.72, 0, 1);
-  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
-  --ease-knit: cubic-bezier(0.32, 0.72, 0, 1);
-
-  /* ── 字号 ── */
-  --text-display: 2.25rem;
-  --text-display--line-height: 1.1;
-}
-
-/* ============================================================ */
-/* CSS 变量（供组件和旧代码使用） */
-/* ============================================================ */
-
+/* ---- Brand Colors (Blue) ---- */
 :root {
-  --background:      var(--color-bg-page);
-  --foreground:      var(--color-text-primary);
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --bg-primary:      var(--color-bg-card);
-  --bg-secondary:    var(--color-bg-page);
-  --text-primary:    var(--color-text-primary);
-  --text-secondary:  var(--color-text-secondary);
-  --card-bg:         var(--color-bg-card);
-  --card-border:     var(--color-border);
-  --muted:           var(--color-text-tertiary);
-  --muted-foreground: var(--color-text-secondary);
-  --border:          var(--color-border);
-  --ring:            var(--color-accent);
-  --destructive:     var(--color-destructive);
-  --destructive-foreground: #FFFFFF;
-  --bottom-nav-height: calc(49px + env(safe-area-inset-bottom));
+  --lifeflow-brand: #2563EB;
+  --lifeflow-brand-50: #EFF6FF;
+  --lifeflow-brand-100: #DBEAFE;
+  --lifeflow-brand-200: #BFDBFE;
+  --lifeflow-brand-300: #93C5FD;
+  --lifeflow-brand-400: #60A5FA;
+  --lifeflow-brand-500: #3B82F6;
+  --lifeflow-brand-600: #2563EB;
+  --lifeflow-brand-700: #1D4ED8;
+  --lifeflow-brand-800: #1E40AF;
+  --lifeflow-brand-900: #1E3A8A;
+
+  /* ---- Semantic Aliases ---- */
+  --lifeflow-background: #F8F8F7;
+  --lifeflow-foreground: #1C1C1E;
+  --lifeflow-card: #FFFFFF;
+  --lifeflow-card-foreground: #1C1C1E;
+  --lifeflow-popover: #FFFFFF;
+  --lifeflow-popover-foreground: #1C1C1E;
+  --lifeflow-primary: #2563EB;
+  --lifeflow-primary-foreground: #FFFFFF;
+  --lifeflow-muted: #F0F0ED;
+  --lifeflow-muted-foreground: #8E8E93;
+  --lifeflow-border: #E8E8EA;
+  --lifeflow-input: #F0F0ED;
+  --lifeflow-ring: #2563EB;
+
+  /* ---- Surface Colors ---- */
+  --color-surface-primary: #F8F8F7;
+  --color-surface-secondary: #F0F0ED;
+  --color-surface-card: #FFFFFF;
+
+  /* ---- Functional Colors ---- */
+  --color-expense: #FF3B30;
+  --color-income: #34C759;
+
+  /* ---- State Colors ---- */
+  --state-success: #34C759;
+  --state-warning: #F59E0B;
+  --state-error: #FF3B30;
+  --state-info: #2563EB;
+
+  /* ---- Text Colors ---- */
+  --color-text-primary: #1C1C1E;
+  --color-text-secondary: #8E8E93;
+  --color-text-disabled: #C7C7CC;
+  --color-text-inverse: #FFFFFF;
+
+  /* ---- Shadow ---- */
+  --shadow-card: 0 1px 1px rgba(0, 0, 0, 0.02), 0 2px 16px rgba(0, 0, 0, 0.04);
+  --shadow-card-elevated: 0 2px 2px rgba(0, 0, 0, 0.03), 0 4px 24px rgba(0, 0, 0, 0.06);
+  --shadow-banner: 0 1px 1px rgba(0, 0, 0, 0.02), 0 2px 8px rgba(0, 0, 0, 0.04);
+  --shadow-tab-center: 0 2px 2px rgba(37, 99, 235, 0.12), 0 4px 16px rgba(37, 99, 235, 0.2);
+
+  /* ---- Radius ---- */
+  --lifeflow-radius-small: 12px;
+  --lifeflow-radius-medium: 20px;
+  --lifeflow-radius-large: 24px;
+  --lifeflow-radius-full: 9999px;
+
+  /* ---- Typography ---- */
+  --font-system: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", "PingFang SC", sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", "PingFang SC", sans-serif;
+
+  /* ---- Animation ---- */
+  --easing-spring: cubic-bezier(0.32, 0.72, 0, 1);
+  --duration-standard: 400ms;
+  --duration-fast: 250ms;
+
+  /* ---- Spacing ---- */
+  --safe-area-top: 59px;
+  --safe-area-bottom: 34px;
+  --tab-bar-height: 83px;
+  --bottom-nav-height: 83px;
 }
 
-* {
-  border-color: var(--border);
+/* ---- Dark Mode ---- */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --lifeflow-brand: #3B82F6;
+    --lifeflow-brand-50: #1E293B;
+    --lifeflow-brand-100: #1E3A5F;
+    --lifeflow-brand-200: #1E4B7C;
+    --lifeflow-brand-300: #2563A8;
+    --lifeflow-brand-400: #3B82D4;
+    --lifeflow-brand-500: #3B82F6;
+    --lifeflow-brand-600: #60A5FA;
+    --lifeflow-brand-700: #93C5FD;
+    --lifeflow-brand-800: #BFDBFE;
+    --lifeflow-brand-900: #DBEAFE;
+
+    --lifeflow-background: #0D0D0D;
+    --lifeflow-foreground: #F5F5F7;
+    --lifeflow-card: #1C1C1E;
+    --lifeflow-card-foreground: #F5F5F7;
+    --lifeflow-popover: #1C1C1E;
+    --lifeflow-popover-foreground: #F5F5F7;
+    --lifeflow-primary: #3B82F6;
+    --lifeflow-primary-foreground: #FFFFFF;
+    --lifeflow-muted: #2C2C2E;
+    --lifeflow-muted-foreground: #98989D;
+    --lifeflow-border: #38383A;
+    --lifeflow-input: #2C2C2E;
+    --lifeflow-ring: #3B82F6;
+
+    --color-surface-primary: #0D0D0D;
+    --color-surface-secondary: #1C1C1E;
+    --color-surface-card: #1C1C1E;
+
+    --color-text-primary: #F5F5F7;
+    --color-text-secondary: #98989D;
+    --color-text-disabled: #636366;
+    --color-text-inverse: #0D0D0D;
+
+    --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.03), 0 2px 16px rgba(0, 0, 0, 0.2);
+    --shadow-card-elevated: 0 2px 0 rgba(255, 255, 255, 0.04), 0 4px 24px rgba(0, 0, 0, 0.3);
+    --shadow-banner: 0 1px 0 rgba(255, 255, 255, 0.02), 0 2px 8px rgba(0, 0, 0, 0.15);
+    --shadow-tab-center: 0 2px 2px rgba(59, 130, 246, 0.15), 0 4px 16px rgba(59, 130, 246, 0.15);
+  }
 }
 
+/* ---- Tailwind Theme ---- */
+@theme inline {
+  --color-background: var(--lifeflow-background);
+  --color-foreground: var(--lifeflow-foreground);
+  --color-card: var(--lifeflow-card);
+  --color-card-foreground: var(--lifeflow-card-foreground);
+  --color-popover: var(--lifeflow-popover);
+  --color-popover-foreground: var(--lifeflow-popover-foreground);
+  --color-primary: var(--lifeflow-primary);
+  --color-primary-foreground: var(--lifeflow-primary-foreground);
+  --color-muted: var(--lifeflow-muted);
+  --color-muted-foreground: var(--lifeflow-muted-foreground);
+  --color-border: var(--lifeflow-border);
+  --color-input: var(--lifeflow-input);
+  --color-ring: var(--lifeflow-ring);
+  --radius-sm: var(--lifeflow-radius-small);
+  --radius-md: var(--lifeflow-radius-medium);
+  --radius-lg: var(--lifeflow-radius-large);
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", "PingFang SC", sans-serif;
+}
+
+/* ---- Base Styles ---- */
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans);
+  background: var(--lifeflow-background);
+  color: var(--color-text-primary);
+  font-family: var(--font-system);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overscroll-behavior-y: none;
   -webkit-tap-highlight-color: transparent;
+  font-size: 17px;
+  line-height: 1.5;
+  letter-spacing: -0.022em;
 }
 
-/* ── 文字选择（贴强调色）── */
+* {
+  border-color: var(--lifeflow-border);
+}
+
 ::selection {
-  background: rgba(79, 70, 229, 0.15);
+  background: rgba(37, 99, 235, 0.15);
 }
 
-/* ============================================================ */
-/* 工具类 */
-/* ============================================================ */
-
-.font-display {
-  font-family: var(--font-display);
+/* ---- Utility Classes ---- */
+.text-title-large {
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.022em;
 }
 
-/* ============================================================ */
-/* 动画 */
-/* ============================================================ */
+.text-title-nav {
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.018em;
+}
 
+.text-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  letter-spacing: -0.01em;
+}
+
+.text-caption {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--color-text-disabled);
+  letter-spacing: 0;
+}
+
+.card-standard {
+  background: var(--color-surface-card);
+  border-radius: var(--lifeflow-radius-medium);
+  box-shadow: var(--shadow-card);
+}
+
+.card-large {
+  background: var(--color-surface-card);
+  border-radius: var(--lifeflow-radius-large);
+  box-shadow: var(--shadow-card-elevated);
+}
+
+.pill-button {
+  border-radius: var(--lifeflow-radius-full);
+  border: 1px solid var(--lifeflow-border);
+  background: var(--color-surface-card);
+  padding: 8px 16px;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+/* ---- Animations ---- */
 @keyframes shimmer {
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
@@ -130,25 +245,14 @@ body {
   to { opacity: 1; }
 }
 
-@keyframes fade-out {
-  from { opacity: 1; }
-  to { opacity: 0; }
-}
-
 @keyframes scale-in {
   from { opacity: 0; transform: scale(0.95); }
   to { opacity: 1; transform: scale(1); }
 }
 
-@keyframes scale-out {
-  from { opacity: 1; transform: scale(1); }
-  to { opacity: 0; transform: scale(0.95); }
-}
-
-/* ── 工具类动画 ── */
 .animate-in {
   animation-duration: 200ms;
-  animation-timing-function: var(--ease-out-expo);
+  animation-timing-function: var(--easing-spring);
   animation-fill-mode: both;
 }
 
@@ -156,108 +260,29 @@ body {
 .fade-in { animation-name: fade-in; }
 .scale-in { animation-name: scale-in; }
 
-/* ── Skeleton ── */
-.skeleton {
-  background: linear-gradient(
-    90deg,
-    var(--card-bg) 25%,
-    var(--bg-secondary) 50%,
-    var(--card-bg) 75%
-  );
-  background-size: 200% 100%;
-  animation: shimmer 1.5s ease-in-out infinite;
-  border-radius: var(--radius-md);
-}
+/* ---- Scrollbar ---- */
+::-webkit-scrollbar { display: none; }
 
-/* ── Scrollbar ── */
-::-webkit-scrollbar {
-  display: none;
-}
-
-.scrollbar-hide {
+.no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
 
-.scrollbar-hide::-webkit-scrollbar {
-  display: none;
-}
+.no-scrollbar::-webkit-scrollbar { display: none; }
 
-/* ── 安全区适配 ── */
-.safe-top {
-  padding-top: env(safe-area-inset-top);
-}
+/* ---- Safe Area ---- */
+.safe-top { padding-top: env(safe-area-inset-top); }
+.safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
 
-.safe-bottom {
-  padding-bottom: env(safe-area-inset-bottom);
-}
-
-/* ============================================================= */
-/* 过渡兼容层：deprecated，禁止新增引用；各页面份完成后统一删除     */
-/* ============================================================= */
-
-@theme inline {
-  /* ── 系统色（iOS 原生色）── */
-  --color-sys-blue:    #007AFF;
-  --color-sys-green:   #34C759;
-  --color-sys-indigo:  #5856D6;
-  --color-sys-orange:  #FF9500;
-  --color-sys-pink:    #FF2D55;
-  --color-sys-purple:  #AF52DE;
-  --color-sys-red:     #FF3B30;
-  --color-sys-teal:    #5AC8FA;
-  --color-sys-yellow:  #FFCC00;
-  --color-sys-gray:    #8E8E93;
-
-  /* ── 子站主题色 ── */
-  --color-eff-primary: #5856D6;
-  --color-eff-light:   #ECECFC;
-  --color-fin-primary: #34C759;
-  --color-fin-light:   #E6F9EC;
-  --color-health-primary: #FF9500;
-  --color-health-light:   #FFF2E0;
-  --color-main-primary: #007AFF;
-  --color-main-light:   #E6F0FF;
-
-  /* ── 旧背景色 ── */
-  --color-bg-primary:   #FFFFFF;
-  --color-bg-secondary: #F5F5F7;
-  --color-bg-tertiary:  #EEEEEF;
-
-  /* ── 旧文字色（不与新令牌冲突的名）── */
-  --color-text-quat:    #C7C7CC;
-  --color-text-inverse: #FFFFFF;
-
-  /* ── 旧边框 ── */
-  --color-border-light: #F2F2F7;
-
-  /* ── 旧品牌色别名 ── */
-  --color-brand-primary: var(--color-sys-indigo);
-  --color-brand-primary-hover: #4B49C9;
-  --color-brand-primary-light: var(--color-eff-light);
-  --color-brand-secondary: var(--color-sys-indigo);
-  --color-brand-secondary-hover: #4B49C9;
-
-  /* ── 旧表面色别名 ── */
-  --color-surface-desk: var(--color-bg-secondary);
-  --color-surface-desk-light: var(--color-bg-primary);
-  --color-surface-fabric: var(--color-bg-primary);
-  --color-surface-fabric-hover: var(--color-bg-secondary);
-
-  /* ── 旧编织色别名 ── */
-  --color-knit-thread: var(--color-sys-indigo);
-  --color-knit-done: var(--color-sys-green);
-  --color-knit-partial: #F5C542;
-  --color-knit-bg: #E9E9EB;
-  --color-knit-grid: #E5E5EA;
-
-  /* ── 旧兼容映射 ── */
-  --color-primary: var(--color-sys-indigo);
-  --color-primary-hover: #4B49C9;
-  --color-secondary: var(--color-sys-indigo);
-
-  /* ── 旧阴影别名 ── */
-  --shadow-knit: var(--shadow-card);
-  --shadow-subtle: 0 1px 2px rgba(0,0,0,0.04);
-  --shadow-fab: 0 4px 16px rgba(88,86,214,0.3);
+/* ---- Skeleton ---- */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--lifeflow-card) 25%,
+    var(--color-surface-secondary) 50%,
+    var(--lifeflow-card) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: var(--lifeflow-radius-small);
 }

@@ -1,26 +1,20 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence, type PanInfo } from "framer-motion";
 import {
-  ChevronLeft, Plus, Check, Trash2, Clock, CalendarDays,
-  AlertCircle, RefreshCw, TrendingUp,
+  Check, Trash2,
 } from "lucide-react";
 import { useEfficiencyStore } from "@/lib/store/efficiencyStore";
 import type { ScheduleTask } from "@/lib/db/efficiency.db";
 import { getScheduleTasksByDate } from "@/lib/db/efficiency.db";
 import { showToast } from "@/components/ui/Toast";
-import { CreateTaskSheet } from "@/components/efficiency/CreateTaskSheet";
 import TimelineView from "@/components/efficiency/TimelineView";
 
 // ============================================================
 // 设计令牌
 // ============================================================
 const ACCENT = "#6366F1";
-const MUTED = "#86868B";
-const BORDER = "#EBEBEB";
-const STRONG = "#C7C7CC";
 
 const WEEK_DAYS = ["一", "二", "三", "四", "五", "六", "日"];
 
@@ -74,7 +68,6 @@ function SegmentedControl({ selected, onChange }: {
 // 主组件
 // ============================================================
 export default function SchedulePage() {
-  const router = useRouter();
   const { scheduleTasks, selectedDate, loadScheduleTasks, toggleScheduleTask, removeScheduleTask } = useEfficiencyStore();
 
   // ── 视图切换 ──
@@ -113,13 +106,7 @@ export default function SchedulePage() {
     }
   }, []);
 
-  const goToday = useCallback(() => {
-    setWeekOffset(0);
-    loadScheduleTasks(todayStr);
-  }, [loadScheduleTasks]);
-
   // ── 任务列表 ──
-  const [sheetOpen, setSheetOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -171,17 +158,8 @@ export default function SchedulePage() {
   return (
     <div className="min-h-screen bg-[#FAFAFA]" style={{ maxWidth: 430, margin: "0 auto" }}>
       {/* ===== Header ===== */}
-      <div className="flex items-center h-14 px-4">
-        <button onClick={() => router.push("/efficiency")} className="w-8 h-8 -ml-1 flex items-center justify-center">
-          <ChevronLeft className="w-6 h-6 text-[#1D1D1F]" />
-        </button>
-        <span className="absolute left-1/2 -translate-x-1/2 text-[17px] font-semibold text-[#1D1D1F]">日程</span>
-        <button
-          onClick={() => setSheetOpen(true)}
-          className="w-8 h-8 ml-auto flex items-center justify-center"
-        >
-          <Plus className="w-5 h-5 text-[#6366F1]" />
-        </button>
+      <div className="flex items-center h-14 px-4 justify-center">
+        <span className="text-[17px] font-semibold text-[#1D1D1F]">日程</span>
       </div>
 
       {/* ===== Segmented Control ===== */}
@@ -346,16 +324,6 @@ export default function SchedulePage() {
           </>
         )}
       </AnimatePresence>
-
-      {/* ===== 创建任务弹窗 ===== */}
-      <CreateTaskSheet
-        open={sheetOpen}
-        onClose={() => setSheetOpen(false)}
-        onSubmit={async () => {
-          setSheetOpen(false);
-          await loadScheduleTasks(selectedDate);
-        }}
-      />
 
       <div className="h-4" />
     </div>

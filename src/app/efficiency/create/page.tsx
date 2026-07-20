@@ -1,9 +1,9 @@
-﻿"use client";
+﻿﻿"use client";
 
 import { Suspense, useEffect, useState, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronRight, Minus, Plus, Sparkles, Check } from "lucide-react";
+import { ChevronRight, Minus, Plus, Sparkles } from "lucide-react";
 import { useEfficiencyStore } from "@/lib/store/efficiencyStore";
 import { useLiveQuery } from "dexie-react-hooks";
 import { efficiencyDB, getAllProjects, type ScheduleTask, type Project } from "@/lib/db/efficiency.db";
@@ -16,7 +16,6 @@ import { showToast } from "@/components/ui/Toast";
 // ============================================================
 
 const ACCENT = "#6366F1";
-const NEW_COLORS = ["#6366F1", "#FF9500", "#34C759", "#E94057"];
 
 function getDefaultDeadline(): string {
   const d = new Date();
@@ -66,7 +65,6 @@ function CreateGoalInner() {
   const { addGoal, confirmBreakdown, loadGoals } = useEfficiencyStore();
 
   const [title, setTitle] = useState("");
-  const [color, setColor] = useState(NEW_COLORS[0]);
   const [projectId, setProjectId] = useState(incomingProjectId || "");
   const [deadline, setDeadline] = useState(getDefaultDeadline());
   const [note, setNote] = useState("");
@@ -90,10 +88,12 @@ function CreateGoalInner() {
       if (cancelled) return;
       if (goal) {
         setTitle(goal.title);
-        setColor(goal.color || NEW_COLORS[0]);
-        setProjectId(goal.projectId || "");
         setDeadline(goal.deadline || getDefaultDeadline());
         setNote(goal.note || "");
+        if (goal.projectId) {
+          setProjectId(goal.projectId);
+        }
+        // 如果没有 projectId，等 project 列表加载后由默认 effect 补上
       } else {
         showToast({ type: "error", message: "目标不存在" });
       }
@@ -101,6 +101,15 @@ function CreateGoalInner() {
     });
     return () => { cancelled = true; };
   }, [editId]);
+
+  // ─── 新建模式：默认选中「无项目」 ───
+  useEffect(() => {
+    if (isEdit || incomingProjectId) return;
+    if (projects.length > 0 && !projectId) {
+      const none = projects.find((p) => p.name === "无项目");
+      if (none) setProjectId(none.id);
+    }
+  }, [isEdit, incomingProjectId, projects, projectId]);
 
   const canSubmit = title.trim().length > 0 && !saving;
 
@@ -110,7 +119,6 @@ function CreateGoalInner() {
     try {
       const data = {
         title: title.trim(),
-        color,
         deadline,
         goalType: "count" as const,
         note: note.trim(),
@@ -139,7 +147,7 @@ function CreateGoalInner() {
       setSaving(false);
       showToast({ type: "error", message: "保存失败" });
     }
-  }, [canSubmit, isEdit, editId, title, color, deadline, note, projectId, useAI, addGoal, loadGoals, router]);
+  }, [canSubmit, isEdit, editId, title, deadline, note, projectId, useAI, addGoal, loadGoals, router]);
 
   if (!loaded) return null;
 
@@ -197,54 +205,24 @@ function CreateGoalInner() {
           </div>
         </motion.div>
 
-        {/* 卡片 2 · 项目标签 */}
+        {/* 卡片 2 · 所属项目 */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.05 }}
-          className="bg-white rounded-[8px] border border-[#EBEBEB] px-4 pt-4 pb-[18px]"
+          className="bg-white rounded-[8px] border border-[#EBEBEB] px-4 py-4"
         >
-          {/* 色点行 + 横线 */}
-          <div className="relative mt-[30px] flex items-center gap-4">
-            <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-px bg-[#EBEBEB]" />
-            {NEW_COLORS.map((c) => {
-              const selected = color === c;
-              return (
-                <motion.button
-                  key={c}
-                  type="button"
-                  whileTap={{ scale: 0.85 }}
-                  onClick={() => setColor(c)}
-                  className="relative z-10 w-2 h-2 rounded-full flex items-center justify-center"
-                  style={{
-                    backgroundColor: c,
-                    boxShadow: selected
-                      ? `0 0 0 2px #FFFFFF, 0 0 0 4px ${c}`
-                      : undefined,
-                  }}
-                >
-                  {selected && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
-                </motion.button>
-              );
-            })}
-          </div>
-
-          {/* 所属项目 */}
-          {projects && projects.length > 0 && (
-            <div className="mt-4">
-              <select
-                value={projectId}
-                onChange={(e) => setProjectId(e.target.value)}
-                className="w-full outline-none text-[15px] text-[#1D1D1F]"
-                style={{ background: "#F2F2F7", borderRadius: "8px", height: "40px", padding: "0 12px" }}
-              >
-                <option value="">未分类</option>
-                {projects.map((p) => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </select>
-            </div>
-          )}
+          <p className="text-[14px] text-[#86868B] mb-2">所属项目</p>
+          <select
+            value={projectId}
+            onChange={(e) => setProjectId(e.target.value)}
+            className="w-full outline-none text-[15px] text-[#1D1D1F]"
+            style={{ background: "#F2F2F7", borderRadius: "8px", height: "40px", padding: "0 12px" }}
+          >
+            {(projects ?? []).map((p) => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
         </motion.div>
 
         {/* 卡片 3 · 截止日期 */}

@@ -4,9 +4,8 @@ import Dexie, { type Table } from 'dexie';
 
 export interface Goal {
   id: string;           // uuid, primary key
-  projectId?: string;      // FK → Project，null=未分类
+  projectId?: string;      // FK → Project，null=无隶属项目
   title: string;
-  color: string;        // hex color like "#5856D6"
   deadline: string;     // ISO date YYYY-MM-DD
   progress: number;     // 0-100
   status: 'active' | 'completed' | 'paused' | 'archived';
@@ -129,6 +128,15 @@ export class EfficiencyDB extends Dexie {
     this.version(4).stores({
       projects: '&id, name',
     });
+    this.version(5).stores({
+      goals: '&id, status, deadline',
+      tasks: '++id, title, type, status, goalId, planId, startTime, endTime, dueDate',
+      habits: '++id, title, goalId, streak, frequency',
+      scheduleTasks: '&id, date, goalId, isCompleted, isImportant',
+      projects: '&id, name',
+    }).upgrade(async tx => {
+      await tx.table('projects').clear();
+    });
   }
 }
 
@@ -141,10 +149,12 @@ export async function initializeEfficiencyDB(): Promise<{ success: boolean; erro
     const projectCount = await efficiencyDB.projects.count();
     if (projectCount === 0) {
       const defaults = [
-        { name: "工作", color: "#6366F1", icon: "Briefcase", description: "", sortOrder: 0 },
-        { name: "学习", color: "#FF9500", icon: "BookOpen", description: "", sortOrder: 1 },
-        { name: "生活", color: "#34C759", icon: "Heart", description: "", sortOrder: 2 },
-        { name: "健康", color: "#FF3B30", icon: "Activity", description: "", sortOrder: 3 },
+        { name: "学习", color: "#FF9500", icon: "BookOpen", description: "", sortOrder: 0 },
+        { name: "健康", color: "#34C759", icon: "Activity", description: "", sortOrder: 1 },
+        { name: "琐事", color: "#5856D6", icon: "ClipboardList", description: "", sortOrder: 2 },
+        { name: "长期主义", color: "#AF52DE", icon: "Clock", description: "", sortOrder: 3 },
+        { name: "娱乐", color: "#FF2D55", icon: "Gamepad2", description: "", sortOrder: 4 },
+        { name: "无项目", color: "#FFFFFF", icon: "Circle", description: "", sortOrder: 5 },
       ];
       for (const p of defaults) {
         await addProject(p);

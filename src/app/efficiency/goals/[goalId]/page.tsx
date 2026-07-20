@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { useEfficiencyStore } from "@/lib/store/efficiencyStore";
-import { efficiencyDB, type Goal, type ScheduleTask } from "@/lib/db/efficiency.db";
+import { efficiencyDB, type Goal, type ScheduleTask, type Project, getAllProjects } from "@/lib/db/efficiency.db";
 import { showToast } from "@/components/ui/Toast";
 
 // ============================================================
@@ -43,6 +43,14 @@ export default function GoalDetailPage() {
   // 从 live query 获取目标
   const goal = useLiveQuery(() => efficiencyDB.goals.get(goalId), [goalId]);
   const allScheduleTasks = useLiveQuery(() => efficiencyDB.scheduleTasks.toArray(), []);
+  const projects = useLiveQuery(() => getAllProjects(), [], [] as Project[]);
+
+  // 目标颜色：从所属项目继承，无项目则为白色
+  const goalColor = useMemo(() => {
+    if (!goal) return ACCENT;
+    const p = projects.find((p) => p.id === goal.projectId);
+    return p?.color || "#FFFFFF";
+  }, [goal, projects]);
 
   // 按 goalId 过滤任务
   const tasks = useMemo(() => {
@@ -108,7 +116,7 @@ export default function GoalDetailPage() {
       {/* ===== 目标卡片 ===== */}
       <div className="mx-4 mt-2 p-5 bg-white rounded-2xl border border-[#EBEBEB]">
         <div className="flex items-center gap-3">
-          <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: goal.color || ACCENT }} />
+          <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: goalColor }} />
           <h1 className="text-[20px] font-bold text-[#1D1D1F] truncate flex-1">{goal.title}</h1>
         </div>
 
@@ -128,7 +136,7 @@ export default function GoalDetailPage() {
         <div className="mt-2 h-2 rounded-full bg-[#F5F5F5] overflow-hidden">
           <motion.div
             className="h-full rounded-full"
-            style={{ backgroundColor: goal.color || ACCENT }}
+            style={{ backgroundColor: goalColor }}
             initial={{ width: 0 }}
             animate={{ width: `${goalProgress}%` }}
             transition={{ duration: 0.6, ease: "easeOut" }}

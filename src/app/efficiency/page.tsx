@@ -1,14 +1,14 @@
-﻿"use client";
+﻿﻿"use client";
 
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Plus, CheckCircle2, Pause, Play, SquarePen, Copy, Trash2, Pencil, FolderKanban,
+  Plus, CheckCircle2, Pause, Play, SquarePen, Copy, Trash2, Pencil,
 } from "lucide-react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { useEfficiencyStore } from "@/lib/store/efficiencyStore";
-import { efficiencyDB, type Goal, type Project, getAllProjects, addProject } from "@/lib/db/efficiency.db";
+import { efficiencyDB, type Goal, type Project, getAllProjects } from "@/lib/db/efficiency.db";
 import { showToast } from "@/components/ui/Toast";
 
 // ─── 设计令牌 ────────────────────────────────────────────────
@@ -63,22 +63,21 @@ export default function EfficiencyPage() {
   // ─── Project 筛选 ──────────────────────────────────────────
   const projects = useLiveQuery(() => getAllProjects(), [], [] as Project[]);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
-  const [showProjectAdd, setShowProjectAdd] = useState(false);
-  const [newProjectName, setNewProjectName] = useState("");
-
-  const handleAddProject = useCallback(async () => {
-    if (!newProjectName.trim()) return;
-    await addProject({ name: newProjectName.trim(), color: ACCENT, icon: "FolderKanban", description: "", sortOrder: (projects ?? []).length });
-    showToast({ type: "success", message: "已创建" });
-    setNewProjectName("");
-    setShowProjectAdd(false);
-  }, [newProjectName, projects]);
 
   // ─── 过滤后的 Goals ────────────────────────────────────────
   const filteredGoals = useMemo(() => {
     if (selectedProjectId === null) return goals;
     return goals.filter((g) => g.projectId === selectedProjectId);
   }, [goals, selectedProjectId]);
+
+  // ─── Project 颜色查找表 ────────────────────────────────────
+  const projectColorMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const p of (projects ?? [])) {
+      map.set(p.id, p.color);
+    }
+    return map;
+  }, [projects]);
 
   // ─── 长按快捷操作 ──────────────────────────────────────────
   const [quickGoalId, setQuickGoalId] = useState<string | null>(null);
@@ -251,43 +250,23 @@ export default function EfficiencyPage() {
         >
           全部
         </button>
-        {(projects ?? []).map((p) => (
-          <button
-            key={p.id}
-            type="button"
-            onClick={() => setSelectedProjectId(p.id)}
-            className={`shrink-0 h-8 px-3 rounded-full text-[13px] font-medium transition-colors ${
-              selectedProjectId === p.id
-                ? "text-white"
-                : "bg-[#F5F5F5] text-[#86868B]"
-            }`}
-            style={{ background: selectedProjectId === p.id ? p.color : undefined }}
-          >
-            {p.name}
-          </button>
-        ))}
-        {showProjectAdd ? (
-          <div className="flex items-center gap-1 shrink-0">
-            <input
-              type="text"
-              value={newProjectName}
-              onChange={(e) => setNewProjectName(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") handleAddProject(); }}
-              placeholder="项目名"
-              autoFocus
-              className="h-8 w-24 px-3 rounded-full text-[13px] bg-[#F5F5F5] outline-none"
-            />
-            <button onClick={handleAddProject} className="text-[20px] text-[#6366F1]">✓</button>
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={() => setShowProjectAdd(true)}
-            className="shrink-0 w-8 h-8 rounded-full bg-[#F5F5F5] flex items-center justify-center text-[#86868B]"
-          >
-            <Plus className="w-4 h-4" />
-          </button>
-        )}
+        {(projects ?? []).map((p) => {
+          const isNone = p.name === "无项目";
+          const isSelected = selectedProjectId === p.id;
+          return (
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => setSelectedProjectId(p.id)}
+              className={`shrink-0 h-8 px-3 rounded-full text-[13px] font-medium transition-colors ${
+                isSelected ? "text-white" : "bg-[#F5F5F5] text-[#86868B]"
+              }`}
+              style={{ background: isSelected ? (isNone ? "#1D1D1F" : p.color) : undefined }}
+            >
+              {p.name}
+            </button>
+          );
+        })}
       </div>
 
       {/* ===== 主操作行 ===== */}
@@ -355,7 +334,7 @@ export default function EfficiencyPage() {
                 stats.total > 0
                   ? Math.round((stats.done / stats.total) * 100)
                   : Math.min(100, Math.max(0, goal.progress));
-              const color = goal.color || ACCENT;
+              const color = projectColorMap.get(goal.projectId || "") || "#FFFFFF";
               const quickActive = quickGoalId === goal.id;
 
               return (

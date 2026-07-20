@@ -17,7 +17,7 @@ const FULLSCREEN_PREFIXES = [
 
 const tabs = [
   { label: "首页", path: "/", icon: Home },
-  { label: "效率", path: "/efficiency", icon: Target },
+  { label: "目标", path: "/efficiency", icon: Target },
   { label: "事项", path: "/tasks", icon: CheckSquare },
   { label: "日程", path: "/schedule", icon: CalendarDays },
   { label: "更多", path: "/more", icon: Package },

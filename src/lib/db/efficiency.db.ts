@@ -137,6 +137,19 @@ export const efficiencyDB = new EfficiencyDB();
 export async function initializeEfficiencyDB(): Promise<{ success: boolean; error?: string }> {
   try {
     await efficiencyDB.open();
+    // Seed 默认项目（仅在 projects 表为空时）
+    const projectCount = await efficiencyDB.projects.count();
+    if (projectCount === 0) {
+      const defaults = [
+        { name: "工作", color: "#6366F1", icon: "Briefcase", description: "", sortOrder: 0 },
+        { name: "学习", color: "#FF9500", icon: "BookOpen", description: "", sortOrder: 1 },
+        { name: "生活", color: "#34C759", icon: "Heart", description: "", sortOrder: 2 },
+        { name: "健康", color: "#FF3B30", icon: "Activity", description: "", sortOrder: 3 },
+      ];
+      for (const p of defaults) {
+        await addProject(p);
+      }
+    }
     return { success: true };
   } catch (err) {
     return { success: false, error: (err as Error).message };

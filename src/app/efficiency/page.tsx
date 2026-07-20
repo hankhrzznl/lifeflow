@@ -108,10 +108,17 @@ export default function EfficiencyPage() {
   );
 
   const handleQuickAction = useCallback(
-    async (goal: Goal, action: "pause" | "edit") => {
+    async (goal: Goal, action: "pause" | "edit" | "delete") => {
       setQuickGoalId(null);
       if (action === "edit") {
         router.push(`/efficiency/create?id=${goal.id}`);
+        return;
+      }
+      if (action === "delete") {
+        if (window.confirm("确定删除这个目标吗？此操作不可恢复。")) {
+          await deleteGoal(goal.id);
+          showToast({ type: "success", message: "已删除" });
+        }
         return;
       }
       if (goal.status === "paused") {
@@ -122,7 +129,7 @@ export default function EfficiencyPage() {
         showToast({ message: "已暂停", type: "info" });
       }
     },
-    [router, updateGoalStatus],
+    [router, updateGoalStatus, deleteGoal],
   );
 
   useEffect(() => { loadGoals(); }, [loadGoals]);
@@ -227,7 +234,7 @@ export default function EfficiencyPage() {
     <div>
       {/* ===== Header ===== */}
       <div className="px-4 pt-5">
-        <h1 className="text-[34px] font-bold text-[#1D1D1F]">效率</h1>
+        <h1 className="text-[34px] font-bold text-[#1D1D1F]">目标</h1>
         <p className="text-[15px] mt-1" style={{ color: "#8E8E93" }}>项目 · 目标 · 任务</p>
       </div>
 
@@ -404,6 +411,20 @@ export default function EfficiencyPage() {
                           <Pencil className="w-5 h-5 text-white" />
                         </motion.button>
                         <span className="text-[11px] text-[#86868B] mt-1">编辑</span>
+                        <motion.button
+                          type="button"
+                          initial={{ opacity: 0, x: 12 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: 12 }}
+                          transition={{ duration: 0.2, delay: 0.1, ease: "easeOut" }}
+                          onClick={(e) => { e.stopPropagation(); handleQuickAction(goal, "delete"); }}
+                          aria-label="删除"
+                          className="w-[44px] h-[44px] rounded-full flex items-center justify-center mt-[8px]"
+                          style={{ backgroundColor: "#FF3B30" }}
+                        >
+                          <Trash2 className="w-5 h-5 text-white" />
+                        </motion.button>
+                        <span className="text-[11px] text-[#86868B] mt-1">删除</span>
                       </div>
                     )}
                   </AnimatePresence>
@@ -428,6 +449,14 @@ export default function EfficiencyPage() {
                     />
                     <div className="flex-1 min-w-0 flex flex-col gap-1">
                       <span className="text-[17px] font-semibold text-[#1D1D1F] truncate">{goal.title}</span>
+                      {goal.deadline && (
+                        (() => {
+                          const daysLeft = Math.ceil((new Date(goal.deadline).getTime() - Date.now()) / 86400000);
+                          return daysLeft > 0 ? <div className="text-[11px]" style={{color:"#8E8E93"}}>还剩 {daysLeft} 天</div>
+                            : daysLeft === 0 ? <div className="text-[11px]" style={{color:"#FF9500"}}>今天截止</div>
+                            : <div className="text-[11px]" style={{color:"#FF3B30"}}>已超 {Math.abs(daysLeft)} 天</div>;
+                        })()
+                      )}
                       <span className="text-[13px] text-[#86868B]">
                         {stats.total > 0
                           ? `今日任务 · ${stats.done}/${stats.total} 项`

@@ -5,7 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronRight, Minus, Plus, Sparkles, Check } from "lucide-react";
 import { useEfficiencyStore } from "@/lib/store/efficiencyStore";
-import { efficiencyDB, type ScheduleTask } from "@/lib/db/efficiency.db";
+import { useLiveQuery } from "dexie-react-hooks";
+import { efficiencyDB, getAllProjects, type ScheduleTask, type Project } from "@/lib/db/efficiency.db";
 import BottomSheet from "@/components/common/BottomSheet";
 import { plannerBrain } from "@/lib/brains/planner";
 import { showToast } from "@/components/ui/Toast";
@@ -66,7 +67,7 @@ function CreateGoalInner() {
 
   const [title, setTitle] = useState("");
   const [color, setColor] = useState(NEW_COLORS[0]);
-  const [goalType, setGoalType] = useState<"count" | "habit">("count");
+  const [projectId, setProjectId] = useState(incomingProjectId || "");
   const [targetCount, setTargetCount] = useState(5);
   const [deadline, setDeadline] = useState(getDefaultDeadline());
   const [note, setNote] = useState("");
@@ -92,6 +93,8 @@ function CreateGoalInner() {
     { label: "旅行", emoji: "✈️" },
   ];
 
+  const projects = useLiveQuery(() => getAllProjects(), [], [] as Project[]);
+
   // ─── 编辑模式：载入现有目标 ───
   useEffect(() => {
     if (!editId) return;
@@ -101,7 +104,7 @@ function CreateGoalInner() {
       if (goal) {
         setTitle(goal.title);
         setColor(goal.color || NEW_COLORS[0]);
-        setGoalType(goal.goalType || "count");
+        setProjectId(goal.projectId || "");
         setTargetCount(goal.targetCount || 5);
         setDeadline(goal.deadline || getDefaultDeadline());
         setNote(goal.note || "");
@@ -123,10 +126,10 @@ function CreateGoalInner() {
         title: title.trim(),
         color,
         deadline,
-        goalType,
+        goalType: "count" as const,
         targetCount,
         note: (tag ? `[${tag}] ` : "") + note.trim(),
-        projectId: incomingProjectId || undefined,
+        projectId: projectId || undefined,
       };
 
       if (isEdit && editId) {
@@ -151,7 +154,7 @@ function CreateGoalInner() {
       setSaving(false);
       showToast({ type: "error", message: "保存失败" });
     }
-  }, [canSubmit, isEdit, editId, title, color, deadline, goalType, targetCount, note, useAI, addGoal, loadGoals, router]);
+  }, [canSubmit, isEdit, editId, title, color, deadline, targetCount, note, projectId, useAI, addGoal, loadGoals, router]);
 
   if (!loaded) return null;
 
@@ -252,6 +255,23 @@ function CreateGoalInner() {
               );
             })}
           </div>
+
+          {/* 所属项目 */}
+          {projects && projects.length > 0 && (
+            <div className="mt-4">
+              <select
+                value={projectId}
+                onChange={(e) => setProjectId(e.target.value)}
+                className="w-full outline-none text-[15px] text-[#1D1D1F]"
+                style={{ background: "#F2F2F7", borderRadius: "8px", height: "40px", padding: "0 12px" }}
+              >
+                <option value="">未分类</option>
+                {projects.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
         </motion.div>
 
         {/* 卡片 3 · 目标类型 */}
@@ -261,29 +281,7 @@ function CreateGoalInner() {
           transition={{ delay: 0.1 }}
           className="bg-white rounded-[8px] border border-[#EBEBEB] px-4 pt-4 pb-4"
         >
-          <p className="text-[14px] text-[#86868B] mb-4">目标类型</p>
-
-          {/* 分段控件 */}
-          <div className="h-10 w-full rounded-[10px] bg-[#F5F5F7] p-[2px] flex">
-            {(["count", "habit"] as const).map((type) => {
-              const active = goalType === type;
-              return (
-                <button
-                  key={type}
-                  type="button"
-                  onClick={() => setGoalType(type)}
-                  className="flex-1 rounded-[8px] text-[14px] transition-colors"
-                  style={{
-                    color: active ? ACCENT : "#86868B",
-                    fontWeight: active ? 500 : 400,
-                    background: active ? "#EEF0FF" : "transparent",
-                  }}
-                >
-                  {type === "count" ? "次数目标" : "习惯目标"}
-                </button>
-              );
-            })}
-          </div>
+          <p className="text-[14px] text-[#86868B] mb-4">完成次数</p>
 
           {/* 步进器行 */}
           <div className="flex items-center justify-between mt-5">

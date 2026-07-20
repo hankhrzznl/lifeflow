@@ -4,7 +4,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import {
   BookOpen, Clock, FolderKanban, Wallet, Droplets,
-  Moon, Dumbbell, CheckCircle, Timer, Clock9,
+  Moon, Dumbbell, Pill, Move, CheckCircle, Timer, Clock9,
   StickyNote, CalendarDays,
 } from "lucide-react";
 
@@ -33,6 +33,8 @@ const groups = [
       { icon: Droplets, label: "饮水", desc: "喝水追踪", href: "/more/water", span: false },
       { icon: Moon, label: "睡眠", desc: "早睡分析", href: "/more/sleep", span: false },
       { icon: Dumbbell, label: "训练", desc: "力量训练记录", href: "/more/fitness", span: true },
+      { icon: Pill, label: "吃药", desc: "用药提醒", href: "/more/medication", span: false },
+      { icon: Move, label: "体态拉伸", desc: "矫正·放松", href: "/more/posture", span: false },
     ],
   },
   {

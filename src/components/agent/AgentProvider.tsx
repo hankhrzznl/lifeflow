@@ -38,6 +38,7 @@ interface AgentContextType {
   toggleOpen: () => void;
   openChat: () => void;
   closeChat: () => void;
+  sendMessage: (text: string) => void;
 }
 
 const AgentContext = createContext<AgentContextType | null>(null);
@@ -1029,6 +1030,7 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
     toggleOpen: () => setOpen((v) => !v),
     openChat: () => setOpen(true),
     closeChat: () => setOpen(false),
+    sendMessage: handleSubmit,
   };
 
   return (

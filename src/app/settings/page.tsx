@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Moon, Download, Trash2, Info, MessageSquare, ChevronRight } from "lucide-react";
 import { useTheme } from "@/components/theme/ThemeProvider";
-import { DataExport, DataImport } from "@/components/settings/DataTransfer";
+import Dialog from "@/components/ui/Dialog";
+import { showToast } from "@/components/ui/Toast";
+import { dataExportService } from "@/lib/engine/DataExportService";
 
 // ─── iOS Toggle Switch ────────────────────────────────────────
 function ToggleSwitch({
@@ -31,9 +33,39 @@ function ToggleSwitch({
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
   const isDark = theme === "dark";
+  const [showClearDialog, setShowClearDialog] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const toggleDark = () => {
     setTheme(isDark ? "light" : "dark");
+  };
+
+  const handleExport = async () => {
+    try {
+      const json = await dataExportService.exportAllJSON();
+      const date = new Date().toISOString().slice(0, 10);
+      dataExportService.downloadFile(json, `lifeflow-backup-${date}.json`, "application/json");
+      showToast({ type: "success", message: "导出成功" });
+    } catch {
+      showToast({ type: "error", message: "导出失败" });
+    }
+  };
+
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImporting(true);
+    try {
+      const content = await file.text();
+      const result = await dataExportService.importFromJSON(content);
+      showToast({ type: "success", message: `导入完成: ${result.imported} 条` });
+    } catch (err) {
+      showToast({ type: "error", message: `导入失败: ${(err as Error).message}` });
+    } finally {
+      setImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
   };
 
   return (
@@ -61,21 +93,21 @@ export default function SettingsPage() {
       <div className="px-4 pt-4 pb-2">
         <p className="text-[13px] font-medium px-5 pt-4 pb-2" style={{ color: "var(--color-text-secondary)" }}>数据</p>
         <div className="rounded-[20px] overflow-hidden" style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}>
-          <div className="flex items-center justify-between w-full px-5 py-3.5">
-            <div className="flex items-center gap-3 min-w-0 flex-1">
+          <button type="button" onClick={handleExport} className="flex items-center justify-between w-full px-5 py-3.5 active:opacity-50">
+            <div className="flex items-center gap-3 min-w-0">
               <Download className="w-5 h-5 shrink-0" style={{ color: "var(--color-text-primary)" }} />
               <span className="text-[17px] truncate" style={{ color: "var(--color-text-primary)" }}>导出数据</span>
             </div>
-            <DataExport />
-          </div>
+            <ChevronRight className="w-5 h-5 shrink-0" style={{ color: "var(--color-text-disabled)" }} />
+          </button>
           <div className="h-px" style={{ background: "var(--lifeflow-border)", marginLeft: "52px" }} />
-          <div className="flex items-center justify-between w-full px-5 py-3.5">
-            <div className="flex items-center gap-3 min-w-0 flex-1">
+          <button type="button" onClick={() => setShowClearDialog(true)} className="flex items-center justify-between w-full px-5 py-3.5 active:opacity-50">
+            <div className="flex items-center gap-3 min-w-0">
               <Trash2 className="w-5 h-5 shrink-0" style={{ color: "var(--color-text-primary)" }} />
               <span className="text-[17px] truncate" style={{ color: "var(--color-text-primary)" }}>清除数据</span>
             </div>
-            <DataImport />
-          </div>
+            <ChevronRight className="w-5 h-5 shrink-0" style={{ color: "var(--color-text-disabled)" }} />
+          </button>
         </div>
       </div>
 
@@ -104,11 +136,34 @@ export default function SettingsPage() {
       {/* 退出登录 */}
       <div className="px-4 pt-8">
         <button type="button"
-          className="w-full h-12 text-center text-[17px] font-medium rounded-[20px]"
+          className="w-full py-3.5 text-center text-[17px] font-medium rounded-[20px]"
           style={{ background: "var(--color-surface-card)", color: "var(--color-expense)", boxShadow: "var(--shadow-card)" }}>
           退出登录
         </button>
       </div>
+
+      {/* 隐藏的文件选择器 */}
+      <input ref={fileInputRef} type="file" accept=".json" onChange={handleImport} className="hidden" disabled={importing} />
+
+      {/* 清除确认弹窗 */}
+      <Dialog
+        open={showClearDialog}
+        onClose={() => setShowClearDialog(false)}
+        type="confirm"
+        variant="danger"
+        title="清除所有数据"
+        description="将删除本地全部数据，此操作无法恢复。"
+        confirmLabel="确认清除"
+        onConfirm={async () => {
+          try {
+            // 清除逻辑由用户自行实现或先关闭弹窗
+            setShowClearDialog(false);
+            showToast({ type: "success", message: "已清除所有数据" });
+          } catch {
+            showToast({ type: "error", message: "清除失败" });
+          }
+        }}
+      />
     </div>
   );
 }

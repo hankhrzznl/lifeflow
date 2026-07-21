@@ -8,9 +8,7 @@ import { Home, Target, CheckSquare, Calendar, Grid3x3 } from "lucide-react";
 // 仅全屏流程页隐藏底导
 
 const FULLSCREEN_PREFIXES = [
-  "/more/accounting/record",
   "/more/accounting/ledgers",
-  "/more/accounting/search",
   "/efficiency/create",
 ];
 

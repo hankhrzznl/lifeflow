@@ -3,10 +3,8 @@
 import { usePathname } from "next/navigation";
 import BottomTabBar from "./BottomTabBar";
 
-// 在记账子站路由下隐藏全局 BottomTabBar（记账有自己的 AccountingTabBar）
-const HIDDEN_PREFIXES = [
-  "/more/accounting",
-];
+// 全屏流程页隐藏全局 BottomTabBar
+const HIDDEN_PREFIXES: string[] = [];
 
 export function BottomNavController() {
   const pathname = usePathname();

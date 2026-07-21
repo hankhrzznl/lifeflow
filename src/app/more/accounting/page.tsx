@@ -405,6 +405,12 @@ export default function AccountingPage() {
           <span className="flex items-center gap-1 px-2.5 py-1 text-[13px] font-medium whitespace-nowrap rounded-full" style={{ background: "var(--lifeflow-muted)", color: "var(--color-text-secondary)" }}>
             <span className="truncate max-w-[80px]">日常账本</span>
           </span>
+          <Link href="/more/accounting/assets" className="flex items-center justify-center w-8 h-8 rounded-full" style={{ background: "var(--lifeflow-muted)" }}>
+            <Wallet className="w-4 h-4" style={{ color: "var(--color-text-secondary)" }} />
+          </Link>
+          <Link href="/more/accounting/settings" className="flex items-center justify-center w-8 h-8 rounded-full" style={{ background: "var(--lifeflow-muted)" }}>
+            <User className="w-4 h-4" style={{ color: "var(--color-text-secondary)" }} />
+          </Link>
         </div>
       </div>
 
@@ -864,47 +870,7 @@ export default function AccountingPage() {
         </motion.div>
       )}
 
-      {/* ═══════════════════════════════════════════════════════
-           底部 Tab Bar
-           ═══════════════════════════════════════════════════════ */}
-      <nav className="fixed bottom-0 left-0 right-0 h-[83px] pb-[34px] z-50 border-t"
-        style={{ background: "var(--color-surface-card)", borderColor: "var(--lifeflow-border)" }}>
-        <div className="w-full max-w-[430px] mx-auto grid grid-cols-5 h-full items-start pt-2">
-          {/* 明细 */}
-          <button onClick={() => setActiveMainTab("detail")} className="flex flex-col items-center gap-0.5">
-            <Receipt className="w-6 h-6" style={{ color: mainTab === "detail" ? "var(--lifeflow-primary)" : "var(--color-text-secondary)" }} />
-            <span className="text-[11px]" style={{
-              color: mainTab === "detail" ? "var(--lifeflow-primary)" : "var(--color-text-secondary)",
-              fontWeight: mainTab === "detail" ? 600 : 400,
-            }}>明细</span>
-          </button>
-          {/* 图表 */}
-          <button onClick={() => setActiveMainTab("chart")} className="flex flex-col items-center gap-0.5">
-            <BarChart3 className="w-6 h-6" style={{ color: mainTab === "chart" ? "var(--lifeflow-primary)" : "var(--color-text-secondary)" }} />
-            <span className="text-[11px]" style={{
-              color: mainTab === "chart" ? "var(--lifeflow-primary)" : "var(--color-text-secondary)",
-              fontWeight: mainTab === "chart" ? 600 : 400,
-            }}>图表</span>
-          </button>
-          {/* + FAB */}
-          <button onClick={() => setShowRecordSheet(true)} className="flex flex-col items-center gap-0.5 relative">
-            <span className="w-14 h-14 rounded-full flex items-center justify-center -mt-9" style={{ background: "var(--lifeflow-primary)", boxShadow: "0 2px 8px rgba(37,99,235,0.3)" }}>
-              <Plus className="w-6 h-6 text-white" />
-            </span>
-            <span className="text-[11px]" style={{ color: "var(--color-text-secondary)" }}>记账</span>
-          </button>
-          {/* 资产 → 跳转路由 */}
-          <Link href="/more/accounting/assets" className="flex flex-col items-center gap-0.5">
-            <Wallet className="w-6 h-6" style={{ color: "var(--color-text-secondary)" }} />
-            <span className="text-[11px]" style={{ color: "var(--color-text-secondary)" }}>资产</span>
-          </Link>
-          {/* 我的 → 跳转路由 */}
-          <Link href="/more/accounting/settings" className="flex flex-col items-center gap-0.5">
-            <User className="w-6 h-6" style={{ color: "var(--color-text-secondary)" }} />
-            <span className="text-[11px]" style={{ color: "var(--color-text-secondary)" }}>我的</span>
-          </Link>
-        </div>
-      </nav>
+
 
       {/* ═══════════════════════════════════════════════════════
            BottomSheet: 记一笔表单

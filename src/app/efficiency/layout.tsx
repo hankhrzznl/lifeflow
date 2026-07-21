@@ -9,7 +9,7 @@ export default function EfficiencyLayout({ children }: { children: React.ReactNo
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA]">
+    <div className="min-h-screen" style={{ backgroundColor: "var(--lifeflow-background)" }}>
       <main className="w-full max-w-[430px] mx-auto pb-[80px]">
         {children}
       </main>

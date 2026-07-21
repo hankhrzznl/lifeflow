@@ -221,32 +221,38 @@ export default function EfficiencyPage() {
   return (
     <div className="mx-auto relative" style={{ maxWidth: 430, minHeight: "100vh", paddingBottom: 100 }}>
       {/* ===== Header ===== */}
-      <div className="px-4 pt-[56px]">
-        <h1 className="text-[34px] font-bold" style={{ color: "var(--color-text-primary)" }}>目标</h1>
-        <p className="text-[15px] mt-1" style={{ color: "var(--color-text-secondary)" }}>
-          项目 · 目标 · 任务
-        </p>
+      <div className="px-5 pt-[var(--safe-area-top)] pb-2">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-title-large" style={{ color: "var(--color-text-primary)" }}>目标</h1>
+          <p className="text-label" style={{ color: "var(--color-text-secondary)" }}>
+            项目 · 目标 · 任务
+          </p>
+        </div>
       </div>
 
       {/* ===== Category Filter Pills ===== */}
-      <div className="px-4 mt-5 flex gap-2 overflow-x-auto scrollbar-hide">
-        {CATEGORIES.map((cat) => {
-          const isActive = activeCategory === cat;
-          return (
-            <button
-              key={cat}
-              type="button"
-              onClick={() => setActiveCategory(cat)}
-              className="shrink-0 px-4 h-[34px] rounded-full text-[14px] font-medium transition-colors"
-              style={{
-                backgroundColor: isActive ? "var(--lifeflow-primary)" : "var(--lifeflow-background)",
-                color: isActive ? "#FFFFFF" : "var(--color-text-secondary)",
-              }}
-            >
-              {cat}
-            </button>
-          );
-        })}
+      <div className="px-5 pt-3 pb-4">
+        <div className="flex flex-nowrap overflow-x-auto gap-2 no-scrollbar">
+          {CATEGORIES.map((cat) => {
+            const isActive = activeCategory === cat;
+            return (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => setActiveCategory(cat)}
+                className="shrink-0 inline-flex items-center justify-center whitespace-nowrap h-9 px-4 rounded-full text-[15px] font-medium transition-colors"
+                style={{
+                  backgroundColor: isActive ? "var(--lifeflow-primary)" : "var(--color-surface-card)",
+                  color: isActive ? "var(--color-text-inverse)" : "var(--color-text-secondary)",
+                  boxShadow: isActive ? "var(--shadow-tab-center)" : undefined,
+                  border: isActive ? "none" : "1px solid var(--lifeflow-border)",
+                }}
+              >
+                {cat}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
 
@@ -277,13 +283,47 @@ export default function EfficiencyPage() {
 
       {/* ===== Empty State ===== */}
       {showEmpty && (
-        <div className="flex flex-col items-center pt-[80px]">
-          <div className="w-14 h-14 rounded-full flex items-center justify-center" style={{ background: "var(--lifeflow-muted)" }}>
-            <Target className="w-7 h-7" style={{ color: "var(--color-text-disabled)" }} />
+        <section className="px-5 pt-8">
+          <div
+            className="p-8 flex flex-col items-center text-center gap-5"
+            style={{
+              backgroundColor: "var(--color-surface-card)",
+              borderRadius: "var(--lifeflow-radius-medium)",
+              boxShadow: "var(--shadow-card)",
+            }}
+          >
+            <div
+              className="w-20 h-20 rounded-full flex items-center justify-center"
+              style={{ backgroundColor: "var(--color-surface-secondary)" }}
+            >
+              <Target className="w-10 h-10" style={{ color: "var(--color-text-disabled)" }} strokeWidth={2} />
+            </div>
+            <p
+              className="text-[17px] font-medium"
+              style={{ color: "var(--color-text-secondary)", letterSpacing: "-0.022em" }}
+            >
+              开始创建一个目标吧！
+            </p>
+            <p
+              className="text-[14px] leading-relaxed"
+              style={{ color: "var(--color-text-disabled)" }}
+            >
+              从项目开始，分解为目标和任务，让每一步都有迹可循
+            </p>
+            <button
+              type="button"
+              onClick={() => router.push("/efficiency/create")}
+              className="inline-flex items-center justify-center whitespace-nowrap h-11 px-7 rounded-full text-[16px] font-semibold"
+              style={{
+                backgroundColor: "var(--lifeflow-primary)",
+                color: "var(--color-text-inverse)",
+                boxShadow: "var(--shadow-tab-center)",
+              }}
+            >
+              创建目标
+            </button>
           </div>
-          <p className="text-[15px] mt-4" style={{ color: "var(--color-text-disabled)" }}>开始创建一个目标吧！</p>
-          <p className="text-[13px] mt-1" style={{ color: "var(--color-text-disabled)" }}>从项目开始，分解为目标和任务，让每一步都有迹可循</p>
-        </div>
+        </section>
       )}
 
       {/* ===== 进行中分组 ===== */}
@@ -470,18 +510,16 @@ export default function EfficiencyPage() {
       <button
         type="button"
         onClick={() => router.push("/efficiency/create")}
-        className="fixed z-40 flex items-center justify-center"
+        className="fixed right-4 bottom-[100px] z-40 flex items-center justify-center"
         style={{
           width: 56,
           height: 56,
           borderRadius: "50%",
           backgroundColor: "var(--lifeflow-primary)",
-          bottom: "calc(var(--tab-bar-height) + 16px)",
-          right: "max(16px, calc((100% - 430px) / 2 + 16px))",
-          boxShadow: "0 4px 16px rgba(37, 99, 235, 0.35)",
+          boxShadow: "0 2px 8px rgba(37, 99, 235, 0.3)",
         }}
       >
-        <Plus className="w-7 h-7 text-white" />
+        <Plus className="w-6 h-6 text-white" strokeWidth={2} />
       </button>
 
       {/* ===== 目标操作弹层 ===== */}

@@ -35,7 +35,7 @@ export function AgentMessage({
     return (
       <div className="flex justify-end mb-4 px-1">
         <div className="max-w-[85%] flex flex-col items-end">
-          <div className="px-4 py-2.5 rounded-2xl rounded-br-sm bg-gradient-to-br from-violet-500 to-blue-600 text-white text-sm leading-relaxed">
+          <div className="px-4 py-2.5 rounded-2xl rounded-br-sm text-white text-sm leading-relaxed" style={{ background: "var(--lifeflow-primary)" }}>
             {content}
           </div>
           <span className="text-[10px] text-zinc-400 mt-1">
@@ -48,7 +48,7 @@ export function AgentMessage({
 
   return (
     <div className="flex items-start gap-2 mb-4 max-w-[85%] px-1">
-      <div className="w-7 h-7 rounded-full bg-gradient-to-br from-violet-400 to-blue-500 flex items-center justify-center flex-shrink-0 mt-0.5">
+      <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: "var(--lifeflow-primary)" }}>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M12 2L9.7 8.5L3 9.7L8.3 14.7L7 21L12 17.5L17 21L15.7 14.7L21 9.7L14.3 8.5L12 2Z" fill="white" />
         </svg>

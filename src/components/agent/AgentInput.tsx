@@ -65,7 +65,8 @@ export function AgentInput({
         <button
           onClick={handleSend}
           disabled={disabled || !value.trim()}
-          className="w-8 h-8 rounded-xl bg-violet-600 text-white flex items-center justify-center flex-shrink-0 hover:bg-violet-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+          className="w-8 h-8 rounded-xl text-white flex items-center justify-center flex-shrink-0 hover:opacity-90 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+          style={{ background: "var(--lifeflow-primary)" }}
         >
           <Send className="w-4 h-4" />
         </button>

@@ -312,7 +312,12 @@ export default function EfficiencyPage() {
             </p>
             <button
               type="button"
-              onClick={() => router.push("/efficiency/create")}
+              onClick={() => {
+                const pid = activeCategory !== "全部"
+                  ? (projects ?? []).find((p) => p.name === activeCategory)?.id
+                  : undefined;
+                router.push(pid ? `/efficiency/create?projectId=${pid}` : "/efficiency/create");
+              }}
               className="inline-flex items-center justify-center whitespace-nowrap h-11 px-7 rounded-full text-[16px] font-semibold"
               style={{
                 backgroundColor: "var(--lifeflow-primary)",
@@ -509,7 +514,12 @@ export default function EfficiencyPage() {
       {/* ===== FAB 按钮 ===== */}
       <button
         type="button"
-        onClick={() => router.push("/efficiency/create")}
+        onClick={() => {
+          const pid = activeCategory !== "全部"
+            ? (projects ?? []).find((p) => p.name === activeCategory)?.id
+            : undefined;
+          router.push(pid ? `/efficiency/create?projectId=${pid}` : "/efficiency/create");
+        }}
         className="fixed right-4 bottom-[100px] z-40 flex items-center justify-center"
         style={{
           width: 56,

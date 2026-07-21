@@ -398,95 +398,108 @@ export default function SchedulePage() {
   const selectedDateObj = selectedDate ? new Date(selectedDate + "T00:00:00") : new Date();
   const isSelectedToday = toDateStr(selectedDateObj) === todayStr;
 
+  const monthLabel = useMemo(() => {
+    const m = weekDates[0];
+    return `${m.getFullYear()}年${m.getMonth() + 1}月`;
+  }, [weekDates]);
+
   return (
     <div className="mx-auto" style={{ maxWidth: 430, minHeight: "100vh", backgroundColor: "var(--lifeflow-background)", paddingBottom: 100 }}>
       {/* ===== Header ===== */}
-      <div className="flex items-center justify-between px-4 h-14" style={{ backgroundColor: "var(--lifeflow-background)" }}>
-        <button
-          type="button"
-          onClick={() => router.push("/efficiency")}
-          className="w-8 h-8 -ml-1 flex items-center justify-center"
-        >
-          <ChevronLeft className="w-6 h-6" style={{ color: "var(--color-text-primary)" }} />
-        </button>
-        <span className="text-[20px] font-bold absolute left-1/2 -translate-x-1/2" style={{ color: "var(--color-text-primary)" }}>
-          日程
-        </span>
+      <div className="px-5 pt-8 pb-2 flex items-center justify-between">
+        <div>
+          <h1 className="text-[34px] font-bold" style={{ color: "var(--color-text-primary)", letterSpacing: "-0.022em", lineHeight: 1.2 }}>
+            日程
+          </h1>
+          <p className="text-[13px] font-medium mt-1" style={{ color: "var(--color-text-secondary)", letterSpacing: "-0.01em" }}>
+            时间轴
+          </p>
+        </div>
         <button
           type="button"
           onClick={() => setShowCreateSheet(true)}
-          className="w-8 h-8 -mr-1 flex items-center justify-center"
+          className="w-8 h-8 flex items-center justify-center"
         >
           <Plus className="w-6 h-6" style={{ color: "var(--lifeflow-primary)" }} />
         </button>
       </div>
 
       {/* ===== Week Strip ===== */}
-      <motion.div className="px-4 select-none" onPanEnd={handleDragEnd}>
-        {/* 星期行 + chevrons */}
-        <div className="flex items-center">
-          <button
-            type="button"
-            onClick={() => setWeekOffset((o) => o - 1)}
-            className="w-8 h-8 flex items-center justify-center shrink-0"
-          >
-            <ChevronLeft className="w-4 h-4" style={{ color: "var(--color-text-secondary)" }} />
-          </button>
-          <div className="grid grid-cols-7 flex-1 h-7">
-            {WEEK_DAYS.map((d) => (
-              <span key={d} className="text-[13px] text-center self-center" style={{ color: "var(--color-text-secondary)" }}>
-                {d}
-              </span>
-            ))}
-          </div>
-          <button
-            type="button"
-            onClick={() => setWeekOffset((o) => o + 1)}
-            className="w-8 h-8 flex items-center justify-center shrink-0"
-          >
-            <ChevronRight className="w-4 h-4" style={{ color: "var(--color-text-secondary)" }} />
-          </button>
-        </div>
-
-        {/* 日期行 */}
-        <div className="grid grid-cols-7 h-[52px]">
-          {weekDates.map((date) => {
-            const ds = toDateStr(date);
-            const isToday = ds === todayStr;
-            const isActive = ds === selectedDate;
-            return (
+      <div className="px-5 mb-6 mt-2">
+        <div
+          className="p-4 overflow-hidden"
+          style={{
+            backgroundColor: "var(--color-surface-card)",
+            borderRadius: 20,
+            boxShadow: "var(--shadow-card)",
+          }}
+        >
+          {/* 月份标签 + 左右箭头 */}
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-[15px] font-semibold" style={{ color: "var(--color-text-primary)", letterSpacing: "-0.018em" }}>
+              {monthLabel}
+            </span>
+            <div className="flex items-center gap-1">
               <button
-                key={ds}
                 type="button"
-                onClick={() => handleSelectDay(date)}
-                className="flex items-center justify-center"
+                onClick={() => setWeekOffset((o) => o - 1)}
+                className="w-7 h-7 flex items-center justify-center rounded-lg"
+                style={{ color: "var(--color-text-secondary)" }}
+                aria-label="上一周"
               >
-                {isActive ? (
-                  <div className="relative flex items-center justify-center">
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setWeekOffset((o) => o + 1)}
+                className="w-7 h-7 flex items-center justify-center rounded-lg"
+                style={{ color: "var(--color-text-secondary)" }}
+                aria-label="下一周"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* 星期行 */}
+          <motion.div className="flex gap-0 overflow-x-auto no-scrollbar -mx-1 px-1" onPanEnd={handleDragEnd}>
+            {weekDates.map((date) => {
+              const ds = toDateStr(date);
+              const isActive = ds === selectedDate;
+              const isToday = ds === todayStr;
+              return (
+                <button
+                  key={ds}
+                  type="button"
+                  onClick={() => handleSelectDay(date)}
+                  className="flex flex-col items-center gap-1.5 shrink-0"
+                  style={{ width: "calc(100% / 7)", minWidth: 44 }}
+                >
+                  <span className="text-[11px] font-medium" style={{ color: "var(--color-text-secondary)", letterSpacing: 0 }}>
+                    {WEEK_DAYS[date.getDay() === 0 ? 6 : date.getDay() - 1]}
+                  </span>
+                  <div
+                    className="w-9 h-9 rounded-full flex items-center justify-center"
+                    style={{
+                      backgroundColor: isActive ? "var(--lifeflow-primary)" : "transparent",
+                    }}
+                  >
                     <span
-                      className="absolute w-[36px] h-[36px] rounded-full"
-                      style={{ backgroundColor: "var(--lifeflow-brand-50)" }}
-                    />
-                    <span
-                      className="relative w-[28px] h-[28px] rounded-full flex items-center justify-center"
-                      style={{ backgroundColor: "var(--lifeflow-primary)" }}
+                      className="text-[15px] leading-none"
+                      style={{
+                        fontWeight: isActive ? 600 : 500,
+                        color: isActive ? "#FFFFFF" : "var(--color-text-primary)",
+                      }}
                     >
-                      <span className="text-[17px] font-medium text-white">{date.getDate()}</span>
+                      {date.getDate()}
                     </span>
                   </div>
-                ) : (
-                  <span
-                    className="text-[17px] font-medium"
-                    style={{ color: isToday ? "var(--lifeflow-primary)" : "var(--color-text-primary)" }}
-                  >
-                    {date.getDate()}
-                  </span>
-                )}
-              </button>
-            );
-          })}
+                </button>
+              );
+            })}
+          </motion.div>
         </div>
-      </motion.div>
+      </div>
 
       {/* ===== Date Title Row ===== */}
       <div className="flex items-center justify-between px-4 mt-5">
@@ -510,10 +523,15 @@ export default function SchedulePage() {
       {/* ===== 当日任务分组卡 ===== */}
       <div className="px-4 mt-3">
         {sortedTasks.length === 0 ? (
-          <div className="flex flex-col items-center py-16">
-            <CalendarDays className="w-10 h-10" style={{ color: "var(--lifeflow-border)" }} />
-            <p className="text-[15px] mt-3" style={{ color: "var(--color-text-secondary)" }}>
+          <div className="flex flex-col items-center justify-center py-20">
+            <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4" style={{ backgroundColor: "var(--color-surface-secondary)" }}>
+              <CalendarDays className="w-7 h-7" style={{ color: "var(--color-text-disabled)" }} />
+            </div>
+            <p className="text-[16px] font-medium" style={{ color: "var(--color-text-secondary)", letterSpacing: "-0.01em" }}>
               当日暂无安排
+            </p>
+            <p className="text-[12px] mt-1.5" style={{ color: "var(--color-text-disabled)" }}>
+              添加日程以开始规划你的时间
             </p>
           </div>
         ) : (

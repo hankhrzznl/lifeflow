@@ -4,14 +4,21 @@ import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Target, Wallet, Heart, ChevronRight, Check } from "lucide-react";
-import { efficiencyDB, getScheduleTasksByDate } from "@/lib/db/efficiency.db";
-import type { Goal, ScheduleTask } from "@/lib/db/efficiency.db";
-import { accountingDB } from "@/lib/db/accounting.db";
+import {
+  Target, Wallet, Heart, ChevronRight,
+  Check, Moon, Sun,
+} from "lucide-react";
+import { getTransactionsByDate } from "@/lib/db/accounting.db";
 import type { Transaction } from "@/lib/db/accounting.db";
-import { healthDB, getWaterGoal } from "@/lib/db/health.db";
-import type { WaterLog, WaterGoal } from "@/lib/db/health.db";
+import { getWaterLogsByDate, getWaterGoal, getWorkoutSessionByDate, getSleepLogByDate } from "@/lib/db/health.db";
+import { getHabits } from "@/lib/db/life.db";
+import type { Habit } from "@/lib/db/life.db";
+import { getScheduleTasksByDate, getAllScheduleTasks } from "@/lib/db/efficiency.db";
+import type { ScheduleTask } from "@/lib/db/efficiency.db";
+import { useTheme } from "@/components/theme/ThemeProvider";
 
+// ============================================================
+// 工具函数
 // ============================================================
 
 function todayStr(): string {
@@ -19,228 +26,399 @@ function todayStr(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+function fmtCompact(fen: number): string {
+  const yuan = fen / 100;
+  return yuan.toLocaleString("zh-CN", { minimumFractionDigits: fen % 100 === 0 ? 0 : 2, maximumFractionDigits: 2 });
+}
+
+function timeToMinutes(t: string): number {
+  const [h, m] = t.split(":").map(Number);
+  return h * 60 + m;
+}
+
 function formatDateChinese(date: Date): string {
   const weekDays = ["日", "一", "二", "三", "四", "五", "六"];
   return `${date.getMonth() + 1}月${date.getDate()}日 周${weekDays[date.getDay()]}`;
 }
 
+function formatDuration(minutes: number): string {
+  if (minutes <= 0) return "--";
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return h > 0 ? `${h}h${m > 0 ? m : ""}` : `${m}min`;
+}
+
+// ============================================================
+// 首页
 // ============================================================
 
 export default function HomePage() {
   const today = todayStr();
   const now = new Date();
+  const { resolvedTheme, setTheme } = useTheme();
 
-  // ── Data queries ──
-  const todayTasks = useLiveQuery(() => getScheduleTasksByDate(today), [today], [] as ScheduleTask[]);
-  const goals = useLiveQuery(() => efficiencyDB.goals.toArray(), [], [] as Goal[]);
-  const transactions = useLiveQuery(
-    () => accountingDB.transactions.where("date").equals(today).toArray(),
-    [today],
-    [] as Transaction[],
-  );
-  const waterLogs = useLiveQuery(
-    () => healthDB.waterLogs.where("date").equals(today).toArray(),
-    [today],
-    [] as WaterLog[],
-  );
-  const [waterGoal, setWaterGoal] = useState<WaterGoal>({ dailyTarget: 2000, reminderInterval: 0, nightMode: false, createdAt: 0, updatedAt: 0 });
-  useEffect(() => {
-    getWaterGoal().then((g) => setWaterGoal(g)).catch(() => {});
-  }, []);
+  // ── 数据源 ──
+  const todayTxs = useLiveQuery(() => getTransactionsByDate(today), [today], [] as Transaction[]);
+  const todayWaterLogs = useLiveQuery(() => getWaterLogsByDate(today), [today], []);
+  const [waterGoalData, setWaterGoalData] = useState<{ dailyTarget: number }>({ dailyTarget: 2000 });
+  useEffect(() => { getWaterGoal().then((g) => setWaterGoalData(g)).catch(() => {}); }, []);
+  const waterGoal = waterGoalData;
+  const todayWorkout = useLiveQuery(() => getWorkoutSessionByDate(today), [today], undefined);
+  const todaySleep = useLiveQuery(() => getSleepLogByDate(today), [today], undefined);
+  const habits = useLiveQuery(() => getHabits(), [], [] as Habit[]);
+  const todayScheduleTasks = useLiveQuery(() => getScheduleTasksByDate(today), [today], [] as ScheduleTask[]);
+  const allScheduleTasks = useLiveQuery(() => getAllScheduleTasks(), [], [] as ScheduleTask[]);
 
-  // ── Derived ──
-  const totalGoals = goals.length;
-  const completedGoals = goals.filter((g) => g.status === "completed").length;
+  // ── 聚合数据 ──
+  const todayExpense = (todayTxs ?? []).filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0);
+  const todayIncome = (todayTxs ?? []).filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0);
+  const netIncome = todayIncome - todayExpense;
 
-  const totalExpense = transactions.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0);
-  const totalIncome = transactions.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0);
-  const netIncome = Math.round((totalIncome - totalExpense) / 100);
-
-  const waterTotal = waterLogs.reduce((s, l) => s + l.amount, 0);
+  const waterTotal = (todayWaterLogs ?? []).reduce((s, l) => s + l.amount, 0);
   const waterTarget = waterGoal?.dailyTarget ?? 2000;
+  const waterPct = waterTarget > 0 ? Math.min(100, Math.round((waterTotal / waterTarget) * 100)) : 0;
+  const sleepHours = todaySleep ? `${Math.floor(timeToMinutes(todaySleep.actualTime) / 60)}h` : "--";
+  const trained = !!todayWorkout;
 
-  // Tasks: today's incomplete tasks
-  const incompleteTasks = useMemo(() => {
-    return todayTasks.filter((t) => !t.isCompleted).slice(0, 4);
+  const completedHabits = useMemo(() => {
+    if (!habits || habits.length === 0) return 0;
+    return habits.filter((h) => h.days[today]).length;
+  }, [habits, today]);
+
+  const habitsTotal = habits?.length ?? 0;
+
+  // ── 今日任务 ──
+  const todayTasks = useMemo(() => {
+    return (todayScheduleTasks ?? []).filter(
+      (t) =>
+        t.date === today ||
+        (t.type === "multi_day" && t.startDate && t.endDate && t.startDate <= today && t.endDate >= today),
+    );
+  }, [todayScheduleTasks, today]);
+
+  const todayTasksTotal = todayTasks.length;
+
+  // 排序：未完成在上，重要在上
+  const sortedTodayTasks = useMemo(() => {
+    return [...todayTasks].sort((a, b) => {
+      if (a.isCompleted !== b.isCompleted) return a.isCompleted ? 1 : -1;
+      if (a.isImportant !== b.isImportant) return a.isImportant ? -1 : 1;
+      return a.createdAt - b.createdAt;
+    });
   }, [todayTasks]);
 
-  // Done tasks
-  const completedTasks = useMemo(() => {
-    return todayTasks.filter((t) => t.isCompleted).slice(0, 2);
-  }, [todayTasks]);
-
-  // Future/upcoming tasks (tomorrow)
+  // ── 即将开始（未来 7 天） ──
   const upcomingTasks = useMemo(() => {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const tomorrowStr = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, "0")}-${String(tomorrow.getDate()).padStart(2, "0")}`;
-    return []; // We'll show static upcoming items for now
-  }, []);
+    if (!allScheduleTasks) return [];
+    const futureTasks: { title: string; subtitle: string; time: string; type: "会议" | "审批" }[] = [];
+    const seen = new Set<string>();
+    for (const t of allScheduleTasks) {
+      if (seen.has(t.title)) continue;
+      seen.add(t.title);
+      if (t.date && t.date > today) {
+        const d = new Date(t.date);
+        const label = `${d.getMonth() + 1}/${d.getDate()}`;
+        futureTasks.push({
+          title: t.title,
+          subtitle: t.note || "待办事项",
+          time: `${label}`,
+          type: t.isImportant ? "审批" : "会议",
+        });
+      }
+    }
+    return futureTasks.slice(0, 5);
+  }, [allScheduleTasks, today]);
 
-  // Get goal name by id
-  const goalMap = useMemo(() => {
-    const map: Record<string, Goal> = {};
-    goals.forEach((g) => { map[g.id] = g; });
-    return map;
-  }, [goals]);
+  // ── 统计卡片数据 ──
+  const statCards = [
+    {
+      label: "今日目标",
+      icon: Target,
+      value: habitsTotal > 0 ? `${completedHabits}/${habitsTotal}` : "暂无",
+      href: "/efficiency",
+    },
+    {
+      label: "今日收支",
+      icon: Wallet,
+      value: `${netIncome >= 0 ? "+" : ""}${fmtCompact(Math.abs(netIncome))}`,
+      href: "/more/accounting",
+    },
+    {
+      label: "今日健康",
+      icon: Heart,
+      value: sleepHours !== "--" ? `${sleepHours}` : waterPct > 0 ? `${waterPct}%` : trained ? "已训练" : "--",
+      href: "/more",
+    },
+  ];
 
-  function getPriorityLabel(quadrant?: string, isImportant?: boolean) {
-    if (quadrant === "q1" || isImportant) return { text: "高优先级", color: "var(--state-warning)" };
-    if (quadrant === "q2") return { text: "中优先级", color: "var(--color-text-secondary)" };
-    return { text: "普通", color: "var(--color-text-secondary)" };
-  }
+  // ── 暗色模式切换 ──
+  const handleToggleTheme = () => {
+    setTheme(resolvedTheme === "dark" ? "light" : "dark");
+  };
 
   return (
-    <main className="px-4 pt-14 pb-[100px] max-w-[430px] mx-auto">
-      {/* Header */}
-      <header className="flex items-center justify-between mb-1">
-        <h1 className="text-title-nav" style={{ color: "var(--color-text-primary)" }}>LifeFlow</h1>
-        <button
-          className="w-10 h-10 rounded-full border flex items-center justify-center"
-          style={{ borderColor: "var(--lifeflow-border)", background: "var(--color-surface-card)" }}
+    <div>
+      {/* ===== 1. Header ===== */}
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, ease: "easeOut" }}
+        className="px-4 pt-14 mb-1"
+      >
+        <header className="flex items-center justify-between mb-1">
+          <h1
+            className="text-[17px] font-semibold"
+            style={{ letterSpacing: "-0.018em", color: "var(--color-text-primary)" }}
+          >
+            LifeFlow
+          </h1>
+          <button
+            type="button"
+            onClick={handleToggleTheme}
+            aria-label="切换暗色模式"
+            className="w-10 h-10 rounded-full flex items-center justify-center"
+            style={{
+              backgroundColor: "var(--color-surface-card)",
+              border: "1px solid var(--lifeflow-border)",
+            }}
+          >
+            {resolvedTheme === "dark" ? (
+              <Sun className="w-5 h-5" style={{ color: "var(--color-text-secondary)" }} />
+            ) : (
+              <Moon className="w-5 h-5" style={{ color: "var(--color-text-secondary)" }} />
+            )}
+          </button>
+        </header>
+        <p
+          className="text-[13px] font-medium mb-6"
+          style={{ color: "var(--color-text-secondary)" }}
         >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-secondary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-          </svg>
-        </button>
-      </header>
-      <p className="text-label mb-6">{formatDateChinese(now)}</p>
+          {formatDateChinese(now)}
+        </p>
+      </motion.div>
 
-      {/* Today Overview Cards — horizontal scroll */}
-      <div className="flex flex-nowrap overflow-x-auto gap-3 mb-6 no-scrollbar">
-        {/* Today Goals */}
-        <Link href="/efficiency" className="flex-shrink-0 w-[156px] rounded-[20px] p-4 flex flex-col gap-2" style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}>
-          <div className="flex items-center justify-between">
-            <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ background: "var(--lifeflow-brand-50)" }}>
-              <Target className="w-[18px] h-[18px]" style={{ color: "var(--lifeflow-primary)" }} />
-            </div>
-            <ChevronRight className="w-4 h-4" style={{ color: "var(--color-text-disabled)" }} />
-          </div>
-          <div>
-            <p className="text-caption">今日目标</p>
-            <p className="text-amount-small" style={{ color: "var(--color-text-primary)" }}>{completedGoals}/{totalGoals}</p>
-          </div>
-        </Link>
-
-        {/* Today Income/Expense */}
-        <Link href="/more/accounting" className="flex-shrink-0 w-[156px] rounded-[20px] p-4 flex flex-col gap-2" style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}>
-          <div className="flex items-center justify-between">
-            <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ background: "var(--lifeflow-brand-50)" }}>
-              <Wallet className="w-[18px] h-[18px]" style={{ color: "var(--lifeflow-primary)" }} />
-            </div>
-            <ChevronRight className="w-4 h-4" style={{ color: "var(--color-text-disabled)" }} />
-          </div>
-          <div>
-            <p className="text-caption">今日收支</p>
-            <p className="text-amount-small" style={{ color: "var(--color-text-primary)" }}>
-              {netIncome >= 0 ? "+" : ""}{netIncome}
-            </p>
-          </div>
-        </Link>
-
-        {/* Today Health */}
-        <Link href="/more" className="flex-shrink-0 w-[156px] rounded-[20px] p-4 flex flex-col gap-2" style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}>
-          <div className="flex items-center justify-between">
-            <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ background: "var(--lifeflow-brand-50)" }}>
-              <Heart className="w-[18px] h-[18px]" style={{ color: "var(--lifeflow-primary)" }} />
-            </div>
-            <ChevronRight className="w-4 h-4" style={{ color: "var(--color-text-disabled)" }} />
-          </div>
-          <div>
-            <p className="text-caption">今日健康</p>
-            <p className="text-amount-small" style={{ color: "var(--color-text-primary)" }}>
-              {waterTotal >= 1000 ? `${(waterTotal / 1000).toFixed(1)}L` : `${waterTotal}ml`}
-            </p>
-          </div>
-        </Link>
-      </div>
-
-      {/* Task List Section */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <h2 className="text-[18px] font-semibold tracking-[-0.018em]" style={{ color: "var(--color-text-primary)" }}>今日任务</h2>
-            <span className="text-[12px] font-semibold px-2 py-0.5 rounded-full" style={{ background: "var(--lifeflow-brand-50)", color: "var(--lifeflow-primary)" }}>
-              {todayTasks.length}
-            </span>
-          </div>
-          <Link href="/tasks" className="text-[13px] font-medium" style={{ color: "var(--lifeflow-primary)" }}>查看全部</Link>
-        </div>
-
-        {incompleteTasks.length === 0 && completedTasks.length === 0 ? (
-          <div className="rounded-[20px] p-8 flex flex-col items-center gap-2" style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}>
-            <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ background: "var(--lifeflow-muted)" }}>
-              <Target className="w-6 h-6" style={{ color: "var(--color-text-disabled)" }} />
-            </div>
-            <p className="text-[14px]" style={{ color: "var(--color-text-secondary)" }}>暂无任务</p>
-            <Link href="/efficiency/create" className="text-[14px] font-medium" style={{ color: "var(--lifeflow-primary)" }}>
-              + 创建任务
-            </Link>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-3">
-            {incompleteTasks.map((task) => {
-              const priority = getPriorityLabel(task.quadrant, task.isImportant);
-              const taskGoal = task.goalId ? goalMap[task.goalId] : null;
-              return (
-                <div key={task.id} className="rounded-[20px] p-4 flex items-center gap-3" style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}>
-                  <div className="w-[22px] h-[22px] rounded-full border-2 flex items-center justify-center flex-shrink-0" style={{ borderColor: "var(--lifeflow-primary)" }}>
-                    <div className="w-[10px] h-[10px] rounded-full" style={{ background: "var(--lifeflow-primary)" }} />
+      {/* ===== 2. 今日概览（横滑统计卡） ===== */}
+      <div className="flex flex-nowrap overflow-x-auto gap-3 mb-6 px-4 no-scrollbar">
+        {statCards.map((card, i) => (
+          <motion.div
+            key={card.label}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.05 + i * 0.06, duration: 0.35, ease: "easeOut" }}
+          >
+            <Link href={card.href}>
+              <div
+                className="flex-shrink-0 w-[156px] rounded-[20px] p-4 flex flex-col gap-2 cursor-pointer"
+                style={{
+                  backgroundColor: "var(--color-surface-card)",
+                  boxShadow: "var(--shadow-card)",
+                }}
+              >
+                <div className="flex items-center justify-between">
+                  <div
+                    className="w-9 h-9 rounded-full flex items-center justify-center"
+                    style={{ backgroundColor: "var(--lifeflow-brand-50)" }}
+                  >
+                    <card.icon className="w-[18px] h-[18px]" style={{ color: "var(--lifeflow-primary)" }} />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[15px] font-medium truncate" style={{ color: "var(--color-text-primary)" }}>{task.title}</p>
-                    {taskGoal && <p className="text-[12px] truncate" style={{ color: "var(--color-text-secondary)" }}>{taskGoal.title}</p>}
-                  </div>
-                  <div className="flex-shrink-0 text-right">
-                    {task.plannedTime > 0 && (
-                      <p className="text-[13px] font-medium whitespace-nowrap" style={{ color: "var(--color-text-secondary)" }}>{task.plannedTime}min</p>
-                    )}
-                    <p className="text-[11px] font-medium whitespace-nowrap" style={{ color: priority.color }}>{priority.text}</p>
-                  </div>
+                  <ChevronRight className="w-4 h-4" style={{ color: "var(--color-text-disabled)" }} />
                 </div>
-              );
-            })}
-
-            {/* Completed tasks */}
-            {completedTasks.map((task) => (
-              <div key={task.id} className="rounded-[20px] p-4 flex items-center gap-3" style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)", opacity: 0.6 }}>
-                <div className="w-[22px] h-[22px] rounded-full border-2 flex items-center justify-center flex-shrink-0" style={{ borderColor: "var(--color-text-disabled)" }}>
-                  <Check className="w-[14px] h-[14px]" style={{ color: "var(--color-text-disabled)" }} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[15px] font-medium truncate line-through" style={{ color: "var(--color-text-disabled)" }}>{task.title}</p>
-                  <p className="text-[12px] truncate" style={{ color: "var(--color-text-disabled)" }}>已完成</p>
-                </div>
-                <div className="flex-shrink-0 text-right">
-                  <p className="text-[11px] font-medium whitespace-nowrap" style={{ color: "var(--color-text-disabled)" }}>已完成</p>
+                <div>
+                  <p className="text-caption">{card.label}</p>
+                  <p
+                    className="text-[20px] font-bold"
+                    style={{ color: "var(--color-text-primary)", letterSpacing: "-0.018em" }}
+                  >
+                    {card.value}
+                  </p>
                 </div>
               </div>
-            ))}
-          </div>
-        )}
+            </Link>
+          </motion.div>
+        ))}
       </div>
 
-      {/* Upcoming Section */}
-      <div className="mb-20">
-        <div className="flex items-center gap-2 mb-3">
-          <h2 className="text-[18px] font-semibold tracking-[-0.018em]" style={{ color: "var(--color-text-primary)" }}>即将开始</h2>
-        </div>
+      {/* ===== 3. 今日任务列表 ===== */}
+      <div className="px-4 mb-6">
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2, duration: 0.35, ease: "easeOut" }}
+          className="flex items-center justify-between mb-3"
+        >
+          <div className="flex items-center gap-2">
+            <h2
+              className="text-[18px] font-semibold"
+              style={{ color: "var(--color-text-primary)", letterSpacing: "-0.018em" }}
+            >
+              今日任务
+            </h2>
+            <span
+              className="text-[12px] font-semibold px-2 py-0.5 rounded-full"
+              style={{ backgroundColor: "var(--lifeflow-brand-50)", color: "var(--lifeflow-primary)" }}
+            >
+              {todayTasksTotal}
+            </span>
+          </div>
+          <Link
+            href="/efficiency/schedule"
+            className="text-[13px] font-medium"
+            style={{ color: "var(--lifeflow-primary)" }}
+          >
+            查看全部
+          </Link>
+        </motion.div>
 
         <div className="flex flex-col gap-3">
-          <div className="rounded-[20px] p-4 flex items-center gap-3" style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}>
-            <div className="w-[22px] h-[22px] rounded-full border-2 flex items-center justify-center flex-shrink-0" style={{ borderColor: "var(--lifeflow-primary)" }} />
-            <div className="flex-1 min-w-0">
-              <p className="text-[15px] font-medium truncate" style={{ color: "var(--color-text-primary)" }}>查看明天日程</p>
-              <p className="text-[12px] truncate" style={{ color: "var(--color-text-secondary)" }}>规划明天的任务和安排</p>
-            </div>
-            <div className="flex-shrink-0 text-right">
-              <Link href="/efficiency/schedule" className="inline-block text-[11px] font-medium px-2 py-0.5 rounded-full whitespace-nowrap" style={{ background: "var(--lifeflow-brand-50)", color: "var(--lifeflow-primary)" }}>
-                日程
-              </Link>
-            </div>
-          </div>
+          {sortedTodayTasks.length === 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.25, duration: 0.35 }}
+              className="rounded-[20px] p-4 text-center"
+              style={{ backgroundColor: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}
+            >
+              <p className="text-[15px]" style={{ color: "var(--color-text-secondary)" }}>
+                今天暂无任务
+              </p>
+            </motion.div>
+          )}
+          {sortedTodayTasks.slice(0, 5).map((task, i) => {
+            const isDone = task.isCompleted;
+            const priorityLabel = task.isImportant ? "高优先级" : "普通";
+            const priorityColor = task.isImportant
+              ? "var(--state-warning)"
+              : isDone
+                ? "var(--color-text-disabled)"
+                : "var(--color-text-secondary)";
+
+            return (
+              <motion.div
+                key={task.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.25 + i * 0.04, duration: 0.3, ease: "easeOut" }}
+                className="rounded-[20px] p-4 flex items-center gap-3"
+                style={{
+                  backgroundColor: "var(--color-surface-card)",
+                  boxShadow: "var(--shadow-card)",
+                  opacity: isDone ? 0.6 : 1,
+                }}
+              >
+                {/* 复选框 */}
+                <div
+                  className="w-[22px] h-[22px] rounded-full border-2 flex items-center justify-center flex-shrink-0"
+                  style={{
+                    borderColor: isDone ? "var(--color-text-disabled)" : "var(--lifeflow-primary)",
+                  }}
+                >
+                  {isDone ? (
+                    <Check className="w-[14px] h-[14px]" style={{ color: "var(--color-text-disabled)" }} strokeWidth={2} />
+                  ) : (
+                    <div className="w-[10px] h-[10px] rounded-full" style={{ backgroundColor: "var(--lifeflow-primary)" }} />
+                  )}
+                </div>
+
+                {/* 中间文字 */}
+                <div className="flex-1 min-w-0">
+                  <p
+                    className="text-[15px] font-medium truncate"
+                    style={{
+                      color: isDone ? "var(--color-text-disabled)" : "var(--color-text-primary)",
+                      textDecoration: isDone ? "line-through" : "none",
+                    }}
+                  >
+                    {task.title}
+                  </p>
+                  <p className="text-[12px] truncate" style={{ color: "var(--color-text-secondary)" }}>
+                    {task.note || (task.goalId ? "目标关联" : "待办事项")}
+                  </p>
+                </div>
+
+                {/* 右侧信息 */}
+                <div className="flex-shrink-0 text-right">
+                  <p className="text-[13px] font-medium whitespace-nowrap" style={{ color: "var(--color-text-secondary)" }}>
+                    {task.plannedTime > 0 ? formatDuration(task.plannedTime) : "--"}
+                  </p>
+                  <p
+                    className="text-[11px] font-medium whitespace-nowrap"
+                    style={{ color: isDone ? "var(--color-text-disabled)" : priorityColor }}
+                  >
+                    {isDone ? "已完成" : priorityLabel}
+                  </p>
+                </div>
+              </motion.div>
+            );
+          })}
         </div>
       </div>
-    </main>
+
+      {/* ===== 4. 即将开始 ===== */}
+      <div className="px-4 mb-6">
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.35, duration: 0.35, ease: "easeOut" }}
+        >
+          <div className="flex items-center gap-2 mb-3">
+            <h2
+              className="text-[18px] font-semibold"
+              style={{ color: "var(--color-text-primary)", letterSpacing: "-0.018em" }}
+            >
+              即将开始
+            </h2>
+          </div>
+          <div className="flex flex-col gap-3">
+            {upcomingTasks.length === 0 && (
+              <div
+                className="rounded-[20px] p-4 text-center"
+                style={{ backgroundColor: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}
+              >
+                <p className="text-[15px]" style={{ color: "var(--color-text-secondary)" }}>
+                  暂无即将开始的任务
+                </p>
+              </div>
+            )}
+            {upcomingTasks.map((item, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 + i * 0.05, duration: 0.3, ease: "easeOut" }}
+                className="rounded-[20px] p-4 flex items-center gap-3"
+                style={{ backgroundColor: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}
+              >
+                <div
+                  className="w-[22px] h-[22px] rounded-full border-2 flex items-center justify-center flex-shrink-0"
+                  style={{ borderColor: "var(--lifeflow-primary)" }}
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="text-[15px] font-medium truncate" style={{ color: "var(--color-text-primary)" }}>
+                    {item.title}
+                  </p>
+                  <p className="text-[12px] truncate" style={{ color: "var(--color-text-secondary)" }}>
+                    {item.subtitle}
+                  </p>
+                </div>
+                <div className="flex-shrink-0 text-right">
+                  <p className="text-[13px] font-medium whitespace-nowrap" style={{ color: "var(--color-text-secondary)" }}>
+                    {item.time}
+                  </p>
+                  <span
+                    className="inline-block text-[11px] font-medium px-2 py-0.5 rounded-full whitespace-nowrap"
+                    style={{
+                      backgroundColor: item.type === "会议" ? "var(--lifeflow-brand-50)" : "var(--lifeflow-muted)",
+                      color: item.type === "会议" ? "var(--lifeflow-primary)" : "var(--color-text-secondary)",
+                    }}
+                  >
+                    {item.type}
+                  </span>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
+      </div>
+    </div>
   );
 }

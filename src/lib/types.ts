@@ -139,6 +139,12 @@ export interface Reminder {
   message: string;
   status: 'pending' | 'dismissed' | 'completed' | 'snoozed';
   snoozeUntil?: number;
+  /** 关联模块类型: water/sleep/medication/fitness/habit/task/goal */
+  moduleType?: string;
+  /** 关联模块中的具体记录 ID */
+  linkedModuleId?: string;
+  /** 重复规则: once/daily/weekly/monthly */
+  recurrenceRule?: string;
   createdAt: number;
   updatedAt: number;
 }

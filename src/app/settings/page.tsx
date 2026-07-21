@@ -1,11 +1,12 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { Moon, Download, Trash2, Info, MessageSquare, ChevronRight } from "lucide-react";
+import { useRef, useState, useEffect } from "react";
+import { Moon, Download, Trash2, Info, MessageSquare, ChevronRight, Brain, Check } from "lucide-react";
 import { useTheme } from "@/components/theme/ThemeProvider";
 import Dialog from "@/components/ui/Dialog";
 import { showToast } from "@/components/ui/Toast";
 import { dataExportService } from "@/lib/engine/DataExportService";
+import { getLLMConfig, saveLLMConfig, clearLLMConfig, type LLMConfig } from "@/lib/brains/downgrade";
 
 // ─── iOS Toggle Switch ────────────────────────────────────────
 function ToggleSwitch({
@@ -36,6 +37,12 @@ export default function SettingsPage() {
   const [showClearDialog, setShowClearDialog] = useState(false);
   const [importing, setImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // LLM Config State
+  const [llmConfig, setLLMConfig] = useState<LLMConfig | null>(null);
+  const [showLLM, setShowLLM] = useState(false);
+  const [llmForm, setLLMForm] = useState<{ provider: "openai" | "anthropic" | "custom"; apiKey: string; model: string; baseUrl: string }>({ provider: "openai", apiKey: "", model: "gpt-3.5-turbo", baseUrl: "" });
+  useEffect(() => { setLLMConfig(getLLMConfig()); }, []);
 
   const toggleDark = () => {
     setTheme(isDark ? "light" : "dark");
@@ -108,6 +115,120 @@ export default function SettingsPage() {
             </div>
             <ChevronRight className="w-5 h-5 shrink-0" style={{ color: "var(--color-text-disabled)" }} />
           </button>
+        </div>
+      </div>
+
+      {/* AI 增强 */}
+      <div className="px-4 pt-4 pb-2">
+        <p className="text-[13px] font-medium px-5 pt-4 pb-2" style={{ color: "var(--color-text-secondary)" }}>AI 增强</p>
+        <div className="rounded-[20px] overflow-hidden" style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}>
+          <button type="button" onClick={() => setShowLLM(!showLLM)} className="flex items-center justify-between w-full px-5 py-3.5 active:opacity-50">
+            <div className="flex items-center gap-3 min-w-0">
+              <Brain className="w-5 h-5 shrink-0" style={{ color: "var(--color-text-primary)" }} />
+              <div className="text-left min-w-0">
+                <span className="text-[17px] block" style={{ color: "var(--color-text-primary)" }}>LLM 智能增强</span>
+                <span className="text-[13px] block truncate" style={{ color: "var(--color-text-secondary)" }}>
+                  {llmConfig?.enabled ? `${llmConfig.provider} · ${llmConfig.model}` : "已关闭"}
+                </span>
+              </div>
+            </div>
+            <ChevronRight className="w-5 h-5 shrink-0" style={{ color: "var(--color-text-disabled)", transform: showLLM ? "rotate(90deg)" : "", transition: "transform 0.2s" }} />
+          </button>
+
+          {showLLM && (
+            <div className="px-5 pb-4 space-y-3" style={{ borderTop: "1px solid var(--lifeflow-border)" }}>
+              <p className="text-[12px] pt-3" style={{ color: "var(--color-text-secondary)" }}>
+                当本地规则引擎无法理解你的输入时，自动调用 LLM 进行语义理解。API Key 只保存在本地浏览器中。
+              </p>
+
+              {/* Provider */}
+              <div>
+                <label className="text-[12px] font-medium block mb-1" style={{ color: "var(--color-text-secondary)" }}>服务商</label>
+                <div className="flex gap-2">
+                  {(["openai", "anthropic", "custom"] as const).map(p => (
+                    <button
+                      key={p}
+                      onClick={() => setLLMForm({ ...llmForm, provider: p, model: p === "anthropic" ? "claude-3-haiku-20240307" : p === "openai" ? "gpt-3.5-turbo" : "" })}
+                      className="px-3 py-1.5 rounded-full text-[13px] font-medium transition-colors"
+                      style={{ background: llmForm.provider === p ? "var(--lifeflow-primary)" : "var(--lifeflow-muted)", color: llmForm.provider === p ? "#fff" : "var(--color-text-secondary)" }}
+                    >
+                      {p === "openai" ? "OpenAI" : p === "anthropic" ? "Anthropic" : "自定义"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Model */}
+              <div>
+                <label className="text-[12px] font-medium block mb-1" style={{ color: "var(--color-text-secondary)" }}>模型</label>
+                <input
+                  type="text"
+                  value={llmForm.model}
+                  onChange={e => setLLMForm({ ...llmForm, model: e.target.value })}
+                  placeholder="gpt-3.5-turbo"
+                  className="w-full h-9 px-3 rounded-lg text-[14px] outline-none"
+                  style={{ background: "var(--lifeflow-muted)", color: "var(--color-text-primary)" }}
+                />
+              </div>
+
+              {/* API Key */}
+              <div>
+                <label className="text-[12px] font-medium block mb-1" style={{ color: "var(--color-text-secondary)" }}>API Key</label>
+                <input
+                  type="password"
+                  value={llmForm.apiKey}
+                  onChange={e => setLLMForm({ ...llmForm, apiKey: e.target.value })}
+                  placeholder="sk-..."
+                  className="w-full h-9 px-3 rounded-lg text-[14px] outline-none"
+                  style={{ background: "var(--lifeflow-muted)", color: "var(--color-text-primary)" }}
+                />
+              </div>
+
+              {/* Base URL (custom only) */}
+              {llmForm.provider === "custom" && (
+                <div>
+                  <label className="text-[12px] font-medium block mb-1" style={{ color: "var(--color-text-secondary)" }}>API 地址</label>
+                  <input
+                    type="text"
+                    value={llmForm.baseUrl}
+                    onChange={e => setLLMForm({ ...llmForm, baseUrl: e.target.value })}
+                    placeholder="https://api.openai.com/v1"
+                    className="w-full h-9 px-3 rounded-lg text-[14px] outline-none"
+                    style={{ background: "var(--lifeflow-muted)", color: "var(--color-text-primary)" }}
+                  />
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="flex gap-2 pt-1">
+                <button
+                  onClick={() => {
+                    const config: LLMConfig = { ...llmForm, enabled: true };
+                    saveLLMConfig(config);
+                    setLLMConfig(config);
+                    showToast({ type: "success", message: "LLM 配置已保存" });
+                  }}
+                  className="flex-1 py-2 rounded-full text-[14px] font-medium text-white active:opacity-90"
+                  style={{ background: "var(--lifeflow-primary)" }}
+                >
+                  <Check className="w-4 h-4 inline mr-1" />保存并启用
+                </button>
+                {llmConfig?.enabled && (
+                  <button
+                    onClick={() => {
+                      clearLLMConfig();
+                      setLLMConfig(null);
+                      showToast({ type: "success", message: "LLM 已关闭" });
+                    }}
+                    className="px-4 py-2 rounded-full text-[14px] font-medium active:opacity-70"
+                    style={{ background: "var(--lifeflow-muted)", color: "var(--color-expense)" }}
+                  >
+                    关闭
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

@@ -15,6 +15,8 @@ import {
   Timer,
   CalendarRange,
   StickyNote,
+  Bell,
+  BarChart3,
   Settings,
 } from "lucide-react";
 
@@ -56,8 +58,15 @@ export default function MorePage() {
       ],
     },
     {
+      label: "数据分析",
+      items: [
+        { title: "复盘", description: "周/月数据总览与回顾", href: "/more/review", icon: BarChart3 },
+      ],
+    },
+    {
       label: "工具",
       items: [
+        { title: "提醒", description: "统一提醒中心", href: "/reminders", icon: Bell },
         { title: "习惯打卡", description: "培养好习惯", href: "/more/habits", icon: CheckSquare },
         { title: "专注计时", description: "番茄钟计时", href: "/more/focus", icon: Timer },
         { title: "倒数日", description: "重要日期倒数", href: "/more/countdown", icon: CalendarRange },

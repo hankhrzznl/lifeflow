@@ -89,6 +89,19 @@ export interface WeeklyStats {
   totalVolumeKg: number;
 }
 
+// ─── Stretch Types ────────────────────────────────────────────
+
+export interface StretchLog {
+  id?: number;
+  exerciseName: string;       // "猫式拉伸"
+  sets: number;               // 3
+  reps: number;               // 15
+  postureIssue?: string;      // "驼背" | "圆肩" | "骨盆前倾" | ...
+  note?: string;
+  date: string;               // "YYYY-MM-DD"
+  createdAt: number;
+}
+
 // ─── V2 Types ─────────────────────────────────────────────────
 
 export interface MuscleGroupV2 {
@@ -145,6 +158,7 @@ export class HealthDB extends Dexie {
   muscleGroupsV2!: Table<MuscleGroupV2, string>;
   exercisesV2!: Table<ExerciseV2, string>;
   workoutSessions!: Table<WorkoutSession, string>;
+  stretchLogs!: Table<StretchLog, number>;
 
   constructor() {
     super('LifeFlowHealth');
@@ -198,6 +212,11 @@ export class HealthDB extends Dexie {
       for (const e of exercises) {
         await tx.table('exercisesV2').add({ ...e, id: crypto.randomUUID(), createdAt: now });
       }
+    });
+
+    // v5: 体态拉伸记录表
+    this.version(5).stores({
+      stretchLogs: "++id, exerciseName, postureIssue, date, createdAt",
     });
   }
 }

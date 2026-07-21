@@ -39,30 +39,15 @@ function getWeekRangeStr(): string {
   return `${mon.getMonth() + 1}/${mon.getDate()} - ${sun.getMonth() + 1}/${sun.getDate()}`;
 }
 
-function fmtAvg(n: number) {
-  return Number.isInteger(n) ? `${n}` : n.toFixed(1);
-}
-
-const DOT_COLORS = ["#D97706", "#2563EB", "#E11D48", "#059669"];
-
 const RPE_OPTIONS = [6, 7, 8, 9, 10] as const;
 
-const EXERCISE_CARDS = [
-  {
-    name: "农夫行走",
-    tags: "核心 · 握力 · 全身",
-    icon: Dumbbell,
-  },
-  {
-    name: "负重旋转",
-    tags: "核心 · 抗旋 · 稳定性",
-    icon: RotateCw,
-  },
-  {
-    name: "爆发",
-    tags: "爆发力 · 速度 · 垂直跳",
-    icon: Zap,
-  },
+const QUICK_EXERCISES = [
+  { name: "杠铃卧推", tags: "胸部 · 推类", icon: Dumbbell },
+  { name: "杠铃深蹲", tags: "腿部 · 蹲类", icon: Dumbbell },
+  { name: "杠铃硬拉", tags: "背部 · 拉类", icon: Dumbbell },
+  { name: "引体向上", tags: "背部 · 自重", icon: RotateCw },
+  { name: "农夫行走", tags: "核心 · 握力", icon: Dumbbell },
+  { name: "爆发训练", tags: "爆发力 · 速度", icon: Zap },
 ] as const;
 
 /* ────────── Component ────────── */
@@ -71,8 +56,6 @@ export default function FitnessPage() {
   const router = useRouter();
 
   const {
-    muscleGroupsV2,
-    exercisesV2,
     workoutSessions,
     loadFitnessDataV2,
     addWorkoutSessionV2,
@@ -140,30 +123,7 @@ export default function FitnessPage() {
 
   const weekRange = useMemo(() => getWeekRangeStr(), []);
 
-  /* ─── Muscle group counts ─── */
-
-  const muscleGroupCounts = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const s of workoutSessions) {
-      for (const ex of s.exercises) {
-        const mg = muscleGroupsV2.find((g) =>
-          exercisesV2.some((ev) => ev.id === ex.exerciseId && ev.muscleGroupId === g.id)
-        );
-        if (mg) {
-          map.set(mg.id, (map.get(mg.id) || 0) + 1);
-        }
-      }
-    }
-    return map;
-  }, [workoutSessions, muscleGroupsV2, exercisesV2]);
-
-  /* Only show groups that have exercises recorded */
-  const activeMuscleGroups = useMemo(
-    () => muscleGroupsV2.filter((g) => muscleGroupCounts.has(g.id)),
-    [muscleGroupsV2, muscleGroupCounts],
-  );
-
-  /* ─── Recent groups ─── */
+  /* ─── Recent records ─── */
 
   const recentGroups = useMemo(() => {
     const sorted = [...workoutSessions]
@@ -181,6 +141,22 @@ export default function FitnessPage() {
       .map(([date, sessions]) => ({ date, sessions }));
   }, [workoutSessions]);
 
+  /* ─── Top exercises this week (for action cards) ─── */
+
+  const topExercises = useMemo(() => {
+    const weekSessions = workoutSessions.filter((s) => isDateInWeek(s.date));
+    const nameCount = new Map<string, number>();
+    for (const s of weekSessions) {
+      for (const ex of s.exercises) {
+        nameCount.set(ex.exerciseName, (nameCount.get(ex.exerciseName) || 0) + 1);
+      }
+    }
+    return [...nameCount.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 4)
+      .map(([name]) => name);
+  }, [workoutSessions]);
+
   /* ─── Format date ─── */
 
   const formatDateGroup = (dateStr: string) => {
@@ -189,28 +165,13 @@ export default function FitnessPage() {
     return `${d.getMonth() + 1}月${d.getDate()}日 周${weeks[d.getDay()]}`;
   };
 
-  /* ─── Exercise name suggestions ─── */
-
-  const suggestions = useMemo(() => {
-    if (!exerciseName.trim()) return [];
-    const q = exerciseName.trim().toLowerCase();
-    /* unique exercise names from the DB */
-    const names = [...new Set(exercisesV2.map((e) => e.name))];
-    return names.filter((n) => n.toLowerCase().includes(q)).slice(0, 5);
-  }, [exerciseName, exercisesV2]);
-
   /* ─── Submit record ─── */
 
   const handleSubmit = useCallback(async () => {
     if (!exerciseName.trim()) return;
     setSubmitting(true);
     try {
-      /* Find or create exercise */
-      let exId = exercisesV2.find((e) => e.name === exerciseName.trim())?.id;
-      if (!exId) {
-        exId = crypto.randomUUID();
-      }
-
+      const exId = crypto.randomUUID();
       await addWorkoutSessionV2({
         date: localTodayStr(),
         exercises: [
@@ -230,7 +191,6 @@ export default function FitnessPage() {
         notes: "",
       });
 
-      /* reset */
       setExerciseName("");
       setSets(3);
       setReps(10);
@@ -243,7 +203,7 @@ export default function FitnessPage() {
     } finally {
       setSubmitting(false);
     }
-  }, [exerciseName, sets, reps, weight, rpe, exercisesV2, addWorkoutSessionV2]);
+  }, [exerciseName, sets, reps, weight, rpe, addWorkoutSessionV2]);
 
   /* ─── Delete session ─── */
 
@@ -267,7 +227,14 @@ export default function FitnessPage() {
     setShowRecord(true);
   }, []);
 
-  /* ─── Stepper helpers ─── */
+  const openRecordForExercise = useCallback((name: string) => {
+    setExerciseName(name);
+    setSets(3);
+    setReps(10);
+    setWeight(20);
+    setRpe(7);
+    setShowRecord(true);
+  }, []);
 
   const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
 
@@ -362,15 +329,15 @@ export default function FitnessPage() {
           </button>
         </motion.div>
 
-        {/* ─── Three Exercise Categories ─── */}
+        {/* ─── Quick Exercise Cards ─── */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1, duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
         >
-          <h2 className="mb-3 px-1 text-[17px] font-semibold" style={{ color: "var(--color-text-primary)" }}>三大项训练</h2>
+          <h2 className="mb-3 px-1 text-[17px] font-semibold" style={{ color: "var(--color-text-primary)" }}>常用动作</h2>
           <div className="flex flex-col" style={{ gap: 12 }}>
-            {EXERCISE_CARDS.map((card) => {
+            {QUICK_EXERCISES.map((card) => {
               const Icon = card.icon;
               return (
                 <div
@@ -393,12 +360,12 @@ export default function FitnessPage() {
                   <div className="flex justify-end">
                     <button
                       type="button"
-                      onClick={openRecordSheet}
+                      onClick={() => openRecordForExercise(card.name)}
                       className="inline-flex items-center rounded-lg px-3 py-1.5 text-[13px] font-medium transition-opacity hover:opacity-90"
                       style={{ background: "var(--lifeflow-brand-50)", color: "var(--lifeflow-primary)" }}
                     >
                       <Plus className="h-3.5 w-3.5 mr-1" />
-                      记录训练
+                      记录
                     </button>
                   </div>
                 </div>
@@ -407,11 +374,39 @@ export default function FitnessPage() {
           </div>
         </motion.div>
 
+        {/* ─── Top exercises this week ─── */}
+        {topExercises.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.12, duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
+            className="p-5"
+            style={{ background: "var(--color-surface-card)", borderRadius: "20px", boxShadow: "var(--shadow-card)" }}
+          >
+            <h2 className="text-[17px] font-semibold mb-4" style={{ color: "var(--color-text-primary)" }}>本周热门动作</h2>
+            <div className="grid grid-cols-2 gap-[10px]">
+              {topExercises.map((name, i) => (
+                <div
+                  key={name}
+                  className="rounded-[12px] h-[76px] flex flex-col items-center justify-center cursor-pointer active:opacity-70"
+                  style={{ background: "var(--lifeflow-muted)" }}
+                  onClick={() => openRecordForExercise(name)}
+                >
+                  <span className="text-[12px]" style={{ color: "var(--color-text-secondary)" }}>{name}</span>
+                  <span className="text-[13px] font-medium mt-1" style={{ color: "var(--lifeflow-primary)" }}>
+                    + 再练一次
+                  </span>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+
         {/* ─── Week Stats Card ─── */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.12, duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
+          transition={{ delay: 0.14, duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
           className="p-5"
           style={{ background: "var(--color-surface-card)", borderRadius: "20px", boxShadow: "var(--shadow-card)" }}
         >
@@ -425,7 +420,7 @@ export default function FitnessPage() {
               { label: "训练天数", value: weekStats.days, unit: "天" },
               { label: "总组数", value: weekStats.totalSets, unit: "组" },
               { label: "动作数", value: weekStats.totalExercises, unit: "个" },
-            ].map((stat, i) => (
+            ].map((stat) => (
               <div key={stat.label} className="flex flex-col items-center flex-1">
                 <span className="text-[24px] font-bold tabular-nums leading-none" style={{ color: "var(--color-text-primary)" }}>
                   {stat.value}
@@ -435,35 +430,6 @@ export default function FitnessPage() {
             ))}
           </div>
         </motion.div>
-
-        {/* ─── Muscle Groups Card ─── */}
-        {activeMuscleGroups.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.14, duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
-            className="p-5"
-            style={{ background: "var(--color-surface-card)", borderRadius: "20px", boxShadow: "var(--shadow-card)" }}
-          >
-            <h2 className="text-[17px] font-semibold mb-4" style={{ color: "var(--color-text-primary)" }}>肌群</h2>
-
-            <div className="grid grid-cols-2 gap-[10px]">
-              {activeMuscleGroups.map((g) => (
-                <div
-                  key={g.id}
-                  className="rounded-[12px] h-[76px] flex flex-col items-center justify-center"
-                  style={{ background: "var(--lifeflow-muted)" }}
-                >
-                  <span className="text-[12px]" style={{ color: "var(--color-text-secondary)" }}>{g.name}</span>
-                  <span className="text-[20px] font-bold mt-0.5" style={{ color: "var(--color-text-primary)" }}>
-                    {muscleGroupCounts.get(g.id) ?? 0}
-                    <span className="text-[14px] font-normal" style={{ color: "var(--color-text-secondary)" }}>次</span>
-                  </span>
-                </div>
-              ))}
-            </div>
-          </motion.div>
-        )}
 
         {/* ─── Recent Training Card ─── */}
         {recentGroups.length > 0 && (
@@ -481,54 +447,28 @@ export default function FitnessPage() {
                 <span className="text-[13px] block mb-1" style={{ color: "var(--color-text-secondary)" }}>
                   {formatDateGroup(group.date)}
                 </span>
-
-                {group.sessions.flatMap((session) =>
-                  session.exercises.map((ex, ei) => {
-                    const totalSets = ex.sets.length;
-                    const avgWeight =
-                      totalSets > 0
-                        ? ex.sets.reduce((s, set) => s + set.weight, 0) / totalSets
-                        : 0;
-                    const avgRpe =
-                      totalSets > 0
-                        ? ex.sets.reduce((s, set) => s + set.rpe, 0) / totalSets
-                        : 0;
-                    const isExpanded = expandedSession === session.id;
-                    const dotColor = DOT_COLORS[ei % DOT_COLORS.length];
-
+                <div className="space-y-2">
+                  {group.sessions.map((s) => {
+                    const isExpanded = expandedSession === s.id;
                     return (
-                      <div key={`${session.id}-${ei}`}>
-                        <div
-                          className="flex items-center gap-3 py-3 cursor-pointer select-none"
-                          style={{
-                            borderBottom:
-                              ei < session.exercises.length - 1
-                                ? "0.5px solid var(--lifeflow-border)"
-                                : "none",
-                          }}
-                          onClick={() =>
-                            setExpandedSession(isExpanded ? null : session.id)
+                      <div
+                        key={s.id}
+                        className="rounded-xl overflow-hidden"
+                        style={{ background: "var(--lifeflow-muted)" }}
+                      >
+                        <button
+                          type="button"
+                          className="w-full flex items-center justify-between p-3 text-left"
+                          onClick={() => setExpandedSession(isExpanded ? null : s.id!)
                           }
                         >
-                          <div
-                            className="w-[8px] h-[8px] rounded-full shrink-0"
-                            style={{ backgroundColor: dotColor }}
-                          />
-                          <div className="flex-1 min-w-0">
-                            <div className="text-[16px] font-semibold truncate" style={{ color: "var(--color-text-primary)" }}>
-                              {ex.exerciseName}
-                            </div>
-                            <div className="text-[15px] mt-0.5" style={{ color: "var(--color-text-secondary)" }}>
-                              {totalSets}组 ×{" "}
-                              {avgWeight === 0
-                                ? "自重"
-                                : `${fmtAvg(avgWeight)}kg`}{" "}
-                              · RPE {fmtAvg(avgRpe)}
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Expanded detail */}
+                          <span className="text-[14px] font-medium" style={{ color: "var(--color-text-primary)" }}>
+                            {s.exercises.map((e) => e.exerciseName).join(" · ")}
+                          </span>
+                          <span className="text-[12px]" style={{ color: "var(--color-text-secondary)" }}>
+                            {s.exercises.reduce((t, e) => t + e.sets.length, 0)} 组
+                          </span>
+                        </button>
                         <AnimatePresence>
                           {isExpanded && (
                             <motion.div
@@ -538,38 +478,32 @@ export default function FitnessPage() {
                               transition={{ duration: 0.2 }}
                               className="overflow-hidden"
                             >
-                              <div className="rounded-[12px] p-3 mb-2" style={{ background: "var(--lifeflow-muted)" }}>
-                                {ex.sets.map((set, si) => (
-                                  <div
-                                    key={set.id}
-                                    className="flex items-center gap-1.5 text-[13px] py-0.5"
-                                    style={{ color: "var(--color-text-secondary)" }}
-                                  >
-                                    <span style={{ color: "var(--color-text-primary)", fontWeight: 500 }}>
-                                      第{si + 1}组
+                              <div className="px-3 pb-3 space-y-2">
+                                {s.exercises.map((ex, ei) => (
+                                  <div key={ei}>
+                                    <span className="text-[13px] font-medium" style={{ color: "var(--color-text-primary)" }}>
+                                      {ex.exerciseName}
                                     </span>
-                                    <span>·</span>
-                                    <span>
-                                      {set.weight > 0
-                                        ? `${set.weight}kg`
-                                        : "自重"}{" "}
-                                      × {set.reps}次
-                                    </span>
-                                    <span>·</span>
-                                    <span>RPE {set.rpe}</span>
+                                    <div className="mt-1 flex flex-wrap gap-1.5">
+                                      {ex.sets.map((set, si) => (
+                                        <span
+                                          key={si}
+                                          className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px]"
+                                          style={{ background: "var(--color-surface-card)", color: "var(--color-text-secondary)" }}
+                                        >
+                                          {set.reps}×{set.weight}kg RPE{set.rpe}
+                                        </span>
+                                      ))}
+                                    </div>
                                   </div>
                                 ))}
                                 <button
                                   type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDelete(session.id);
-                                  }}
-                                  className="mt-2 flex items-center gap-1.5 text-[13px]"
-                                  style={{ color: "var(--color-text-secondary)" }}
+                                  onClick={() => handleDelete(s.id!)}
+                                  className="inline-flex items-center gap-1 text-[12px] mt-1 active:opacity-70"
+                                  style={{ color: "var(--color-expense)" }}
                                 >
-                                  <Trash2 className="w-4 h-4" />
-                                  删除此记录
+                                  <Trash2 className="w-3 h-3" />删除
                                 </button>
                               </div>
                             </motion.div>
@@ -577,203 +511,126 @@ export default function FitnessPage() {
                         </AnimatePresence>
                       </div>
                     );
-                  })
-                )}
+                  })}
+                </div>
               </div>
             ))}
           </motion.div>
         )}
 
-        {/* ─── Empty state guide ─── */}
-        {workoutSessions.length === 0 && (
+        {recentGroups.length === 0 && (
           <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1, duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
-            className="border-[1.5px] border-dashed rounded-[20px] h-[104px] flex flex-col items-center justify-center"
-            style={{ borderColor: "var(--color-text-disabled)" }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-center py-12"
           >
-            <span className="text-[14px]" style={{ color: "var(--color-text-disabled)" }}>
-              点击「记录训练」开始
-            </span>
-            <span className="text-[13px] mt-1" style={{ color: "var(--color-text-disabled)" }}>
-              记录动作 · 组数 · 重量 · RPE
-            </span>
+            <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ background: "var(--lifeflow-brand-50)" }}>
+              <Dumbbell className="w-8 h-8" style={{ color: "var(--lifeflow-muted-foreground)" }} />
+            </div>
+            <p className="text-[15px] font-medium" style={{ color: "var(--color-text-primary)" }}>还没有训练记录</p>
+            <p className="text-[13px] mt-1" style={{ color: "var(--color-text-secondary)" }}>点击「记录训练」开始记录吧</p>
           </motion.div>
         )}
       </div>
 
-      {/* ─── Recording Bottom Sheet ─── */}
+      {/* ─── Record Bottom Sheet ─── */}
       <AnimatePresence>
         {showRecord && (
           <>
-            {/* Backdrop */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/30 z-40"
+              className="fixed inset-0 z-50"
+              style={{ background: "rgba(0,0,0,0.3)" }}
               onClick={() => setShowRecord(false)}
             />
-            {/* Sheet */}
             <motion.div
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
-              transition={{ type: "spring", stiffness: 400, damping: 40 }}
-              className="fixed bottom-0 left-0 right-0 z-50 rounded-t-[20px] px-5 pt-6 pb-10 max-h-[85vh] overflow-y-auto"
-              style={{ maxWidth: 430, margin: "0 auto", background: "var(--color-surface-card)" }}
+              transition={{ type: "spring", damping: 28, stiffness: 300 }}
+              className="fixed bottom-0 left-0 right-0 z-50 rounded-t-[24px] px-5 pt-5 pb-8"
+              style={{ background: "var(--color-surface-card)", maxHeight: "85vh", overflowY: "auto" }}
             >
-              <div className="w-9 h-1 rounded-full mx-auto mb-5" style={{ background: "var(--lifeflow-muted)" }} />
-              <h3 className="text-[17px] font-semibold mb-5" style={{ color: "var(--color-text-primary)" }}>记录训练</h3>
+              <div className="flex items-center justify-between mb-5">
+                <h2 className="text-[17px] font-semibold" style={{ color: "var(--color-text-primary)" }}>记录训练</h2>
+                <button onClick={() => setShowRecord(false)} className="text-[15px] font-medium" style={{ color: "var(--lifeflow-primary)" }}>取消</button>
+              </div>
 
-              {/* Exercise name */}
-              <label className="text-[13px] mb-1.5 block" style={{ color: "var(--color-text-secondary)" }}>动作名称</label>
-              <div className="relative">
+              {/* Exercise Name */}
+              <div className="mb-5">
+                <label className="text-[13px] font-medium mb-1.5 block" style={{ color: "var(--color-text-secondary)" }}>动作名称</label>
                 <input
                   ref={nameInputRef}
                   type="text"
-                  placeholder="卧推、深蹲、硬拉…"
                   value={exerciseName}
                   onChange={(e) => setExerciseName(e.target.value)}
-                  className="w-full h-11 px-4 rounded-[12px] text-[16px] outline-none mb-1 transition-colors"
-                  style={{
-                    border: "1px solid var(--lifeflow-border)",
-                    color: "var(--color-text-primary)",
-                    background: "var(--lifeflow-input)",
-                  }}
+                  placeholder="输入动作名，如：杠铃卧推"
+                  className="w-full h-11 px-4 rounded-xl text-[15px] outline-none"
+                  style={{ background: "var(--lifeflow-muted)", color: "var(--color-text-primary)", border: "1px solid transparent" }}
+                  autoFocus
                 />
-                {/* Suggestions */}
-                {suggestions.length > 0 && (
-                  <div
-                    className="absolute top-full left-0 right-0 rounded-[12px] overflow-hidden z-10 shadow-lg"
-                    style={{ background: "var(--color-surface-card)", border: "1px solid var(--lifeflow-border)" }}
-                  >
-                    {suggestions.map((s) => (
+              </div>
+
+              {/* Sets / Reps / Weight */}
+              <div className="grid grid-cols-3 gap-3 mb-5">
+                {[
+                  { label: "组数", value: sets, min: 1, max: 20, set: setSets },
+                  { label: "次数", value: reps, min: 1, max: 50, set: setReps },
+                  { label: "重量(kg)", value: weight, min: 0, max: 500, set: setWeight },
+                ].map((field) => (
+                  <div key={field.label}>
+                    <label className="text-[13px] font-medium mb-1.5 block" style={{ color: "var(--color-text-secondary)" }}>{field.label}</label>
+                    <div className="flex items-center rounded-xl overflow-hidden" style={{ background: "var(--lifeflow-muted)" }}>
                       <button
-                        key={s}
-                        type="button"
-                        className="w-full text-left px-4 py-2.5 text-[15px] hover:opacity-80"
-                        style={{ color: "var(--color-text-primary)" }}
-                        onClick={() => {
-                          setExerciseName(s);
-                        }}
+                        onClick={() => field.set(clamp(field.value - (field.label === "重量(kg)" ? 5 : 1), field.min, field.max))}
+                        className="w-9 h-9 flex items-center justify-center active:opacity-60"
                       >
-                        {s}
+                        <Minus className="w-4 h-4" style={{ color: "var(--color-text-secondary)" }} />
                       </button>
-                    ))}
+                      <span className="flex-1 text-center text-[15px] font-semibold" style={{ color: "var(--color-text-primary)" }}>
+                        {field.value}
+                      </span>
+                      <button
+                        onClick={() => field.set(clamp(field.value + (field.label === "重量(kg)" ? 5 : 1), field.min, field.max))}
+                        className="w-9 h-9 flex items-center justify-center active:opacity-60"
+                      >
+                        <Plus className="w-4 h-4" style={{ color: "var(--color-text-secondary)" }} />
+                      </button>
+                    </div>
                   </div>
-                )}
+                ))}
               </div>
 
-              {/* Sets stepper */}
-              <div className="mt-4">
-                <label className="text-[13px] mb-1.5 block" style={{ color: "var(--color-text-secondary)" }}>组数</label>
-                <div className="flex items-center gap-4">
-                  <button
-                    type="button"
-                    onClick={() => setSets(clamp(sets - 1, 1, 20))}
-                    className="w-8 h-8 rounded-full border-2 flex items-center justify-center shrink-0"
-                    style={{ borderColor: "var(--lifeflow-primary)", background: "var(--color-surface-card)" }}
-                  >
-                    <Minus className="w-4 h-4" style={{ color: "var(--lifeflow-primary)" }} />
-                  </button>
-                  <span className="flex-1 text-center text-[24px] font-bold tabular-nums" style={{ color: "var(--color-text-primary)" }}>
-                    {sets}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setSets(clamp(sets + 1, 1, 20))}
-                    className="w-8 h-8 rounded-full border-2 flex items-center justify-center shrink-0"
-                    style={{ borderColor: "var(--lifeflow-primary)", background: "var(--color-surface-card)" }}
-                  >
-                    <Plus className="w-4 h-4" style={{ color: "var(--lifeflow-primary)" }} />
-                  </button>
-                </div>
-              </div>
-
-              {/* Reps stepper */}
-              <div className="mt-4">
-                <label className="text-[13px] mb-1.5 block" style={{ color: "var(--color-text-secondary)" }}>次数</label>
-                <div className="flex items-center gap-4">
-                  <button
-                    type="button"
-                    onClick={() => setReps(clamp(reps - 1, 1, 100))}
-                    className="w-8 h-8 rounded-full border-2 flex items-center justify-center shrink-0"
-                    style={{ borderColor: "var(--lifeflow-primary)", background: "var(--color-surface-card)" }}
-                  >
-                    <Minus className="w-4 h-4" style={{ color: "var(--lifeflow-primary)" }} />
-                  </button>
-                  <span className="flex-1 text-center text-[24px] font-bold tabular-nums" style={{ color: "var(--color-text-primary)" }}>
-                    {reps}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setReps(clamp(reps + 1, 1, 100))}
-                    className="w-8 h-8 rounded-full border-2 flex items-center justify-center shrink-0"
-                    style={{ borderColor: "var(--lifeflow-primary)", background: "var(--color-surface-card)" }}
-                  >
-                    <Plus className="w-4 h-4" style={{ color: "var(--lifeflow-primary)" }} />
-                  </button>
-                </div>
-              </div>
-
-              {/* Weight stepper */}
-              <div className="mt-4">
-                <label className="text-[13px] mb-1.5 block" style={{ color: "var(--color-text-secondary)" }}>重量 (kg)</label>
-                <div className="flex items-center gap-4">
-                  <button
-                    type="button"
-                    onClick={() => setWeight(clamp(+(weight - 2.5).toFixed(1), 0, 500))}
-                    className="w-8 h-8 rounded-full border-2 flex items-center justify-center shrink-0"
-                    style={{ borderColor: "var(--lifeflow-primary)", background: "var(--color-surface-card)" }}
-                  >
-                    <Minus className="w-4 h-4" style={{ color: "var(--lifeflow-primary)" }} />
-                  </button>
-                  <span className="flex-1 text-center text-[24px] font-bold tabular-nums" style={{ color: "var(--color-text-primary)" }}>
-                    {weight}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setWeight(clamp(+(weight + 2.5).toFixed(1), 0, 500))}
-                    className="w-8 h-8 rounded-full border-2 flex items-center justify-center shrink-0"
-                    style={{ borderColor: "var(--lifeflow-primary)", background: "var(--color-surface-card)" }}
-                  >
-                    <Plus className="w-4 h-4" style={{ color: "var(--lifeflow-primary)" }} />
-                  </button>
-                </div>
-              </div>
-
-              {/* RPE pills */}
-              <div className="mt-4">
-                <label className="text-[13px] mb-1.5 block" style={{ color: "var(--color-text-secondary)" }}>RPE</label>
+              {/* RPE */}
+              <div className="mb-6">
+                <label className="text-[13px] font-medium mb-1.5 block" style={{ color: "var(--color-text-secondary)" }}>RPE（自觉强度 1-10）</label>
                 <div className="flex gap-2">
-                  {RPE_OPTIONS.map((val) => (
+                  {RPE_OPTIONS.map((r) => (
                     <button
-                      key={val}
-                      type="button"
-                      onClick={() => setRpe(val)}
-                      className="flex-1 h-9 rounded-full text-[13px] font-medium transition-colors"
+                      key={r}
+                      onClick={() => setRpe(r)}
+                      className="flex-1 h-10 rounded-xl text-[14px] font-medium transition-colors"
                       style={{
-                        background: rpe === val ? "var(--lifeflow-brand-50)" : "var(--lifeflow-muted)",
-                        color: rpe === val ? "var(--lifeflow-primary)" : "var(--color-text-secondary)",
+                        background: rpe === r ? "var(--lifeflow-primary)" : "var(--lifeflow-muted)",
+                        color: rpe === r ? "#fff" : "var(--color-text-secondary)",
                       }}
                     >
-                      {val}
+                      {r}
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* Save button */}
+              {/* Submit */}
               <button
-                type="button"
                 onClick={handleSubmit}
                 disabled={submitting || !exerciseName.trim()}
-                className="w-full h-11 rounded-full text-white text-[16px] font-medium mt-6 disabled:opacity-50"
+                className="w-full py-3.5 rounded-full text-white text-base font-semibold tracking-[-0.018em] active:opacity-90 transition-opacity disabled:opacity-50"
                 style={{ background: "var(--lifeflow-primary)" }}
               >
-                {submitting ? "记录中…" : "保存"}
+                {submitting ? "记录中..." : "保存记录"}
               </button>
             </motion.div>
           </>

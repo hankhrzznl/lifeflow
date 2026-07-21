@@ -853,6 +853,21 @@ export class LifeFlowDB extends Dexie {
         console.log("[LifeFlowDB v32] Goal.projectId is now optional (project as tag); normalized placeholder projectId=0 records");
       }
     });
+
+    // v33: 正式定义 reminders 表 + 扩展提醒字段（moduleType, linkedModuleId, recurrenceRule）
+    this.version(33).stores({
+      reminders: "++id, type, status, triggerTime, moduleType, createdAt",
+      reminderLogs: "++id, reminderId, action, timestamp",
+    }).upgrade(async (tx) => {
+      // Ensure existing reminders have default values for new fields
+      await tx.table("reminders").toCollection().modify((r) => {
+        if (!r.moduleType && r.type === "habit") r.moduleType = "habit";
+        if (!r.recurrenceRule) r.recurrenceRule = "once";
+      });
+      if (typeof window !== "undefined" && window.location.hostname === "localhost") {
+        console.log("[LifeFlowDB v33] Formalized reminders schema with moduleType/recurrenceRule support");
+      }
+    });
   }
 }
 

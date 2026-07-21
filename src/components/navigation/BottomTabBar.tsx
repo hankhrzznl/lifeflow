@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Target, CheckSquare, Calendar, Grid3x3 } from "lucide-react";
+import { Home, Target, CheckSquare, Calendar, Bot, Grid3x3 } from "lucide-react";
 
-// 全站统一 5-tab 底部导航：首页/目标/事项/日程/更多
+// 全站统一 6-tab 底部导航：首页/目标/事项/日程/助手/更多
 // 仅全屏流程页隐藏底导
 
 const FULLSCREEN_PREFIXES = [
@@ -17,6 +17,7 @@ const tabs = [
   { label: "目标", path: "/efficiency", icon: Target },
   { label: "事项", path: "/tasks", icon: CheckSquare },
   { label: "日程", path: "/efficiency/schedule", icon: Calendar },
+  { label: "助手", path: "/assistant", icon: Bot },
   { label: "更多", path: "/more", icon: Grid3x3 },
 ] as const;
 
@@ -29,6 +30,7 @@ export default function BottomTabBar() {
     if (path === "/") return pathname === "/";
     if (path === "/efficiency") return pathname === "/efficiency" || pathname.startsWith("/efficiency/") && pathname !== "/efficiency/schedule" && !pathname.startsWith("/efficiency/schedule/");
     if (path === "/efficiency/schedule") return pathname === "/efficiency/schedule" || pathname.startsWith("/efficiency/schedule/");
+    if (path === "/assistant") return pathname.startsWith("/assistant");
     if (path === "/more") return pathname === "/more" || (pathname.startsWith("/more/") && !pathname.startsWith("/more/accounting"));
     return pathname === path || pathname.startsWith(path + "/");
   };

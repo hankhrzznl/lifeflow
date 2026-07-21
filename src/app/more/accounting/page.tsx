@@ -4,7 +4,7 @@ import { useMemo, useState, useCallback } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Plus, ChevronDown, Trash2, Wallet, Receipt, BarChart3, User, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, ChevronDown, Trash2, Wallet, User, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { getTransactionsByMonth, getTransactionsByYear, getTransactionsByDate, deleteTransaction, getAllCategories, addTransaction, accountingDB } from "@/lib/db/accounting.db";
 import type { Transaction, Category, Ledger, Account } from "@/lib/db/accounting.db";
 import { getIcon } from "@/components/accounting/CategoryIcon";

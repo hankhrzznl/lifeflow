@@ -408,7 +408,7 @@ export default function AccountingPage() {
           <Link href="/more/accounting/assets" className="flex items-center justify-center w-8 h-8 rounded-full" style={{ background: "var(--lifeflow-muted)" }}>
             <Wallet className="w-4 h-4" style={{ color: "var(--color-text-secondary)" }} />
           </Link>
-          <Link href="/more/accounting/settings" className="flex items-center justify-center w-8 h-8 rounded-full" style={{ background: "var(--lifeflow-muted)" }}>
+          <Link href="/settings" className="flex items-center justify-center w-8 h-8 rounded-full" style={{ background: "var(--lifeflow-muted)" }}>
             <User className="w-4 h-4" style={{ color: "var(--color-text-secondary)" }} />
           </Link>
         </div>

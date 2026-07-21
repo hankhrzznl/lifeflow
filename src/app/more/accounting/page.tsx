@@ -4,7 +4,7 @@ import { useMemo, useState, useCallback } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Plus, ChevronDown, Trash2, Wallet, User, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, ChevronDown, Trash2, Wallet, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { getTransactionsByMonth, getTransactionsByYear, getTransactionsByDate, deleteTransaction, getAllCategories, addTransaction, accountingDB } from "@/lib/db/accounting.db";
 import type { Transaction, Category, Ledger, Account } from "@/lib/db/accounting.db";
 import { getIcon } from "@/components/accounting/CategoryIcon";
@@ -408,9 +408,7 @@ export default function AccountingPage() {
           <Link href="/more/accounting/assets" className="flex items-center justify-center w-8 h-8 rounded-full" style={{ background: "var(--lifeflow-muted)" }}>
             <Wallet className="w-4 h-4" style={{ color: "var(--color-text-secondary)" }} />
           </Link>
-          <Link href="/settings" className="flex items-center justify-center w-8 h-8 rounded-full" style={{ background: "var(--lifeflow-muted)" }}>
-            <User className="w-4 h-4" style={{ color: "var(--color-text-secondary)" }} />
-          </Link>
+
         </div>
       </div>
 

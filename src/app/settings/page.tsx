@@ -2,52 +2,78 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { ChevronRight, Moon, Download, Trash2, Info, MessageSquare } from "lucide-react";
-import Link from "next/link";
-import { ThemeToggle } from "@/components/theme/ThemeToggle";
+import { Moon, Download, Trash2, Info, MessageSquare, ChevronRight } from "lucide-react";
+import { useTheme } from "@/components/theme/ThemeProvider";
 import { DataExport, DataImport } from "@/components/settings/DataTransfer";
 
-export default function SettingsPage() {
+// ─── Toggle Switch ────────────────────────────────────────────
+function ToggleSwitch({
+  checked, onChange, label,
+}: { checked: boolean; onChange: () => void; label: string }) {
   return (
-    <div className="min-h-screen max-w-[430px] mx-auto px-4 pt-14 pb-[100px]" style={{ background: "var(--lifeflow-background)" }}>
-      {/* Header */}
-      <div className="flex items-center gap-3 mb-6">
-        <Link href="/more" className="w-9 h-9 rounded-full border flex items-center justify-center" style={{ borderColor: "var(--lifeflow-border)", background: "var(--color-surface-card)" }}>
-          <ChevronRight className="w-5 h-5 rotate-180" style={{ color: "var(--color-text-secondary)" }} />
-        </Link>
+    <button type="button" role="switch" aria-checked={checked} aria-label={label} onClick={onChange}
+      className="relative shrink-0 rounded-full cursor-pointer border-none outline-none"
+      style={{
+        width: 51, height: 31,
+        background: checked ? "var(--lifeflow-primary)" : "var(--lifeflow-border)",
+        transition: "background 0.2s",
+      }}>
+      <div className="absolute rounded-full bg-white"
+        style={{
+          width: 27, height: 27, top: 2,
+          left: checked ? 22 : 2,
+          boxShadow: "0 1px 3px rgba(0,0,0,0.15)",
+          transition: "left 0.2s",
+        }} />
+    </button>
+  );
+}
+
+export default function SettingsPage() {
+  const { theme, setTheme } = useTheme();
+  const isDark = theme === "dark";
+
+  const toggleDark = () => {
+    setTheme(isDark ? "light" : "dark");
+  };
+
+  return (
+    <div className="min-h-screen max-w-[430px] mx-auto pb-[100px]" style={{ background: "var(--lifeflow-background)" }}>
+      {/* Header - 居中"设置"标题，去掉返回箭头 */}
+      <div className="flex items-center justify-center h-[44px] px-4 pt-3 relative">
         <h1 className="text-title-nav" style={{ color: "var(--color-text-primary)" }}>设置</h1>
       </div>
 
       {/* 外观 */}
-      <div className="mb-4">
-        <h2 className="text-[13px] font-semibold uppercase tracking-wider mb-2" style={{ color: "var(--color-text-disabled)" }}>外观</h2>
+      <div className="px-4 pt-6 pb-2">
+        <p className="text-label px-3 pb-2">外观</p>
         <div className="rounded-[20px] overflow-hidden" style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}>
-          <div className="px-5 py-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Moon className="w-5 h-5" style={{ color: "var(--color-text-secondary)" }} />
-              <span className="text-[17px]" style={{ color: "var(--color-text-primary)" }}>深色模式</span>
+          <div className="flex items-center justify-between px-4 py-3.5">
+            <div className="flex items-center gap-3 min-w-0">
+              <Moon className="w-5 h-5 shrink-0" style={{ color: "var(--color-text-primary)" }} />
+              <span className="text-[17px] truncate" style={{ color: "var(--color-text-primary)" }}>深色模式</span>
             </div>
-            <ThemeToggle />
+            <ToggleSwitch checked={isDark} onChange={toggleDark} label="深色模式" />
           </div>
         </div>
       </div>
 
       {/* 数据 */}
-      <div className="mb-4">
-        <h2 className="text-[13px] font-semibold uppercase tracking-wider mb-2" style={{ color: "var(--color-text-disabled)" }}>数据</h2>
+      <div className="px-4 pt-4 pb-2">
+        <p className="text-label px-3 pb-2">数据</p>
         <div className="rounded-[20px] overflow-hidden" style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}>
-          <div className="px-5 py-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Download className="w-5 h-5" style={{ color: "var(--color-text-secondary)" }} />
-              <span className="text-[17px]" style={{ color: "var(--color-text-primary)" }}>导出数据</span>
+          <div className="flex items-center justify-between w-full px-4 py-3.5">
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <Download className="w-5 h-5 shrink-0" style={{ color: "var(--color-text-primary)" }} />
+              <span className="text-[17px] truncate" style={{ color: "var(--color-text-primary)" }}>导出数据</span>
             </div>
             <DataExport />
           </div>
-          <div className="mx-5" style={{ borderTop: "0.5px solid var(--lifeflow-border)" }} />
-          <div className="px-5 py-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Trash2 className="w-5 h-5" style={{ color: "var(--color-text-secondary)" }} />
-              <span className="text-[17px]" style={{ color: "var(--color-text-primary)" }}>清除数据</span>
+          <div style={{ height: "0.5px", background: "var(--lifeflow-border)", margin: "0 16px" }} />
+          <div className="flex items-center justify-between w-full px-4 py-3.5">
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <Trash2 className="w-5 h-5 shrink-0" style={{ color: "var(--color-text-primary)" }} />
+              <span className="text-[17px] truncate" style={{ color: "var(--color-text-primary)" }}>清除数据</span>
             </div>
             <DataImport />
           </div>
@@ -55,30 +81,34 @@ export default function SettingsPage() {
       </div>
 
       {/* 关于 */}
-      <div className="mb-4">
-        <h2 className="text-[13px] font-semibold uppercase tracking-wider mb-2" style={{ color: "var(--color-text-disabled)" }}>关于</h2>
+      <div className="px-4 pt-4 pb-2">
+        <p className="text-label px-3 pb-2">关于</p>
         <div className="rounded-[20px] overflow-hidden" style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}>
-          <div className="px-5 py-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Info className="w-5 h-5" style={{ color: "var(--color-text-secondary)" }} />
-              <span className="text-[17px]" style={{ color: "var(--color-text-primary)" }}>版本</span>
+          <div className="flex items-center justify-between px-4 py-3.5">
+            <div className="flex items-center gap-3 min-w-0">
+              <Info className="w-5 h-5 shrink-0" style={{ color: "var(--color-text-primary)" }} />
+              <span className="text-[17px] truncate" style={{ color: "var(--color-text-primary)" }}>版本</span>
             </div>
-            <span className="text-[17px]" style={{ color: "var(--color-text-secondary)" }}>v2.6</span>
+            <span className="text-[17px] shrink-0" style={{ color: "var(--color-text-secondary)" }}>v2.6</span>
           </div>
-          <div className="mx-5" style={{ borderTop: "0.5px solid var(--lifeflow-border)" }} />
-          <div className="px-5 py-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <MessageSquare className="w-5 h-5" style={{ color: "var(--color-text-secondary)" }} />
-              <span className="text-[17px]" style={{ color: "var(--color-text-primary)" }}>反馈</span>
+          <div style={{ height: "0.5px", background: "var(--lifeflow-border)", margin: "0 16px" }} />
+          <div className="flex items-center justify-between w-full px-4 py-3.5">
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <MessageSquare className="w-5 h-5 shrink-0" style={{ color: "var(--color-text-primary)" }} />
+              <span className="text-[17px] truncate" style={{ color: "var(--color-text-primary)" }}>反馈</span>
             </div>
-            <ChevronRight className="w-5 h-5" style={{ color: "var(--color-text-disabled)" }} />
+            <ChevronRight className="w-5 h-5 shrink-0" style={{ color: "var(--color-text-disabled)" }} />
           </div>
         </div>
       </div>
 
       {/* 退出登录 */}
-      <div className="mt-8 rounded-[20px] py-4 text-center" style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}>
-        <span className="text-[17px] font-medium" style={{ color: "var(--state-error)" }}>退出登录</span>
+      <div className="px-4 pt-8">
+        <button type="button"
+          className="w-full py-3.5 text-center text-[17px] font-medium rounded-[20px]"
+          style={{ background: "var(--color-surface-card)", color: "var(--state-error)", boxShadow: "var(--shadow-card)" }}>
+          退出登录
+        </button>
       </div>
     </div>
   );

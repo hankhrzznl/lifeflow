@@ -3,7 +3,7 @@
 import { useMemo, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { ChevronLeft, Plus, Trash2 } from "lucide-react";
+import { ChevronLeft, Plus, Trash2, Clock9 } from "lucide-react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { getCountdowns, addCountdown, deleteCountdown } from "@/lib/db/life.db";
 import type { Countdown } from "@/lib/db/life.db";
@@ -51,24 +51,26 @@ export default function CountdownPage() {
 
   return (
     <div className="pb-[100px]">
-      {/* Header */}
-      <div className="flex items-center px-4 pt-3 pb-2">
-        <button
-          type="button"
-          onClick={() => router.push("/more")}
-          className="inline-flex h-8 w-8 items-center justify-center rounded-lg"
-          style={{
-            background: "var(--color-surface-card)",
-            border: "1px solid var(--lifeflow-border)",
-          }}
-        >
-          <ChevronLeft className="w-4 h-4" style={{ color: "var(--color-text-primary)" }} />
-        </button>
-        <h1 className="text-title-nav flex-1 text-center" style={{ color: "var(--color-text-primary)" }}>
-          倒数日
-        </h1>
-        <div className="w-8" />
-      </div>
+      {/* Header — sticky with bordered back button */}
+      <header className="sticky top-0 z-30 bg-[var(--lifeflow-background)]/95 backdrop-blur">
+        <div className="flex h-11 items-center px-4">
+          <button
+            type="button"
+            onClick={() => router.push("/more")}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-lg"
+            style={{
+              background: "var(--color-surface-card)",
+              border: "1px solid var(--lifeflow-border)",
+            }}
+          >
+            <ChevronLeft className="w-4 h-4" style={{ color: "var(--color-text-primary)" }} />
+          </button>
+          <h1 className="min-w-0 flex-1 text-center text-title-nav truncate" style={{ color: "var(--color-text-primary)" }}>
+            倒数日
+          </h1>
+          <div className="w-8" />
+        </div>
+      </header>
 
       <div className="px-4 pt-5">
         {/* Add form or button */}
@@ -125,7 +127,7 @@ export default function CountdownPage() {
               </button>
             </div>
           </motion.div>
-        ) : (
+        ) : (countdowns ?? []).length > 0 ? (
           <button
             onClick={() => setShowAdd(true)}
             className="w-full h-11 flex items-center justify-center gap-2 rounded-[20px] mb-4 text-[15px] font-medium"
@@ -139,7 +141,7 @@ export default function CountdownPage() {
             <Plus className="w-4 h-4" />
             添加倒数日
           </button>
-        )}
+        ) : null}
 
         {/* List */}
         <div className="flex flex-col gap-3">
@@ -180,27 +182,40 @@ export default function CountdownPage() {
           })}
         </div>
 
-        {/* Empty state */}
+        {/* Empty state — card-standard centered */}
         {(countdowns ?? []).length === 0 && !showAdd && (
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="card-standard p-10 flex flex-col items-center mt-2"
-          >
-            <p className="text-[17px] font-semibold" style={{ color: "var(--color-text-primary)" }}>
-              暂无重要日子
-            </p>
-            <p className="text-[14px] mt-1.5" style={{ color: "var(--color-text-secondary)" }}>
-              添加重要的日子开始倒计时
-            </p>
-            <button
-              onClick={() => setShowAdd(true)}
-              className="mt-5 h-10 px-6 rounded-full text-[15px] font-semibold text-white"
-              style={{ background: "var(--lifeflow-primary)" }}
+          <section className="flex flex-col items-center justify-center pt-16">
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex w-full max-w-sm flex-col items-center gap-6 p-10"
+              style={{
+                background: "var(--color-surface-card)",
+                borderRadius: "var(--lifeflow-radius-medium)",
+                boxShadow: "var(--shadow-card)",
+              }}
             >
-              添加倒数日
-            </button>
-          </motion.div>
+              {/* Clock icon in 64px blue circle */}
+              <div
+                className="inline-flex h-16 w-16 items-center justify-center rounded-full"
+                style={{ background: "var(--lifeflow-brand-50)" }}
+              >
+                <Clock9 className="h-8 w-8" style={{ color: "var(--lifeflow-brand)" }} />
+              </div>
+              {/* Empty text */}
+              <p className="text-[17px] text-center" style={{ color: "var(--color-text-secondary)" }}>
+                暂无重要日子
+              </p>
+              {/* Add button — blue pill */}
+              <button
+                onClick={() => setShowAdd(true)}
+                className="inline-flex items-center justify-center rounded-full px-6 py-2.5 text-[15px] font-semibold whitespace-nowrap transition-colors active:opacity-80"
+                style={{ background: "var(--lifeflow-primary)", color: "var(--lifeflow-primary-foreground)" }}
+              >
+                添加倒数日
+              </button>
+            </motion.div>
+          </section>
         )}
       </div>
     </div>

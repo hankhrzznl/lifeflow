@@ -3,7 +3,7 @@
 import { useMemo, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { ChevronLeft, Plus, Trash2, Flame, CircleCheckBig } from "lucide-react";
+import { ChevronLeft, Plus, Trash2, Flame, CheckCircle } from "lucide-react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { getHabits, addHabit, deleteHabit, toggleHabitDay } from "@/lib/db/life.db";
 import type { Habit } from "@/lib/db/life.db";
@@ -61,14 +61,24 @@ export default function HabitsPage() {
 
   return (
     <div className="mx-auto px-4 pt-5 pb-[100px]" style={{ maxWidth: 430 }}>
-      {/* 页头 */}
-      <div className="flex items-center gap-2 mb-4">
-        <button type="button" onClick={() => router.push("/more")} className="w-8 h-8 -ml-1 flex items-center justify-center">
-          <ChevronLeft className="w-6 h-6" style={{ color: "var(--color-text-primary)" }} />
-        </button>
-        <h1 className="text-[28px] font-bold tracking-[-0.02em] leading-tight flex-1" style={{ color: "var(--color-text-primary)" }}>习惯打卡</h1>
+      {/* Header */}
+      <div className="sticky top-0 z-30 -mx-4 mb-5 border-b" style={{
+        backgroundColor: "var(--color-surface-card)",
+        borderColor: "var(--lifeflow-border)",
+        width: "calc(100% + 2rem)",
+      }}>
+        <div className="relative flex h-11 items-center px-4">
+          <button
+            type="button"
+            onClick={() => router.push("/more")}
+            className="absolute left-4 inline-flex h-8 w-8 items-center justify-center rounded-full"
+            style={{ border: "1px solid var(--lifeflow-border)" }}
+          >
+            <ChevronLeft className="w-5 h-5" style={{ color: "var(--color-text-primary)" }} />
+          </button>
+          <h1 className="w-full text-center text-[17px] font-semibold tracking-[-0.018em]" style={{ color: "var(--color-text-primary)" }}>习惯打卡</h1>
+        </div>
       </div>
-      <p className="text-[15px] mb-4" style={{ color: "var(--color-text-secondary)" }}>每日坚持 · 持续打卡</p>
 
       {/* 添加 */}
       {showAdd ? (
@@ -191,17 +201,24 @@ export default function HabitsPage() {
 
       {/* 空状态 */}
       {(habits ?? []).length === 0 && (
-        <div className="text-center py-16">
-          <CircleCheckBig className="w-12 h-12 mx-auto mb-4" style={{ color: "var(--color-text-disabled)" }} />
-          <p className="text-[17px] font-semibold mb-1" style={{ color: "var(--color-text-primary)" }}>暂无习惯</p>
-          <p className="text-[15px] mb-6" style={{ color: "var(--color-text-secondary)" }}>创建一个习惯开始打卡吧</p>
-          <button
-            onClick={() => setShowAdd(true)}
-            className="inline-flex items-center gap-2 h-10 px-5 rounded-full text-[15px] font-semibold text-white"
-            style={{ backgroundColor: "var(--lifeflow-primary)" }}
+        <div className="flex flex-col items-center justify-center" style={{ minHeight: "calc(100vh - 200px)" }}>
+          <div
+            className="w-full flex flex-col items-center text-center px-8 py-10"
+            style={{ maxWidth: 320, backgroundColor: "var(--color-surface-card)", borderRadius: 20, boxShadow: "var(--shadow-card)" }}
           >
-            <Plus className="w-4 h-4" />创建习惯
-          </button>
+            <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-full" style={{ backgroundColor: "var(--lifeflow-brand-50)" }}>
+              <CheckCircle className="w-8 h-8" style={{ color: "var(--lifeflow-brand)" }} />
+            </div>
+            <p className="text-[17px] mb-6" style={{ color: "var(--color-text-secondary)" }}>暂无习惯</p>
+            <button
+              onClick={() => setShowAdd(true)}
+              className="inline-flex items-center gap-2 rounded-full px-6 py-2.5 text-[15px] font-medium transition-opacity hover:opacity-90"
+              style={{ backgroundColor: "var(--lifeflow-brand)", color: "var(--lifeflow-primary-foreground)" }}
+            >
+              <Plus className="w-4 h-4" />
+              <span>创建习惯</span>
+            </button>
+          </div>
         </div>
       )}
     </div>

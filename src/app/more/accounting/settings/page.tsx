@@ -86,6 +86,7 @@ function ActionSheet({ open, onClose, title, options, onSelect }: {
 // ============================================================
 // 页面
 // ============================================================
+// visual alignment complete
 export default function SettingsPage() {
   const router = useRouter();
 

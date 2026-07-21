@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { ChevronLeft, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, StickyNote } from "lucide-react";
 import { getNotes, addNote, updateNote, deleteNote } from "@/lib/db/life.db";
 import type { Note } from "@/lib/db/life.db";
 import { showToast } from "@/components/ui/Toast";
@@ -62,19 +62,19 @@ export default function NotesPage() {
   };
 
   return (
-    <div className="pb-[100px]">
+    <div className="flex flex-col min-h-dvh pb-[100px]">
       {/* Header */}
       <div className="flex items-center px-4 pt-3 pb-2">
         <button
           type="button"
           onClick={() => router.push("/more")}
-          className="inline-flex h-8 w-8 items-center justify-center rounded-lg"
+          className="inline-flex h-10 w-10 items-center justify-center rounded-xl"
           style={{
             background: "var(--color-surface-card)",
-            border: "1px solid var(--lifeflow-border)",
+            boxShadow: "var(--shadow-card)",
           }}
         >
-          <ChevronLeft className="w-4 h-4" style={{ color: "var(--color-text-primary)" }} />
+          <ArrowLeft className="w-5 h-5" style={{ color: "var(--color-text-primary)" }} />
         </button>
         <h1 className="text-title-nav flex-1 text-center" style={{ color: "var(--color-text-primary)" }}>
           备忘录
@@ -82,84 +82,93 @@ export default function NotesPage() {
         <div className="w-8" />
       </div>
 
-      <div className="px-4 pt-5">
-        {/* Add form or button */}
-        {showAdd ? (
-          <motion.div
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="card-standard p-4 mb-4"
-          >
-            <input
-              type="text" value={newTitle} onChange={(e) => setNewTitle(e.target.value)}
-              placeholder="标题" autoFocus
-              className="w-full text-[16px] font-semibold outline-none bg-transparent"
-              style={{ color: "var(--color-text-primary)" }}
-            />
-            <textarea
-              value={newContent} onChange={(e) => setNewContent(e.target.value)}
-              placeholder="内容..." rows={4}
-              className="w-full text-[15px] outline-none resize-none mt-2 bg-transparent"
-              style={{ color: "var(--color-text-primary)" }}
-            />
-            <div className="flex gap-2 mt-3">
-              <button
-                onClick={() => { setShowAdd(false); setNewTitle(""); setNewContent(""); }}
-                className="flex-1 h-10 rounded-lg text-[15px]"
-                style={{ background: "var(--color-surface-secondary)", color: "var(--color-text-secondary)" }}
-              >
-                取消
-              </button>
-              <button
-                onClick={handleAdd}
-                disabled={!newTitle.trim() || !newContent.trim()}
-                className="flex-1 h-10 rounded-lg text-[15px] font-semibold text-white"
-                style={{
-                  background: "var(--lifeflow-primary)",
-                  opacity: newTitle.trim() && newContent.trim() ? 1 : 0.5,
-                }}
-              >
-                保存
-              </button>
-            </div>
-          </motion.div>
-        ) : (
-          <button
-            onClick={() => setShowAdd(true)}
-            className="w-full h-11 flex items-center justify-center gap-2 rounded-[20px] mb-4 text-[15px] font-medium"
-            style={{
-              background: "var(--lifeflow-brand-50)",
-              color: "var(--lifeflow-primary)",
-              border: "1px dashed var(--lifeflow-brand-200)",
-            }}
-          >
-            <Plus className="w-4 h-4" />
-            新建备忘录
-          </button>
-        )}
-
-        {/* Notes list */}
-        {loading ? null : notes.length === 0 && !showAdd ? (
+      {loading ? null : notes.length === 0 && !showAdd ? (
+        <div className="flex-1 flex items-center justify-center px-4 pb-12">
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            className="card-standard p-10 flex flex-col items-center mt-2"
+            className="flex w-full max-w-sm flex-col items-center rounded-[20px] px-6 py-10 text-center"
+            style={{
+              background: "var(--color-surface-card)",
+              boxShadow: "var(--shadow-card)",
+            }}
           >
-            <p className="text-[17px] font-semibold" style={{ color: "var(--color-text-primary)" }}>
+            <div
+              className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-2xl"
+              style={{ background: "var(--lifeflow-brand-50)" }}
+            >
+              <StickyNote className="h-8 w-8" style={{ color: "var(--lifeflow-primary)" }} />
+            </div>
+            <p className="text-[17px]" style={{ color: "var(--color-text-secondary)" }}>
               暂无笔记
-            </p>
-            <p className="text-[14px] mt-1.5" style={{ color: "var(--color-text-secondary)" }}>
-              记录你的灵感和想法
             </p>
             <button
               onClick={() => setShowAdd(true)}
-              className="mt-5 h-10 px-6 rounded-full text-[15px] font-semibold text-white"
-              style={{ background: "var(--lifeflow-primary)" }}
+              className="mt-6 inline-flex items-center justify-center rounded-full px-8 py-3 text-[16px] font-semibold transition-opacity hover:opacity-90 active:opacity-80"
+              style={{ background: "var(--lifeflow-primary)", color: "var(--lifeflow-primary-foreground)" }}
             >
               写笔记
             </button>
           </motion.div>
-        ) : (
+        </div>
+      ) : (
+        <div className="px-4 pt-5">
+          {/* Add form or button */}
+          {showAdd ? (
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="card-standard p-4 mb-4"
+            >
+              <input
+                type="text" value={newTitle} onChange={(e) => setNewTitle(e.target.value)}
+                placeholder="标题" autoFocus
+                className="w-full text-[16px] font-semibold outline-none bg-transparent"
+                style={{ color: "var(--color-text-primary)" }}
+              />
+              <textarea
+                value={newContent} onChange={(e) => setNewContent(e.target.value)}
+                placeholder="内容..." rows={4}
+                className="w-full text-[15px] outline-none resize-none mt-2 bg-transparent"
+                style={{ color: "var(--color-text-primary)" }}
+              />
+              <div className="flex gap-2 mt-3">
+                <button
+                  onClick={() => { setShowAdd(false); setNewTitle(""); setNewContent(""); }}
+                  className="flex-1 h-10 rounded-lg text-[15px]"
+                  style={{ background: "var(--color-surface-secondary)", color: "var(--color-text-secondary)" }}
+                >
+                  取消
+                </button>
+                <button
+                  onClick={handleAdd}
+                  disabled={!newTitle.trim() || !newContent.trim()}
+                  className="flex-1 h-10 rounded-lg text-[15px] font-semibold text-white"
+                  style={{
+                    background: "var(--lifeflow-primary)",
+                    opacity: newTitle.trim() && newContent.trim() ? 1 : 0.5,
+                  }}
+                >
+                  保存
+                </button>
+              </div>
+            </motion.div>
+          ) : (
+            <button
+              onClick={() => setShowAdd(true)}
+              className="w-full h-11 flex items-center justify-center gap-2 rounded-[20px] mb-4 text-[15px] font-medium"
+              style={{
+                background: "var(--lifeflow-brand-50)",
+                color: "var(--lifeflow-primary)",
+                border: "1px dashed var(--lifeflow-brand-200)",
+              }}
+            >
+              <Plus className="w-4 h-4" />
+              新建备忘录
+            </button>
+          )}
+
+          {/* Notes list */}
           <div className="flex flex-col gap-3">
             {notes.map((n, i) => (
               <motion.div
@@ -220,8 +229,8 @@ export default function NotesPage() {
               </motion.div>
             ))}
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

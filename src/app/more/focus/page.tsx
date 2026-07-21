@@ -76,102 +76,124 @@ export default function FocusPage() {
   const totalFocusMin = sessions.filter((s) => s.type === "focus" && s.completed).reduce((sum, s) => sum + s.duration, 0);
 
   return (
-    <div className="mx-auto px-4 pt-5 pb-[100px] flex flex-col items-center" style={{ maxWidth: 430 }}>
-      {/* 页头 */}
-      <div className="flex items-center gap-2 mb-3 w-full">
-        <button type="button" onClick={() => router.push("/more")} className="w-8 h-8 -ml-1 flex items-center justify-center">
-          <ChevronLeft className="w-6 h-6" style={{ color: "var(--color-text-primary)" }} />
-        </button>
-        <h1 className="text-[28px] font-bold tracking-[-0.02em] leading-tight flex-1" style={{ color: "var(--color-text-primary)" }}>专注计时</h1>
-      </div>
-      <p className="text-[15px] mb-5 w-full text-left" style={{ color: "var(--color-text-secondary)" }}>番茄工作法 · 保持专注</p>
-
-      {/* 时长选择 pills */}
-      <div className="flex rounded-full p-1 mb-8" style={{ backgroundColor: "var(--lifeflow-background)" }}>
-        {FOCUS_OPTIONS.map((opt) => (
+    <div className="mx-auto px-4 pt-4 pb-[100px] flex flex-col items-center" style={{ maxWidth: 430 }}>
+      {/* Header - bordered back button + centered title */}
+      <header className="sticky top-0 z-20 w-full pb-3 mb-6" style={{ background: "var(--lifeflow-background)", paddingTop: "16px" }}>
+        <div className="flex items-center">
           <button
-            key={opt}
-            onClick={() => { if (!running) { setFocusMin(opt); setMode("focus"); } }}
-            className="px-6 py-2 rounded-full text-[15px] font-medium transition-colors"
-            style={{
-              backgroundColor: mode === "focus" && focusMin === opt ? "var(--lifeflow-primary)" : "transparent",
-              color: mode === "focus" && focusMin === opt ? "#FFFFFF" : "var(--color-text-secondary)",
-            }}
+            onClick={() => router.push("/more")}
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
+            style={{ background: "var(--lifeflow-card)", border: "1px solid var(--lifeflow-border)" }}
+            aria-label="返回"
           >
-            {opt} min
+            <ChevronLeft className="h-5 w-5" style={{ color: "var(--color-text-primary)" }} />
           </button>
-        ))}
-      </div>
-
-      {/* 计时环 180x180 */}
-      <div className="relative mb-8" style={{ width: 180, height: 180 }}>
-        <svg viewBox="0 0 200 200" className="w-full h-full -rotate-90">
-          <circle cx="100" cy="100" r="90" fill="none" stroke="var(--lifeflow-background)" strokeWidth="8" />
-          <circle cx="100" cy="100" r="90" fill="none" stroke="var(--lifeflow-primary)" strokeWidth="8"
-            strokeLinecap="round" strokeDasharray={`${progress * 565} 565`}
-            style={{ transition: "stroke-dashoffset 1s linear" }} />
-        </svg>
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span
-            className="text-[42px] font-bold tabular-nums"
-            style={{ color: running ? "var(--lifeflow-primary)" : "var(--color-text-primary)" }}
+          <h1
+            className="min-w-0 flex-1 text-center truncate"
+            style={{ fontFamily: "var(--font-system)", fontSize: "17px", fontWeight: 600, color: "var(--color-text-primary)", letterSpacing: "-0.018em" }}
           >
-            {String(min).padStart(2, "0")}:{String(sec).padStart(2, "0")}
-          </span>
-          <span className="text-[13px] mt-1" style={{ color: "var(--color-text-secondary)" }}>
-            {mode === "focus" ? "专注中" : "休息中"}
-          </span>
+            专注计时
+          </h1>
+          <div className="w-9 shrink-0"></div>
         </div>
-      </div>
+      </header>
 
-      {/* 控制按钮 */}
-      <div className="flex items-center gap-6 mb-8">
-        <button onClick={reset}
-          className="w-11 h-11 rounded-full flex items-center justify-center"
-          style={{ backgroundColor: "var(--lifeflow-background)" }}>
-          <RotateCcw className="w-5 h-5" style={{ color: "var(--color-text-secondary)" }} />
-        </button>
-        <button onClick={toggle}
-          className="w-[64px] h-[64px] rounded-full flex items-center justify-center text-white"
-          style={{
-            backgroundColor: "var(--lifeflow-primary)",
-            boxShadow: "0 4px 16px rgba(37, 99, 235, 0.35)",
-          }}>
-          {running ? <Pause className="w-7 h-7" /> : <Play className="w-7 h-7 ml-1" />}
-        </button>
+      {/* Timer Card */}
+      <section className="card-standard p-6 mb-4 flex flex-col items-center w-full">
+        {/* Circular Timer Display with SVG Progress Ring */}
+        <div className="relative mb-4" style={{ width: 180, height: 180 }}>
+          <svg viewBox="0 0 200 200" className="w-full h-full -rotate-90">
+            <circle cx="100" cy="100" r="90" fill="none" stroke="var(--lifeflow-background)" strokeWidth="8" />
+            <circle cx="100" cy="100" r="90" fill="none" stroke="var(--lifeflow-primary)" strokeWidth="8"
+              strokeLinecap="round" strokeDasharray={`${progress * 565} 565`}
+              style={{ transition: "stroke-dashoffset 1s linear" }} />
+          </svg>
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <Timer className="h-8 w-8 mb-1" style={{ color: "var(--lifeflow-primary)" }} />
+            <span
+              className="text-[40px] font-bold tabular-nums"
+              style={{ color: "var(--color-text-primary)", letterSpacing: "-0.022em" }}
+            >
+              {String(min).padStart(2, "0")}:{String(sec).padStart(2, "0")}
+            </span>
+          </div>
+        </div>
+
+        {/* Mode Label */}
+        <span className="text-label mb-6">{mode === "focus" ? "番茄钟" : "休息"}</span>
+
+        {/* Preset Duration Pills */}
+        <div className="flex flex-wrap gap-2 justify-center mb-6">
+          {FOCUS_OPTIONS.map((opt) => (
+            <button
+              key={opt}
+              onClick={() => { if (!running) { setFocusMin(opt); setMode("focus"); } }}
+              className="pill-button whitespace-nowrap inline-flex items-center h-9"
+              style={{
+                background: !running && mode === "focus" && focusMin === opt ? "var(--lifeflow-primary)" : "var(--color-surface-card)",
+                color: !running && mode === "focus" && focusMin === opt ? "#FFFFFF" : "var(--color-text-primary)",
+                borderColor: !running && mode === "focus" && focusMin === opt ? "var(--lifeflow-primary)" : "var(--lifeflow-border)",
+              }}
+            >
+              {opt}分钟
+            </button>
+          ))}
+        </div>
+
+        {/* Start / Pause Button */}
         <button
-          onClick={() => setMode(mode === "focus" ? "break" : "focus")}
-          disabled={running}
-          className="text-[13px] font-medium"
-          style={{ color: running ? "var(--color-text-disabled)" : "var(--color-text-secondary)" }}
+          onClick={toggle}
+          className="whitespace-nowrap inline-flex items-center justify-center gap-2"
+          style={{
+            background: "var(--lifeflow-primary)",
+            color: "var(--lifeflow-primary-foreground)",
+            borderRadius: "var(--lifeflow-radius-full)",
+            padding: "14px 48px",
+            fontSize: "17px",
+            fontWeight: 600,
+            fontFamily: "var(--font-system)",
+            letterSpacing: "-0.018em",
+            border: "none",
+            cursor: "pointer",
+          }}
         >
-          {mode === "focus" ? `休息 ${BREAK_MIN}min` : `专注 ${focusMin}min`}
+          {running ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
+          {running ? "暂停" : "开始专注"}
         </button>
-      </div>
 
-      {/* 今日统计 */}
-      <div
-        className="rounded-[20px] p-4 w-full"
-        style={{
-          backgroundColor: "var(--color-surface-card)",
-          boxShadow: "var(--shadow-card)",
-        }}
-      >
-        <div className="flex items-center gap-2 mb-3">
-          <Timer className="w-5 h-5" style={{ color: "var(--lifeflow-primary)" }} />
-          <span className="text-[17px] font-semibold" style={{ color: "var(--color-text-primary)" }}>今日统计</span>
+        {/* Reset & Mode Toggle */}
+        <div className="flex items-center gap-5 mt-4">
+          <button
+            onClick={reset}
+            className="flex items-center gap-1 text-[13px] font-medium"
+            style={{ color: "var(--color-text-secondary)" }}
+          >
+            <RotateCcw className="w-4 h-4" />
+            重置
+          </button>
+          <button
+            onClick={() => setMode(mode === "focus" ? "break" : "focus")}
+            disabled={running}
+            className="text-[13px] font-medium"
+            style={{ color: running ? "var(--color-text-disabled)" : "var(--color-text-secondary)" }}
+          >
+            {mode === "focus" ? `休息 ${BREAK_MIN}min` : `专注 ${focusMin}min`}
+          </button>
         </div>
-        <div className="flex gap-4">
-          <div className="flex-1 text-center py-2 rounded-lg" style={{ backgroundColor: "var(--lifeflow-brand-50)" }}>
-            <div className="text-[24px] font-bold" style={{ color: "var(--lifeflow-primary)" }}>{completedFocus}</div>
-            <div className="text-[13px]" style={{ color: "var(--color-text-secondary)" }}>番茄数</div>
-          </div>
-          <div className="flex-1 text-center py-2 rounded-lg" style={{ backgroundColor: "var(--lifeflow-brand-50)" }}>
-            <div className="text-[24px] font-bold" style={{ color: "var(--lifeflow-primary)" }}>{totalFocusMin}min</div>
-            <div className="text-[13px]" style={{ color: "var(--color-text-secondary)" }}>总专注</div>
-          </div>
+      </section>
+
+      {/* Today's Stats Card */}
+      <section className="card-standard p-4 w-full">
+        <div className="flex items-center justify-between">
+          <span className="text-label truncate">今日专注</span>
+          <span
+            className="whitespace-nowrap"
+            style={{ fontFamily: "var(--font-system)", fontSize: "20px", fontWeight: 700, color: "var(--color-text-primary)", letterSpacing: "-0.018em" }}
+          >
+            {totalFocusMin} 分钟
+          </span>
         </div>
-      </div>
+      </section>
     </div>
   );
 }

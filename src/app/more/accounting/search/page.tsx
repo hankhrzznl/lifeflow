@@ -3,18 +3,10 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Search, X, ChevronLeft } from "lucide-react";
+import { Search, X } from "lucide-react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { getAllTransactions, getAllCategories } from "@/lib/db/accounting.db";
 import type { Transaction, Category } from "@/lib/db/accounting.db";
-
-// ============================================================
-// 设计令牌（Apple 简约风）
-// ============================================================
-const INK = "#1D1D1F";
-const FAINT = "#AEAEB2";
-const FIELD_BG = "#F5F5F5";
-const DIVIDER = "#E5E5E5";
 
 // ─── 星期映射 ────────────────────────────────────────────────
 const DAY_NAMES = ["日", "一", "二", "三", "四", "五", "六"];
@@ -107,68 +99,61 @@ export default function SearchPage() {
   const hasResults = results.length > 0;
 
   return (
-    <div className="min-h-screen" style={{ background: "#FFFFFF" }}>
-      {/* ===== 页头 ===== */}
-      <div className="pt-4">
+    <div className="min-h-screen flex flex-col" style={{ background: "var(--color-surface-card)" }}>
+      {/* ===== 搜索栏 ===== */}
+      <div className="flex items-center gap-2 px-4 pt-3 pb-2">
         <div
-          className="h-11 flex items-center relative px-4"
-          style={{ borderBottom: `1px solid ${DIVIDER}` }}
+          className="flex-1 flex items-center gap-2 px-4 h-10 rounded-[20px]"
+          style={{ background: "var(--color-surface-secondary)" }}
         >
-          <button
-            type="button"
-            onClick={() => router.back()}
-            className="w-10 h-10 -ml-2 grid place-items-center active:opacity-50"
-            aria-label="返回"
-          >
-            <ChevronLeft className="w-6 h-6" style={{ color: INK }} />
-          </button>
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <span className="text-[17px] font-semibold" style={{ color: INK }}>
-              搜索
-            </span>
-          </div>
+          <Search className="w-4 h-4 shrink-0" style={{ color: "var(--color-text-secondary)" }} />
+          <input
+            type="text"
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+            placeholder="搜索收支记录"
+            autoFocus
+            className="flex-1 bg-transparent outline-none text-[17px]"
+            style={{ color: "var(--color-text-primary)" }}
+          />
+          {hasKeyword && (
+            <button
+              type="button"
+              onClick={() => setKeyword("")}
+              className="w-8 h-8 -mr-1 grid place-items-center active:opacity-50"
+              aria-label="清空"
+            >
+              <X className="w-[18px] h-[18px]" style={{ color: "var(--color-text-disabled)" }} />
+            </button>
+          )}
         </div>
-      </div>
-
-      {/* ===== 搜索框 ===== */}
-      <div
-        className="mx-4 mt-3 h-11 rounded-[12px] flex items-center px-3 gap-2"
-        style={{ background: FIELD_BG }}
-      >
-        <Search className="w-5 h-5 shrink-0" style={{ color: FAINT }} />
-        <input
-          type="text"
-          value={keyword}
-          onChange={(e) => setKeyword(e.target.value)}
-          placeholder="搜索备注，分类或金额"
-          autoFocus
-          className="flex-1 bg-transparent outline-none text-[17px] placeholder:text-[#AEAEB2] placeholder:text-[17px]"
-          style={{ color: INK }}
-        />
-        {hasKeyword && (
-          <button
-            type="button"
-            onClick={() => setKeyword("")}
-            className="w-8 h-8 -mr-1 grid place-items-center active:opacity-50"
-            aria-label="清空"
-          >
-            <X className="w-[18px] h-[18px]" style={{ color: FAINT }} />
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={() => router.back()}
+          className="text-[16px] font-medium shrink-0"
+          style={{ color: "var(--lifeflow-primary)" }}
+        >
+          取消
+        </button>
       </div>
 
       {/* ===== 内容区 ===== */}
       {!hasKeyword ? (
-        /* 初始空态 */
-        <div className="flex justify-center pt-[160px]">
-          <p className="text-center px-8 text-[15px]" style={{ color: FAINT }}>
-            搜索备注，分类或者金额的结果会显示在这里
-          </p>
+        /* 初始空态：最近搜索 */
+        <div className="px-4 pt-5">
+          <h3 className="text-[15px] font-semibold mb-4" style={{ color: "var(--color-text-primary)" }}>最近搜索</h3>
+          <div className="flex flex-col items-center justify-center py-14">
+            <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4" style={{ background: "var(--color-surface-secondary)" }}>
+              <Search className="w-8 h-8" style={{ color: "var(--color-text-disabled)" }} />
+            </div>
+            <p className="text-[15px]" style={{ color: "var(--color-text-secondary)" }}>暂无搜索记录</p>
+            <p className="text-[13px] mt-1.5" style={{ color: "var(--color-text-disabled)" }}>搜索过的记录将显示在这里</p>
+          </div>
         </div>
       ) : !hasResults ? (
         /* 无结果态 */
         <div className="flex justify-center pt-[120px]">
-          <p className="text-center px-8 text-[15px]" style={{ color: FAINT }}>
+          <p className="text-center px-8 text-[15px]" style={{ color: "var(--color-text-disabled)" }}>
             没有找到相关的记账记录
           </p>
         </div>
@@ -178,7 +163,7 @@ export default function SearchPage() {
           {groups.map((g, gi) => (
             <div key={g.date} className={gi > 0 ? "mt-6" : ""}>
               {/* 分组日期标题 */}
-              <p className="text-[13px] mb-2" style={{ color: FAINT }}>
+              <p className="text-[13px] mb-2" style={{ color: "var(--color-text-disabled)" }}>
                 {g.label}
               </p>
 
@@ -199,22 +184,22 @@ export default function SearchPage() {
                     transition={{ delay: i * 0.03, duration: 0.25 }}
                     className="flex items-center gap-3 py-3.5"
                     style={{
-                      borderTop: i === 0 ? "none" : `1px solid ${DIVIDER}`,
+                      borderTop: i === 0 ? "none" : `1px solid var(--lifeflow-border)`,
                     }}
                   >
                     {/* 分类圆点 */}
                     <div
                       className="w-2 h-2 rounded-full shrink-0"
-                      style={{ background: cat?.color ?? FAINT }}
+                      style={{ background: cat?.color ?? "var(--color-text-disabled)" }}
                     />
 
                     {/* 文字列 */}
                     <div className="flex-1 min-w-0">
-                      <p className="text-[17px] font-medium truncate" style={{ color: INK }}>
+                      <p className="text-[17px] font-medium truncate" style={{ color: "var(--color-text-primary)" }}>
                         {primaryText}
                       </p>
                       {showSecondary && (
-                        <p className="text-[13px] mt-0.5 truncate" style={{ color: FAINT }}>
+                        <p className="text-[13px] mt-0.5 truncate" style={{ color: "var(--color-text-secondary)" }}>
                           {catName}
                         </p>
                       )}
@@ -224,11 +209,11 @@ export default function SearchPage() {
                     <div className="shrink-0 flex flex-col items-end">
                       <span
                         className="text-[17px] font-semibold tabular-nums"
-                        style={{ color: INK }}
+                        style={{ color: "var(--color-text-primary)" }}
                       >
                         {isExpense ? "-" : "+"}¥{fmtFull(t.amount)}
                       </span>
-                      <span className="text-[13px] mt-0.5" style={{ color: FAINT }}>
+                      <span className="text-[13px] mt-0.5" style={{ color: "var(--color-text-secondary)" }}>
                         {formatTime(t.createdAt)}
                       </span>
                     </div>

@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { ChevronLeft, Plus, TrendingUp, TrendingDown } from "lucide-react";
+import { ChevronLeft, Plus, TrendingUp, TrendingDown, Wallet, WalletCards } from "lucide-react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { getAllAccounts, getTransactionsByMonth, addAccount, updateAccount, deleteAccount, getDefaultLedger } from "@/lib/db/accounting.db";
 import type { Account, Transaction } from "@/lib/db/accounting.db";
@@ -147,39 +147,53 @@ export default function AssetsPage() {
   // ============================================================
   return (
     <div className="min-h-screen">
-      {/* 导航条 */}
-      <div className="h-[44px] flex items-center px-4 mt-3">
+      {/* Header */}
+      <header className="flex h-11 items-center px-4 mt-3">
         <button type="button" onClick={() => router.push("/more/accounting")}
-          className="inline-flex items-center justify-center w-[44px] h-[44px] -ml-1">
-          <ChevronLeft className="w-[28px] h-[28px]" style={{ color: "var(--color-text-primary)" }} />
+          className="inline-flex h-8 w-8 items-center justify-center rounded-lg"
+          style={{ border: "1px solid var(--lifeflow-border)", background: "var(--color-surface-card)" }}>
+          <ChevronLeft className="w-5 h-5" style={{ color: "var(--color-text-primary)" }} />
         </button>
-        <div className="flex-1 flex items-center justify-center">
+        <div className="min-w-0 flex-1 text-center">
           <span className="text-[17px] font-semibold" style={{ color: "var(--color-text-primary)" }}>资产</span>
         </div>
-        <button type="button" onClick={openAddSheet}
-          className="inline-flex items-center justify-center w-[44px] h-[44px] -mr-1">
-          <Plus className="w-[24px] h-[24px]" style={{ color: "var(--lifeflow-primary)" }} />
-        </button>
-      </div>
+        <div className="w-8" />
+      </header>
 
-      {/* 净资产卡 */}
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}
-        className="mx-4 mt-[20px]">
-        <div className="rounded-xl p-[24px] flex flex-col items-center" style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}>
-          <span className="text-[13px]" style={{ color: "var(--color-text-secondary)" }}>净资产</span>
-          <span className="text-[34px] font-bold leading-none mt-[8px]" style={{ color: "var(--color-text-primary)" }}>{fmt(netWorth)}</span>
-          <div className="mt-[16px] h-[32px] px-4 rounded-full flex items-center justify-center gap-1" style={{ background: "var(--lifeflow-brand-50)" }}>
-            {isFlowPositive && <TrendingUp className="w-[16px] h-[16px]" style={{ color: "var(--lifeflow-primary)" }} />}
-            {isFlowNegative && <TrendingDown className="w-[16px] h-[16px]" style={{ color: "var(--lifeflow-primary)" }} />}
-            <span className="text-[14px] font-medium" style={{ color: "var(--lifeflow-primary)" }}>{flowLabel}</span>
+      {/* 总资产卡片 */}
+      <section className="px-4 pt-4">
+        <div className="rounded-[20px] p-5" style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}>
+          <div className="flex items-center gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[12px]" style={{ background: "var(--lifeflow-brand-50)" }}>
+              <Wallet className="h-6 w-6" style={{ color: "var(--lifeflow-brand)" }} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[13px] font-medium" style={{ color: "var(--color-text-secondary)" }}>总资产</p>
+              <p className="text-[34px] font-bold leading-none mt-1 truncate" style={{ color: "var(--color-text-primary)", letterSpacing: "-0.022em" }}>{fmt(totalAssets)}</p>
+            </div>
           </div>
         </div>
-      </motion.div>
+      </section>
 
+      {/* 空状态 */}
       {!hasAccounts && (
-        <div className="py-[24px] text-center">
-          <span className="text-[13px]" style={{ color: "var(--color-text-disabled)" }}>暂无账户，点击下方添加</span>
-        </div>
+        <section className="px-4 pt-3">
+          <div className="rounded-[20px] p-6" style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}>
+            <div className="flex flex-col items-center py-8">
+              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full" style={{ background: "var(--lifeflow-muted)" }}>
+                <WalletCards className="h-8 w-8" style={{ color: "var(--color-text-secondary)" }} />
+              </div>
+              <p className="mb-1 text-[16px] font-medium" style={{ color: "var(--color-text-primary)" }}>暂无账户</p>
+              <p className="mb-6 text-[13px] font-medium" style={{ color: "var(--color-text-secondary)" }}>添加您的第一个账户，开始记账</p>
+              <button type="button" onClick={openAddSheet}
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-[15px] font-semibold"
+                style={{ background: "var(--lifeflow-primary)", color: "var(--lifeflow-primary-foreground)" }}>
+                <Plus className="w-4 h-4" />
+                添加账户
+              </button>
+            </div>
+          </div>
+        </section>
       )}
 
       {/* 账户列表 */}

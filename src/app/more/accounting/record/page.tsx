@@ -4,11 +4,11 @@ import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Calendar, Pencil, Delete } from "lucide-react";
+import { Calendar, Pencil, Delete, ChevronDown, BookOpen } from "lucide-react";
 import { useAccountingStore } from "@/lib/store/accountingStore";
 import { getAllCategories } from "@/lib/db/accounting.db";
 import type { Category } from "@/lib/db/accounting.db";
-import { CategoryIcon } from "@/components/accounting/CategoryIcon";
+import { getIcon } from "@/components/accounting/CategoryIcon";
 import { showToast } from "@/components/ui/Toast";
 
 // ============================================================
@@ -112,36 +112,67 @@ export default function RecordPage() {
         <span className="w-10" />
       </div>
 
-      {/* ===== 金额显示区 ===== */}
-      <div className="text-center py-8">
-        <span className="text-[64px] font-medium tracking-tight"
+      {/* ===== 金额显示 + 备注输入 ===== */}
+      <div className="flex flex-col items-center pt-8 pb-2">
+        <div className="text-5xl font-bold tracking-[-0.025em] leading-none select-none"
           style={{ color: raw ? "var(--color-text-primary)" : "var(--color-text-disabled)" }}>
           ¥{displayAmount}
-        </span>
+        </div>
+        <div className="flex items-center gap-1.5 mt-4 px-4 py-2.5 rounded-full"
+          style={{ background: "var(--lifeflow-muted)" }}>
+          <Pencil className="h-3.5 w-3.5" style={{ color: "var(--lifeflow-muted-foreground)" }} />
+          <input type="text" placeholder="添加备注..." value={note}
+            onChange={(e) => setNote(e.target.value)}
+            className="bg-transparent border-none outline-none text-sm w-28"
+            style={{ color: "var(--color-text-secondary)" }} maxLength={30} />
+        </div>
       </div>
 
-      {/* ===== 支出/收入 pill 分段控件 ===== */}
-      <div className="flex justify-center pb-6">
-        <div className="inline-flex items-center rounded-full p-1 relative" style={{ background: "var(--lifeflow-border)" }}>
+      {/* ===== 分类网格（3 列） ===== */}
+      <div className="px-4 pt-6">
+        <div className="grid grid-cols-3 gap-y-7 gap-x-2">
+          {visibleCategories.map((c) => {
+            const selected = selectedCategory?.id === c.id;
+            const Icon = getIcon(c.icon);
+            return (
+              <button key={c.id} type="button" onClick={() => setSelectedCategory(c)}
+                className="flex flex-col items-center gap-2.5 focus:outline-none active:opacity-70">
+                <div className="w-14 h-14 rounded-full flex items-center justify-center transition-colors duration-200"
+                  style={{
+                    background: selected
+                      ? "var(--lifeflow-brand-200)"
+                      : "var(--lifeflow-brand-100)",
+                  }}>
+                  <Icon className="w-6 h-6" style={{ color: "var(--lifeflow-brand)" }} />
+                </div>
+                <span className="text-xs font-medium"
+                  style={{
+                    color: selected ? "var(--lifeflow-primary)" : "var(--color-text-primary)",
+                    fontWeight: selected ? 600 : 500,
+                  }}>
+                  {c.name}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ===== 支出/收入 tab 切换 ===== */}
+      <div className="flex justify-center pt-8 pb-4">
+        <div className="flex p-1 rounded-full" style={{ background: "var(--lifeflow-muted)", width: "fit-content" }}>
           {(["expense", "income"] as const).map((t) => {
             const active = type === t;
             return (
-              <button
-                key={t} type="button" onClick={() => setType(t)}
-                className={`relative h-9 px-6 rounded-full text-[15px] transition-colors ${
-                  active ? "font-semibold" : ""
+              <button key={t} type="button" onClick={() => setType(t)}
+                className={`px-7 py-2 rounded-full text-sm transition-all duration-200 ${
+                  active ? "font-semibold" : "font-medium"
                 }`}
-                style={{ color: active ? "var(--lifeflow-primary)" : "var(--color-text-secondary)" }}
-              >
-                {active && (
-                  <motion.div
-                    layoutId="record-type-pill"
-                    className="absolute inset-0 rounded-full"
-                    style={{ background: "var(--lifeflow-brand-50)" }}
-                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                  />
-                )}
-                <span className="relative z-10">{t === "expense" ? "支出" : "收入"}</span>
+                style={active
+                  ? { background: "var(--lifeflow-brand)", color: "var(--lifeflow-primary-foreground)", boxShadow: "var(--shadow-tab-center)" }
+                  : { color: "var(--lifeflow-muted-foreground)" }
+                }>
+                {t === "expense" ? "支出" : "收入"}
               </button>
             );
           })}
@@ -149,7 +180,7 @@ export default function RecordPage() {
       </div>
 
       {/* ===== 数字键盘（3×4） ===== */}
-      <div className="px-6">
+      <div className="px-6 pt-2">
         <div className="grid grid-cols-3 gap-x-4 gap-y-6">
           {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((k) => (
             <button key={k} type="button" onClick={() => pressDigit(k)}
@@ -170,85 +201,37 @@ export default function RecordPage() {
         </div>
       </div>
 
-      {/* ===== 选择分类 ===== */}
-      <div className="px-4 pt-8">
-        <h2 className="text-[17px] font-semibold mb-4" style={{ color: "var(--color-text-primary)" }}>选择分类</h2>
-        <div className="grid grid-cols-4" style={{ gap: "12px 9px" }}>
-          {visibleCategories.map((c) => {
-            const selected = selectedCategory?.id === c.id;
-            return (
-              <button key={c.id} type="button" onClick={() => setSelectedCategory(c)}
-                className="flex flex-col items-center active:opacity-60">
-                <motion.div
-                  animate={selected ? { scale: 1.08 } : { scale: 1 }}
-                  transition={{ type: "spring", stiffness: 500, damping: 25 }}
-                  className={selected ? "ring-2 ring-offset-2 rounded-full" : ""}
-                  style={selected ? { boxShadow: "0 0 0 2px var(--lifeflow-primary)" } : undefined}
-                >
-                  <CategoryIcon icon={c.icon} color={c.color} size={44} iconSize={22} />
-                </motion.div>
-                <span className="text-[13px] mt-2"
-                  style={{ color: selected ? "var(--lifeflow-primary)" : "var(--color-text-secondary)", fontWeight: selected ? 600 : 400 }}>
-                  {c.name}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
       {/* 弹性占位，底栏始终在底部 */}
       <div className="flex-1" />
 
       {/* ===== 底部操作栏 ===== */}
-      <div className="sticky bottom-0 px-4 py-3 flex items-center gap-3" style={{ background: "var(--color-surface-card)", borderTop: "1px solid var(--lifeflow-border)" }}>
-        {/* 日期 chip */}
-        <div className="h-10 px-4 rounded-full flex items-center gap-1.5 relative" style={{ background: "var(--lifeflow-border)" }}>
-          <Calendar className="w-4 h-4" style={{ color: "var(--color-text-secondary)" }} />
-          <span className="text-[14px]" style={{ color: "var(--color-text-primary)" }}>{dateLabel}</span>
-          <input type="date" value={date} max={todayStr()}
-            onChange={(e) => e.target.value && setDate(e.target.value)}
-            className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" />
-        </div>
-
-        {/* 备注 chip + 内联输入 */}
-        <div className="relative">
-          <button type="button" onClick={() => { setShowNoteInput(true); setTimeout(() => noteRef.current?.focus(), 50); }}
-            className="h-10 px-4 rounded-full flex items-center gap-1.5" style={{ background: "var(--lifeflow-border)" }}>
-            <Pencil className="w-4 h-4" style={{ color: "var(--color-text-secondary)" }} />
-            <span className="text-[14px]" style={{ color: note ? "var(--color-text-primary)" : "var(--color-text-secondary)" }}>
-              {note || "添加备注"}
-            </span>
-          </button>
-          <AnimatePresence>
-            {showNoteInput && (
-              <motion.div
-                initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }}
-                className="absolute bottom-full left-0 mb-2 w-[200px]"
-              >
-                <input
-                  ref={noteRef} type="text" value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  onBlur={() => setShowNoteInput(false)}
-                  onKeyDown={(e) => { if (e.key === "Enter") setShowNoteInput(false); }}
-                  placeholder="添加备注"
-                  className="h-11 px-4 rounded-[12px] text-[15px] outline-none w-full"
-                  style={{ background: "var(--lifeflow-border)", color: "var(--color-text-primary)" }}
-                />
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-
-        {/* 保存按钮 */}
-        <motion.button
-          type="button" whileTap={{ scale: 0.95 }}
+      <div className="sticky bottom-0 px-4 pb-4 pt-2" style={{ background: "var(--color-surface-card)" }}>
+        <motion.button type="button" whileTap={{ scale: 0.95 }}
           onClick={handleSave} disabled={!canSave || saving}
-          className="ml-auto h-12 px-8 rounded-full text-[16px] font-semibold text-white disabled:opacity-60"
-          style={{ background: canSave ? "var(--lifeflow-primary)" : "#C7D2FE" }}
-        >
-          {saving ? "保存中…" : "保存"}
+          className="w-full py-3.5 rounded-full text-lg font-semibold tracking-[-0.01em] transition-opacity duration-200 active:opacity-85 disabled:opacity-60"
+          style={{
+            background: canSave ? "var(--lifeflow-brand)" : "var(--lifeflow-border)",
+            color: "var(--lifeflow-primary-foreground)",
+            boxShadow: canSave ? "var(--shadow-tab-center)" : "none",
+          }}>
+          {saving ? "保存中…" : "记一笔"}
         </motion.button>
+
+        {/* 日期 + 账本选择行 */}
+        <div className="flex items-center justify-between px-1 mt-3">
+          <button type="button" className="flex items-center gap-1.5 text-sm py-1.5"
+            style={{ color: "var(--color-text-secondary)" }}>
+            <Calendar className="h-4 w-4" />
+            <span style={{ color: "var(--color-text-primary)" }}>{dateLabel}</span>
+            <ChevronDown className="h-3 w-3" />
+          </button>
+          <button type="button" className="flex items-center gap-1.5 text-sm py-1.5"
+            style={{ color: "var(--color-text-secondary)" }}>
+            <BookOpen className="h-4 w-4" />
+            <span style={{ color: "var(--color-text-primary)" }}>默认账本</span>
+            <ChevronDown className="h-3 w-3" />
+          </button>
+        </div>
       </div>
     </motion.div>
   );

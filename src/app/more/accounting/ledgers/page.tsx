@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { ChevronLeft, Plus } from "lucide-react";
+import { ChevronLeft, Plus, BookOpen, ChevronRight, Bookmark } from "lucide-react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { getAllLedgers, getAllTransactions, updateLedger } from "@/lib/db/accounting.db";
 import type { Ledger } from "@/lib/db/accounting.db";
@@ -78,6 +78,12 @@ export default function LedgersPage() {
 
   const sortedLedgers = useMemo(() => [...ledgers].sort((a, b) => a.createdAt - b.createdAt), [ledgers]);
 
+  // 非默认账本列表
+  const otherLedgers = useMemo(() => {
+    if (!defaultLedger) return sortedLedgers;
+    return sortedLedgers.filter((l) => l.id !== defaultLedger.id);
+  }, [sortedLedgers, defaultLedger]);
+
   const openDetail = (l: Ledger) => { setSelectedLedger(l); setShowDetail(true); };
 
   const handleSetDefault = async () => {
@@ -89,65 +95,90 @@ export default function LedgersPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#FAFAFA]">
-      <div className="h-[52px] flex items-center justify-between px-4 shrink-0" style={{ background: "#FFFFFF", borderBottom: `1px solid ${BORDER_NAV}` }}>
-        <button type="button" onClick={() => router.back()} className="inline-flex items-center justify-center w-8 h-8 -ml-2">
-          <ChevronLeft className="w-6 h-6" style={{ color: TEXT_PRIMARY }} />
+    <div className="min-h-screen flex flex-col" style={{ background: "var(--lifeflow-background)" }}>
+      {/* ===== Header ===== */}
+      <div className="h-[52px] flex items-center justify-between px-4 shrink-0" style={{ background: "var(--color-surface-card)" }}>
+        <button type="button" onClick={() => router.back()} className="inline-flex items-center justify-center h-10 w-10">
+          <ChevronLeft className="w-5 h-5" style={{ color: "var(--color-text-primary)" }} />
         </button>
-        <span className="text-[17px] font-semibold" style={{ color: TEXT_PRIMARY }}>账本</span>
+        <span className="text-title-nav" style={{ color: "var(--color-text-primary)" }}>我的账本</span>
         <button type="button" onClick={() => router.push("/more/accounting/ledgers/new")}
-          className="inline-flex items-center justify-center w-8 h-8 -mr-2">
-          <Plus className="w-6 h-6" style={{ color: ACCENT }} />
+          className="inline-flex items-center justify-center h-10 w-10">
+          <Plus className="w-5 h-5" style={{ color: "var(--lifeflow-primary)" }} />
         </button>
       </div>
 
-      {sortedLedgers.length === 0 && (
-        <div className="flex-1 flex items-center justify-center">
-          <div className="flex flex-col items-center gap-1">
-            <span className="text-[15px]" style={{ color: TEXT_SECONDARY }}>还没有账本</span>
-            <span className="text-[15px]" style={{ color: TEXT_SECONDARY }}>点击右上角新建吧</span>
-          </div>
+      {/* ===== 默认"总账本"卡片 ===== */}
+      {defaultLedger && (
+        <div className="px-4 mt-8">
+          <button
+            type="button"
+            onClick={() => openDetail(defaultLedger)}
+            className="w-full card-standard p-4 flex items-center gap-3 text-left"
+          >
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl" style={{ background: "var(--lifeflow-brand-50)" }}>
+              <BookOpen className="w-5 h-5" style={{ color: "var(--lifeflow-primary)" }} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5">
+                <span className="truncate text-[16px] font-semibold leading-snug" style={{ color: "var(--color-text-primary)" }}>
+                  {defaultLedger.name}
+                </span>
+                <span className="inline-block h-2 w-2 shrink-0 rounded-full" style={{ background: "var(--lifeflow-primary)" }} />
+              </div>
+              <p className="truncate text-[13px] mt-0.5 leading-snug" style={{ color: "var(--color-text-secondary)" }}>
+                默认账本，包含全部收支记录
+              </p>
+            </div>
+            <ChevronRight className="w-4 h-4 shrink-0" style={{ color: "var(--color-text-disabled)" }} />
+          </button>
         </div>
       )}
 
-      {sortedLedgers.length > 0 && (
-        <>
-          {defaultLedger && (
-            <div className="px-4 mt-8 flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full" style={{ background: ACCENT }} />
-              <span className="text-[13px]" style={{ color: TEXT_SECONDARY }}>当前账本</span>
-              <span className="text-[17px] font-bold" style={{ color: TEXT_PRIMARY }}>
-                {defaultLedger.name} · {defaultLedger.currency}
-              </span>
-            </div>
-          )}
-          <div className="px-4 mt-10 flex flex-col gap-3 pb-8">
-            {sortedLedgers.map((ledger, i) => {
-              const monthCount = monthTxCountMap.get(ledger.id) || 0;
-              const isDefault = defaultLedger?.id === ledger.id;
-              return (
-                <motion.button key={ledger.id} type="button" whileTap={{ scale: 0.98 }}
-                  onClick={() => openDetail(ledger)}
-                  initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.08 + i * 0.06, duration: 0.25 }}
-                  className="w-full text-left rounded-[20px] overflow-hidden relative"
-                  style={{ background: "#FFFFFF", boxShadow: SHADOW_CARD }}>
-                  <div className="h-[68px] w-full" style={{ background: getCover(ledger.coverIndex) }} />
-                  <div className="flex items-center justify-between px-4 py-4">
-                    <div className="min-w-0">
-                      <p className="text-[17px] font-semibold truncate flex items-center gap-1" style={{ color: TEXT_PRIMARY }}>
-                        {ledger.name}
-                        {isDefault && <span className="text-[11px] px-1.5 py-0.5 rounded-full bg-[#EEF2FF] text-[#5865F2] font-normal">默认</span>}
-                      </p>
-                      <p className="text-[13px]" style={{ color: TEXT_SECONDARY }}>{ledger.currency}</p>
-                    </div>
-                    <span className="text-[13px] shrink-0" style={{ color: TEXT_SECONDARY }}>本月 {monthCount} 笔</span>
+      {/* ===== 其他账本列表 / 空状态 ===== */}
+      {otherLedgers.length > 0 ? (
+        <div className="px-4 mt-6 flex flex-col gap-3 pb-8">
+          {otherLedgers.map((ledger, i) => {
+            const monthCount = monthTxCountMap.get(ledger.id) || 0;
+            return (
+              <motion.button key={ledger.id} type="button" whileTap={{ scale: 0.98 }}
+                onClick={() => openDetail(ledger)}
+                initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.08 + i * 0.06, duration: 0.25 }}
+                className="w-full text-left rounded-[20px] overflow-hidden relative"
+                style={{ background: "#FFFFFF", boxShadow: "var(--shadow-card)" }}>
+                <div className="h-[68px] w-full" style={{ background: getCover(ledger.coverIndex) }} />
+                <div className="flex items-center justify-between px-4 py-4">
+                  <div className="min-w-0">
+                    <p className="text-[17px] font-semibold truncate flex items-center gap-1" style={{ color: "var(--color-text-primary)" }}>
+                      {ledger.name}
+                    </p>
+                    <p className="text-[13px]" style={{ color: "var(--color-text-secondary)" }}>{ledger.currency}</p>
                   </div>
-                </motion.button>
-              );
-            })}
+                  <span className="text-[13px] shrink-0" style={{ color: "var(--color-text-secondary)" }}>本月 {monthCount} 笔</span>
+                </div>
+              </motion.button>
+            );
+          })}
+        </div>
+      ) : (
+        /* 空状态 */
+        <div className="flex flex-col items-center justify-center pt-14 pb-8">
+          <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-full" style={{ background: "var(--lifeflow-muted)" }}>
+            <Bookmark className="h-7 w-7" style={{ color: "var(--color-text-disabled)" }} />
           </div>
-        </>
+          <p className="text-[15px] font-medium" style={{ color: "var(--color-text-secondary)" }}>暂无其他账本</p>
+          <p className="text-[13px] mt-1 mb-6" style={{ color: "var(--color-text-disabled)" }}>创建专属账本，分类管理收支</p>
+          <button
+            type="button"
+            onClick={() => router.push("/more/accounting/ledgers/new")}
+            className="inline-flex items-center gap-1.5 rounded-full px-6 py-2.5 text-[15px] font-medium transition-opacity hover:opacity-90 active:opacity-80"
+            style={{ background: "var(--lifeflow-primary)", color: "var(--lifeflow-primary-foreground)" }}
+          >
+            <Plus className="w-4 h-4" />
+            新建账本
+          </button>
+        </div>
       )}
 
       {/* 账本详情 Sheet */}
@@ -155,32 +186,33 @@ export default function LedgersPage() {
         {selectedLedger && (
           <>
             <div className="px-5 pt-5 pb-2 flex items-center justify-between">
-              <span className="text-[17px] font-semibold text-[#1D1D1F]">{selectedLedger.name}</span>
-              <button onClick={() => setShowDetail(false)} className="text-[15px] text-[#86868B]">关闭</button>
+              <span className="text-[17px] font-semibold" style={{ color: "var(--color-text-primary)" }}>{selectedLedger.name}</span>
+              <button onClick={() => setShowDetail(false)} className="text-[15px]" style={{ color: "var(--color-text-secondary)" }}>关闭</button>
             </div>
             <div className="px-5 mt-3 space-y-3">
               <div className="flex justify-between">
-                <span className="text-[15px] text-[#86868B]">货币</span>
-                <span className="text-[15px] text-[#1D1D1F]">{selectedLedger.currency}</span>
+                <span className="text-[15px]" style={{ color: "var(--color-text-secondary)" }}>货币</span>
+                <span className="text-[15px]" style={{ color: "var(--color-text-primary)" }}>{selectedLedger.currency}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-[15px] text-[#86868B]">总交易</span>
-                <span className="text-[15px] text-[#1D1D1F]">{totalTxMap.get(selectedLedger.id) || 0} 笔</span>
+                <span className="text-[15px]" style={{ color: "var(--color-text-secondary)" }}>总交易</span>
+                <span className="text-[15px]" style={{ color: "var(--color-text-primary)" }}>{totalTxMap.get(selectedLedger.id) || 0} 笔</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-[15px] text-[#86868B]">本月交易</span>
-                <span className="text-[15px] text-[#1D1D1F]">{monthTxCountMap.get(selectedLedger.id) || 0} 笔</span>
+                <span className="text-[15px]" style={{ color: "var(--color-text-secondary)" }}>本月交易</span>
+                <span className="text-[15px]" style={{ color: "var(--color-text-primary)" }}>{monthTxCountMap.get(selectedLedger.id) || 0} 笔</span>
               </div>
               {selectedLedger.note && (
                 <div className="flex justify-between">
-                  <span className="text-[15px] text-[#86868B]">备注</span>
-                  <span className="text-[15px] text-[#1D1D1F]">{selectedLedger.note}</span>
+                  <span className="text-[15px]" style={{ color: "var(--color-text-secondary)" }}>备注</span>
+                  <span className="text-[15px]" style={{ color: "var(--color-text-primary)" }}>{selectedLedger.note}</span>
                 </div>
               )}
             </div>
             <div className="px-5 mt-6">
               <button type="button" onClick={handleSetDefault}
-                className="w-full h-11 rounded-[12px] text-[15px] font-semibold text-white bg-[#5865F2]">
+                className="w-full h-11 rounded-[12px] text-[15px] font-semibold text-white"
+                style={{ background: "var(--lifeflow-primary)" }}>
                 设为默认账本
               </button>
             </div>

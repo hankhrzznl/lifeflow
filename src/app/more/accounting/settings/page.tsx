@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Moon, Download, Trash2, Info } from "lucide-react";
 import { useLiveQuery } from "dexie-react-hooks";
 import {
   getAllTransactions, getDefaultLedger, clearAllAccountingData,
@@ -20,14 +20,7 @@ import {
 // 设计令牌
 // ============================================================
 const ACCENT = "#5865F2";
-const INK = "#1D1D1F";
-const MUTED = "#86868B";
-const CHEVRON = "#C7C7CC";
-const DANGER = "#FF3B30";
-const BORDER_CARD = "#EBEBEB";
-const BORDER_HEADER = "#E6E6E6";
 const TOGGLE_OFF = "#EBEBEB";
-const SKELETON = "#F5F5F5";
 
 // ─── 货币列表 ────────────────────────────────────────────────
 const CURRENCIES = [
@@ -73,17 +66,15 @@ function ActionSheet({ open, onClose, title, options, onSelect }: {
         className="relative w-full max-w-[430px] bg-white rounded-t-[20px] pb-[calc(56px+max(16px,env(safe-area-inset-bottom)))]"
         onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 pt-5 pb-2">
-          <span className="text-[17px] font-semibold text-[#1D1D1F]">{title}</span>
-          <button onClick={onClose} className="text-[15px] text-[#86868B]">取消</button>
+          <span className="text-[17px] font-semibold" style={{ color: "var(--color-text-primary)" }}>{title}</span>
+          <button onClick={onClose} className="text-[15px]" style={{ color: "var(--color-text-secondary)" }}>取消</button>
         </div>
         <div className="max-h-[320px] overflow-y-auto">
           {options.map((o) => (
             <button key={o.value} type="button" onClick={() => { onSelect(o.value); onClose(); }}
               className="w-full h-[52px] px-5 flex items-center justify-between active:bg-black/5">
-              <span className="text-[15px] text-[#1D1D1F]">{o.label}</span>
-              {o.selected && <div className="w-5 h-5 rounded-full bg-[#5865F2] flex items-center justify-center">
-                <svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 6l3 3 5-6" stroke="#fff" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              </div>}
+              <span className="text-[15px]" style={{ color: "var(--color-text-primary)" }}>{o.label}</span>
+              {o.selected && <div className="w-5 h-5 rounded-full" style={{ background: "var(--lifeflow-brand)" }}>...</div>}
             </button>
           ))}
         </div>
@@ -134,7 +125,6 @@ export default function SettingsPage() {
   // ─── 默认账本切换 ──────────────────────────────────────────
   const handleSelectLedger = async (id: string) => {
     if (!allLedgers) return;
-    // 清除旧的 isDefault
     for (const l of allLedgers) {
       if (l.isDefault) await updateLedger(l.id, { isDefault: false });
     }
@@ -192,108 +182,83 @@ export default function SettingsPage() {
 
   // ============================================================
   return (
-    <div className="min-h-screen bg-[#FAFAFA]">
-      {/* 页头 */}
-      <div className="h-[56px] flex items-center relative px-4" style={{ background: "#FFFFFF", borderBottom: `1px solid ${BORDER_HEADER}` }}>
-        <button type="button" onClick={() => router.back()} className="w-11 h-11 -ml-1 flex items-center justify-center active:opacity-50">
-          <ChevronLeft className="w-6 h-6" style={{ color: INK }} />
+    <div className="min-h-screen" style={{ background: "var(--lifeflow-background)" }}>
+      {/* ===== 页头 ===== */}
+      <div className="flex items-center justify-center relative h-14 px-4">
+        <button type="button" onClick={() => router.back()}
+          className="absolute left-4 inline-flex h-8 w-8 items-center justify-center rounded-lg"
+          style={{ border: "1px solid var(--lifeflow-border)", background: "var(--color-surface-card)" }}>
+          <ChevronLeft className="h-4 w-4" style={{ color: "var(--color-text-primary)" }} />
         </button>
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <span className="text-[17px] font-semibold" style={{ color: INK }}>设置</span>
-        </div>
-        <div className="w-11 h-11" />
+        <span className="text-[17px] font-semibold" style={{ color: "var(--color-text-primary)" }}>设置</span>
+        <div className="w-8" aria-hidden="true" />
       </div>
 
-      {/* 统计双卡 */}
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}
-        className="px-4 mt-4 flex gap-3">
-        <div className="flex-1 h-[104px] rounded-xl p-4 flex flex-col justify-between" style={{ background: "#FFFFFF", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-          <span className="text-[13px]" style={{ color: MUTED }}>总交易</span>
-          <div className="flex items-baseline gap-1">
-            {loaded ? (
-              <><span className="text-[34px] font-bold leading-none" style={{ color: INK }}>{totalCount.toLocaleString("zh-CN")}</span>
-              <span className="text-[17px] font-semibold" style={{ color: INK }}>笔</span></>
-            ) : <div className="h-[34px] w-[80px] rounded-md animate-pulse" style={{ background: SKELETON }} />}
+      {/* ===== 外观组 ===== */}
+      <div className="px-4 pt-4">
+        <p className="text-[13px] font-medium px-5 pt-4 pb-2" style={{ color: "var(--color-text-secondary)" }}>外观</p>
+        <div className="rounded-[20px] overflow-hidden" style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}>
+          <div className="flex items-center justify-between w-full px-5 py-3.5">
+            <div className="flex items-center gap-3 min-w-0">
+              <Moon className="w-5 h-5 shrink-0" style={{ color: "var(--color-text-primary)" }} />
+              <span className="text-[17px] truncate" style={{ color: "var(--color-text-primary)" }}>深色模式</span>
+            </div>
+            <ToggleSwitch
+              checked={false}
+              onChange={() => {}}
+              label="深色模式"
+            />
           </div>
         </div>
-        <div className="flex-1 h-[104px] rounded-xl p-4 flex flex-col justify-between" style={{ background: "#FFFFFF", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-          <span className="text-[13px]" style={{ color: MUTED }}>记账天数</span>
-          <div className="flex items-baseline gap-1">
-            {loaded ? (
-              <><span className="text-[34px] font-bold leading-none" style={{ color: INK }}>{uniqueDays.toLocaleString("zh-CN")}</span>
-              <span className="text-[17px] font-semibold" style={{ color: INK }}>天</span></>
-            ) : <div className="h-[34px] w-[80px] rounded-md animate-pulse" style={{ background: SKELETON }} />}
+      </div>
+
+      {/* ===== 数据组 ===== */}
+      <div className="px-4 pt-4">
+        <p className="text-[13px] font-medium px-5 pt-4 pb-2" style={{ color: "var(--color-text-secondary)" }}>数据</p>
+        <div className="rounded-[20px] overflow-hidden" style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}>
+          <button type="button" onClick={handleExport} className="flex items-center justify-between w-full px-5 py-3.5 active:opacity-50">
+            <div className="flex items-center gap-3 min-w-0">
+              <Download className="w-5 h-5 shrink-0" style={{ color: "var(--color-text-primary)" }} />
+              <span className="text-[17px] truncate" style={{ color: "var(--color-text-primary)" }}>导出数据</span>
+            </div>
+            <ChevronRight className="w-5 h-5 shrink-0" style={{ color: "var(--color-text-disabled)" }} />
+          </button>
+          <div className="h-px" style={{ background: "var(--lifeflow-border)", marginLeft: "52px" }} />
+          <button type="button" onClick={() => setShowClearDialog(true)} className="flex items-center justify-between w-full px-5 py-3.5 active:opacity-50">
+            <div className="flex items-center gap-3 min-w-0">
+              <Trash2 className="w-5 h-5 shrink-0" style={{ color: "var(--color-text-primary)" }} />
+              <span className="text-[17px] truncate" style={{ color: "var(--color-text-primary)" }}>清除数据</span>
+            </div>
+            <ChevronRight className="w-5 h-5 shrink-0" style={{ color: "var(--color-text-disabled)" }} />
+          </button>
+        </div>
+      </div>
+
+      {/* ===== 关于组 ===== */}
+      <div className="px-4 pt-4">
+        <p className="text-[13px] font-medium px-5 pt-4 pb-2" style={{ color: "var(--color-text-secondary)" }}>关于</p>
+        <div className="rounded-[20px] overflow-hidden" style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}>
+          <div className="flex items-center justify-between w-full px-5 py-3.5">
+            <div className="flex items-center gap-3 min-w-0">
+              <Info className="w-5 h-5 shrink-0" style={{ color: "var(--color-text-primary)" }} />
+              <span className="text-[17px] truncate" style={{ color: "var(--color-text-primary)" }}>版本</span>
+            </div>
+            <span className="text-[17px] shrink-0" style={{ color: "var(--color-text-secondary)" }}>1.0.0</span>
           </div>
         </div>
-      </motion.div>
+      </div>
 
-      {/* 通用分组 */}
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: 0.05 }}
-        className="mx-4 mt-4">
-        <div className="rounded-xl overflow-hidden" style={{ background: "#FFFFFF", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-          <div className="px-4 pt-4 pb-1"><span className="text-[13px]" style={{ color: MUTED }}>通用</span></div>
+      {/* ===== 退出登录 ===== */}
+      <div className="px-5 mt-8">
+        <button type="button"
+          className="w-full h-12 rounded-[20px] text-[16px] font-semibold active:opacity-70"
+          style={{ background: "var(--color-surface-card)", color: "var(--color-expense)", boxShadow: "var(--shadow-card)" }}>
+          退出登录
+        </button>
+      </div>
 
-          <button type="button" onClick={() => setShowLedgerPicker(true)} className="h-[56px] flex items-center justify-between px-4 w-full active:opacity-50">
-            <span className="text-[17px]" style={{ color: INK }}>默认账本</span>
-            <div className="flex items-center gap-1">
-              <span className="text-[15px]" style={{ color: MUTED }}>{ledgerName}</span>
-              <ChevronRight className="w-5 h-5" style={{ color: CHEVRON }} />
-            </div>
-          </button>
-          <div style={{ borderTop: `0.5px solid ${BORDER_CARD}` }} />
-
-          <button type="button" onClick={() => setShowCurrencyPicker(true)} className="h-[56px] flex items-center justify-between px-4 w-full active:opacity-50">
-            <span className="text-[17px]" style={{ color: INK }}>货币单位</span>
-            <div className="flex items-center gap-1">
-              <span className="text-[15px]" style={{ color: MUTED }}>{getCurrencyLabel(ledgerCurrency)}</span>
-              <ChevronRight className="w-5 h-5" style={{ color: CHEVRON }} />
-            </div>
-          </button>
-          <div style={{ borderTop: `0.5px solid ${BORDER_CARD}` }} />
-
-          <button type="button" onClick={() => router.push("/more/accounting/categories")}
-            className="h-[56px] flex items-center justify-between px-4 w-full active:opacity-50">
-            <span className="text-[17px]" style={{ color: INK }}>分类管理</span>
-            <ChevronRight className="w-5 h-5" style={{ color: CHEVRON }} />
-          </button>
-        </div>
-      </motion.div>
-
-      {/* 显示分组 */}
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: 0.1 }}
-        className="mx-4 mt-4">
-        <div className="rounded-xl overflow-hidden" style={{ background: "#FFFFFF", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-          <div className="px-4 pt-4 pb-1"><span className="text-[13px]" style={{ color: MUTED }}>显示</span></div>
-          <button type="button" onClick={toggleHideZero} className="h-[56px] flex items-center justify-between px-4 w-full active:opacity-50">
-            <span className="text-[17px]" style={{ color: INK }}>隐藏零交易分类</span>
-            <ToggleSwitch checked={hideZeroOn} onChange={toggleHideZero} label="隐藏零交易分类" />
-          </button>
-          <div style={{ borderTop: `0.5px solid ${BORDER_CARD}` }} />
-          <button type="button" onClick={toggleWeekly} className="h-[56px] flex items-center justify-between px-4 w-full active:opacity-50">
-            <span className="text-[17px]" style={{ color: INK }}>按周统计</span>
-            <ToggleSwitch checked={weeklyOn} onChange={toggleWeekly} label="按周统计" />
-          </button>
-        </div>
-      </motion.div>
-
-      {/* 数据分组 */}
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: 0.15 }}
-        className="mx-4 mt-4">
-        <div className="rounded-xl overflow-hidden" style={{ background: "#FFFFFF", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-          <div className="px-4 pt-4 pb-1"><span className="text-[13px]" style={{ color: MUTED }}>数据</span></div>
-          <button type="button" onClick={handleExport} className="h-[56px] flex items-center justify-between px-4 w-full active:opacity-50">
-            <span className="text-[17px]" style={{ color: INK }}>导出数据</span>
-            <ChevronRight className="w-5 h-5" style={{ color: CHEVRON }} />
-          </button>
-          <div style={{ borderTop: `0.5px solid ${BORDER_CARD}` }} />
-          <button type="button" onClick={() => setShowClearDialog(true)} className="h-[56px] flex items-center justify-between px-4 w-full active:opacity-50">
-            <span className="text-[17px]" style={{ color: DANGER }}>清除所有数据</span>
-            <ChevronRight className="w-5 h-5" style={{ color: CHEVRON }} />
-          </button>
-        </div>
-      </motion.div>
-
-      <p className="text-center mt-8 text-[13px] pb-10" style={{ color: MUTED }}>LifeFlow v1.0.0</p>
+      {/* ===== 底部内边距 ===== */}
+      <div className="h-10" />
 
       {/* 选择器 */}
       <ActionSheet open={showLedgerPicker} onClose={() => setShowLedgerPicker(false)} title="选择默认账本"

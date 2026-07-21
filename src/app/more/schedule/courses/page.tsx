@@ -3,7 +3,7 @@
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, Plus, Trash2, Clock, MapPin } from "lucide-react";
+import { ChevronLeft, Plus, Trash2, Clock, MapPin, BookOpen } from "lucide-react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { getCourses, addCourse, updateCourse, deleteCourse } from "@/lib/db/daylog.db";
 import type { Course } from "@/lib/db/daylog.db";
@@ -147,13 +147,26 @@ export default function CoursesPage() {
               className="h-9 px-5 rounded-full text-[14px] font-medium transition-colors"
               style={{
                 background: activeWeek === w.key ? "var(--lifeflow-primary)" : "var(--color-surface-secondary)",
-                color: activeWeek === w.key ? "var(--color-text-inverse)" : "var(--color-text-secondary)",
+                color: activeWeek === w.key ? "var(--lifeflow-primary-foreground)" : "var(--color-text-secondary)",
               }}
             >
               {w.label}
             </button>
           ))}
         </motion.div>
+
+        {/* Days of Week Header Row */}
+        <div className="grid grid-cols-7 gap-1 mb-4">
+          {["周一","周二","周三","周四","周五","周六","周日"].map((label, i) => (
+            <span
+              key={label}
+              className="text-center text-[13px] font-medium truncate"
+              style={{ color: i >= 5 ? "var(--color-expense)" : "var(--color-text-secondary)" }}
+            >
+              {label}
+            </span>
+          ))}
+        </div>
 
         {/* Add / Edit form */}
         <AnimatePresence mode="wait">
@@ -298,13 +311,37 @@ export default function CoursesPage() {
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            className="card-standard p-10 flex flex-col items-center"
+            className="flex flex-1 flex-col items-center justify-center px-4"
           >
-            <p className="text-[17px] font-semibold" style={{ color: "var(--color-text-primary)" }}>还没有课程</p>
-            <p className="text-[14px] mt-1.5" style={{ color: "var(--color-text-secondary)" }}>添加新学期的课程表吧</p>
-            <button onClick={() => setAdding(true)}
-              className="mt-5 h-10 px-6 rounded-full text-[15px] font-semibold text-white"
-              style={{ background: "var(--lifeflow-primary)" }}>添加课程</button>
+            <div
+              className="w-full max-w-sm flex flex-col items-center px-6 py-12"
+              style={{
+                backgroundColor: "var(--color-surface-card)",
+                borderRadius: 20,
+                boxShadow: "var(--shadow-card)",
+              }}
+            >
+              <div className="w-20 h-20 rounded-full flex items-center justify-center mb-5" style={{ backgroundColor: "var(--lifeflow-brand-50)" }}>
+                <BookOpen className="w-10 h-10" style={{ color: "var(--lifeflow-primary)" }} />
+              </div>
+              <p className="text-[17px] font-semibold mb-2" style={{ color: "var(--color-text-primary)", letterSpacing: "-0.018em" }}>
+                暂无课程安排
+              </p>
+              <p className="text-[14px] mb-7" style={{ color: "var(--color-text-secondary)", letterSpacing: "-0.01em" }}>
+                本周还没有添加任何课程
+              </p>
+              <button
+                onClick={() => setAdding(true)}
+                className="inline-flex items-center gap-2 rounded-full px-6 py-2.5 text-[15px] font-medium"
+                style={{
+                  backgroundColor: "var(--lifeflow-primary)",
+                  color: "var(--lifeflow-primary-foreground)",
+                }}
+              >
+                <Plus className="w-4 h-4" />
+                添加课程
+              </button>
+            </div>
           </motion.div>
         )}
       </div>

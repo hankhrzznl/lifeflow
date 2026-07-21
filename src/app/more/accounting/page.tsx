@@ -3,7 +3,7 @@
 import { useMemo, useState, useCallback } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, ChevronDown, Trash2 } from "lucide-react";
+import { Plus, ChevronDown, Trash2, Wallet } from "lucide-react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { getTransactionsByMonth, deleteTransaction, getAllCategories } from "@/lib/db/accounting.db";
 import type { Transaction, Category } from "@/lib/db/accounting.db";
@@ -126,55 +126,55 @@ export default function AccountingPage() {
 
   return (
     <div className="pb-6">
-      {/* ===== 标题行 ===== */}
+      {/* ===== Header ===== */}
       <div className="px-4 pt-5 flex items-center justify-between">
-        <div>
-          <h1 className="text-[34px] font-bold tracking-[-0.02em] leading-tight" style={{ color: "var(--color-text-primary)" }}>记账</h1>
-          <p className="text-[15px] mt-1" style={{ color: "var(--color-text-secondary)" }}>明细记录 · 收支一览</p>
-        </div>
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => setMonthPanelOpen((v) => !v)}
-            className="flex items-center gap-1 active:opacity-60"
-          >
-            <span className="text-[15px]" style={{ color: "var(--color-text-secondary)" }}>{year}年{month}月</span>
-            <ChevronDown className={`w-4 h-4 transition-transform ${monthPanelOpen ? "rotate-180" : ""}`} style={{ color: "var(--color-text-secondary)" }} />
-          </button>
-          <AnimatePresence>
-            {monthPanelOpen && (
-              <>
-                <div className="fixed inset-0 z-40" onClick={() => setMonthPanelOpen(false)} />
-                <motion.div
-                  initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }}
-                  transition={{ duration: 0.15 }}
-                  className="absolute right-0 top-full mt-2 z-50 w-[160px] rounded-[12px] border border-[var(--lifeflow-border)] shadow-[0_4px_16px_rgba(0,0,0,0.08)] py-2 max-h-[320px] overflow-y-auto"
-                  style={{ background: "var(--color-surface-card)" }}
-                >
-                  {monthOptions.map((opt) => {
-                    const active = opt.year === year && opt.month === month;
-                    const now = new Date();
-                    const targetOffset = -( (now.getFullYear() - opt.year) * 12 + (now.getMonth() + 1 - opt.month) );
-                    return (
-                      <button
-                        key={`${opt.year}-${opt.month}`}
-                        type="button"
-                        onClick={() => { setMonthOffset(targetOffset); setMonthPanelOpen(false); }}
-                        className="w-full h-9 px-4 text-[13px] flex items-center"
-                        style={{
-                          background: active ? "var(--lifeflow-brand-50)" : "transparent",
-                          color: active ? "var(--lifeflow-primary)" : "var(--color-text-primary)",
-                          fontWeight: active ? 500 : 400,
-                        }}
-                      >
-                        {opt.year}年{opt.month}月
-                      </button>
-                    );
-                  })}
-                </motion.div>
-              </>
-            )}
-          </AnimatePresence>
+        <h1 className="text-[34px] font-bold leading-tight" style={{ color: "var(--color-text-primary)", letterSpacing: "-0.022em" }}>记账</h1>
+        <div className="flex items-center gap-1.5">
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setMonthPanelOpen((v) => !v)}
+              className="flex items-center gap-1.5 active:opacity-60"
+            >
+              <span className="text-[13px] font-medium" style={{ color: "var(--color-text-secondary)" }}>{month}月</span>
+            </button>
+            <AnimatePresence>
+              {monthPanelOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setMonthPanelOpen(false)} />
+                  <motion.div
+                    initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute right-0 top-full mt-2 z-50 w-[160px] rounded-[12px] border border-[var(--lifeflow-border)] shadow-[0_4px_16px_rgba(0,0,0,0.08)] py-2 max-h-[320px] overflow-y-auto"
+                    style={{ background: "var(--color-surface-card)" }}
+                  >
+                    {monthOptions.map((opt) => {
+                      const active = opt.year === year && opt.month === month;
+                      const now = new Date();
+                      const targetOffset = -( (now.getFullYear() - opt.year) * 12 + (now.getMonth() + 1 - opt.month) );
+                      return (
+                        <button
+                          key={`${opt.year}-${opt.month}`}
+                          type="button"
+                          onClick={() => { setMonthOffset(targetOffset); setMonthPanelOpen(false); }}
+                          className="w-full h-9 px-4 text-[13px] flex items-center"
+                          style={{
+                            background: active ? "var(--lifeflow-brand-50)" : "transparent",
+                            color: active ? "var(--lifeflow-primary)" : "var(--color-text-primary)",
+                            fontWeight: active ? 500 : 400,
+                          }}
+                        >
+                          {opt.year}年{opt.month}月
+                        </button>
+                      );
+                    })}
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
+          </div>
+          <span className="w-[6px] h-[6px] rounded-full" style={{ background: "var(--lifeflow-border)" }} />
+          <span className="text-[13px] font-medium truncate max-w-[100px]" style={{ color: "var(--color-text-secondary)" }}>日常账本</span>
         </div>
       </div>
 
@@ -183,29 +183,42 @@ export default function AccountingPage() {
         <PillNav />
       </div>
 
-      {/* ===== 本月汇总卡 ===== */}
+      {/* ===== 月汇总卡片 ===== */}
       <motion.div
         initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-        className="mx-4 mt-4 rounded-[20px] px-6 py-6"
+        className="mx-4 mt-4 rounded-[20px] p-5"
         style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}
       >
-        <div className="text-[13px] text-center" style={{ color: "var(--color-text-secondary)" }}>本月支出</div>
-        <div className="text-[34px] font-bold tracking-tight leading-none mt-2 text-center tabular-nums" style={{ color: "var(--color-text-primary)" }}>
-          ¥{fmtCompact(monthExpense)}
-        </div>
-        <div className="my-5" style={{ borderTop: "0.5px solid var(--lifeflow-border)" }} />
-        <div className="flex">
-          <div className="flex-1 text-center">
-            <div className="text-[13px]" style={{ color: "var(--color-text-secondary)" }}>收入</div>
-            <div className="text-[20px] font-semibold mt-1 tabular-nums" style={{ color: "var(--color-text-primary)" }}>¥{fmtCompact(monthIncome)}</div>
+        <div className="grid grid-cols-2">
+          {/* 本月支出 */}
+          <div className="flex flex-col items-start gap-1 pr-3" style={{ borderRight: "0.5px solid var(--lifeflow-border)" }}>
+            <span className="flex items-center gap-1.5 text-[13px] font-medium" style={{ color: "var(--color-text-secondary)" }}>
+              <span className="w-2 h-2 rounded-full shrink-0" style={{ background: "var(--color-expense)" }} />
+              本月支出
+            </span>
+            <span className="text-[20px] font-bold tracking-[-0.018em]" style={{ color: "var(--color-expense)" }}>¥{fmtCompact(monthExpense)}</span>
           </div>
-          <div className="w-px self-stretch" style={{ background: "var(--lifeflow-border)" }} />
-          <div className="flex-1 text-center">
-            <div className="text-[13px]" style={{ color: "var(--color-text-secondary)" }}>结余</div>
-            <div className="text-[20px] font-semibold mt-1 tabular-nums" style={{ color: "var(--color-text-primary)" }}>¥{fmtCompact(monthIncome - monthExpense)}</div>
+          {/* 本月收入 */}
+          <div className="flex flex-col items-start gap-1 pl-3">
+            <span className="flex items-center gap-1.5 text-[13px] font-medium" style={{ color: "var(--color-text-secondary)" }}>
+              <span className="w-2 h-2 rounded-full shrink-0" style={{ background: "var(--color-income)" }} />
+              本月收入
+            </span>
+            <span className="text-[20px] font-bold tracking-[-0.018em]" style={{ color: "var(--color-income)" }}>¥{fmtCompact(monthIncome)}</span>
           </div>
         </div>
       </motion.div>
+
+      {/* ===== 今日空状态 ===== */}
+      {todayStats.count === 0 && (
+        <section className="px-4 pb-6 mt-4">
+          <h2 className="text-[17px] font-semibold px-1 mb-3" style={{ color: "var(--color-text-primary)" }}>今天</h2>
+          <div className="rounded-[20px] py-10 flex flex-col items-center justify-center gap-3" style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}>
+            <Wallet className="w-12 h-12 shrink-0" style={{ color: "var(--color-text-disabled)" }} strokeWidth={1.5} />
+            <p className="text-[13px] font-medium" style={{ color: "var(--color-text-secondary)" }}>今日暂无收支记录</p>
+          </div>
+        </section>
+      )}
 
       {/* ===== 分类汇总 chips ===== */}
       {topExpenseCats.length > 0 && (

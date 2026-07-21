@@ -73,22 +73,28 @@ export default function RoutinesPage() {
   return (
     <div className="pb-[100px]">
       {/* Header */}
-      <div className="flex items-center px-4 pt-3 pb-2">
+      <div className="flex items-center justify-between px-4 pt-3 pb-2">
         <button
           type="button"
           onClick={() => router.push("/more")}
-          className="inline-flex h-8 w-8 items-center justify-center rounded-lg"
+          className="inline-flex h-10 w-10 items-center justify-center rounded-full"
           style={{
             background: "var(--color-surface-card)",
-            border: "1px solid var(--lifeflow-border)",
+            boxShadow: "var(--shadow-card)",
           }}
         >
-          <ChevronLeft className="w-4 h-4" style={{ color: "var(--color-text-primary)" }} />
+          <ChevronLeft className="w-5 h-5" style={{ color: "var(--color-text-primary)" }} />
         </button>
-        <h1 className="text-title-nav flex-1 text-center" style={{ color: "var(--color-text-primary)" }}>
+        <h1 className="text-title-nav" style={{ color: "var(--color-text-primary)" }}>
           作息
         </h1>
-        <div className="w-8" />
+        <button
+          type="button"
+          onClick={() => setAdding(true)}
+          className="inline-flex h-10 w-10 items-center justify-center"
+        >
+          <Plus className="w-6 h-6" style={{ color: "var(--lifeflow-primary)" }} />
+        </button>
       </div>
 
       <div className="px-4 pt-5">
@@ -196,21 +202,33 @@ export default function RoutinesPage() {
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            className="card-standard p-10 flex flex-col items-center"
+            className="flex flex-1 flex-col items-center justify-center px-4"
           >
-            <p className="text-[17px] font-semibold" style={{ color: "var(--color-text-primary)" }}>
-              暂无作息模板
-            </p>
-            <p className="text-[14px] mt-1.5" style={{ color: "var(--color-text-secondary)" }}>
-              添加作息模板，每日自动生成日程
-            </p>
-            <button
-              onClick={() => setAdding(true)}
-              className="mt-5 h-10 px-6 rounded-full text-[15px] font-semibold text-white"
-              style={{ background: "var(--lifeflow-primary)" }}
+            <div
+              className="w-full max-w-sm flex flex-col items-center px-8 py-12"
+              style={{
+                backgroundColor: "var(--color-surface-card)",
+                borderRadius: 20,
+                boxShadow: "var(--shadow-card)",
+              }}
             >
-              创建作息
-            </button>
+              <div className="w-16 h-16 rounded-[16px] flex items-center justify-center mb-5" style={{ backgroundColor: "var(--lifeflow-brand-50)" }}>
+                <Clock className="w-8 h-8" style={{ color: "var(--lifeflow-primary)" }} />
+              </div>
+              <p className="text-[15px] mb-5" style={{ color: "var(--color-text-secondary)" }}>
+                暂无作息模板
+              </p>
+              <button
+                onClick={() => setAdding(true)}
+                className="inline-flex items-center justify-center rounded-full px-6 py-2.5 text-[14px] font-medium"
+                style={{
+                  backgroundColor: "var(--lifeflow-primary)",
+                  color: "var(--lifeflow-primary-foreground)",
+                }}
+              >
+                创建作息
+              </button>
+            </div>
           </motion.div>
         )}
       </div>

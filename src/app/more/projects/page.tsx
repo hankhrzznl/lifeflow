@@ -3,7 +3,7 @@
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, Plus, Trash2, Target, Pencil } from "lucide-react";
+import { ChevronLeft, Plus, Trash2, Target, Pencil, FolderKanban } from "lucide-react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { getAllProjects, addProject, updateProject, deleteProject } from "@/lib/db/efficiency.db";
 import { getAllGoalsV2 } from "@/lib/db/efficiency.db";
@@ -96,22 +96,30 @@ export default function ProjectsPage() {
   return (
     <div className="pb-[100px]">
       {/* Header */}
-      <div className="flex items-center px-4 pt-3 pb-2">
+      <div className="flex items-center justify-between px-4 pt-3 pb-2">
         <button
           type="button"
           onClick={() => router.push("/more")}
           className="inline-flex h-8 w-8 items-center justify-center rounded-lg"
           style={{
-            background: "var(--color-surface-card)",
-            border: "1px solid var(--lifeflow-border)",
+            background: "var(--color-surface-secondary)",
           }}
         >
-          <ChevronLeft className="w-4 h-4" style={{ color: "var(--color-text-primary)" }} />
+          <ChevronLeft className="w-5 h-5" style={{ color: "var(--color-text-primary)" }} />
         </button>
-        <h1 className="text-title-nav flex-1 text-center" style={{ color: "var(--color-text-primary)" }}>
+        <h1 className="text-title-nav mx-2 truncate" style={{ color: "var(--color-text-primary)" }}>
           项目管理
         </h1>
-        <div className="w-8" />
+        <button
+          type="button"
+          onClick={() => setAdding(true)}
+          className="inline-flex h-8 w-8 items-center justify-center rounded-lg"
+          style={{
+            background: "var(--lifeflow-primary)",
+          }}
+        >
+          <Plus className="w-5 h-5" style={{ color: "var(--lifeflow-primary-foreground)" }} />
+        </button>
       </div>
 
       <div className="px-4 pt-5">
@@ -129,7 +137,7 @@ export default function ProjectsPage() {
               className="h-9 px-4 rounded-full text-[14px] font-medium whitespace-nowrap shrink-0 transition-colors"
               style={{
                 background: activeFilter === f.key ? "var(--lifeflow-primary)" : "var(--color-surface-secondary)",
-                color: activeFilter === f.key ? "var(--color-text-inverse)" : "var(--color-text-secondary)",
+                color: activeFilter === f.key ? "var(--lifeflow-primary-foreground)" : "var(--color-text-secondary)",
               }}
             >
               {f.label}
@@ -267,21 +275,36 @@ export default function ProjectsPage() {
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            className="card-standard p-10 flex flex-col items-center"
+            className="flex flex-1 flex-col items-center justify-center px-4"
           >
-            <p className="text-[17px] font-semibold" style={{ color: "var(--color-text-primary)" }}>
-              暂无项目
-            </p>
-            <p className="text-[14px] mt-1.5" style={{ color: "var(--color-text-secondary)" }}>
-              创建项目来分类管理你的目标
-            </p>
-            <button
-              onClick={() => setAdding(true)}
-              className="mt-5 h-10 px-6 rounded-full text-[15px] font-semibold text-white"
-              style={{ background: "var(--lifeflow-primary)" }}
+            <div
+              className="w-full max-w-sm flex flex-col items-center text-center p-8"
+              style={{
+                backgroundColor: "var(--color-surface-card)",
+                borderRadius: 20,
+                boxShadow: "var(--shadow-card)",
+              }}
             >
-              添加项目
-            </button>
+              <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4" style={{ backgroundColor: "var(--lifeflow-brand-50)" }}>
+                <FolderKanban className="w-8 h-8" style={{ color: "var(--lifeflow-primary)" }} />
+              </div>
+              <p className="text-[17px] mb-1" style={{ color: "var(--color-text-primary)", letterSpacing: "-0.022em" }}>
+                暂无项目
+              </p>
+              <p className="text-[13px] font-medium mb-6" style={{ color: "var(--color-text-secondary)", letterSpacing: "-0.01em" }}>
+                创建你的第一个项目，开始管理任务
+              </p>
+              <button
+                onClick={() => setAdding(true)}
+                className="inline-flex items-center justify-center rounded-full h-10 px-6 text-[14px] font-medium"
+                style={{
+                  backgroundColor: "var(--lifeflow-primary)",
+                  color: "var(--lifeflow-primary-foreground)",
+                }}
+              >
+                创建项目
+              </button>
+            </div>
           </motion.div>
         )}
       </div>

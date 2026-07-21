@@ -26,7 +26,15 @@ const ThemeContext = createContext<ThemeContextType>({
 
 function applyDarkTokens() {
   const root = document.documentElement;
-  root.style.setProperty("--bg-primary", "#000000");
+  root.style.setProperty("--lifeflow-background", "#0F0F0F");
+  root.style.setProperty("--lifeflow-foreground", "#FFFFFF");
+  root.style.setProperty("--lifeflow-border", "#2C2C2E");
+  root.style.setProperty("--color-surface-card", "#1C1C1E");
+  root.style.setProperty("--color-text-primary", "#FFFFFF");
+  root.style.setProperty("--color-text-secondary", "#999999");
+  root.style.setProperty("--color-text-disabled", "#555555");
+  root.style.setProperty("--color-expense", "#FF453A");
+  root.style.setProperty("--bg-primary", "#0F0F0F");
   root.style.setProperty("--bg-secondary", "#1C1C1E");
   root.style.setProperty("--text-primary", "#FFFFFF");
   root.style.setProperty("--text-secondary", "#EBEBF5");
@@ -36,14 +44,24 @@ function applyDarkTokens() {
   root.style.setProperty("--card-border", "#38383A");
   root.style.setProperty("--border", "#38383A");
   root.style.setProperty("--border-light", "#2C2C2E");
-  root.style.setProperty("--background", "#000000");
+  root.style.setProperty("--background", "#0F0F0F");
   root.style.setProperty("--foreground", "#FFFFFF");
+  root.style.setProperty("--lifeflow-muted", "#1C1C1E");
+  root.style.setProperty("--lifeflow-brand-50", "#1E3A5F");
   root.classList.add("dark");
   root.classList.remove("light");
 }
 
 function applyLightTokens() {
   const root = document.documentElement;
+  root.style.setProperty("--lifeflow-background", "#F8F8F7");
+  root.style.setProperty("--lifeflow-foreground", "#1C1C1E");
+  root.style.setProperty("--lifeflow-border", "#E8E8EA");
+  root.style.setProperty("--color-surface-card", "#FFFFFF");
+  root.style.setProperty("--color-text-primary", "#1C1C1E");
+  root.style.setProperty("--color-text-secondary", "#6B7280");
+  root.style.setProperty("--color-text-disabled", "#9CA3AF");
+  root.style.setProperty("--color-expense", "#EF4444");
   root.style.setProperty("--bg-primary", "#FFFFFF");
   root.style.setProperty("--bg-secondary", "#F5F5F7");
   root.style.setProperty("--text-primary", "#000000");
@@ -56,6 +74,8 @@ function applyLightTokens() {
   root.style.setProperty("--border-light", "#F2F2F7");
   root.style.setProperty("--background", "#F5F5F7");
   root.style.setProperty("--foreground", "#000000");
+  root.style.setProperty("--lifeflow-muted", "#F3F4F6");
+  root.style.setProperty("--lifeflow-brand-50", "#EFF6FF");
   root.classList.add("light");
   root.classList.remove("dark");
 }

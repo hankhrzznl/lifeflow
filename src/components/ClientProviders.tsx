@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AgentProvider } from "@/components/agent/AgentProvider";
+import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { GoalEngine } from "@/services/goal-engine";
 
 function GoalEngineInitializer({ children }: { children: React.ReactNode }) {
@@ -42,8 +43,10 @@ export default function ClientProviders({
   children: React.ReactNode;
 }) {
   return (
-    <AgentProvider>
-      <GoalEngineInitializer>{children}</GoalEngineInitializer>
-    </AgentProvider>
+    <ThemeProvider>
+      <AgentProvider>
+        <GoalEngineInitializer>{children}</GoalEngineInitializer>
+      </AgentProvider>
+    </ThemeProvider>
   );
 }

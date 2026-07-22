@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, Bot, Trash2, Mic, X as XIcon } from "lucide-react";
 import { useAgent } from "@/components/agent/AgentProvider";
@@ -54,7 +54,7 @@ function formatTime(ts: number) {
 // ─── 主组件 ────────────────────────────────────────────────────
 export default function AssistantPage() {
   const router = useRouter();
-  const { messages, state: stateCtx, sendMessage } = useAgent();
+  const { messages, state: stateCtx, sendMessage, undoLastMessage } = useAgent();
   const [historyCleared, setHistoryCleared] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -78,6 +78,14 @@ export default function AssistantPage() {
   const showTyping = stateCtx.currentState === "tool_calling" || stateCtx.currentState === "waiting_llm";
 
   const displayMessages = historyCleared ? [] : messages;
+
+  // Find last user message ID (for undo/edit eligibility)
+  const lastUserMsgId = useMemo(() => {
+    for (let i = displayMessages.length - 1; i >= 0; i--) {
+      if (displayMessages[i].role === "user") return displayMessages[i].id;
+    }
+    return null;
+  }, [displayMessages]);
 
   return (
     <div className="flex flex-col h-screen max-w-[430px] mx-auto" style={{ background: "var(--lifeflow-background)" }}>
@@ -147,6 +155,9 @@ export default function AssistantPage() {
             onModifySuggestion={() => {}}
             onRejectSuggestion={() => {}}
             isProcessing={isProcessing}
+            isLastUserMessage={msg.role === "user" && msg.id === lastUserMsgId}
+            onUndo={() => undoLastMessage()}
+            onEdit={() => {}}
           />
         ))}
         {showTyping && <TypingIndicator />}

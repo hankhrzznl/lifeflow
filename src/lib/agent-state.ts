@@ -45,6 +45,7 @@ export interface AgentMessage {
   toolCall?: ToolCall;
   isError?: boolean;
   suggestions?: SuggestionCardData[];
+  actionRef?: { action: string; sourceLogId?: string; sourceModule?: string; scheduleTaskId?: string };
 }
 
 const VALID_TRANSITIONS: Record<ChatState, ChatState[]> = {

@@ -259,6 +259,16 @@ export class AssistantBrain {
       }
     }
 
+    // Cross-match: "删除/删掉/移除" + "目标" → update_goal
+    if (!bestMatch || bestMatch.action !== "update_goal") {
+      const hasDelete = /删除|删掉|移除/.test(lowerText);
+      const hasGoal = /目标/.test(lowerText);
+      if (hasDelete && hasGoal) {
+        bestMatch = INTENT_PATTERNS.find(p => p.action === "update_goal") || bestMatch;
+        bestScore = 20; // Force high score
+      }
+    }
+
     // Step 2: Legacy patterns from old assistant (backward compat)
     if (!bestMatch && /点|到|下午|上午|明天|后天|晚上|早上/.test(trimmed)) {
       return {

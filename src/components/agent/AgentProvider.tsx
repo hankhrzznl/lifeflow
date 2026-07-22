@@ -40,6 +40,8 @@ interface AgentContextType {
   closeChat: () => void;
   sendMessage: (text: string) => void;
   sendAndNavigate: (text: string) => void;
+  undoLastMessage: () => void;
+  editLastMessage: (newText: string) => void;
 }
 
 const AgentContext = createContext<AgentContextType | null>(null);
@@ -608,9 +610,31 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
     const activeSession = await getActiveChatSession();
     if (!activeSession || (activeSession as any).status !== "active") return false;
     const ctx = (activeSession as any).context;
-    if (!ctx || ctx.intent !== "create_goal") return false;
+    if (!ctx) return false;
 
     const params = ctx.params || {};
+
+    // ── Batch delete goals confirmation ──
+    if (ctx.intent === "batch_delete_goal" && ctx.stage === "confirm") {
+      if (/确认|好的|行|可以|是的|嗯|对/.test(text)) {
+        const { efficiencyDB } = await import("@/lib/db/efficiency.db");
+        const ids: string[] = params.ids || [];
+        for (const id of ids) {
+          await efficiencyDB.goals.delete(id);
+        }
+        lastActionRef.current = { action: 'batch_delete_goal', sourceLogId: ids.join(','), sourceModule: 'goal' };
+        addAssistantMessage(`已删除 ${ids.length} 个目标。`);
+        await persistSession([], "completed");
+        return true;
+      } else {
+        addAssistantMessage("已取消批量删除。");
+        await persistSession([], "completed");
+        return true;
+      }
+    }
+
+    if (ctx.intent !== "create_goal") return false;
+
     const stage = ctx.stage || "confirm_type";
 
     if (stage === "confirm_type") {
@@ -730,31 +754,57 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
     try {
       const { efficiencyDB } = await import("@/lib/db/efficiency.db");
       const goals = await efficiencyDB.goals.where("status").equals("active").toArray();
+      const pausedGoals = await efficiencyDB.goals.where("status").equals("paused").toArray();
+      const allNonCompleted = [...goals, ...pausedGoals];
       
-      if (goals.length === 0) {
-        addAssistantMessage("当前没有进行中的目标。");
+      if (allNonCompleted.length === 0) {
+        addAssistantMessage("当前没有进行中或暂停的目标。");
+        return;
+      }
+
+      const isDelete = /删除|删掉|移除/.test(rawText);
+      const isBatch = /所有|全部|所有目标/.test(rawText);
+
+      // ── 批量删除 ──
+      if (isDelete && isBatch) {
+        const titles = allNonCompleted.map((g: any) => g.title).join("」、「");
+        const allMsgs = messagesRef.current;
+        await persistSession([...allMsgs, {
+          id: generateId(), role: "assistant",
+          content: `将删除以下 ${allNonCompleted.length} 个目标：\n「${titles}」\n\n确认删除请回复「确认」或「好的」`,
+          timestamp: Date.now(),
+        } as any], "active", { intent: "batch_delete_goal", stage: "confirm", params: { ids: allNonCompleted.map((g: any) => g.id), titles: allNonCompleted.map((g: any) => g.title) }});
+        addAssistantMessage(`将删除以下 ${allNonCompleted.length} 个目标：\n「${titles}」\n\n确认删除请回复「确认」或「好的」`);
         return;
       }
 
       // Find matching goal by title keyword
       let matchedGoal: any = null;
-      for (const g of goals) {
-        if (rawText.includes(g.title) || g.title.includes(rawText.replace(/更新目标|修改目标|调整目标/g, "").trim())) {
+      for (const g of allNonCompleted) {
+        if (rawText.includes(g.title) || g.title.includes(rawText.replace(/更新目标|修改目标|调整目标|删除目标|删掉目标|移除目标/g, "").trim())) {
           matchedGoal = g;
           break;
         }
       }
 
       if (!matchedGoal) {
-        addAssistantMessage(`请告诉我具体是哪个目标？当前进行中的：${goals.map((g: any) => g.title).join("、")}`);
+        if (isDelete) {
+          // If no specific match, but delete intent, show available goals
+          const titles = allNonCompleted.map((g: any) => g.title).join("、");
+          addAssistantMessage(`请告诉我具体是哪个目标？当前可删除的：${titles}\n\n或说「删除所有目标」批量删除。`);
+        } else {
+          const titles = allNonCompleted.map((g: any) => g.title).join("、");
+          addAssistantMessage(`请告诉我具体是哪个目标？当前进行中的：${titles}`);
+        }
         return;
       }
 
       if (rawText.includes("完成") || rawText.includes("做完")) {
         await efficiencyDB.goals.update(matchedGoal.id, { status: "completed", completedAt: Date.now() } as any);
         addAssistantMessage(`已将目标「${matchedGoal.title}」标记为已完成！🎉`);
-      } else if (rawText.includes("删除") || rawText.includes("删掉") || rawText.includes("移除")) {
+      } else if (isDelete) {
         await efficiencyDB.goals.delete(matchedGoal.id);
+        lastActionRef.current = { action: 'delete_goal', sourceLogId: matchedGoal.id, sourceModule: 'goal' };
         addAssistantMessage(`已删除目标「${matchedGoal.title}」。`);
       } else if (rawText.includes("暂停")) {
         await efficiencyDB.goals.update(matchedGoal.id, { status: "paused" } as any);
@@ -963,6 +1013,11 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
         await lifeDB.notes.where("date").equals(action.sourceLogId).delete();
       } else if (action.sourceModule === 'focus' && action.sourceLogId) {
         // Focus has no separate DB table; schedule task already deleted above
+      } else if (action.sourceModule === 'goal') {
+        // Cannot restore a deleted goal; just clean up the scheduleTask
+        addAssistantMessage("已撤回上次操作");
+        lastActionRef.current = null;
+        return;
       }
       lastActionRef.current = null;
       addAssistantMessage("已撤回上次操作");
@@ -1030,6 +1085,9 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
 
       setMessages((prev) => [...prev, userMsg]);
       setStateCtx((prev) => transitionState(prev, "sending", { currentMessageId: userMsg.id }));
+
+      // Reset lastActionRef before running intent (will be set by handlers if successful)
+      lastActionRef.current = null;
 
       // Check for active multi-turn goal creation first
       const multiTurnHandled = await handleGoalMultiTurn(text);
@@ -1104,6 +1162,15 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
       try {
         await runIntent(intent);
         setStateCtx((prev) => transitionState(prev, "done"));
+        // Attach actionRef to the user message
+        if (lastActionRef.current) {
+          setMessages((prev) => {
+            const msgs = [...prev];
+            const idx = msgs.findIndex(m => m.id === userMsg.id);
+            if (idx >= 0) msgs[idx] = { ...msgs[idx], actionRef: { ...lastActionRef.current! } };
+            return msgs;
+          });
+        }
         // Persist using ref (includes async assistant responses added by addAssistantMessage)
         await persistSession(messagesRef.current);
       } catch (err) {
@@ -1218,6 +1285,56 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
     }
   }, [messages, handleSubmit]);
 
+  // ── Undo/Edit Last Message ──────────────────────────────
+
+  const undoLastMessage = useCallback(() => {
+    // Find last user message to get its actionRef
+    let lastAction: any = null;
+    const lastUserMsgId = (() => {
+      for (let i = messages.length - 1; i >= 0; i--) {
+        if (messages[i].role === "user") return messages[i].id;
+      }
+      return null;
+    })();
+    const lastUserMsg = lastUserMsgId ? messages.find(m => m.id === lastUserMsgId) : null;
+    if (lastUserMsg?.actionRef) {
+      lastAction = lastUserMsg.actionRef;
+      lastActionRef.current = lastAction;
+    }
+
+    // Remove last user msg + all following AI replies
+    setMessages((prev) => {
+      let lastUserIdx = -1;
+      for (let i = prev.length - 1; i >= 0; i--) {
+        if (prev[i].role === "user") { lastUserIdx = i; break; }
+      }
+      if (lastUserIdx < 0) return prev;
+      return prev.slice(0, lastUserIdx);
+    });
+
+    // Execute undo using the action from the message
+    if (lastAction) {
+      handleUndo();
+    }
+  }, [messages, handleUndo]);
+
+  const editLastMessage = useCallback((newText: string) => {
+    // Undo first (remove old msg + replies)
+    undoLastMessage();
+    // Then re-send with new text
+    setTimeout(() => handleSubmit(newText), 200);
+  }, [undoLastMessage, handleSubmit]);
+
+  // Listen for edit event from AgentMessage component
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const text = (e as CustomEvent).detail;
+      if (text && typeof text === "string") editLastMessage(text);
+    };
+    window.addEventListener("lifeflow:editMessage", handler);
+    return () => window.removeEventListener("lifeflow:editMessage", handler);
+  }, [editLastMessage]);
+
   const value: AgentContextType = {
     open, state: stateCtx, messages,
     toggleOpen: () => setOpen((v) => !v),
@@ -1228,6 +1345,8 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
       handleSubmit(text);
       router.push("/assistant");
     },
+    undoLastMessage,
+    editLastMessage,
   };
 
   return (

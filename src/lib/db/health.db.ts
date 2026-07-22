@@ -120,11 +120,14 @@ export interface ExerciseV2 {
   createdAt: number;
 }
 
+export type TrainingType = 'gym_compound' | 'low_cardio' | 'farmer_walk' | 'weighted_rotation' | 'power_training';
+
 export interface WorkoutSession {
   id: string;
   date: string;          // YYYY-MM-DD
   exercises: WorkoutExercise[];
   notes: string;
+  trainingType?: TrainingType;  // 训练体系分类
   createdAt: number;
 }
 

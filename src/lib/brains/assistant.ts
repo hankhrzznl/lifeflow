@@ -23,6 +23,9 @@ export type IntentAction =
   | "create_countdown" | "query_countdown"
   | "query_courses" | "query_routines"
   | "create_project" | "query_project"
+  | "record_diet" | "query_diet"
+  | "record_wellness" | "query_wellness"
+  | "undo"
   | "unknown";
 
 export interface ParsedIntent {
@@ -65,6 +68,9 @@ export interface ExtractedEntities {
   medicationName?: string;
   countdownName?: string;
   countdownDate?: string;
+  mealType?: string;
+  name?: string;
+  type?: string;
 }
 
 // ─── Keyword Patterns ────────────────────────────────────────
@@ -138,6 +144,15 @@ const INTENT_PATTERNS: IntentPattern[] = [
   // P3: Courses / Routines
   { action: "query_courses", keywords: ["课程表", "今天什么课", "课程安排"], priority: 7 },
   { action: "query_routines", keywords: ["作息", "作息时间", "日常安排"], priority: 7 },
+
+  // P3: Diet
+  { action: "record_diet", keywords: ["吃", "饮食", "吃了", "早餐", "午餐", "晚餐", "加餐", "食物"], priority: 8 },
+
+  // P3: Wellness
+  { action: "record_wellness", keywords: ["功法", "养生", "提肛", "八段锦", "太极", "五禽戏"], priority: 8 },
+
+  // P2: Undo
+  { action: "undo", keywords: ["撤回", "撤销", "撤消", "undo", "取消上次", "回滚"], priority: 9 },
 ];
 
 // ─── Category Patterns ──────────────────────────────────────
@@ -372,6 +387,14 @@ export class AssistantBrain {
 
       case "record_habit":
         this.extractHabitName(entities, text);
+        break;
+
+      case "record_diet":
+        this.extractDietDetails(entities, text);
+        break;
+
+      case "record_wellness":
+        this.extractWellnessDetails(entities, text);
         break;
     }
 
@@ -679,6 +702,40 @@ export class AssistantBrain {
     if (cleaned) entities.habitName = cleaned;
   }
 
+  private extractDietDetails(entities: ExtractedEntities, text: string): void {
+    // Extract meal type
+    if (text.includes("早餐")) entities.mealType = "breakfast";
+    else if (text.includes("午餐")) entities.mealType = "lunch";
+    else if (text.includes("晚餐")) entities.mealType = "dinner";
+    else if (text.includes("加餐")) entities.mealType = "snack";
+    else entities.mealType = "snack";
+
+    // Extract food name
+    let name = text
+      .replace(/吃了|吃|饮食|早餐|午餐|晚餐|加餐|食物/g, "")
+      .trim();
+    if (name) {
+      entities.name = name;
+    }
+  }
+
+  private extractWellnessDetails(entities: ExtractedEntities, text: string): void {
+    // Extract type
+    if (text.includes("提肛")) {
+      entities.type = "tigang";
+    } else {
+      entities.type = "gongfa";
+    }
+
+    // Extract name
+    let name = text
+      .replace(/功法|养生|提肛|八段锦|太极|五禽戏/g, "")
+      .trim();
+    if (name) {
+      entities.name = name;
+    }
+  }
+
   /**
    * 获取帮助信息 — 当无法识别意图时返回
    */
@@ -693,7 +750,10 @@ export class AssistantBrain {
 • "这周餐饮花了多少" — 查询账单
 • "帮我复盘这周" — 生成复盘
 • "今天喝了多少水" — 查询饮水
-• "开始25分钟专注" — 开始番茄钟`;
+• "开始25分钟专注" — 开始番茄钟
+• "早餐吃了鸡蛋" — 记录饮食
+• "做了八段锦" — 记录养生
+• "撤回" — 撤销上次操作`;
   }
 }
 

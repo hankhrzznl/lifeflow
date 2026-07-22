@@ -18,6 +18,8 @@ import {
   Bell,
   BarChart3,
   Settings,
+  Utensils,
+  Flower2,
 } from "lucide-react";
 
 // ============================================================
@@ -50,6 +52,8 @@ export default function MorePage() {
     {
       label: "健康",
       items: [
+        { title: "饮食", description: "记录每日饮食", href: "/more/diet", icon: Utensils },
+        { title: "养生", description: "功法与提肛", href: "/more/wellness", icon: Flower2 },
         { title: "饮水", description: "记录每日饮水", href: "/more/water", icon: Droplets },
         { title: "睡眠", description: "追踪睡眠质量", href: "/more/sleep", icon: Moon },
         { title: "训练", description: "记录训练数据", href: "/more/fitness", icon: Dumbbell },

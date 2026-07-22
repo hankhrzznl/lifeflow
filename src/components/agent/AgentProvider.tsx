@@ -80,6 +80,7 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const processingRef = useRef(false);
   const doneTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastActionRef = useRef<{ action: string; sourceLogId?: string; sourceModule?: string; scheduleTaskId?: string } | null>(null);
 
   // Keep ref in sync so persistSession can read latest messages from async handlers
   useEffect(() => { messagesRef.current = messages; }, [messages]);
@@ -291,6 +292,15 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
         } as any);
       }
       addAssistantMessage(`已记录饮水 ${ml}ml`);
+      const { addScheduleTask } = await import("@/lib/db/efficiency.db");
+      const newTaskId = await addScheduleTask({
+        title: `喝水 ${ml}ml`,
+        type: 'single', date: today, goalId: null,
+        quadrant: 'q2', isCompleted: true, plannedTime: 0, actualTime: 1,
+        isImportant: false, note: '', category: 'habit' as any,
+        sourceModule: 'water', sourceLogId: today,
+      });
+      lastActionRef.current = { action: 'record_water', sourceLogId: today, sourceModule: 'water', scheduleTaskId: newTaskId };
     } catch (err) {
       addAssistantMessage(`记录饮水失败`, undefined, true);
     }
@@ -322,6 +332,15 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
         createdAt: Date.now(),
       } as any);
       addAssistantMessage(`已记录入睡时间：${sleepDate} ${sleepTime}`);
+      const { addScheduleTask } = await import("@/lib/db/efficiency.db");
+      const newTaskId = await addScheduleTask({
+        title: `睡觉 ${sleepTime}`,
+        type: 'single', date: sleepDate, goalId: null,
+        quadrant: 'q2', isCompleted: true, plannedTime: 0, actualTime: 1,
+        isImportant: false, note: '', category: 'habit' as any,
+        sourceModule: 'sleep', sourceLogId: sleepDate,
+      });
+      lastActionRef.current = { action: 'record_sleep', sourceLogId: sleepDate, sourceModule: 'sleep', scheduleTaskId: newTaskId };
     } catch {
       addAssistantMessage("记录睡眠失败", undefined, true);
     }
@@ -368,6 +387,15 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
       } as any);
       const detailStr = [sets && `${sets}组`, reps && `${reps}次`, weight && `${weight}kg`].filter(Boolean).join("×");
       addAssistantMessage(`已记录训练：${exerciseName} ${detailStr}`);
+      const { addScheduleTask } = await import("@/lib/db/efficiency.db");
+      const newTaskId = await addScheduleTask({
+        title: `${exerciseName} ${sets}组${reps}次`,
+        type: 'single', date: today, goalId: null,
+        quadrant: 'q2', isCompleted: true, plannedTime: 0, actualTime: 1,
+        isImportant: false, note: '', category: 'habit' as any,
+        sourceModule: 'fitness', sourceLogId: today,
+      });
+      lastActionRef.current = { action: 'record_workout', sourceLogId: today, sourceModule: 'fitness', scheduleTaskId: newTaskId };
     } catch {
       addAssistantMessage("记录训练失败", undefined, true);
     }
@@ -392,19 +420,42 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
       } as any);
       const detail = [`${sets || 1}组`, `${reps || 15}次`, postureIssue ? `改善${postureIssue}` : ""].filter(Boolean).join(" · ");
       addAssistantMessage(`已记录拉伸：${exerciseName} ${detail}`);
+      const { addScheduleTask } = await import("@/lib/db/efficiency.db");
+      const newTaskId = await addScheduleTask({
+        title: `拉伸 ${exerciseName}`,
+        type: 'single', date: today, goalId: null,
+        quadrant: 'q2', isCompleted: true, plannedTime: 0, actualTime: 1,
+        isImportant: false, note: '', category: 'habit' as any,
+        sourceModule: 'stretch', sourceLogId: today,
+      });
+      lastActionRef.current = { action: 'record_stretch', sourceLogId: today, sourceModule: 'stretch', scheduleTaskId: newTaskId };
     } catch {
       addAssistantMessage("记录拉伸失败", undefined, true);
     }
   }, [addAssistantMessage]);
 
   const handleRecordMedication = useCallback(async (intent: ParsedIntent) => {
-    const name = (intent.params as any).medicationName || "药";
+    const medicationName = (intent.params as any).medicationName;
+    const name = medicationName || "药";
     const time = (intent.params as any).time || new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
+    const today = new Date().toISOString().slice(0, 10);
     addAssistantMessage(`已记录用药：${name} @ ${time}`);
+    try {
+      const { addScheduleTask } = await import("@/lib/db/efficiency.db");
+      const newTaskId = await addScheduleTask({
+        title: `吃药 ${medicationName || ''}`,
+        type: 'single', date: today, goalId: null,
+        quadrant: 'q2', isCompleted: true, plannedTime: 0, actualTime: 1,
+        isImportant: false, note: '', category: 'habit' as any,
+        sourceModule: 'medication', sourceLogId: today,
+      });
+      lastActionRef.current = { action: 'record_medication', sourceLogId: today, sourceModule: 'medication', scheduleTaskId: newTaskId };
+    } catch { /* schedule task optional */ }
   }, [addAssistantMessage]);
 
   const handleRecordHabit = useCallback(async (intent: ParsedIntent) => {
-    const name = (intent.params as any).habitName || intent.rawText.replace(/打卡|习惯打卡|完成了/g, "").trim();
+    const habitName = (intent.params as any).habitName;
+    const name = habitName || intent.rawText.replace(/打卡|习惯打卡|完成了/g, "").trim();
     if (!name) {
       addAssistantMessage("请告诉我完成了什么习惯，比如「冥想打卡」。");
       return;
@@ -425,6 +476,15 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
         } as any);
       }
       addAssistantMessage(`已打卡：${name}`);
+      const { addScheduleTask } = await import("@/lib/db/efficiency.db");
+      const newTaskId = await addScheduleTask({
+        title: `打卡 ${name}`,
+        type: 'single', date: today, goalId: null,
+        quadrant: 'q2', isCompleted: true, plannedTime: 0, actualTime: 1,
+        isImportant: false, note: '', category: 'habit' as any,
+        sourceModule: 'habit', sourceLogId: today,
+      });
+      lastActionRef.current = { action: 'record_habit', sourceLogId: today, sourceModule: 'habit', scheduleTaskId: newTaskId };
     } catch {
       addAssistantMessage("打卡失败", undefined, true);
     }
@@ -773,24 +833,136 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
   const handleStartFocus = useCallback(async (intent: ParsedIntent) => {
     const minutes = (intent.params as any).focusMinutes || 25;
     addAssistantMessage(`准备开始 ${minutes} 分钟专注。正在进入专注模式...`);
+    try {
+      const { addScheduleTask } = await import("@/lib/db/efficiency.db");
+      const today = new Date().toISOString().slice(0, 10);
+      const newTaskId = await addScheduleTask({
+        title: `专注 ${minutes}分钟`,
+        type: 'single', date: today, goalId: null,
+        quadrant: 'q2', isCompleted: true, plannedTime: 0, actualTime: 1,
+        isImportant: false, note: '', category: 'habit' as any,
+        sourceModule: 'focus', sourceLogId: today,
+      });
+      lastActionRef.current = { action: 'start_focus', sourceLogId: today, sourceModule: 'focus', scheduleTaskId: newTaskId };
+    } catch { /* schedule task optional */ }
     setTimeout(() => router.push("/focus"), 500);
   }, [addAssistantMessage, router]);
 
   const handleCreateNote = useCallback(async (intent: ParsedIntent) => {
     const content = (intent.params as any).noteContent || intent.rawText;
+    const noteTitle = content.slice(0, 30);
     try {
       const { lifeDB } = await import("@/lib/db/life.db");
       await lifeDB.notes.add({
         id: crypto.randomUUID(),
-        title: content.slice(0, 30),
+        title: noteTitle,
         content: content,
         date: new Date().toISOString().slice(0, 10),
         createdAt: Date.now(),
       } as any);
       addAssistantMessage(`已记录备忘录：${content.slice(0, 50)}${content.length > 50 ? "..." : ""}`);
+      const { addScheduleTask } = await import("@/lib/db/efficiency.db");
+      const today = new Date().toISOString().slice(0, 10);
+      const newTaskId = await addScheduleTask({
+        title: `备忘录 ${noteTitle}`,
+        type: 'single', date: today, goalId: null,
+        quadrant: 'q2', isCompleted: true, plannedTime: 0, actualTime: 1,
+        isImportant: false, note: '', category: 'habit' as any,
+        sourceModule: 'notes', sourceLogId: today,
+      });
+      lastActionRef.current = { action: 'create_note', sourceLogId: today, sourceModule: 'notes', scheduleTaskId: newTaskId };
     } catch {
       addAssistantMessage("记录备忘录失败", undefined, true);
     }
+  }, [addAssistantMessage]);
+
+  const handleRecordDiet = useCallback(async (intent: ParsedIntent) => {
+    const { name, mealType } = intent.params as any;
+    if (!name) { addAssistantMessage("请告诉我吃了什么"); return; }
+    try {
+      const { lifeDB } = await import("@/lib/db/life.db");
+      const today = new Date().toISOString().slice(0, 10);
+      await lifeDB.dietLogs.add({ name, mealType: mealType || 'snack', date: today, createdAt: Date.now() } as any);
+      addAssistantMessage(`已记录饮食：${name}`);
+      const { addScheduleTask } = await import("@/lib/db/efficiency.db");
+      const newTaskId = await addScheduleTask({
+        title: `${mealType === 'breakfast' ? '早餐' : mealType === 'lunch' ? '午餐' : mealType === 'dinner' ? '晚餐' : '饮食'}：${name}`,
+        type: 'single', date: today, goalId: null,
+        quadrant: 'q2', isCompleted: true, plannedTime: 0, actualTime: 1,
+        isImportant: false, note: mealType || '', category: 'habit' as any,
+        sourceModule: 'diet', sourceLogId: today,
+      });
+      lastActionRef.current = { action: 'record_diet', sourceLogId: today, sourceModule: 'diet', scheduleTaskId: newTaskId };
+    } catch { addAssistantMessage("记录饮食失败", undefined, true); }
+  }, [addAssistantMessage]);
+
+  const handleRecordWellness = useCallback(async (intent: ParsedIntent) => {
+    const { name, type } = intent.params as any;
+    if (!name) { addAssistantMessage("请告诉我做了什么养生动作"); return; }
+    try {
+      const { lifeDB } = await import("@/lib/db/life.db");
+      const today = new Date().toISOString().slice(0, 10);
+      await lifeDB.wellnessLogs.add({ name, type: type || 'gongfa', date: today, createdAt: Date.now() } as any);
+      addAssistantMessage(`已记录养生：${name}`);
+      const { addScheduleTask } = await import("@/lib/db/efficiency.db");
+      const newTaskId = await addScheduleTask({
+        title: `${type === 'tigang' ? '提肛' : '功法'}：${name}`,
+        type: 'single', date: today, goalId: null,
+        quadrant: 'q2', isCompleted: true, plannedTime: 0, actualTime: 1,
+        isImportant: false, note: type || '', category: 'habit' as any,
+        sourceModule: 'wellness', sourceLogId: today,
+      });
+      lastActionRef.current = { action: 'record_wellness', sourceLogId: today, sourceModule: 'wellness', scheduleTaskId: newTaskId };
+    } catch { addAssistantMessage("记录养生失败", undefined, true); }
+  }, [addAssistantMessage]);
+
+  const handleUndo = useCallback(async () => {
+    const action = lastActionRef.current;
+    if (!action) { addAssistantMessage("没有可撤回的操作"); return; }
+    try {
+      if (action.scheduleTaskId) {
+        const { deleteScheduleTask } = await import("@/lib/db/efficiency.db");
+        try { await deleteScheduleTask(action.scheduleTaskId); } catch {}
+      }
+      if (action.sourceModule === 'water' && action.sourceLogId) {
+        const { healthDB } = await import("@/lib/db/health.db");
+        await healthDB.waterLogs.where("date").equals(action.sourceLogId).delete();
+      } else if (action.sourceModule === 'sleep' && action.sourceLogId) {
+        const { healthDB } = await import("@/lib/db/health.db");
+        await healthDB.sleepLogs.where("date").equals(action.sourceLogId).delete();
+      } else if (action.sourceModule === 'fitness' && action.sourceLogId) {
+        const { healthDB } = await import("@/lib/db/health.db");
+        await healthDB.workoutSessions.where("date").equals(action.sourceLogId).delete();
+      } else if (action.sourceModule === 'stretch' && action.sourceLogId) {
+        const { healthDB } = await import("@/lib/db/health.db");
+        await healthDB.stretchLogs.where("date").equals(action.sourceLogId).delete();
+      } else if (action.sourceModule === 'diet' && action.sourceLogId) {
+        const { lifeDB } = await import("@/lib/db/life.db");
+        await lifeDB.dietLogs.where("date").equals(action.sourceLogId).delete();
+      } else if (action.sourceModule === 'wellness' && action.sourceLogId) {
+        const { lifeDB } = await import("@/lib/db/life.db");
+        await lifeDB.wellnessLogs.where("date").equals(action.sourceLogId).delete();
+      } else if (action.sourceModule === 'medication' && action.sourceLogId) {
+        // Medication has no separate DB table; schedule task already deleted above
+      } else if (action.sourceModule === 'habit' && action.sourceLogId) {
+        const { lifeDB } = await import("@/lib/db/life.db");
+        const habits = await lifeDB.habits.toArray();
+        for (const h of habits) {
+          if (h.days?.[action.sourceLogId]) {
+            delete h.days[action.sourceLogId];
+            h.streak = Math.max(0, (h.streak || 1) - 1);
+            await lifeDB.habits.update(h.id!, { days: h.days, streak: h.streak });
+          }
+        }
+      } else if (action.sourceModule === 'notes' && action.sourceLogId) {
+        const { lifeDB } = await import("@/lib/db/life.db");
+        await lifeDB.notes.where("date").equals(action.sourceLogId).delete();
+      } else if (action.sourceModule === 'focus' && action.sourceLogId) {
+        // Focus has no separate DB table; schedule task already deleted above
+      }
+      lastActionRef.current = null;
+      addAssistantMessage("已撤回上次操作");
+    } catch { addAssistantMessage("撤回失败", undefined, true); }
   }, [addAssistantMessage]);
 
   // ── Intent Dispatcher (shared between local engine and LLM fallback) ──
@@ -821,6 +993,9 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
       case "query_project": await handleQueryProject(); break;
       case "start_focus": await handleStartFocus(intent); break;
       case "create_note": await handleCreateNote(intent); break;
+      case "record_diet": await handleRecordDiet(intent); break;
+      case "record_wellness": await handleRecordWellness(intent); break;
+      case "undo": await handleUndo(); break;
       case "query_reminder": {
         const pending = await (await import("@/lib/db")).getPendingReminders();
         if (pending.length === 0) { addAssistantMessage("当前没有待处理的提醒。"); }
@@ -836,7 +1011,7 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
       default:
         addAssistantMessage(`我理解你想执行 ${intent.action}，但该功能还在开发中。\n\n${assistantBrain.getHelpMessage()}`);
     }
-  }, [handleCreateGoal, handleQueryGoal, handleUpdateGoal, handleAddTransaction, handleQueryFinance, handleRecordWater, handleQueryWater, handleRecordSleep, handleQuerySleep, handleRecordWorkout, handleRecordStretch, handleCreateReminder, handleQueryReview, handleRecordMedication, handleRecordHabit, handleQueryHabit, handleCreateCountdown, handleQueryCountdown, handleQueryNote, handleCreateProject, handleQueryProject, handleStartFocus, handleCreateNote, addAssistantMessage, router]);
+  }, [handleCreateGoal, handleQueryGoal, handleUpdateGoal, handleAddTransaction, handleQueryFinance, handleRecordWater, handleQueryWater, handleRecordSleep, handleQuerySleep, handleRecordWorkout, handleRecordStretch, handleCreateReminder, handleQueryReview, handleRecordMedication, handleRecordHabit, handleQueryHabit, handleCreateCountdown, handleQueryCountdown, handleQueryNote, handleCreateProject, handleQueryProject, handleStartFocus, handleCreateNote, handleRecordDiet, handleRecordWellness, handleUndo, addAssistantMessage, router]);
 
   // ── Main Submit Handler ──────────────────────────────────
 

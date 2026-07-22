@@ -40,6 +40,23 @@ export interface FocusSession {
   endedAt?: number;
 }
 
+export interface DietLog {
+  id?: number;
+  name: string;
+  mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack';
+  date: string;          // YYYY-MM-DD
+  createdAt: number;
+}
+
+export interface WellnessLog {
+  id?: number;
+  name: string;
+  type: 'gongfa' | 'tigang';
+  duration?: number;     // 分钟，功法可选时长
+  date: string;          // YYYY-MM-DD
+  createdAt: number;
+}
+
 // ─── Database ────────────────────────────────────────────────
 
 export class LifeDB extends Dexie {
@@ -47,6 +64,8 @@ export class LifeDB extends Dexie {
   countdowns!: Table<Countdown, string>;
   notes!: Table<Note, string>;
   focusSessions!: Table<FocusSession, string>;
+  dietLogs!: Table<DietLog, number>;
+  wellnessLogs!: Table<WellnessLog, number>;
 
   constructor() {
     super('LifeFlowLife');
@@ -67,6 +86,14 @@ export class LifeDB extends Dexie {
       countdowns: '&id, name, date, createdAt',
       notes: '&id, date, createdAt',
       focusSessions: '&id, date, startedAt',
+    });
+    this.version(4).stores({
+      habits: '&id, name, createdAt',
+      countdowns: '&id, name, date, createdAt',
+      notes: '&id, date, createdAt',
+      focusSessions: '&id, date, startedAt',
+      dietLogs: '++id, date, mealType',
+      wellnessLogs: '++id, date, type',
     });
   }
 }
@@ -193,4 +220,46 @@ export async function getTotalFocusMinutes(date: string): Promise<number> {
     .filter(s => s.type === 'focus' && s.completed)
     .toArray();
   return sessions.reduce((sum, s) => sum + s.duration, 0);
+}
+
+// ─── Diet Logs CRUD ───────────────────────────────────────────
+
+export async function addDietLog(log: Omit<DietLog, 'id' | 'createdAt'>): Promise<number> {
+  return lifeDB.dietLogs.add({ ...log, createdAt: Date.now() });
+}
+
+export async function deleteDietLog(id: number): Promise<void> {
+  await lifeDB.dietLogs.delete(id);
+}
+
+export async function getDietLogsByDate(date: string): Promise<DietLog[]> {
+  return lifeDB.dietLogs.where('date').equals(date).toArray();
+}
+
+export async function getDietLogsByDateRange(startDate: string, endDate: string): Promise<DietLog[]> {
+  return lifeDB.dietLogs
+    .where('date')
+    .between(startDate, endDate, true, true)
+    .toArray();
+}
+
+// ─── Wellness Logs CRUD ───────────────────────────────────────
+
+export async function addWellnessLog(log: Omit<WellnessLog, 'id' | 'createdAt'>): Promise<number> {
+  return lifeDB.wellnessLogs.add({ ...log, createdAt: Date.now() });
+}
+
+export async function deleteWellnessLog(id: number): Promise<void> {
+  await lifeDB.wellnessLogs.delete(id);
+}
+
+export async function getWellnessLogsByDate(date: string): Promise<WellnessLog[]> {
+  return lifeDB.wellnessLogs.where('date').equals(date).toArray();
+}
+
+export async function getWellnessLogsByDateRange(startDate: string, endDate: string): Promise<WellnessLog[]> {
+  return lifeDB.wellnessLogs
+    .where('date')
+    .between(startDate, endDate, true, true)
+    .toArray();
 }

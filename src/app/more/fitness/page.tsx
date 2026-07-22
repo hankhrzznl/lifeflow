@@ -3,10 +3,100 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, Minus, Plus, Trash2, Dumbbell, RotateCw, Zap } from "lucide-react";
+import { ChevronLeft, Minus, Plus, Trash2, Dumbbell, Heart, Grip, RotateCw, Zap, Star, TrendingUp } from "lucide-react";
 import { useHealthStore } from "@/lib/store/healthStore";
-import type { WorkoutSession } from "@/lib/db/health.db";
+import type { WorkoutSession, TrainingType } from "@/lib/db/health.db";
 import { showToast } from "@/components/ui/Toast";
+
+/* ────────── Training Systems Definitions ────────── */
+
+interface TrainingSystemDef {
+  type: TrainingType;
+  label: string;
+  subtitle: string;
+  icon: typeof Dumbbell;
+  exercises: string[];
+  color: string;          // accent color for card highlight
+  schedule: string;
+  notes: string;
+}
+
+const TRAINING_SYSTEMS: TrainingSystemDef[] = [
+  {
+    type: "gym_compound",
+    label: "健身房复合力量",
+    subtitle: "全年主食",
+    icon: Dumbbell,
+    exercises: ["杠铃卧推", "高位下拉", "高脚杯深蹲", "坐姿肩推", "杠铃硬拉"],
+    color: "#2563EB",
+    schedule: "每周 2-3 次",
+    notes: "每次选 3-4 个动作 · 8-12 次/组 · 3-4 组",
+  },
+  {
+    type: "low_cardio",
+    label: "低强度有氧",
+    subtitle: "全年主食",
+    icon: Heart,
+    exercises: ["快走", "游泳", "骑行", "划船机"],
+    color: "#10B981",
+    schedule: "每周 1-2 次",
+    notes: "每次 30-60 分钟",
+  },
+  {
+    type: "farmer_walk",
+    label: "农夫行走",
+    subtitle: "全年贯穿",
+    icon: Grip,
+    exercises: ["双手农夫行走", "单手农夫行走", "壶铃农夫行走", "哑铃农夫行走"],
+    color: "#F59E0B",
+    schedule: "主项月 3-4 次 · 辅项月收尾 3 组",
+    notes: "双手/单手拎重壶铃或哑铃行走 20-40 米",
+  },
+  {
+    type: "weighted_rotation",
+    label: "负重旋转",
+    subtitle: "专项训练",
+    icon: RotateCw,
+    exercises: ["壶铃旋转", "绳索旋转", "药球转体砸地"],
+    color: "#8B5CF6",
+    schedule: "主项月重点训练",
+    notes: "强化核心旋转爆发力与抗旋能力",
+  },
+  {
+    type: "power_training",
+    label: "爆发力训练",
+    subtitle: "专项训练",
+    icon: Zap,
+    exercises: ["跳箱", "壶铃摆荡", "短冲刺", "药球抛掷"],
+    color: "#EF4444",
+    schedule: "主项月重点训练",
+    notes: "提升全身爆发力与运动表现",
+  },
+];
+
+/* ────────── Monthly Rotation ────────── */
+
+/**
+ * 七月=农夫行走, 八月=负重旋转, 九月=爆发力, 十月起循环
+ * 公式: ((month - 7 + 12) % 3) 映射到 farmer_walk / weighted_rotation / power_training
+ */
+const MONTHLY_PRIMARY_MAP: Record<number, TrainingType> = {
+  0: "farmer_walk",
+  1: "weighted_rotation",
+  2: "power_training",
+};
+
+function getCurrentMonthPrimary(): TrainingType {
+  const month = new Date().getMonth() + 1; // 1-12
+  const idx = ((month - 7 + 12) % 3) as 0 | 1 | 2;
+  return MONTHLY_PRIMARY_MAP[idx];
+}
+
+function getMonthPrimaryLabel(): string {
+  const primary = getCurrentMonthPrimary();
+  const sys = TRAINING_SYSTEMS.find((s) => s.type === primary);
+  return sys?.label ?? "农夫行走";
+}
 
 /* ────────── Helpers ────────── */
 
@@ -39,16 +129,7 @@ function getWeekRangeStr(): string {
   return `${mon.getMonth() + 1}/${mon.getDate()} - ${sun.getMonth() + 1}/${sun.getDate()}`;
 }
 
-const RPE_OPTIONS = [6, 7, 8, 9, 10] as const;
-
-const QUICK_EXERCISES = [
-  { name: "杠铃卧推", tags: "胸部 · 推类", icon: Dumbbell },
-  { name: "杠铃深蹲", tags: "腿部 · 蹲类", icon: Dumbbell },
-  { name: "杠铃硬拉", tags: "背部 · 拉类", icon: Dumbbell },
-  { name: "引体向上", tags: "背部 · 自重", icon: RotateCw },
-  { name: "农夫行走", tags: "核心 · 握力", icon: Dumbbell },
-  { name: "爆发训练", tags: "爆发力 · 速度", icon: Zap },
-] as const;
+const RPE_OPTIONS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
 
 /* ────────── Component ────────── */
 
@@ -65,25 +146,41 @@ export default function FitnessPage() {
   const [loading, setLoading] = useState(true);
   const [expandedSession, setExpandedSession] = useState<string | null>(null);
 
-  /* recording bottom sheet */
+  /* ─── Record sheet state ─── */
   const [showRecord, setShowRecord] = useState(false);
-
-  /* form state */
+  const [selectedTrainingType, setSelectedTrainingType] = useState<TrainingType>("gym_compound");
   const [exerciseName, setExerciseName] = useState("");
+  const [showExerciseDropdown, setShowExerciseDropdown] = useState(false);
   const [sets, setSets] = useState(3);
   const [reps, setReps] = useState(10);
   const [weight, setWeight] = useState(20);
-  const [rpe, setRpe] = useState(7);
+  const [rpe, setRpe] = useState<number | null>(7);
   const [submitting, setSubmitting] = useState(false);
 
   const nameInputRef = useRef<HTMLInputElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  /* ─── Current month primary ─── */
+  const currentPrimary = useMemo(() => getCurrentMonthPrimary(), []);
+  const currentPrimaryLabel = useMemo(() => getMonthPrimaryLabel(), []);
 
   useEffect(() => {
     loadFitnessDataV2().finally(() => setLoading(false));
   }, [loadFitnessDataV2]);
 
-  /* ─── Today stats ─── */
+  /* ─── Close exercise dropdown on outside click ─── */
+  useEffect(() => {
+    if (!showExerciseDropdown) return;
+    const handler = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setShowExerciseDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showExerciseDropdown]);
 
+  /* ─── Today stats ─── */
   const todayStats = useMemo(() => {
     const today = localTodayStr();
     const todaySessions = workoutSessions.filter((s) => s.date === today);
@@ -104,6 +201,7 @@ export default function FitnessPage() {
     }
 
     return {
+      sessionCount: todaySessions.length,
       exerciseCount: exerciseNames.size,
       totalWeight,
       avgRpe: rpeCount > 0 ? +(totalRpe / rpeCount).toFixed(1) : 0,
@@ -112,19 +210,25 @@ export default function FitnessPage() {
   }, [workoutSessions]);
 
   /* ─── Week stats ─── */
-
   const weekStats = useMemo(() => {
     const weekSessions = workoutSessions.filter((s) => isDateInWeek(s.date));
     const days = new Set(weekSessions.map((s) => s.date)).size;
     const totalSets = weekSessions.reduce((s, sess) => s + sess.exercises.reduce((t, e) => t + e.sets.length, 0), 0);
     const totalExercises = weekSessions.reduce((s, sess) => s + sess.exercises.length, 0);
-    return { days, totalSets, totalExercises };
+
+    // Count per training type
+    const typeCount: Record<string, number> = {};
+    for (const s of weekSessions) {
+      const t = s.trainingType ?? "unknown";
+      typeCount[t] = (typeCount[t] || 0) + 1;
+    }
+
+    return { days, totalSets, totalExercises, sessionCount: weekSessions.length, typeCount };
   }, [workoutSessions]);
 
   const weekRange = useMemo(() => getWeekRangeStr(), []);
 
-  /* ─── Recent records ─── */
-
+  /* ─── Recent records grouped by date ─── */
   const recentGroups = useMemo(() => {
     const sorted = [...workoutSessions]
       .sort((a, b) => b.createdAt - a.createdAt)
@@ -141,32 +245,23 @@ export default function FitnessPage() {
       .map(([date, sessions]) => ({ date, sessions }));
   }, [workoutSessions]);
 
-  /* ─── Top exercises this week (for action cards) ─── */
-
-  const topExercises = useMemo(() => {
-    const weekSessions = workoutSessions.filter((s) => isDateInWeek(s.date));
-    const nameCount = new Map<string, number>();
-    for (const s of weekSessions) {
-      for (const ex of s.exercises) {
-        nameCount.set(ex.exerciseName, (nameCount.get(ex.exerciseName) || 0) + 1);
-      }
-    }
-    return [...nameCount.entries()]
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 4)
-      .map(([name]) => name);
-  }, [workoutSessions]);
-
   /* ─── Format date ─── */
-
   const formatDateGroup = (dateStr: string) => {
     const d = new Date(dateStr + "T00:00:00");
     const weeks = ["日", "一", "二", "三", "四", "五", "六"];
     return `${d.getMonth() + 1}月${d.getDate()}日 周${weeks[d.getDay()]}`;
   };
 
-  /* ─── Submit record ─── */
+  /* ─── Get training type label ─── */
+  const getTrainingTypeLabel = (type?: TrainingType) => {
+    return TRAINING_SYSTEMS.find((s) => s.type === type)?.label ?? "未知";
+  };
 
+  const getTrainingTypeColor = (type?: TrainingType) => {
+    return TRAINING_SYSTEMS.find((s) => s.type === type)?.color ?? "#94A3B8";
+  };
+
+  /* ─── Submit record ─── */
   const handleSubmit = useCallback(async () => {
     if (!exerciseName.trim()) return;
     setSubmitting(true);
@@ -183,12 +278,13 @@ export default function FitnessPage() {
               setNumber: i + 1,
               reps,
               weight,
-              rpe,
+              rpe: rpe ?? 0,
               isPR: false,
             })),
           },
         ],
         notes: "",
+        trainingType: selectedTrainingType,
       });
 
       setExerciseName("");
@@ -196,6 +292,7 @@ export default function FitnessPage() {
       setReps(10);
       setWeight(20);
       setRpe(7);
+      setSelectedTrainingType("gym_compound");
       setShowRecord(false);
       showToast({ type: "success", message: "训练已记录" });
     } catch {
@@ -203,10 +300,9 @@ export default function FitnessPage() {
     } finally {
       setSubmitting(false);
     }
-  }, [exerciseName, sets, reps, weight, rpe, addWorkoutSessionV2]);
+  }, [exerciseName, sets, reps, weight, rpe, selectedTrainingType, addWorkoutSessionV2]);
 
   /* ─── Delete session ─── */
-
   const handleDelete = useCallback(
     async (id: string) => {
       await deleteWorkoutSessionV2(id);
@@ -217,18 +313,13 @@ export default function FitnessPage() {
   );
 
   /* ─── Open record sheet ─── */
-
-  const openRecordSheet = useCallback(() => {
-    setExerciseName("");
-    setSets(3);
-    setReps(10);
-    setWeight(20);
-    setRpe(7);
-    setShowRecord(true);
-  }, []);
-
-  const openRecordForExercise = useCallback((name: string) => {
-    setExerciseName(name);
+  const openRecordSheet = useCallback((trainingType?: TrainingType, exName?: string) => {
+    if (trainingType) setSelectedTrainingType(trainingType);
+    if (exName) {
+      setExerciseName(exName);
+    } else {
+      setExerciseName("");
+    }
     setSets(3);
     setReps(10);
     setWeight(20);
@@ -238,8 +329,18 @@ export default function FitnessPage() {
 
   const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
 
-  /* ─── Loading skeleton ─── */
+  /* ─── Exercise suggestions based on selected training type ─── */
+  const exerciseSuggestions = useMemo(() => {
+    const sys = TRAINING_SYSTEMS.find((s) => s.type === selectedTrainingType);
+    return sys?.exercises ?? [];
+  }, [selectedTrainingType]);
 
+  const rpeLabels: Record<number, string> = {
+    1: "极轻", 2: "很轻", 3: "轻", 4: "中轻", 5: "中等",
+    6: "中强", 7: "较强", 8: "强", 9: "很强", 10: "极限",
+  };
+
+  /* ─── Loading skeleton ─── */
   if (loading) {
     return (
       <div className="min-h-screen" style={{ background: "var(--lifeflow-background)" }}>
@@ -259,7 +360,6 @@ export default function FitnessPage() {
   }
 
   /* ────────── Render ────────── */
-
   return (
     <div className="min-h-screen pb-10" style={{ background: "var(--lifeflow-background)" }}>
       {/* ─── Header ─── */}
@@ -275,9 +375,20 @@ export default function FitnessPage() {
         <h1 className="text-[17px] font-semibold tracking-[-0.018em] truncate" style={{ color: "var(--color-text-primary)" }}>
           训练
         </h1>
+        {/* Month primary badge */}
+        <div
+          className="ml-auto flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[12px] font-medium shrink-0"
+          style={{
+            background: `${TRAINING_SYSTEMS.find((s) => s.type === currentPrimary)?.color ?? "#2563EB"}15`,
+            color: TRAINING_SYSTEMS.find((s) => s.type === currentPrimary)?.color ?? "#2563EB",
+          }}
+        >
+          <Star className="h-3 w-3" />
+          {new Date().getMonth() + 1}月主项: {currentPrimaryLabel}
+        </div>
       </header>
 
-      <div className="px-4 pt-4 pb-10 space-y-4">
+      <div className="px-4 pt-0 pb-10 space-y-4">
         {/* ─── Today Summary Card ─── */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
@@ -286,29 +397,34 @@ export default function FitnessPage() {
           className="p-5"
           style={{ background: "var(--color-surface-card)", borderRadius: "20px", boxShadow: "var(--shadow-card)" }}
         >
-          <p className="text-center mb-4 text-[17px] font-semibold" style={{ color: "var(--color-text-primary)" }}>
-            今日训练 · {todayStats.totalSets} 组
-          </p>
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-[17px] font-semibold" style={{ color: "var(--color-text-primary)" }}>
+              今日训练
+            </p>
+            <span className="text-[13px] font-medium px-2.5 py-1 rounded-full" style={{ background: "var(--lifeflow-brand-50)", color: "var(--lifeflow-primary)" }}>
+              {todayStats.totalSets} 组
+            </span>
+          </div>
           <div className="flex items-center justify-center" style={{ gap: 24 }}>
             <div className="flex flex-col items-center flex-1" style={{ minWidth: 0 }}>
-              <span className="text-[20px] font-bold tracking-[-0.018em]" style={{ color: "var(--color-text-primary)" }}>
+              <span className="text-[24px] font-bold tracking-[-0.018em]" style={{ color: "var(--color-text-primary)" }}>
+                {todayStats.sessionCount}
+              </span>
+              <span className="text-[13px] font-medium truncate" style={{ color: "var(--color-text-secondary)", letterSpacing: "-0.01em" }}>训练次数</span>
+            </div>
+            <div style={{ width: 1, height: 32, background: "var(--lifeflow-border)", flexShrink: 0 }} />
+            <div className="flex flex-col items-center flex-1" style={{ minWidth: 0 }}>
+              <span className="text-[24px] font-bold tracking-[-0.018em]" style={{ color: "var(--color-text-primary)" }}>
                 {todayStats.exerciseCount}
               </span>
-              <span className="text-[13px] font-medium truncate" style={{ color: "var(--color-text-secondary)", letterSpacing: "-0.01em" }}>动作</span>
+              <span className="text-[13px] font-medium truncate" style={{ color: "var(--color-text-secondary)", letterSpacing: "-0.01em" }}>动作数</span>
             </div>
             <div style={{ width: 1, height: 32, background: "var(--lifeflow-border)", flexShrink: 0 }} />
             <div className="flex flex-col items-center flex-1" style={{ minWidth: 0 }}>
-              <span className="text-[20px] font-bold tracking-[-0.018em]" style={{ color: "var(--color-text-primary)" }}>
-                {todayStats.totalWeight}<span style={{ fontSize: 14, fontWeight: 500 }}>kg</span>
+              <span className="text-[24px] font-bold tracking-[-0.018em]" style={{ color: "var(--color-text-primary)" }}>
+                {todayStats.avgRpe || "-"}
               </span>
-              <span className="text-[13px] font-medium truncate" style={{ color: "var(--color-text-secondary)", letterSpacing: "-0.01em" }}>总负重</span>
-            </div>
-            <div style={{ width: 1, height: 32, background: "var(--lifeflow-border)", flexShrink: 0 }} />
-            <div className="flex flex-col items-center flex-1" style={{ minWidth: 0 }}>
-              <span className="text-[20px] font-bold tracking-[-0.018em]" style={{ color: "var(--color-text-primary)" }}>
-                {todayStats.avgRpe || 0}
-              </span>
-              <span className="text-[13px] font-medium truncate" style={{ color: "var(--color-text-secondary)", letterSpacing: "-0.01em" }}>RPE 均</span>
+              <span className="text-[13px] font-medium truncate" style={{ color: "var(--color-text-secondary)", letterSpacing: "-0.01em" }}>RPE均</span>
             </div>
           </div>
         </motion.div>
@@ -321,7 +437,7 @@ export default function FitnessPage() {
         >
           <button
             type="button"
-            onClick={openRecordSheet}
+            onClick={() => openRecordSheet()}
             className="w-full py-3.5 rounded-full text-white text-base font-semibold tracking-[-0.018em] active:opacity-90 transition-opacity"
             style={{ background: "var(--lifeflow-primary)" }}
           >
@@ -329,78 +445,90 @@ export default function FitnessPage() {
           </button>
         </motion.div>
 
-        {/* ─── Quick Exercise Cards ─── */}
+        {/* ─── Training System Cards ─── */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1, duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
         >
-          <h2 className="mb-3 px-1 text-[17px] font-semibold" style={{ color: "var(--color-text-primary)" }}>常用动作</h2>
+          <h2 className="mb-3 px-1 text-[17px] font-semibold" style={{ color: "var(--color-text-primary)" }}>训练体系</h2>
           <div className="flex flex-col" style={{ gap: 12 }}>
-            {QUICK_EXERCISES.map((card) => {
-              const Icon = card.icon;
+            {TRAINING_SYSTEMS.map((sys) => {
+              const Icon = sys.icon;
+              const isPrimary = sys.type === currentPrimary;
               return (
                 <div
-                  key={card.name}
-                  className="p-4"
-                  style={{ background: "var(--color-surface-card)", borderRadius: "20px", boxShadow: "var(--shadow-card)" }}
+                  key={sys.type}
+                  className="p-4 relative overflow-hidden"
+                  style={{
+                    background: "var(--color-surface-card)",
+                    borderRadius: "20px",
+                    boxShadow: isPrimary ? `0 0 0 2px ${sys.color}40, var(--shadow-card)` : "var(--shadow-card)",
+                    border: isPrimary ? `1.5px solid ${sys.color}60` : "1.5px solid transparent",
+                  }}
                 >
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center gap-3 min-w-0 flex-1">
-                      <div className="flex-shrink-0 flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: "var(--lifeflow-brand-50)" }}>
-                        <Icon className="h-5 w-5" style={{ color: "var(--lifeflow-primary)" }} />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="truncate text-[16px] font-semibold" style={{ color: "var(--color-text-primary)" }}>{card.name}</p>
-                        <p className="truncate text-[13px]" style={{ color: "var(--color-text-secondary)" }}>{card.tags}</p>
-                      </div>
-                    </div>
-                    <span className="flex-shrink-0 text-[13px] font-medium whitespace-nowrap" style={{ color: "var(--color-text-secondary)" }}>最佳: —</span>
-                  </div>
-                  <div className="flex justify-end">
-                    <button
-                      type="button"
-                      onClick={() => openRecordForExercise(card.name)}
-                      className="inline-flex items-center rounded-lg px-3 py-1.5 text-[13px] font-medium transition-opacity hover:opacity-90"
-                      style={{ background: "var(--lifeflow-brand-50)", color: "var(--lifeflow-primary)" }}
+                  {/* Primary badge */}
+                  {isPrimary && (
+                    <div
+                      className="absolute top-0 right-0 px-2.5 py-1 text-[11px] font-semibold rounded-bl-xl"
+                      style={{ background: sys.color, color: "#fff" }}
                     >
-                      <Plus className="h-3.5 w-3.5 mr-1" />
-                      记录
-                    </button>
+                      <Star className="h-3 w-3 inline mr-0.5" style={{ marginTop: -1 }} />
+                      本月主项
+                    </div>
+                  )}
+
+                  {/* Header */}
+                  <div className="flex items-center gap-3 mb-3">
+                    <div
+                      className="flex-shrink-0 flex h-10 w-10 items-center justify-center rounded-xl"
+                      style={{ background: `${sys.color}15` }}
+                    >
+                      <Icon className="h-5 w-5" style={{ color: sys.color }} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="text-[16px] font-semibold truncate" style={{ color: "var(--color-text-primary)" }}>
+                          {sys.label}
+                        </p>
+                        <span
+                          className="text-[11px] font-medium px-2 py-0.5 rounded-full shrink-0"
+                          style={{ background: `${sys.color}12`, color: sys.color }}
+                        >
+                          {sys.subtitle}
+                        </span>
+                      </div>
+                      <p className="text-[12px] mt-0.5 truncate" style={{ color: "var(--color-text-secondary)" }}>
+                        {sys.schedule}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Notes */}
+                  <p className="text-[12px] mb-3 leading-relaxed" style={{ color: "var(--color-text-secondary)" }}>
+                    {sys.notes}
+                  </p>
+
+                  {/* Exercise quick-action buttons */}
+                  <div className="flex flex-wrap gap-2">
+                    {sys.exercises.map((ex) => (
+                      <button
+                        key={ex}
+                        type="button"
+                        onClick={() => openRecordSheet(sys.type, ex)}
+                        className="inline-flex items-center rounded-lg px-3 py-1.5 text-[13px] font-medium transition-opacity hover:opacity-90 active:opacity-70"
+                        style={{ background: `${sys.color}12`, color: sys.color }}
+                      >
+                        <Plus className="h-3.5 w-3.5 mr-1" />
+                        {ex}
+                      </button>
+                    ))}
                   </div>
                 </div>
               );
             })}
           </div>
         </motion.div>
-
-        {/* ─── Top exercises this week ─── */}
-        {topExercises.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.12, duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
-            className="p-5"
-            style={{ background: "var(--color-surface-card)", borderRadius: "20px", boxShadow: "var(--shadow-card)" }}
-          >
-            <h2 className="text-[17px] font-semibold mb-4" style={{ color: "var(--color-text-primary)" }}>本周热门动作</h2>
-            <div className="grid grid-cols-2 gap-[10px]">
-              {topExercises.map((name, i) => (
-                <div
-                  key={name}
-                  className="rounded-[12px] h-[76px] flex flex-col items-center justify-center cursor-pointer active:opacity-70"
-                  style={{ background: "var(--lifeflow-muted)" }}
-                  onClick={() => openRecordForExercise(name)}
-                >
-                  <span className="text-[12px]" style={{ color: "var(--color-text-secondary)" }}>{name}</span>
-                  <span className="text-[13px] font-medium mt-1" style={{ color: "var(--lifeflow-primary)" }}>
-                    + 再练一次
-                  </span>
-                </div>
-              ))}
-            </div>
-          </motion.div>
-        )}
 
         {/* ─── Week Stats Card ─── */}
         <motion.div
@@ -410,16 +538,20 @@ export default function FitnessPage() {
           className="p-5"
           style={{ background: "var(--color-surface-card)", borderRadius: "20px", boxShadow: "var(--shadow-card)" }}
         >
-          <div className="flex items-center justify-between">
-            <h2 className="text-[17px] font-semibold" style={{ color: "var(--color-text-primary)" }}>本周</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-[17px] font-semibold flex items-center gap-2" style={{ color: "var(--color-text-primary)" }}>
+              <TrendingUp className="h-4 w-4" style={{ color: "var(--lifeflow-primary)" }} />
+              本周统计
+            </h2>
             <span className="text-[13px]" style={{ color: "var(--color-text-secondary)" }}>{weekRange}</span>
           </div>
 
-          <div className="mt-4 flex">
+          <div className="flex">
             {[
               { label: "训练天数", value: weekStats.days, unit: "天" },
+              { label: "训练次数", value: weekStats.sessionCount, unit: "次" },
+              { label: "动作总数", value: weekStats.totalExercises, unit: "个" },
               { label: "总组数", value: weekStats.totalSets, unit: "组" },
-              { label: "动作数", value: weekStats.totalExercises, unit: "个" },
             ].map((stat) => (
               <div key={stat.label} className="flex flex-col items-center flex-1">
                 <span className="text-[24px] font-bold tabular-nums leading-none" style={{ color: "var(--color-text-primary)" }}>
@@ -429,6 +561,27 @@ export default function FitnessPage() {
               </div>
             ))}
           </div>
+
+          {/* Training type distribution */}
+          {Object.keys(weekStats.typeCount).length > 0 && (
+            <div className="mt-4 pt-4 flex flex-wrap gap-2" style={{ borderTop: `1px solid var(--lifeflow-border)` }}>
+              {Object.entries(weekStats.typeCount)
+                .sort(([, a], [, b]) => b - a)
+                .map(([type, count]) => {
+                  const label = type === "unknown" ? "其他" : getTrainingTypeLabel(type as TrainingType);
+                  const color = type === "unknown" ? "#94A3B8" : getTrainingTypeColor(type as TrainingType);
+                  return (
+                    <span
+                      key={type}
+                      className="text-[12px] font-medium px-2.5 py-1 rounded-full"
+                      style={{ background: `${color}15`, color }}
+                    >
+                      {label} {count}次
+                    </span>
+                  );
+                })}
+            </div>
+          )}
         </motion.div>
 
         {/* ─── Recent Training Card ─── */}
@@ -444,12 +597,14 @@ export default function FitnessPage() {
 
             {recentGroups.map((group) => (
               <div key={group.date} className="mb-4 last:mb-0">
-                <span className="text-[13px] block mb-1" style={{ color: "var(--color-text-secondary)" }}>
+                <span className="text-[13px] block mb-1 font-medium" style={{ color: "var(--color-text-secondary)" }}>
                   {formatDateGroup(group.date)}
                 </span>
                 <div className="space-y-2">
                   {group.sessions.map((s) => {
                     const isExpanded = expandedSession === s.id;
+                    const ttColor = getTrainingTypeColor(s.trainingType);
+                    const ttLabel = getTrainingTypeLabel(s.trainingType);
                     return (
                       <div
                         key={s.id}
@@ -459,13 +614,24 @@ export default function FitnessPage() {
                         <button
                           type="button"
                           className="w-full flex items-center justify-between p-3 text-left"
-                          onClick={() => setExpandedSession(isExpanded ? null : s.id!)
-                          }
+                          onClick={() => setExpandedSession(isExpanded ? null : s.id!)}
                         >
-                          <span className="text-[14px] font-medium" style={{ color: "var(--color-text-primary)" }}>
-                            {s.exercises.map((e) => e.exerciseName).join(" · ")}
-                          </span>
-                          <span className="text-[12px]" style={{ color: "var(--color-text-secondary)" }}>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-[14px] font-medium truncate" style={{ color: "var(--color-text-primary)" }}>
+                                {s.exercises.map((e) => e.exerciseName).join(" · ")}
+                              </span>
+                            </div>
+                            {s.trainingType && (
+                              <span
+                                className="inline-block text-[11px] font-medium px-2 py-0.5 rounded-full mt-1"
+                                style={{ background: `${ttColor}15`, color: ttColor }}
+                              >
+                                {ttLabel}
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-[12px] shrink-0 ml-2" style={{ color: "var(--color-text-secondary)" }}>
                             {s.exercises.reduce((t, e) => t + e.sets.length, 0)} 组
                           </span>
                         </button>
@@ -491,7 +657,7 @@ export default function FitnessPage() {
                                           className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px]"
                                           style={{ background: "var(--color-surface-card)", color: "var(--color-text-secondary)" }}
                                         >
-                                          {set.reps}×{set.weight}kg RPE{set.rpe}
+                                          {set.reps}次×{set.weight}kg{set.rpe > 0 ? ` RPE${set.rpe}` : ""}
                                         </span>
                                       ))}
                                     </div>
@@ -551,49 +717,107 @@ export default function FitnessPage() {
               exit={{ y: "100%" }}
               transition={{ type: "spring", damping: 28, stiffness: 300 }}
               className="fixed bottom-0 left-0 right-0 z-50 rounded-t-[24px] px-5 pt-5 pb-8"
-              style={{ background: "var(--color-surface-card)", maxHeight: "85vh", overflowY: "auto" }}
+              style={{ background: "var(--color-surface-card)", maxHeight: "85vh", overflowY: "auto", paddingBottom: "calc(var(--bottom-nav-height, 83px) + 20px)" }}
             >
               <div className="flex items-center justify-between mb-5">
                 <h2 className="text-[17px] font-semibold" style={{ color: "var(--color-text-primary)" }}>记录训练</h2>
                 <button onClick={() => setShowRecord(false)} className="text-[15px] font-medium" style={{ color: "var(--lifeflow-primary)" }}>取消</button>
               </div>
 
-              {/* Exercise Name */}
+              {/* Training Type Selector */}
               <div className="mb-5">
+                <label className="text-[13px] font-medium mb-2 block" style={{ color: "var(--color-text-secondary)" }}>训练类型</label>
+                <div className="flex flex-wrap gap-2">
+                  {TRAINING_SYSTEMS.map((sys) => (
+                    <button
+                      key={sys.type}
+                      type="button"
+                      onClick={() => {
+                        setSelectedTrainingType(sys.type);
+                        setExerciseName("");
+                      }}
+                      className="px-3 py-1.5 rounded-lg text-[13px] font-medium transition-all"
+                      style={{
+                        background: selectedTrainingType === sys.type ? sys.color : `${sys.color}10`,
+                        color: selectedTrainingType === sys.type ? "#fff" : sys.color,
+                        border: selectedTrainingType === sys.type ? `1.5px solid ${sys.color}` : "1.5px solid transparent",
+                      }}
+                    >
+                      {sys.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Exercise Name with dropdown */}
+              <div className="mb-5" ref={dropdownRef}>
                 <label className="text-[13px] font-medium mb-1.5 block" style={{ color: "var(--color-text-secondary)" }}>动作名称</label>
-                <input
-                  ref={nameInputRef}
-                  type="text"
-                  value={exerciseName}
-                  onChange={(e) => setExerciseName(e.target.value)}
-                  placeholder="输入动作名，如：杠铃卧推"
-                  className="w-full h-11 px-4 rounded-xl text-[15px] outline-none"
-                  style={{ background: "var(--lifeflow-muted)", color: "var(--color-text-primary)", border: "1px solid transparent" }}
-                  autoFocus
-                />
+                <div className="relative">
+                  <input
+                    ref={nameInputRef}
+                    type="text"
+                    value={exerciseName}
+                    onChange={(e) => {
+                      setExerciseName(e.target.value);
+                      setShowExerciseDropdown(true);
+                    }}
+                    onFocus={() => setShowExerciseDropdown(true)}
+                    placeholder="输入或选择动作名"
+                    className="w-full h-11 px-4 rounded-xl text-[15px] outline-none"
+                    style={{ background: "var(--lifeflow-muted)", color: "var(--color-text-primary)", border: "1px solid transparent" }}
+                  />
+                  {showExerciseDropdown && exerciseSuggestions.length > 0 && (
+                    <div
+                      className="absolute top-full left-0 right-0 mt-1 rounded-xl overflow-hidden z-10"
+                      style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)", border: "1px solid var(--lifeflow-border)" }}
+                    >
+                      {exerciseSuggestions
+                        .filter((ex) => !exerciseName || ex.includes(exerciseName))
+                        .map((ex) => (
+                          <button
+                            key={ex}
+                            type="button"
+                            onClick={() => {
+                              setExerciseName(ex);
+                              setShowExerciseDropdown(false);
+                            }}
+                            className="w-full text-left px-4 py-2.5 text-[14px] hover:opacity-80 transition-opacity"
+                            style={{ color: "var(--color-text-primary)", borderBottom: "1px solid var(--lifeflow-border)" }}
+                          >
+                            {ex}
+                          </button>
+                        ))}
+                      {exerciseSuggestions.filter((ex) => !exerciseName || ex.includes(exerciseName)).length === 0 && (
+                        <div className="px-4 py-2.5 text-[13px]" style={{ color: "var(--color-text-secondary)" }}>
+                          输入自定义动作
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Sets / Reps / Weight */}
               <div className="grid grid-cols-3 gap-3 mb-5">
                 {[
-                  { label: "组数", value: sets, min: 1, max: 20, set: setSets },
-                  { label: "次数", value: reps, min: 1, max: 50, set: setReps },
-                  { label: "重量(kg)", value: weight, min: 0, max: 500, set: setWeight },
+                  { label: "组数", value: sets, min: 1, max: 20, step: 1, set: setSets },
+                  { label: "次数", value: reps, min: 1, max: 50, step: 1, set: setReps },
+                  { label: "重量(kg)", value: weight, min: 0, max: 500, step: 5, set: setWeight },
                 ].map((field) => (
                   <div key={field.label}>
                     <label className="text-[13px] font-medium mb-1.5 block" style={{ color: "var(--color-text-secondary)" }}>{field.label}</label>
                     <div className="flex items-center rounded-xl overflow-hidden" style={{ background: "var(--lifeflow-muted)" }}>
                       <button
-                        onClick={() => field.set(clamp(field.value - (field.label === "重量(kg)" ? 5 : 1), field.min, field.max))}
+                        onClick={() => field.set(clamp(field.value - field.step, field.min, field.max))}
                         className="w-9 h-9 flex items-center justify-center active:opacity-60"
                       >
                         <Minus className="w-4 h-4" style={{ color: "var(--color-text-secondary)" }} />
                       </button>
-                      <span className="flex-1 text-center text-[15px] font-semibold" style={{ color: "var(--color-text-primary)" }}>
+                      <span className="flex-1 text-center text-[15px] font-semibold tabular-nums" style={{ color: "var(--color-text-primary)" }}>
                         {field.value}
                       </span>
                       <button
-                        onClick={() => field.set(clamp(field.value + (field.label === "重量(kg)" ? 5 : 1), field.min, field.max))}
+                        onClick={() => field.set(clamp(field.value + field.step, field.min, field.max))}
                         className="w-9 h-9 flex items-center justify-center active:opacity-60"
                       >
                         <Plus className="w-4 h-4" style={{ color: "var(--color-text-secondary)" }} />
@@ -605,13 +829,22 @@ export default function FitnessPage() {
 
               {/* RPE */}
               <div className="mb-6">
-                <label className="text-[13px] font-medium mb-1.5 block" style={{ color: "var(--color-text-secondary)" }}>RPE（自觉强度 1-10）</label>
-                <div className="flex gap-2">
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-[13px] font-medium" style={{ color: "var(--color-text-secondary)" }}>
+                    RPE（自觉强度 1-10，可选）
+                  </label>
+                  {rpe !== null && (
+                    <span className="text-[12px] font-medium" style={{ color: "var(--lifeflow-primary)" }}>
+                      {rpeLabels[rpe] ?? ""}
+                    </span>
+                  )}
+                </div>
+                <div className="flex gap-1.5 flex-wrap">
                   {RPE_OPTIONS.map((r) => (
                     <button
                       key={r}
-                      onClick={() => setRpe(r)}
-                      className="flex-1 h-10 rounded-xl text-[14px] font-medium transition-colors"
+                      onClick={() => setRpe(rpe === r ? null : r)}
+                      className="flex-1 min-w-[28px] h-9 rounded-lg text-[13px] font-medium transition-colors"
                       style={{
                         background: rpe === r ? "var(--lifeflow-primary)" : "var(--lifeflow-muted)",
                         color: rpe === r ? "#fff" : "var(--color-text-secondary)",

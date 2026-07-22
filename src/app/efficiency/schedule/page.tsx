@@ -423,7 +423,7 @@ export default function SchedulePage() {
             style={{ background: "var(--lifeflow-brand-50)", color: "var(--lifeflow-primary)" }}
           >
             <ListTodo className="w-3.5 h-3.5" />
-            事项
+            分类
           </Link>
           <button
             type="button"

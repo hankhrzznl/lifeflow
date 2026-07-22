@@ -2,22 +2,35 @@
 
 import { useMemo, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
-import { Plus, Circle, CheckCircle2, GripVertical, CalendarDays, ListTodo } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ChevronLeft, Target, Sparkles, ListTodo as ListIcon, CheckCircle2, Plus } from "lucide-react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { getAllScheduleTasks, updateScheduleTask, addScheduleTask } from "@/lib/db/efficiency.db";
-import type { ScheduleTask } from "@/lib/db/efficiency.db";
+import { efficiencyDB, getAllGoals, type Goal, type ScheduleTask } from "@/lib/db/efficiency.db";
+import { getScheduleTasksByDate, updateScheduleTask } from "@/lib/db/efficiency.db";
 import { showToast } from "@/components/ui/Toast";
 
 // ============================================================
-// 事项 · 四象限视图
+// 分类视图 · 目标 / 习惯 / 琐事
 // ============================================================
 
-const QUADRANTS = [
-  { key: "q1", label: "重要且紧急", desc: "立即去做", colorBar: "var(--state-error)", color: "#FF3B30" },
-  { key: "q2", label: "重要不紧急", desc: "计划去做", colorBar: "var(--lifeflow-primary)", color: "#2563EB" },
-  { key: "q3", label: "不重要紧急", desc: "委托他人", colorBar: "var(--state-warning)", color: "#F59E0B" },
-  { key: "q4", label: "不重要不紧急", desc: "尽量不做", colorBar: "var(--color-text-disabled)", color: "#C7C7CC" },
+const QUADRANT_COLORS: Record<string, string> = {
+  q1: "var(--state-error)",
+  q2: "var(--lifeflow-primary)",
+  q3: "var(--state-warning)",
+  q4: "var(--color-text-disabled)",
+};
+
+const QUADRANT_LABELS: Record<string, string> = {
+  q1: "重要且紧急",
+  q2: "重要不紧急",
+  q3: "不重要紧急",
+  q4: "不重要不紧急",
+};
+
+const CATEGORIES = [
+  { key: "task", label: "目标", icon: Target, color: "var(--lifeflow-primary)" },
+  { key: "habit", label: "习惯", icon: Sparkles, color: "var(--state-success)" },
+  { key: "chore", label: "琐事", icon: ListIcon, color: "var(--state-warning)" },
 ] as const;
 
 function todayStr(): string {
@@ -25,174 +38,219 @@ function todayStr(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-export default function TasksPage() {
+export default function CategoryPage() {
   const router = useRouter();
-  const [showAdd, setShowAdd] = useState(false);
-  const [addQuadrant, setAddQuadrant] = useState<"q1" | "q2" | "q3" | "q4">("q2");
-  const [newTitle, setNewTitle] = useState("");
-  const [adding, setAdding] = useState(false);
 
-  const allTasks = useLiveQuery(() => getAllScheduleTasks(), [], [] as ScheduleTask[]);
+  // Data sources
+  const goals = useLiveQuery(() => efficiencyDB.goals.where("status").notEqual("archived").toArray(), [], [] as Goal[]);
+  const allScheduleTasks = useLiveQuery(() => efficiencyDB.scheduleTasks.toArray(), [], [] as ScheduleTask[]);
   const today = todayStr();
 
-  // 分组
-  const grouped = useMemo(() => {
-    const map: Record<string, ScheduleTask[]> = { q1: [], q2: [], q3: [], q4: [] };
-    for (const t of allTasks ?? []) {
-      if (t.isCompleted) continue;
-      const q = t.quadrant || "q2";
-      if (map[q]) map[q].push(t);
+  // Today's schedule tasks grouped by category
+  const categorized = useMemo(() => {
+    const map: Record<string, { goal: Goal | null; tasks: ScheduleTask[] }[]> = {
+      task: [],
+      habit: [],
+      chore: [],
+    };
+
+    // 1. Goals → "task" category
+    const activeGoals = (goals ?? []).filter(g => g.status === "active" || g.status === "paused");
+    for (const goal of activeGoals) {
+      const tasks = (allScheduleTasks ?? []).filter(t => t.goalId === goal.id);
+      map.task.push({ goal, tasks });
     }
+
+    // 2. Habits → "habit" category
+    const habitTasks = (allScheduleTasks ?? []).filter(t => t.category === "habit");
+    // Group by goalId or just list individually
+    const habitGroups = new Map<string, ScheduleTask[]>();
+    for (const t of habitTasks) {
+      const key = t.goalId || t.id;
+      if (!habitGroups.has(key)) habitGroups.set(key, []);
+      habitGroups.get(key)!.push(t);
+    }
+    for (const [_, tasks] of habitGroups) {
+      map.habit.push({ goal: null, tasks });
+    }
+
+    // 3. Chores → "chore" category
+    const choreTasks = (allScheduleTasks ?? []).filter(t => t.category === "chore");
+    for (const t of choreTasks) {
+      map.chore.push({ goal: null, tasks: [t] });
+    }
+
     return map;
-  }, [allTasks]);
-
-  const todayTasks = useMemo(() => {
-    return (allTasks ?? []).filter((t) => t.date === today && !t.isCompleted);
-  }, [allTasks, today]);
-
-  const completedCount = useMemo(() => {
-    return allTasks ? allTasks.filter((t) => t.isCompleted).length : 0;
-  }, [allTasks]);
+  }, [goals, allScheduleTasks]);
 
   const toggleTask = useCallback(async (task: ScheduleTask) => {
     await updateScheduleTask(task.id, { isCompleted: !task.isCompleted });
   }, []);
 
-  const changeQuadrant = useCallback(async (task: ScheduleTask, newQuadrant: string) => {
-    await updateScheduleTask(task.id, { quadrant: newQuadrant as ScheduleTask["quadrant"] });
+  const changeGoalQuadrant = useCallback(async (goal: Goal, quadrant: string) => {
+    await efficiencyDB.goals.update(goal.id, { quadrant: quadrant as Goal["quadrant"] });
+    showToast({ type: "success", message: `已移至「${QUADRANT_LABELS[quadrant]}」` });
   }, []);
-
-  const handleAdd = useCallback(async () => {
-    if (!newTitle.trim()) return;
-    setAdding(true);
-    await addScheduleTask({
-      goalId: null,
-      title: newTitle.trim(),
-      type: "single",
-      date: today,
-      quadrant: addQuadrant,
-      isCompleted: false,
-      plannedTime: 30,
-      actualTime: 0,
-      isImportant: addQuadrant === "q1" || addQuadrant === "q2",
-      note: "",
-    });
-    showToast({ type: "success", message: "已添加" });
-    setNewTitle("");
-    setShowAdd(false);
-    setAdding(false);
-  }, [newTitle, addQuadrant, today]);
 
   return (
     <div className="mx-auto px-4 pt-8 pb-[100px]" style={{ maxWidth: 430 }}>
-      {/* ===== Header ===== */}
-      <div className="mb-6">
-        <h1 className="text-[28px] font-bold tracking-[-0.022em]" style={{ color: "var(--color-text-primary)" }}>
-          事项
-        </h1>
-        <p className="text-[14px] font-medium mt-1.5" style={{ color: "var(--color-text-secondary)" }}>
-          {todayTasks.length} 件待办 · {completedCount} 件已完成
-        </p>
-      </div>
-
-      {/* ===== 快捷添加 ===== */}
-      {showAdd ? (
-        <div
-          className="rounded-[20px] p-4 mb-4"
-          style={{
-            backgroundColor: "var(--color-surface-card)",
-            boxShadow: "var(--shadow-card)",
-          }}
-        >
-          <input
-            type="text" value={newTitle} onChange={(e) => setNewTitle(e.target.value)}
-            placeholder="输入事项标题..."
-            autoFocus
-            className="w-full text-[17px] outline-none mb-3 bg-transparent"
-            style={{ color: "var(--color-text-primary)" }}
-            onKeyDown={(e) => { if (e.key === "Enter") handleAdd(); }}
-          />
-          <div className="flex gap-2 mb-3">
-            {QUADRANTS.map((q) => (
-              <button key={q.key} type="button"
-                onClick={() => setAddQuadrant(q.key)}
-                className="px-3 py-1 rounded-full text-[12px] font-medium transition-colors"
-                style={{
-                  background: addQuadrant === q.key ? q.color : `${q.color}16`,
-                  color: addQuadrant === q.key ? "#FFF" : q.color,
-                }}>
-                {q.label}
-              </button>
-            ))}
-          </div>
-          <div className="flex gap-2">
-            <button type="button" onClick={() => { setShowAdd(false); setNewTitle(""); }}
-              className="flex-1 h-10 rounded-lg text-[15px]"
-              style={{ backgroundColor: "var(--lifeflow-background)", color: "var(--color-text-secondary)" }}>
-              取消
-            </button>
-            <button type="button" onClick={handleAdd} disabled={adding || !newTitle.trim()}
-              className="flex-1 h-10 rounded-lg text-[15px] font-semibold text-white"
-              style={{ backgroundColor: "var(--lifeflow-primary)", opacity: newTitle.trim() ? 1 : 0.5 }}>
-              添加
-            </button>
-          </div>
-        </div>
-      ) : (
-        <button type="button" onClick={() => setShowAdd(true)}
-          className="w-full h-11 flex items-center justify-center gap-2 rounded-xl mb-4 text-[15px] font-medium"
-          style={{
-            backgroundColor: "var(--lifeflow-brand-50)",
-            color: "var(--lifeflow-primary)",
-            border: "1px dashed var(--lifeflow-primary)",
-          }}>
-          <Plus className="w-4 h-4" />添加事项
+      {/* Header */}
+      <div className="flex items-center gap-2.5 mb-4">
+        <button onClick={() => router.back()} className="flex items-center justify-center w-8 h-8 rounded-lg active:opacity-60" style={{ background: "var(--color-surface-card)", border: "1px solid var(--lifeflow-border)" }}>
+          <ChevronLeft className="w-5 h-5" style={{ color: "var(--color-text-primary)" }} />
         </button>
-      )}
-
-      {/* ===== 四象限 2x2 Grid ===== */}
-      <div className="grid grid-cols-2 gap-3">
-        {QUADRANTS.map((q) => {
-          const items = grouped[q.key] || [];
-          return (
-            <motion.div key={q.key}
-              initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: QUADRANTS.indexOf(q) * 0.05 }}
-              className="rounded-[20px] overflow-hidden"
-              style={{
-                backgroundColor: "var(--color-surface-card)",
-                boxShadow: "var(--shadow-card)",
-              }}>
-              {/* Color bar */}
-              <div className="h-1" style={{ background: q.colorBar }} />
-              {/* Inner content */}
-              <div className="p-4 flex flex-col items-center justify-center min-h-[142px]">
-                <div
-                  className="text-[15px] font-semibold mb-1"
-                  style={{ color: q.colorBar }}
-                >{q.label}</div>
-                <div className="text-[12px] font-medium mb-1" style={{ color: "var(--color-text-secondary)" }}>
-                  {q.desc} · {items.length}件
-                </div>
-                {items.length === 0 ? (
-                  <div className="text-[26px] font-light" style={{ color: "var(--color-text-disabled)" }}>空</div>
-                ) : (
-                  <div className="w-full space-y-0.5 mt-2">
-                    {items.map((t) => (
-                      <button key={t.id} type="button"
-                        className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-left"
-                        onClick={() => toggleTask(t)}>
-                        <Circle className="w-3.5 h-3.5 shrink-0" style={{ color: q.colorBar }} />
-                        <span className="flex-1 text-[13px] truncate" style={{ color: "var(--color-text-primary)" }}>{t.title}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          );
-        })}
+        <div>
+          <h1 className="text-[22px] font-bold tracking-[-0.022em]" style={{ color: "var(--color-text-primary)" }}>
+            分类视图
+          </h1>
+          <p className="text-[12px] font-medium mt-0.5" style={{ color: "var(--color-text-secondary)" }}>
+            目标 · 习惯 · 琐事
+          </p>
+        </div>
       </div>
+
+      {/* Category sections */}
+      {CATEGORIES.map((cat) => {
+        const items = categorized[cat.key];
+        if (items.length === 0) return null;
+
+        return (
+          <div key={cat.key} className="mb-6">
+            {/* Category header */}
+            <div className="flex items-center gap-2 mb-3 px-1">
+              <cat.icon className="w-4 h-4" style={{ color: cat.color }} />
+              <h2 className="text-[15px] font-semibold" style={{ color: "var(--color-text-primary)" }}>
+                {cat.label}
+              </h2>
+              <span className="text-[12px]" style={{ color: "var(--color-text-disabled)" }}>
+                {items.length} 项
+              </span>
+            </div>
+
+            {/* Items grouped by quadrant */}
+            {(["q1", "q2", "q3", "q4"] as const).map((q) => {
+              const qItems = items.filter((item) => {
+                if (cat.key === "task") return item.goal?.quadrant === q || (!item.goal?.quadrant && q === "q2");
+                if (cat.key === "habit") return q === "q2"; // Habits default to q2
+                if (cat.key === "chore") return item.tasks[0]?.quadrant === q || (!item.tasks[0]?.quadrant && q === "q2");
+                return false;
+              });
+              if (qItems.length === 0) return null;
+
+              return (
+                <div key={q} className="mb-3">
+                  {/* Quadrant sub-header */}
+                  <div className="flex items-center gap-2 px-2 mb-2">
+                    <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: QUADRANT_COLORS[q] }} />
+                    <span className="text-[11px] font-medium" style={{ color: QUADRANT_COLORS[q] }}>
+                      {QUADRANT_LABELS[q]}
+                    </span>
+                  </div>
+
+                  {/* Items */}
+                  <div className="flex flex-col gap-2">
+                    {qItems.map((item) => {
+                      const isGoal = cat.key === "task" && item.goal;
+                      const tasks = item.tasks;
+
+                      if (isGoal) {
+                        const goal = item.goal!;
+                        const totalTasks = tasks.length;
+                        const doneTasks = tasks.filter(t => t.isCompleted).length;
+                        const pct = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : goal.progress;
+
+                        return (
+                          <motion.div
+                            key={goal.id}
+                            whileTap={{ scale: 0.98 }}
+                            onClick={() => router.push(`/efficiency/create?id=${goal.id}`)}
+                            className="rounded-[16px] p-3.5 flex items-center gap-3 cursor-pointer"
+                            style={{
+                              backgroundColor: "var(--color-surface-card)",
+                              boxShadow: "var(--shadow-card)",
+                              borderLeft: `3px solid ${goal.color || QUADRANT_COLORS[q]}`,
+                            }}
+                          >
+                            <div className="flex-1 min-w-0">
+                              <div className="text-[14px] font-semibold truncate" style={{ color: "var(--color-text-primary)" }}>
+                                {goal.title}
+                              </div>
+                              <div className="text-[11px] mt-0.5" style={{ color: "var(--color-text-secondary)" }}>
+                                {tasks.length > 0 ? `${doneTasks}/${totalTasks} 项完成` : "暂无任务"}
+                              </div>
+                            </div>
+                            {tasks.length > 0 && (
+                              <div className="w-9 h-9 rounded-full flex items-center justify-center text-[11px] font-bold flex-shrink-0" style={{ background: pct === 100 ? "rgba(52,199,89,0.15)" : "var(--lifeflow-muted)", color: pct === 100 ? "#34C759" : "var(--color-text-secondary)" }}>
+                                {pct}%
+                              </div>
+                            )}
+                          </motion.div>
+                        );
+                      }
+
+                      // Habit / Chore items
+                      return tasks.map((task) => (
+                        <motion.div
+                          key={task.id}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={() => toggleTask(task)}
+                          className={`rounded-[16px] p-3.5 flex items-center gap-3 cursor-pointer ${task.isCompleted ? "opacity-50" : ""}`}
+                          style={{
+                            backgroundColor: "var(--color-surface-card)",
+                            boxShadow: "var(--shadow-card)",
+                          }}
+                        >
+                          <div
+                            className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${task.isCompleted ? "" : ""}`}
+                            style={{
+                              borderColor: task.isCompleted ? "#34C759" : "var(--lifeflow-border)",
+                              background: task.isCompleted ? "#34C759" : "transparent",
+                            }}
+                          >
+                            {task.isCompleted && <CheckCircle2 className="w-4 h-4 text-white" />}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div
+                              className="text-[14px] font-medium truncate"
+                              style={{
+                                color: "var(--color-text-primary)",
+                                textDecoration: task.isCompleted ? "line-through" : "none",
+                              }}
+                            >
+                              {task.title}
+                            </div>
+                            {task.note && (
+                              <div className="text-[11px] mt-0.5 truncate" style={{ color: "var(--color-text-disabled)" }}>
+                                {task.note}
+                              </div>
+                            )}
+                          </div>
+                          <span className="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold flex-shrink-0" style={{ background: `${QUADRANT_COLORS[q]}15`, color: QUADRANT_COLORS[q] }}>
+                            {q.toUpperCase()}
+                          </span>
+                        </motion.div>
+                      ));
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        );
+      })}
+
+      {/* Empty state */}
+      {Object.values(categorized).every(v => v.length === 0) && (
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4" style={{ background: "var(--lifeflow-brand-50)" }}>
+            <Target className="w-8 h-8" style={{ color: "var(--lifeflow-primary)" }} />
+          </div>
+          <h3 className="text-[16px] font-semibold mb-1" style={{ color: "var(--color-text-primary)" }}>暂无分类内容</h3>
+          <p className="text-[13px]" style={{ color: "var(--color-text-secondary)" }}>
+            创建目标或习惯后，这里会自动分组展示
+          </p>
+        </div>
+      )}
     </div>
   );
 }

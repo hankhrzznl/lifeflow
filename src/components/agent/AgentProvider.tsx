@@ -1164,14 +1164,16 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
         setStateCtx((prev) => transitionState(prev, "done"));
         // Attach actionRef to the user message
         if (lastActionRef.current) {
+          const actionRef = Object.assign({}, lastActionRef.current!);
           setMessages((prev) => {
             const msgs = [...prev];
             const idx = msgs.findIndex(m => m.id === userMsg.id);
-            if (idx >= 0) msgs[idx] = { ...msgs[idx], actionRef: { ...lastActionRef.current! } };
+            if (idx >= 0) msgs[idx] = { ...msgs[idx], actionRef };
+            messagesRef.current = msgs;
             return msgs;
           });
         }
-        // Persist using ref (includes async assistant responses added by addAssistantMessage)
+        // Persist using updated ref
         await persistSession(messagesRef.current);
       } catch (err) {
         const errorMsg = err instanceof Error ? err.message : "处理失败，请重试";

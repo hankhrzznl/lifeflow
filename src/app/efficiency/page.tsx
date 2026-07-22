@@ -354,60 +354,56 @@ export default function EfficiencyPage() {
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.05, duration: 0.35, ease: "easeOut" }}
-                  className="relative"
-                  style={{ zIndex: quickActive ? 40 : undefined }}
+                  className="relative overflow-hidden"
+                  style={{ zIndex: quickActive ? 40 : undefined, borderRadius: "20px" }}
                 >
-                  {/* 快捷操作按钮 */}
-                  <AnimatePresence>
-                    {quickActive && (
-                      <div
-                        className="absolute flex flex-col items-center"
-                        style={{ right: 8, top: "50%", transform: "translateY(-50%)" }}
-                      >
-                        {(goal.status === "active" || goal.status === "paused") && (
-                          <motion.button
-                            type="button"
-                            initial={{ opacity: 0, x: 12 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: 12 }}
-                            transition={{ duration: 0.2, ease: "easeOut" }}
-                            onClick={(e) => { e.stopPropagation(); handleQuickAction(goal, "delete"); }}
-                            aria-label="删除"
-                            className="w-[44px] h-[44px] rounded-full flex items-center justify-center"
-                            style={{ background: "rgba(239,68,68,0.1)" }}
-                          >
-                            <Trash2 className="w-5 h-5" style={{ color: "var(--state-error)" }} />
-                          </motion.button>
-                        )}
-                        <motion.button
-                          type="button"
-                          initial={{ opacity: 0, x: 12 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          exit={{ opacity: 0, x: 12 }}
-                          transition={{ duration: 0.2, delay: 0.05, ease: "easeOut" }}
-                          onClick={(e) => { e.stopPropagation(); handleQuickAction(goal, "edit"); }}
-                          aria-label="编辑"
-                          className="w-[44px] h-[44px] rounded-full flex items-center justify-center"
-                          style={{
-                            backgroundColor: "var(--lifeflow-primary)",
-                            marginTop: goal.status === "active" || goal.status === "paused" ? 8 : 0,
-                          }}
-                        >
-                          <Pencil className="w-5 h-5 text-white" />
-                        </motion.button>
-                      </div>
-                    )}
-                  </AnimatePresence>
+                  {/* 滑出操作按钮（底部层） */}
+                  <div
+                    className="absolute right-2 top-0 bottom-0 flex items-center gap-2"
+                    style={{ right: 8 }}
+                  >
+                    <motion.button
+                      type="button"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: quickActive ? 1 : 0 }}
+                      transition={{ duration: 0.15 }}
+                      onClick={(e) => { e.stopPropagation(); handleQuickAction(goal, "delete"); }}
+                      aria-label="删除"
+                      className="w-[44px] h-[44px] rounded-full flex items-center justify-center flex-shrink-0"
+                      style={{ background: "rgba(239,68,68,0.1)" }}
+                    >
+                      <Trash2 className="w-5 h-5" style={{ color: "var(--state-error)" }} />
+                    </motion.button>
+                    <motion.button
+                      type="button"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: quickActive ? 1 : 0 }}
+                      transition={{ duration: 0.15, delay: 0.03 }}
+                      onClick={(e) => { e.stopPropagation(); handleQuickAction(goal, "edit"); }}
+                      aria-label="编辑"
+                      className="w-[44px] h-[44px] rounded-full flex items-center justify-center flex-shrink-0"
+                      style={{ backgroundColor: "var(--lifeflow-primary)" }}
+                    >
+                      <Pencil className="w-5 h-5 text-white" />
+                    </motion.button>
+                  </div>
 
-                  {/* 卡片本体 */}
+                  {/* 卡片本体（可拖拽层） */}
                   <motion.div
-                    whileTap={{ scale: 0.98 }}
-                    animate={{
-                      scale: quickActive ? 0.98 : 1,
-                      opacity: quickActive ? 0.9 : 1,
-                      x: quickActive ? -70 : 0,
+                    whileTap={{ scale: quickActive ? 0.98 : 0.98 }}
+                    animate={{ x: quickActive ? -106 : 0, scale: 1, opacity: 1 }}
+                    transition={{ duration: 0.25, ease: "easeOut" }}
+                    drag="x"
+                    dragConstraints={{ left: -120, right: 0 }}
+                    dragElastic={0.1}
+                    dragSnapToOrigin
+                    onDragEnd={(_e, info) => {
+                      if (info.offset.x < -60) {
+                        setQuickGoalId(goal.id);
+                      } else if (info.offset.x > 10) {
+                        setQuickGoalId(null);
+                      }
                     }}
-                    transition={{ duration: 0.2, ease: "easeOut" }}
                     onPointerDown={() => startPress(goal)}
                     onPointerUp={cancelPress}
                     onPointerLeave={cancelPress}
@@ -417,6 +413,8 @@ export default function EfficiencyPage() {
                       backgroundColor: "var(--color-surface-card)",
                       border: "1px solid var(--lifeflow-border)",
                       boxShadow: "var(--shadow-card)",
+                      position: "relative",
+                      zIndex: 1,
                     }}
                   >
                     <div
@@ -508,7 +506,7 @@ export default function EfficiencyPage() {
             : undefined;
           router.push(pid ? `/efficiency/create?projectId=${pid}` : "/efficiency/create");
         }}
-        className="fixed right-4 bottom-[100px] z-40 flex items-center justify-center"
+        className="fixed right-4 bottom-[170px] z-40 flex items-center justify-center"
         style={{
           width: 56,
           height: 56,

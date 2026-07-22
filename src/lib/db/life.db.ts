@@ -57,6 +57,12 @@ export interface WellnessLog {
   createdAt: number;
 }
 
+export interface CheatDay {
+  id?: number;
+  date: string;          // YYYY-MM-DD
+  createdAt: number;
+}
+
 // ─── Database ────────────────────────────────────────────────
 
 export class LifeDB extends Dexie {
@@ -66,6 +72,7 @@ export class LifeDB extends Dexie {
   focusSessions!: Table<FocusSession, string>;
   dietLogs!: Table<DietLog, number>;
   wellnessLogs!: Table<WellnessLog, number>;
+  cheatDays!: Table<CheatDay, number>;
 
   constructor() {
     super('LifeFlowLife');
@@ -94,6 +101,15 @@ export class LifeDB extends Dexie {
       focusSessions: '&id, date, startedAt',
       dietLogs: '++id, date, mealType',
       wellnessLogs: '++id, date, type',
+    });
+    this.version(5).stores({
+      habits: '&id, name, createdAt',
+      countdowns: '&id, name, date, createdAt',
+      notes: '&id, date, createdAt',
+      focusSessions: '&id, date, startedAt',
+      dietLogs: '++id, date, mealType',
+      wellnessLogs: '++id, date, type',
+      cheatDays: '++id, date',
     });
   }
 }
@@ -238,6 +254,30 @@ export async function getDietLogsByDate(date: string): Promise<DietLog[]> {
 
 export async function getDietLogsByDateRange(startDate: string, endDate: string): Promise<DietLog[]> {
   return lifeDB.dietLogs
+    .where('date')
+    .between(startDate, endDate, true, true)
+    .toArray();
+}
+
+// ─── Cheat Days CRUD ──────────────────────────────────────────
+
+export async function addCheatDay(date: string): Promise<number> {
+  const existing = await lifeDB.cheatDays.where('date').equals(date).first();
+  if (existing) return existing.id!;
+  return lifeDB.cheatDays.add({ date, createdAt: Date.now() });
+}
+
+export async function removeCheatDay(date: string): Promise<void> {
+  await lifeDB.cheatDays.where('date').equals(date).delete();
+}
+
+export async function isCheatDay(date: string): Promise<boolean> {
+  const record = await lifeDB.cheatDays.where('date').equals(date).first();
+  return !!record;
+}
+
+export async function getCheatDaysInRange(startDate: string, endDate: string): Promise<CheatDay[]> {
+  return lifeDB.cheatDays
     .where('date')
     .between(startDate, endDate, true, true)
     .toArray();

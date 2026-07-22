@@ -3,11 +3,15 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, Utensils, Coffee, Sun, Moon, Apple, X } from "lucide-react";
+import { ChevronLeft, Utensils, Coffee, Sun, Moon, Apple, X, Cake } from "lucide-react";
 import {
   addDietLog,
   deleteDietLog,
   getDietLogsByDateRange,
+  addCheatDay,
+  removeCheatDay,
+  isCheatDay,
+  getCheatDaysInRange,
 } from "@/lib/db/life.db";
 import type { DietLog } from "@/lib/db/life.db";
 import { showToast } from "@/components/ui/Toast";
@@ -56,6 +60,10 @@ export default function DietPage() {
   /* delete confirm */
   const [deleteTarget, setDeleteTarget] = useState<number | null>(null);
 
+  /* cheat day */
+  const [isTodayCheat, setIsTodayCheat] = useState(false);
+  const [cheatDates, setCheatDates] = useState<Set<string>>(new Set());
+
   /* ─── Load ─── */
 
   const loadLogs = useCallback(async () => {
@@ -76,6 +84,18 @@ export default function DietPage() {
 
   useEffect(() => {
     loadLogs();
+    // Load cheat day status
+    (async () => {
+      const td = todayStr();
+      const cheat = await isCheatDay(td);
+      setIsTodayCheat(cheat);
+      const end = new Date();
+      const start = new Date(end);
+      start.setDate(start.getDate() - DAYS_TO_LOAD + 1);
+      const sStr = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}-${String(start.getDate()).padStart(2, "0")}`;
+      const cdList = await getCheatDaysInRange(sStr, td);
+      setCheatDates(new Set(cdList.map(c => c.date)));
+    })();
   }, [loadLogs]);
 
   /* ─── Open add sheet ─── */
@@ -123,6 +143,27 @@ export default function DietPage() {
       showToast({ type: "error", message: "删除失败" });
     }
   }, [deleteTarget, loadLogs]);
+
+  /* ─── Cheat Day ─── */
+
+  const toggleCheatDay = useCallback(async () => {
+    const td = todayStr();
+    try {
+      if (isTodayCheat) {
+        await removeCheatDay(td);
+        setIsTodayCheat(false);
+        setCheatDates((prev) => { const next = new Set(prev); next.delete(td); return next; });
+        showToast({ type: "info", message: "已取消放纵日" });
+      } else {
+        await addCheatDay(td);
+        setIsTodayCheat(true);
+        setCheatDates((prev) => new Set(prev).add(td));
+        showToast({ type: "success", message: "今日设为放纵日 🍰" });
+      }
+    } catch {
+      showToast({ type: "error", message: "操作失败" });
+    }
+  }, [isTodayCheat]);
 
   /* ─── Group by date ─── */
 
@@ -223,6 +264,27 @@ export default function DietPage() {
               </motion.button>
             ))}
           </div>
+          {/* Cheat day toggle */}
+          <div className="mt-4 pt-4 flex items-center justify-between" style={{ borderTop: "1px solid var(--lifeflow-border)" }}>
+            <div className="flex items-center gap-2">
+              <Cake className="h-4 w-4" style={{ color: isTodayCheat ? "#F59E0B" : "var(--color-text-disabled)" }} />
+              <span className="text-[13px] font-medium" style={{ color: "var(--color-text-secondary)" }}>
+                放纵日
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={toggleCheatDay}
+              className="w-12 h-7 rounded-full relative transition-colors"
+              style={{ background: isTodayCheat ? "#F59E0B" : "var(--lifeflow-border)" }}
+            >
+              <motion.div
+                animate={{ x: isTodayCheat ? 20 : 2 }}
+                transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                className="absolute top-0.5 w-6 h-6 rounded-full bg-white shadow-sm"
+              />
+            </button>
+          </div>
         </motion.div>
       </div>
 
@@ -250,8 +312,11 @@ export default function DietPage() {
               className="mb-4 p-4"
               style={{ background: "var(--color-surface-card)", borderRadius: "20px", boxShadow: "var(--shadow-card)" }}
             >
-              <h3 className="text-[13px] font-semibold mb-2" style={{ color: "var(--color-text-disabled)" }}>
+              <h3 className="text-[13px] font-semibold mb-2 flex items-center gap-2" style={{ color: "var(--color-text-disabled)" }}>
                 {formatDate(date)}
+                {cheatDates.has(date) && (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium" style={{ background: "rgba(245,158,11,0.12)", color: "#F59E0B" }}>放纵日</span>
+                )}
               </h3>
               {items.map((item) => (
                 <div

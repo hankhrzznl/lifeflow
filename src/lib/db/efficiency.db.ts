@@ -15,6 +15,8 @@ export interface Goal {
   note?: string;                  // 备注，默认 ''
   color?: string;                 // 项目标签颜色，默认 #5865F2
   quadrant?: 'q1' | 'q2' | 'q3' | 'q4';  // 四象限分类，默认 q2
+  streak?: number;               // 习惯连续天数，仅 goalType='habit'
+  daysLog?: Record<string, boolean>;  // 打卡记录 YYYY-MM-DD → true，仅 goalType='habit'
   createdAt: number;
 }
 
@@ -151,6 +153,13 @@ export class EfficiencyDB extends Dexie {
     });
     this.version(7).stores({
       goals: '&id, status, deadline, quadrant',
+      tasks: '++id, title, type, status, goalId, planId, startTime, endTime, dueDate',
+      habits: '++id, title, goalId, streak, frequency',
+      scheduleTasks: '&id, date, goalId, isCompleted, isImportant, category',
+      projects: '&id, name',
+    });
+    this.version(8).stores({
+      goals: '&id, status, deadline, quadrant, goalType, streak',
       tasks: '++id, title, type, status, goalId, planId, startTime, endTime, dueDate',
       habits: '++id, title, goalId, streak, frequency',
       scheduleTasks: '&id, date, goalId, isCompleted, isImportant, category',

@@ -3,7 +3,7 @@
 import { useMemo, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, Target, Sparkles, ListTodo as ListIcon, CheckCircle2, Plus } from "lucide-react";
+import { ChevronLeft, Target, ListTodo as ListIcon, CheckCircle2 } from "lucide-react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { efficiencyDB, getAllGoals, type Goal, type ScheduleTask } from "@/lib/db/efficiency.db";
 import { getScheduleTasksByDate, updateScheduleTask } from "@/lib/db/efficiency.db";
@@ -29,7 +29,6 @@ const QUADRANT_LABELS: Record<string, string> = {
 
 const CATEGORIES = [
   { key: "task", label: "目标", icon: Target, color: "var(--lifeflow-primary)" },
-  { key: "habit", label: "习惯", icon: Sparkles, color: "var(--state-success)" },
   { key: "chore", label: "琐事", icon: ListIcon, color: "var(--state-warning)" },
 ] as const;
 
@@ -46,35 +45,21 @@ export default function CategoryPage() {
   const allScheduleTasks = useLiveQuery(() => efficiencyDB.scheduleTasks.toArray(), [], [] as ScheduleTask[]);
   const today = todayStr();
 
-  // Today's schedule tasks grouped by category
+  // Goals grouped by category (task=all goals, chore=loose scheduleTasks)
   const categorized = useMemo(() => {
     const map: Record<string, { goal: Goal | null; tasks: ScheduleTask[] }[]> = {
       task: [],
-      habit: [],
       chore: [],
     };
 
-    // 1. Goals → "task" category
+    // 1. Goals → "task" category (includes goalType='count' and 'habit')
     const activeGoals = (goals ?? []).filter(g => g.status === "active" || g.status === "paused");
     for (const goal of activeGoals) {
       const tasks = (allScheduleTasks ?? []).filter(t => t.goalId === goal.id);
       map.task.push({ goal, tasks });
     }
 
-    // 2. Habits → "habit" category
-    const habitTasks = (allScheduleTasks ?? []).filter(t => t.category === "habit");
-    // Group by goalId or just list individually
-    const habitGroups = new Map<string, ScheduleTask[]>();
-    for (const t of habitTasks) {
-      const key = t.goalId || t.id;
-      if (!habitGroups.has(key)) habitGroups.set(key, []);
-      habitGroups.get(key)!.push(t);
-    }
-    for (const [_, tasks] of habitGroups) {
-      map.habit.push({ goal: null, tasks });
-    }
-
-    // 3. Chores → "chore" category
+    // 2. Chores → "chore" category
     const choreTasks = (allScheduleTasks ?? []).filter(t => t.category === "chore");
     for (const t of choreTasks) {
       map.chore.push({ goal: null, tasks: [t] });
@@ -104,7 +89,7 @@ export default function CategoryPage() {
             分类视图
           </h1>
           <p className="text-[12px] font-medium mt-0.5" style={{ color: "var(--color-text-secondary)" }}>
-            目标 · 习惯 · 琐事
+            目标 · 琐事
           </p>
         </div>
       </div>
@@ -131,7 +116,6 @@ export default function CategoryPage() {
             {(["q1", "q2", "q3", "q4"] as const).map((q) => {
               const qItems = items.filter((item) => {
                 if (cat.key === "task") return item.goal?.quadrant === q || (!item.goal?.quadrant && q === "q2");
-                if (cat.key === "habit") return q === "q2"; // Habits default to q2
                 if (cat.key === "chore") return item.tasks[0]?.quadrant === q || (!item.tasks[0]?.quadrant && q === "q2");
                 return false;
               });
@@ -155,9 +139,12 @@ export default function CategoryPage() {
 
                       if (isGoal) {
                         const goal = item.goal!;
+                        const isHabit = goal.goalType === "habit";
                         const totalTasks = tasks.length;
                         const doneTasks = tasks.filter(t => t.isCompleted).length;
-                        const pct = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : goal.progress;
+                        const pct = isHabit
+                          ? (goal.streak ? Math.min(100, Math.round((goal.streak / (goal.targetCount || 30)) * 100)) : 0)
+                          : totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : goal.progress;
 
                         return (
                           <motion.div
@@ -172,18 +159,23 @@ export default function CategoryPage() {
                             }}
                           >
                             <div className="flex-1 min-w-0">
-                              <div className="text-[14px] font-semibold truncate" style={{ color: "var(--color-text-primary)" }}>
-                                {goal.title}
+                              <div className="flex items-center gap-2">
+                                <div className="text-[14px] font-semibold truncate" style={{ color: "var(--color-text-primary)" }}>
+                                  {goal.title}
+                                </div>
+                                {isHabit && (
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium" style={{ background: "rgba(16,185,129,0.12)", color: "#10B981" }}>习惯</span>
+                                )}
                               </div>
                               <div className="text-[11px] mt-0.5" style={{ color: "var(--color-text-secondary)" }}>
-                                {tasks.length > 0 ? `${doneTasks}/${totalTasks} 项完成` : "暂无任务"}
+                                {isHabit
+                                  ? `连续 ${goal.streak || 0} 天 · 目标 ${goal.targetCount || 30} 天`
+                                  : tasks.length > 0 ? `${doneTasks}/${totalTasks} 项完成` : "暂无任务"}
                               </div>
                             </div>
-                            {tasks.length > 0 && (
-                              <div className="w-9 h-9 rounded-full flex items-center justify-center text-[11px] font-bold flex-shrink-0" style={{ background: pct === 100 ? "rgba(52,199,89,0.15)" : "var(--lifeflow-muted)", color: pct === 100 ? "#34C759" : "var(--color-text-secondary)" }}>
-                                {pct}%
-                              </div>
-                            )}
+                            <div className="w-9 h-9 rounded-full flex items-center justify-center text-[11px] font-bold flex-shrink-0" style={{ background: pct === 100 ? "rgba(52,199,89,0.15)" : "var(--lifeflow-muted)", color: pct === 100 ? "#34C759" : "var(--color-text-secondary)" }}>
+                              {pct}%
+                            </div>
                           </motion.div>
                         );
                       }

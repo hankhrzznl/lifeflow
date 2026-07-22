@@ -464,25 +464,32 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     try {
-      const { lifeDB } = await import("@/lib/db/life.db");
+      const { efficiencyDB } = await import("@/lib/db/efficiency.db");
       const today = new Date().toISOString().slice(0, 10);
-      const existing = await lifeDB.habits.where("name").equals(name).first();
-      if (existing) {
-        const days = existing.days || {};
-        days[today] = true;
-        await lifeDB.habits.update(existing.id!, { days, streak: (existing.streak || 0) + 1 });
+      
+      // Find existing habit-type goal by title
+      let goal = await efficiencyDB.goals.where({ goalType: "habit" as any }).and((g: any) => g.title === name).first();
+      
+      if (goal) {
+        const daysLog = goal.daysLog || {};
+        daysLog[today] = true;
+        const streak = Object.keys(daysLog).length;
+        await efficiencyDB.goals.update(goal.id, { daysLog, streak } as any);
       } else {
-        const id = crypto.randomUUID();
-        await lifeDB.habits.add({
-          id, name, icon: "CheckSquare", color: "#10B981",
-          days: { [today]: true }, streak: 1, createdAt: Date.now(),
+        const goalId = crypto.randomUUID();
+        await efficiencyDB.goals.add({
+          id: goalId, title: name, deadline: new Date().toISOString().slice(0, 10),
+          progress: 0, status: "active", goalType: "habit", targetCount: 30,
+          note: "", color: "#10B981", quadrant: "q2",
+          streak: 1, daysLog: { [today]: true }, createdAt: Date.now(),
         } as any);
+        goal = { id: goalId } as any;
       }
       addAssistantMessage(`已打卡：${name}`);
       const { addScheduleTask } = await import("@/lib/db/efficiency.db");
       const newTaskId = await addScheduleTask({
         title: `打卡 ${name}`,
-        type: 'single', date: today, goalId: null,
+        type: 'single', date: today, goalId: goal!.id,
         quadrant: 'q2', isCompleted: true, plannedTime: 0, actualTime: 1,
         isImportant: false, note: '', category: 'habit' as any,
         sourceModule: 'habit', sourceLogId: today,
@@ -495,16 +502,16 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
 
   const handleQueryHabit = useCallback(async () => {
     try {
-      const { lifeDB } = await import("@/lib/db/life.db");
-      const habits = await lifeDB.habits.toArray();
-      if (habits.length === 0) {
+      const { efficiencyDB } = await import("@/lib/db/efficiency.db");
+      const habitGoals = await efficiencyDB.goals.where("goalType").equals("habit" as any).toArray();
+      if (habitGoals.length === 0) {
         addAssistantMessage("还没有习惯记录。说「冥想打卡」来记录吧！");
         return;
       }
       const today = new Date().toISOString().slice(0, 10);
-      const lines = habits.map((h: any) => {
-        const done = h.days?.[today];
-        return `• ${h.name} — ${done ? "✅ 今日已打卡" : `连续 ${h.streak || 0} 天`}`;
+      const lines = habitGoals.map((h: any) => {
+        const done = h.daysLog?.[today];
+        return `• ${h.title} — ${done ? "✅ 今日已打卡" : `连续 ${h.streak || 0} 天`}`;
       });
       addAssistantMessage(`习惯记录：\n${lines.join("\n")}`);
     } catch {
@@ -999,13 +1006,15 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
       } else if (action.sourceModule === 'medication' && action.sourceLogId) {
         // Medication has no separate DB table; schedule task already deleted above
       } else if (action.sourceModule === 'habit' && action.sourceLogId) {
-        const { lifeDB } = await import("@/lib/db/life.db");
-        const habits = await lifeDB.habits.toArray();
-        for (const h of habits) {
-          if (h.days?.[action.sourceLogId]) {
-            delete h.days[action.sourceLogId];
-            h.streak = Math.max(0, (h.streak || 1) - 1);
-            await lifeDB.habits.update(h.id!, { days: h.days, streak: h.streak });
+        // Habit is now stored as a Goal in efficiencyDB
+        const { efficiencyDB } = await import("@/lib/db/efficiency.db");
+        const habitGoals = await efficiencyDB.goals.where("goalType").equals("habit" as any).toArray();
+        for (const g of habitGoals) {
+          if ((g as any).daysLog?.[action.sourceLogId]) {
+            const daysLog = { ...(g as any).daysLog };
+            delete daysLog[action.sourceLogId];
+            const streak = Object.keys(daysLog).length;
+            await efficiencyDB.goals.update(g.id, { daysLog, streak } as any);
           }
         }
       } else if (action.sourceModule === 'notes' && action.sourceLogId) {

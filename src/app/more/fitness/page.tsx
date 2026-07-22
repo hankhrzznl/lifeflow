@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, Minus, Plus, Trash2, Dumbbell, Heart, Grip, RotateCw, Zap, Star, TrendingUp } from "lucide-react";
+import { ChevronLeft, Minus, Plus, Trash2, Dumbbell, Heart, Grip, RotateCw, Zap, Star, TrendingUp, CalendarDays, Target } from "lucide-react";
 import { useHealthStore } from "@/lib/store/healthStore";
-import type { WorkoutSession, TrainingType } from "@/lib/db/health.db";
+import type { WorkoutSession, TrainingType, TrainingPlan } from "@/lib/db/health.db";
 import { showToast } from "@/components/ui/Toast";
+import { initializeTrainingPlans, getActiveTrainingPlans, getMonthLabel } from "@/lib/training-plan-generator";
 
 /* ────────── Training Systems Definitions ────────── */
 
@@ -145,6 +146,8 @@ export default function FitnessPage() {
 
   const [loading, setLoading] = useState(true);
   const [expandedSession, setExpandedSession] = useState<string | null>(null);
+  const [tab, setTab] = useState<'record' | 'plan'>('record');
+  const [plans, setPlans] = useState<TrainingPlan[]>([]);
 
   /* ─── Record sheet state ─── */
   const [showRecord, setShowRecord] = useState(false);
@@ -166,6 +169,8 @@ export default function FitnessPage() {
 
   useEffect(() => {
     loadFitnessDataV2().finally(() => setLoading(false));
+    // Initialize training plans
+    initializeTrainingPlans().then(() => getActiveTrainingPlans().then(setPlans));
   }, [loadFitnessDataV2]);
 
   /* ─── Close exercise dropdown on outside click ─── */
@@ -388,6 +393,33 @@ export default function FitnessPage() {
         </div>
       </header>
 
+      {/* ─── Tabs ─── */}
+      <div className="px-4 mb-4">
+        <div className="flex rounded-full p-1" style={{ background: "var(--lifeflow-muted)" }}>
+          {(['record', 'plan'] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className="flex-1 py-1.5 rounded-full text-[13px] font-medium transition-all"
+              style={{
+                background: tab === t ? "var(--color-surface-card)" : "transparent",
+                color: tab === t ? "var(--color-text-primary)" : "var(--color-text-secondary)",
+                boxShadow: tab === t ? "var(--shadow-card)" : "none",
+              }}
+            >
+              {t === 'record' ? '记录' : '计划'}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* ─── Plan View ─── */}
+      {tab === 'plan' && (
+        <TrainingPlanView plans={plans} />
+      )}
+
+      {/* ─── Record View ─── */}
+      {tab === 'record' && (
       <div className="px-4 pt-0 pb-10 space-y-4">
         {/* ─── Today Summary Card ─── */}
         <motion.div
@@ -698,6 +730,7 @@ export default function FitnessPage() {
           </motion.div>
         )}
       </div>
+      )}
 
       {/* ─── Record Bottom Sheet ─── */}
       <AnimatePresence>
@@ -870,5 +903,138 @@ export default function FitnessPage() {
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+/* ================================================================
+ * Training Plan View Component
+ * ================================================================ */
+
+function TrainingPlanView({ plans }: { plans: TrainingPlan[] }) {
+  const { primary, secondary } = useMemo(() => {
+    const now = new Date();
+    const startYear = 2026; const startMonth = 7;
+    const totalMonths = (now.getFullYear() - startYear) * 12 + (now.getMonth() + 1 - startMonth);
+    const idx = ((totalMonths % 3) + 3) % 3;
+    const types: TrainingType[] = ["farmer_walk", "weighted_rotation", "power_training"];
+    const p = types[idx];
+    const s = types.filter((_, i) => i !== idx);
+    return { primary: p, secondary: s };
+  }, []);
+
+  const staple = plans.filter(p => p.role === 'staple' && p.active);
+  const rotating = plans.filter(p => p.role === 'rotating' && p.active);
+
+  if (plans.length === 0) {
+    return (
+      <div className="px-4 pt-4 text-center">
+        <div
+          className="p-8 rounded-[20px] flex flex-col items-center gap-4"
+          style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}
+        >
+          <CalendarDays className="w-10 h-10" style={{ color: "var(--color-text-disabled)" }} />
+          <p className="text-[15px] font-medium" style={{ color: "var(--color-text-secondary)" }}>还没有训练计划</p>
+          <p className="text-[13px]" style={{ color: "var(--color-text-disabled)" }}>刷新页面即可自动生成</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="px-4 pt-0 pb-10 space-y-4">
+      {/* Monthly rotation summary */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="p-4 rounded-[20px]"
+        style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}
+      >
+        <div className="flex items-center gap-2 mb-3">
+          <Star className="w-4 h-4" style={{ color: "#F59E0B" }} />
+          <span className="text-[14px] font-semibold" style={{ color: "var(--color-text-primary)" }}>
+            {new Date().getMonth() + 1}月轮换
+          </span>
+        </div>
+        <div className="flex items-center gap-3 text-[13px]">
+          <span className="px-2.5 py-1 rounded-full font-medium text-white" style={{ background: TRAINING_SYSTEMS.find(s => s.type === primary)?.color }}>
+            {TRAINING_SYSTEMS.find(s => s.type === primary)?.label} 主
+          </span>
+          {secondary.map(t => {
+            const sys = TRAINING_SYSTEMS.find(s => s.type === t);
+            return (
+              <span key={t} className="px-2 py-1 rounded-full text-[12px]" style={{ background: `${sys?.color}15`, color: sys?.color }}>
+                {sys?.label} 辅
+              </span>
+            );
+          })}
+        </div>
+      </motion.div>
+
+      {/* Staple plans */}
+      {staple.length > 0 && (
+        <div>
+          <div className="flex items-center gap-2 mb-2 px-1">
+            <Target className="w-4 h-4" style={{ color: "var(--lifeflow-primary)" }} />
+            <h3 className="text-[14px] font-semibold" style={{ color: "var(--color-text-primary)" }}>全年主食</h3>
+          </div>
+          {staple.map(p => (
+            <PlanCard key={p.id} plan={p} />
+          ))}
+        </div>
+      )}
+
+      {/* Rotating plans */}
+      {rotating.length > 0 && (
+        <div>
+          <div className="flex items-center gap-2 mb-2 px-1">
+            <RotateCw className="w-4 h-4" style={{ color: "#F59E0B" }} />
+            <h3 className="text-[14px] font-semibold" style={{ color: "var(--color-text-primary)" }}>月度轮换</h3>
+          </div>
+          {rotating.map(p => {
+            const isPrimary = p.trainingType === primary;
+            return (
+              <PlanCard key={p.id} plan={p} highlight={isPrimary} />
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PlanCard({ plan, highlight }: { plan: TrainingPlan; highlight?: boolean }) {
+  const sys = TRAINING_SYSTEMS.find(s => s.type === plan.trainingType);
+  const dayLabels = ["", "周一", "周二", "周三", "周四", "周五", "周六", "周日"];
+
+  return (
+    <motion.div
+      whileTap={{ scale: 0.98 }}
+      className="p-3.5 rounded-[16px] mb-2 flex items-center gap-3"
+      style={{
+        background: "var(--color-surface-card)",
+        boxShadow: "var(--shadow-card)",
+        borderLeft: `3px solid ${sys?.color || "#94A3B8"}`,
+      }}
+    >
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <span className="text-[14px] font-semibold truncate" style={{ color: "var(--color-text-primary)" }}>{plan.name}</span>
+          {highlight && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium" style={{ background: "rgba(245,158,11,0.12)", color: "#F59E0B" }}>本月主项</span>
+          )}
+          <span className="px-1.5 py-0.5 rounded text-[10px] font-medium" style={{ background: "var(--lifeflow-brand-50)", color: "var(--lifeflow-primary)" }}>
+            {plan.role === 'staple' ? '主食' : '轮换'}
+          </span>
+        </div>
+        <div className="text-[11px] mt-0.5" style={{ color: "var(--color-text-secondary)" }}>
+          {plan.frequency === 'weekly' && plan.weeklyDays
+            ? `${plan.weeklyDays?.map(d => dayLabels[d]).join('、')} · 每周${plan.weeklyDays.length}次`
+            : `每月${plan.monthlyDays?.join('、')}号`}
+        </div>
+        <div className="text-[11px] mt-0.5 truncate" style={{ color: "var(--color-text-disabled)" }}>
+          {plan.exercises.join('、')}
+        </div>
+      </div>
+    </motion.div>
   );
 }

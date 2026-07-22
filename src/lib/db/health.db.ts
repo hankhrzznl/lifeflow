@@ -146,6 +146,20 @@ export interface ExerciseSet {
   isPR: boolean;
 }
 
+export interface TrainingPlan {
+  id: string;
+  name: string;
+  trainingType: TrainingType;
+  role: 'staple' | 'rotating';   // 主食=全年固定, 轮换=月度主辅
+  frequency: 'weekly' | 'monthly';
+  weeklyDays?: number[];         // 周循环: [1,3,5]=周一三五
+  monthlyDays?: number[];        // 月计划: [1,15]=每月1号和15号
+  exercises: string[];
+  goalId?: string;               // FK → Goal
+  active: boolean;
+  createdAt: number;
+}
+
 // ─── Database ────────────────────────────────────────────────
 
 export class HealthDB extends Dexie {
@@ -162,6 +176,7 @@ export class HealthDB extends Dexie {
   exercisesV2!: Table<ExerciseV2, string>;
   workoutSessions!: Table<WorkoutSession, string>;
   stretchLogs!: Table<StretchLog, number>;
+  trainingPlans!: Table<TrainingPlan, string>;
 
   constructor() {
     super('LifeFlowHealth');
@@ -220,6 +235,10 @@ export class HealthDB extends Dexie {
     // v5: 体态拉伸记录表
     this.version(5).stores({
       stretchLogs: "++id, exerciseName, postureIssue, date, createdAt",
+    });
+    // v6: 训练计划
+    this.version(6).stores({
+      trainingPlans: "&id, trainingType, active, createdAt",
     });
   }
 }

@@ -1,6 +1,6 @@
 /**
  * 训练计划自动生成器
- * 五大训练内容 → Goal + ScheduleTask 自动编排
+ * 五大训练体系 → 统一挂在一个「强健体魄」Goal下作为打卡项
  */
 
 import { healthDB, type TrainingPlan, type TrainingType } from "@/lib/db/health.db";
@@ -53,9 +53,8 @@ export function getMonthlyRotation(monthOffset: number = 0): {
   monthIndex: number;
 } {
   const now = new Date();
-  // Month index from July 2026 as start
   const startYear = 2026;
-  const startMonth = 7; // July
+  const startMonth = 7;
   const totalMonths = (now.getFullYear() - startYear) * 12 + (now.getMonth() + 1 - startMonth) + monthOffset;
   const idx = ((totalMonths % 3) + 3) % 3;
   const primary = ROTATING_TYPES[idx];
@@ -70,30 +69,89 @@ export function getMonthLabel(): string {
 }
 
 // ============================================================
-// 计划初始化（一键创建5个TrainingPlan + 对应Goal + 本周ScheduleTask）
+// 计划初始化（一个Goal「强健体魄」+ 5个TrainingPlan + ScheduleTask）
 // ============================================================
+
+const MASTER_GOAL_TITLE = "强健体魄";
 
 export async function initializeTrainingPlans(): Promise<{ created: number }> {
   const existing = await healthDB.trainingPlans.count();
-  if (existing > 0) return { created: 0 };
+  if (existing > 0) {
+    // Already initialized — ensure all plans point to the correct master goal
+    return await repairPlans();
+  }
 
+  // 1. Create or find the master goal
+  const masterGoal = await ensureMasterGoal();
+
+  // 2. Clean up any orphan training goals
+  await cleanupOrphanTrainingGoals(masterGoal.id);
+
+  // 3. Create TrainingPlans
   const { primary, secondary } = getMonthlyRotation();
   let created = 0;
 
   for (const sys of TRAINING_SYSTEMS) {
-    const plan: Omit<TrainingPlan, 'id'> = getPlanDefaults(sys, primary, secondary);
-    const goal = await createGoalForPlan(plan);
+    const planDef = getPlanDefaults(sys, primary, secondary);
     const planId = crypto.randomUUID();
     await healthDB.trainingPlans.add({
-      ...plan, id: planId, goalId: goal.id, active: true, createdAt: Date.now(),
+      ...planDef, id: planId, goalId: masterGoal.id, streak: 0, daysLog: {}, active: true, createdAt: Date.now(),
     } as TrainingPlan);
     created++;
 
-    // Generate this week's ScheduleTasks
-    await generateScheduleTasksForPlan({ ...plan, id: planId, goalId: goal.id, active: true, createdAt: Date.now() } as TrainingPlan, goal);
+    await generateScheduleTasksForPlan({ ...planDef, id: planId, goalId: masterGoal.id, streak: 0, daysLog: {}, active: true, createdAt: Date.now() } as TrainingPlan, masterGoal.id);
   }
 
   return { created };
+}
+
+/** Ensure master goal exists; returns it if already present */
+async function ensureMasterGoal(): Promise<Goal> {
+  const existing = await efficiencyDB.goals.where("title").equals(MASTER_GOAL_TITLE).first();
+  if (existing) return existing;
+
+  const goalId = crypto.randomUUID();
+  await efficiencyDB.goals.add({
+    id: goalId,
+    title: MASTER_GOAL_TITLE,
+    deadline: getMonthEnd(),
+    progress: 0,
+    status: 'active',
+    goalType: 'count',
+    targetCount: 5,  // 5个训练体系
+    note: "健身房复合力量、低强度有氧、农夫行走、负重旋转、爆发力训练",
+    color: "#2563EB",
+    quadrant: 'q2',
+    createdAt: Date.now(),
+  } as Goal);
+
+  return { id: goalId } as Goal;
+}
+
+/** Delete orphan goals that were created by old initializeTrainingPlans */
+async function cleanupOrphanTrainingGoals(masterGoalId: string): Promise<void> {
+  const trainingLabels = TRAINING_SYSTEMS.map(s => s.label);
+  const allGoals = await efficiencyDB.goals.where("status").notEqual("archived").toArray();
+  for (const g of allGoals) {
+    if (g.id === masterGoalId) continue;
+    if (trainingLabels.includes(g.title)) {
+      await efficiencyDB.goals.delete(g.id);
+    }
+  }
+}
+
+/** Ensure existing plans' goalId points to master goal */
+async function repairPlans(): Promise<{ created: number }> {
+  const masterGoal = await ensureMasterGoal();
+  await cleanupOrphanTrainingGoals(masterGoal.id);
+
+  const plans = await healthDB.trainingPlans.toArray();
+  for (const p of plans) {
+    if (p.goalId !== masterGoal.id) {
+      await healthDB.trainingPlans.update(p.id, { goalId: masterGoal.id } as any);
+    }
+  }
+  return { created: 0 };
 }
 
 function getPlanDefaults(sys: TrainingSystemDef, primary: TrainingType, secondary: TrainingType[]): Omit<TrainingPlan, 'id'> {
@@ -103,59 +161,20 @@ function getPlanDefaults(sys: TrainingSystemDef, primary: TrainingType, secondar
     if (sys.type === 'gym_compound') {
       return { name: sys.label, trainingType: sys.type, role: 'staple', frequency: 'weekly', weeklyDays: [1, 3, 5], exercises: sys.exercises, active: true, createdAt: Date.now() };
     }
-    // low_cardio
     return { name: sys.label, trainingType: sys.type, role: 'staple', frequency: 'weekly', weeklyDays: [2, 4], exercises: sys.exercises, active: true, createdAt: Date.now() };
   }
 
-  // Rotating
   if (sys.type === primary) {
     return { name: sys.label, trainingType: sys.type, role: 'rotating', frequency: 'weekly', weeklyDays: [1, 3, 5], exercises: sys.exercises, active: true, createdAt: Date.now() };
   }
-  // Secondary
   return { name: sys.label, trainingType: sys.type, role: 'rotating', frequency: 'weekly', weeklyDays: [6], exercises: sys.exercises, active: true, createdAt: Date.now() };
 }
 
 // ============================================================
-// Goal 创建
+// 生成本周 ScheduleTask
 // ============================================================
 
-async function createGoalForPlan(plan: Omit<TrainingPlan, 'id'>): Promise<Goal> {
-  const goalId = crypto.randomUUID();
-  const today = localDateStr(new Date());
-  const isStaple = plan.role === 'staple';
-  const isPrimary = plan.frequency === 'weekly' && (plan.weeklyDays?.length ?? 0) > 2;
-
-  const quadrant = isStaple ? 'q2' : isPrimary ? 'q2' : 'q3';
-
-  await efficiencyDB.goals.add({
-    id: goalId,
-    title: plan.name,
-    deadline: getMonthEnd(),
-    progress: 0,
-    status: 'active',
-    goalType: 'count',
-    targetCount: isStaple ? 12 : isPrimary ? 12 : 4,
-    note: plan.exercises.join('、'),
-    color: '#2563EB',
-    quadrant,
-    createdAt: Date.now(),
-  } as Goal);
-
-  return { id: goalId } as Goal;
-}
-
-function getMonthEnd(): string {
-  const d = new Date();
-  d.setMonth(d.getMonth() + 1);
-  d.setDate(0);
-  return localDateStr(d);
-}
-
-// ============================================================
-// 生成本周/本月 ScheduleTask
-// ============================================================
-
-export async function generateScheduleTasksForPlan(plan: TrainingPlan, goal: Goal): Promise<void> {
+export async function generateScheduleTasksForPlan(plan: TrainingPlan, masterGoalId: string): Promise<void> {
   if (!plan.active) return;
 
   if (plan.frequency === 'weekly' && plan.weeklyDays) {
@@ -163,13 +182,12 @@ export async function generateScheduleTasksForPlan(plan: TrainingPlan, goal: Goa
 
     for (const dayOfWeek of plan.weeklyDays) {
       const date = getDateFromDayOfWeek(start, dayOfWeek);
-      if (date < localDateStr(new Date())) continue; // Skip past days
+      if (date < localDateStr(new Date())) continue;
       if (date > end) continue;
 
-      // Check if already exists
       const existing = await efficiencyDB.scheduleTasks
-        .where({ goalId: goal.id })
-        .and(t => t.date === date)
+        .where({ goalId: masterGoalId })
+        .and(t => t.date === date && t.title === plan.name)
         .count();
       if (existing > 0) continue;
 
@@ -177,39 +195,12 @@ export async function generateScheduleTasksForPlan(plan: TrainingPlan, goal: Goa
         title: plan.name,
         type: 'single',
         date,
-        goalId: goal.id,
-        quadrant: goal.quadrant || 'q2',
+        goalId: masterGoalId,
+        quadrant: 'q2',
         isCompleted: false,
-        plannedTime: 60,
+        plannedTime: plan.role === 'staple' ? 60 : plan.trainingType === plan.trainingType ? 45 : 20,
         actualTime: 0,
-        isImportant: goal.quadrant === 'q1' || goal.quadrant === 'q2',
-        note: plan.exercises.join('、'),
-        category: 'task',
-        sourceModule: 'training',
-        sourceLogId: plan.trainingType,
-      });
-    }
-  } else if (plan.frequency === 'monthly' && plan.monthlyDays) {
-    for (const day of plan.monthlyDays) {
-      const date = getDateFromMonthDay(day);
-      if (date < localDateStr(new Date())) continue;
-
-      const existing = await efficiencyDB.scheduleTasks
-        .where({ goalId: goal.id })
-        .and(t => t.date === date)
-        .count();
-      if (existing > 0) continue;
-
-      await addScheduleTask({
-        title: plan.name,
-        type: 'single',
-        date,
-        goalId: goal.id,
-        quadrant: 'q3',
-        isCompleted: false,
-        plannedTime: 30,
-        actualTime: 0,
-        isImportant: false,
+        isImportant: true,
         note: plan.exercises.join('、'),
         category: 'task',
         sourceModule: 'training',
@@ -241,23 +232,21 @@ function getCurrentWeek(): { start: string; end: string } {
 function getDateFromDayOfWeek(weekStart: string, targetDow: number): string {
   const [y, m, d] = weekStart.split('-').map(Number);
   const base = new Date(y, m - 1, d);
-  const currentDow = base.getDay() || 7; // Sunday=7
+  const currentDow = base.getDay() || 7;
   const offset = targetDow - currentDow;
   base.setDate(base.getDate() + offset);
   return localDateStr(base);
 }
 
-function getDateFromMonthDay(day: number): string {
-  const now = new Date();
-  const date = new Date(now.getFullYear(), now.getMonth(), day);
-  if (date <= now) {
-    date.setMonth(date.getMonth() + 1);
-  }
-  return localDateStr(date);
+function getMonthEnd(): string {
+  const d = new Date();
+  d.setMonth(d.getMonth() + 1);
+  d.setDate(0);
+  return localDateStr(d);
 }
 
 // ============================================================
-// 获取当前所有训练计划
+// 查询
 // ============================================================
 
 export async function getActiveTrainingPlans(): Promise<TrainingPlan[]> {
@@ -266,4 +255,8 @@ export async function getActiveTrainingPlans(): Promise<TrainingPlan[]> {
 
 export async function getTrainingPlansByRole(role: 'staple' | 'rotating'): Promise<TrainingPlan[]> {
   return healthDB.trainingPlans.filter(p => p.active && p.role === role).toArray();
+}
+
+export async function getMasterGoal(): Promise<Goal | undefined> {
+  return efficiencyDB.goals.where("title").equals(MASTER_GOAL_TITLE).first();
 }

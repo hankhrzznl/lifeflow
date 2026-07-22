@@ -155,7 +155,9 @@ export interface TrainingPlan {
   weeklyDays?: number[];         // 周循环: [1,3,5]=周一三五
   monthlyDays?: number[];        // 月计划: [1,15]=每月1号和15号
   exercises: string[];
-  goalId?: string;               // FK → Goal
+  goalId?: string;               // FK → Goal（所有训练计划共享同一个「强健体魄」Goal）
+  streak?: number;               // 连续打卡天数
+  daysLog?: Record<string, boolean>;  // 打卡记录
   active: boolean;
   createdAt: number;
 }

@@ -71,7 +71,7 @@ const REMINDER_ICONS: Record<string, React.ComponentType<any>> = {
 export default function HomePage() {
   const today = todayStr();
   const now = new Date();
-  const { openChat, sendMessage } = useAgent();
+  const { sendAndNavigate } = useAgent();
   const router = useRouter();
 
   // ── 数据源 ──
@@ -208,7 +208,7 @@ export default function HomePage() {
                   去事项页
                 </Link>
                 <button
-                  onClick={() => { openChat(); sendMessage("帮我安排今天的重要任务"); }}
+                  onClick={() => { sendAndNavigate("帮我安排今天的重要任务"); }}
                   className="py-2.5 px-4 rounded-full text-[14px] font-medium active:opacity-70"
                   style={{ background: "var(--lifeflow-muted)", color: "var(--color-text-secondary)" }}
                 >
@@ -231,7 +231,7 @@ export default function HomePage() {
             {QUICK_PROMPTS.map((p) => (
               <button
                 key={p.label}
-                onClick={() => { openChat(); sendMessage(p.label); }}
+                onClick={() => { sendAndNavigate(p.label); }}
                 className="flex-1 py-2.5 px-2 rounded-full text-[12px] font-medium flex items-center justify-center gap-1.5 active:opacity-70 transition-opacity"
                 style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)", color: "var(--color-text-primary)" }}
               >

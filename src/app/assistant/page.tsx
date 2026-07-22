@@ -2,10 +2,8 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
 import { ChevronLeft, Bot, Trash2, Mic, X as XIcon } from "lucide-react";
 import { useAgent } from "@/components/agent/AgentProvider";
-import type { AgentMessage as AgentMsgType, SuggestionCardData } from "@/lib/agent-state";
 import { AgentMessage } from "@/components/agent/AgentMessage";
 import { TypingIndicator } from "@/components/agent/TypingIndicator";
 import { AgentInput } from "@/components/agent/AgentInput";
@@ -56,16 +54,14 @@ function formatTime(ts: number) {
 // ─── 主组件 ────────────────────────────────────────────────────
 export default function AssistantPage() {
   const router = useRouter();
-  const { messages, state: stateCtx, closeChat } = useAgent();
+  const { messages, state: stateCtx, sendMessage } = useAgent();
   const [historyCleared, setHistoryCleared] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   // 语音识别
   const handleVoiceResult = useCallback((text: string) => {
-    // Auto-send: need to access handleSubmit from AgentProvider
-    // We'll use a global event approach - dispatch a custom event
-    window.dispatchEvent(new CustomEvent("lifeflow:sendMessage", { detail: text }));
-  }, []);
+    sendMessage(text);
+  }, [sendMessage]);
 
   const { listening, supported, start: startVoice, stop: stopVoice } = useVoice(handleVoiceResult);
 
@@ -128,7 +124,7 @@ export default function AssistantPage() {
               {["今天有什么提醒？", "帮我排一下日程", "复盘一下这周", "记录喝水200ml"].map((q) => (
                 <button
                   key={q}
-                  onClick={() => window.dispatchEvent(new CustomEvent("lifeflow:sendMessage", { detail: q }))}
+                  onClick={() => sendMessage(q)}
                   className="px-3 py-2 rounded-xl text-[12px] text-left active:opacity-70"
                   style={{ background: "var(--color-surface-card)", color: "var(--color-text-secondary)", boxShadow: "var(--shadow-card)" }}
                 >
@@ -160,7 +156,7 @@ export default function AssistantPage() {
       {/* Input Area */}
       <div style={{ borderTop: "1px solid var(--lifeflow-border)", padding: 12 }}>
         <AgentInput
-          onSend={(text) => window.dispatchEvent(new CustomEvent("lifeflow:sendMessage", { detail: text }))}
+          onSend={sendMessage}
           disabled={isProcessing}
           placeholder={listening ? "正在聆听..." : "输入你的需求，或点击麦克风语音输入..."}
         />

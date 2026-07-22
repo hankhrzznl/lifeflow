@@ -39,6 +39,7 @@ interface AgentContextType {
   openChat: () => void;
   closeChat: () => void;
   sendMessage: (text: string) => void;
+  sendAndNavigate: (text: string) => void;
 }
 
 const AgentContext = createContext<AgentContextType | null>(null);
@@ -1220,6 +1221,10 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
     openChat: () => setOpen(true),
     closeChat: () => setOpen(false),
     sendMessage: handleSubmit,
+    sendAndNavigate: (text: string) => {
+      handleSubmit(text);
+      router.push("/assistant");
+    },
   };
 
   return (

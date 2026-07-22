@@ -753,11 +753,14 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
       if (rawText.includes("完成") || rawText.includes("做完")) {
         await efficiencyDB.goals.update(matchedGoal.id, { status: "completed", completedAt: Date.now() } as any);
         addAssistantMessage(`已将目标「${matchedGoal.title}」标记为已完成！🎉`);
+      } else if (rawText.includes("删除") || rawText.includes("删掉") || rawText.includes("移除")) {
+        await efficiencyDB.goals.delete(matchedGoal.id);
+        addAssistantMessage(`已删除目标「${matchedGoal.title}」。`);
       } else if (rawText.includes("暂停")) {
         await efficiencyDB.goals.update(matchedGoal.id, { status: "paused" } as any);
         addAssistantMessage(`已将目标「${matchedGoal.title}」暂停。`);
       } else {
-        addAssistantMessage(`你想对「${matchedGoal.title}」做什么修改？（完成/暂停/修改标题等）`);
+        addAssistantMessage(`你想对「${matchedGoal.title}」做什么修改？（完成/删除/暂停/修改标题等）`);
       }
     } catch {
       addAssistantMessage("更新目标失败", undefined, true);

@@ -85,7 +85,7 @@ const INTENT_PATTERNS: IntentPattern[] = [
   // P1: Goals
   { action: "create_goal", keywords: ["创建目标", "新目标", "添加目标", "我要", "我想", "制定"], priority: 10 },
   { action: "query_goal", keywords: ["目标进度", "目标完成", "目标怎么样", "目标如何"], priority: 10 },
-  { action: "update_goal", keywords: ["更新目标", "修改目标", "调整目标"], priority: 10 },
+  { action: "update_goal", keywords: ["更新目标", "修改目标", "调整目标", "删除目标", "删掉目标", "移除目标"], priority: 10 },
 
   // P1: Finance
   { action: "add_transaction", keywords: ["花了", "消费", "买了", "付了", "支出了", "收入", "赚了", "进账", "入账"], priority: 9 },

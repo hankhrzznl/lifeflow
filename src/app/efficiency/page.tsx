@@ -102,21 +102,16 @@ export default function EfficiencyPage() {
   );
 
   const handleQuickAction = useCallback(
-    async (goal: Goal, action: "pause" | "edit") => {
+    async (goal: Goal, action: "delete" | "edit") => {
       setQuickGoalId(null);
       if (action === "edit") {
         router.push(`/efficiency/create?id=${goal.id}`);
         return;
       }
-      if (goal.status === "paused") {
-        await updateGoalStatus(goal.id, "active");
-        showToast({ message: "已恢复", type: "success" });
-      } else {
-        await updateGoalStatus(goal.id, "paused");
-        showToast({ message: "已暂停", type: "info" });
-      }
+      await deleteGoal(goal.id);
+      showToast({ message: "已删除", type: "success" });
     },
-    [router, updateGoalStatus],
+    [router, deleteGoal],
   );
 
   useEffect(() => { loadGoals(); }, [loadGoals]);
@@ -376,19 +371,12 @@ export default function EfficiencyPage() {
                             animate={{ opacity: 1, x: 0 }}
                             exit={{ opacity: 0, x: 12 }}
                             transition={{ duration: 0.2, ease: "easeOut" }}
-                            onClick={(e) => { e.stopPropagation(); handleQuickAction(goal, "pause"); }}
-                            aria-label={goal.status === "paused" ? "恢复" : "暂停"}
+                            onClick={(e) => { e.stopPropagation(); handleQuickAction(goal, "delete"); }}
+                            aria-label="删除"
                             className="w-[44px] h-[44px] rounded-full flex items-center justify-center"
-                            style={{
-                              backgroundColor: "var(--color-surface-card)",
-                              border: "1px solid var(--lifeflow-border)",
-                            }}
+                            style={{ background: "rgba(239,68,68,0.1)" }}
                           >
-                            {goal.status === "paused" ? (
-                              <Play className="w-5 h-5" style={{ color: "var(--color-text-primary)" }} />
-                            ) : (
-                              <Pause className="w-5 h-5" style={{ color: "var(--color-text-primary)" }} />
-                            )}
+                            <Trash2 className="w-5 h-5" style={{ color: "var(--state-error)" }} />
                           </motion.button>
                         )}
                         <motion.button
@@ -572,7 +560,7 @@ export default function EfficiencyPage() {
                 <>
                   <ActionSheetItem icon={CheckCircle2} label="完成目标" onClick={() => handleAction("complete")} />
                   <Divider />
-                  <ActionSheetItem icon={Pause} label="暂停目标" onClick={() => handleAction("pause")} />
+                  <ActionSheetItem icon={Trash2} label="删除目标" onClick={() => handleAction("delete")} />
                   <Divider />
                 </>
               )}

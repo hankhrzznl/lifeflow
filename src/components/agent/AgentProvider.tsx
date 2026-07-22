@@ -86,6 +86,7 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
 
   const isHiddenPage =
     pathname === "/focus" || pathname.startsWith("/settings");
+  const isAssistantPage = pathname === "/assistant";
 
   useEffect(() => {
     if (isHiddenPage && open) {
@@ -138,6 +139,8 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
     init();
   }, []);
 
+  // Ref-based handleSubmit for global event listener (avoids stale closure)
+  const handleSubmitRef = useRef<(text: string) => Promise<void>>(() => Promise.resolve());
   useEffect(() => {
     if (doneTimerRef.current) {
       clearTimeout(doneTimerRef.current);
@@ -934,6 +937,17 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
     [messages, addAssistantMessage, persistSession, handleGoalMultiTurn, runIntent, router]
   );
 
+  // Sync handleSubmit ref and listen for global messages
+  handleSubmitRef.current = handleSubmit;
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const text = (e as CustomEvent).detail;
+      if (text && typeof text === "string") handleSubmitRef.current(text);
+    };
+    window.addEventListener("lifeflow:sendMessage", handler);
+    return () => window.removeEventListener("lifeflow:sendMessage", handler);
+  }, []);
+
   const handleAcceptSuggestion = useCallback(
     async (suggestion: SuggestionCardData) => {
       // Handle review navigation
@@ -1038,10 +1052,10 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
       {children}
 
       {/* Floating Action Button — quick access on all main pages */}
-      {!isHiddenPage && !open && (
+      {!isHiddenPage && !isAssistantPage && !open && (
         <button
-          onClick={() => setOpen(true)}
-          className="fixed bottom-24 right-5 z-40 w-14 h-14 rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-transform"
+          onClick={() => router.push("/assistant")}
+          className="fixed bottom-24 right-5 z-40 w-14 h-14 rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-transform select-none"
           style={{ background: "var(--lifeflow-primary)", boxShadow: "0 4px 24px rgba(37, 99, 235, 0.35)" }}
           aria-label="打开助手"
         >
@@ -1051,7 +1065,7 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
         </button>
       )}
 
-      {!isHiddenPage && (
+      {!isHiddenPage && !isAssistantPage && open && (
         <AgentChat
           open={open}
           onClose={() => setOpen(false)}

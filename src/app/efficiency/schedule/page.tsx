@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence, type PanInfo } from "framer-motion";
 import {
   Check, Plus, ChevronLeft, ChevronRight, CalendarDays, Clock,
-  TrendingUp, X,
+  TrendingUp, X, ListTodo,
 } from "lucide-react";
 import { useEfficiencyStore } from "@/lib/store/efficiencyStore";
 import type { ScheduleTask } from "@/lib/db/efficiency.db";
@@ -412,16 +413,26 @@ export default function SchedulePage() {
             日程
           </h1>
           <p className="text-[13px] font-medium mt-1" style={{ color: "var(--color-text-secondary)", letterSpacing: "-0.01em" }}>
-            时间轴
+            统一视图
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => setShowCreateSheet(true)}
-          className="w-8 h-8 flex items-center justify-center"
-        >
-          <Plus className="w-6 h-6" style={{ color: "var(--lifeflow-primary)" }} />
-        </button>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/tasks"
+            className="px-3 py-1.5 rounded-full text-[12px] font-medium flex items-center gap-1"
+            style={{ background: "var(--lifeflow-brand-50)", color: "var(--lifeflow-primary)" }}
+          >
+            <ListTodo className="w-3.5 h-3.5" />
+            事项
+          </Link>
+          <button
+            type="button"
+            onClick={() => setShowCreateSheet(true)}
+            className="w-8 h-8 flex items-center justify-center"
+          >
+            <Plus className="w-6 h-6" style={{ color: "var(--lifeflow-primary)" }} />
+          </button>
+        </div>
       </div>
 
       {/* ===== Week Strip ===== */}

@@ -77,18 +77,18 @@ export interface ScheduleTask {
   projectId?: string;       // FK → Project（冗余，方便按项目查询）
   title: string;
   type: 'single' | 'multi_day' | 'recurring';
+  category?: 'task' | 'habit' | 'chore';  // task=目标任务 habit=习惯 chore=日常琐事
   date: string | null;      // YYYY-MM-DD
   startDate?: string;
   endDate?: string;
   recurringDays?: number[]; // [0-6]
-  quadrant?: 'q1' | 'q2' | 'q3' | 'q4';  // 四象限: q1=重要紧急 q2=重要不紧急 q3=不重要紧急 q4=不重要不紧急
+  quadrant?: 'q1' | 'q2' | 'q3' | 'q4';
   isCompleted: boolean;
-  plannedTime: number;      // 分钟
+  plannedTime: number;
   actualTime: number;
   isImportant: boolean;
   note: string;
-  // 进度条任务扩展字段
-  progressType?: 'normal' | 'progress';  // 任务类型
+  progressType?: 'normal' | 'progress';
   progressPeriod?: 'none' | 'daily' | 'weekly' | 'monthly';
   targetValue?: number;
   targetUnit?: string;
@@ -97,7 +97,10 @@ export interface ScheduleTask {
   dailyMin?: number;
   progressCalc?: 'sum' | 'average';
   hasSubTasks?: boolean;
-  progressCurrent?: number;   // 当前进度值（手动更新）
+  progressCurrent?: number;
+  // 来源追踪（用于撤回时回滚）
+  sourceModule?: string;    // 哪个模块产生的：water/sleep/fitness/stretch/medication/diet/wellness等
+  sourceLogId?: string;     // 原始记录ID，用于撤回时定位删除
   createdAt: number;
 }
 
@@ -137,6 +140,13 @@ export class EfficiencyDB extends Dexie {
       projects: '&id, name',
     }).upgrade(async tx => {
       await tx.table('projects').clear();
+    });
+    this.version(6).stores({
+      goals: '&id, status, deadline',
+      tasks: '++id, title, type, status, goalId, planId, startTime, endTime, dueDate',
+      habits: '++id, title, goalId, streak, frequency',
+      scheduleTasks: '&id, date, goalId, isCompleted, isImportant, category',
+      projects: '&id, name',
     });
   }
 }

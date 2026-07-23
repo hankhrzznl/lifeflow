@@ -197,19 +197,36 @@ export class EfficiencyDB extends Dexie {
       projects: '&id, name, projectType, parentProjectId',
     }).upgrade(async (tx) => {
       const defaultSmallProjects = [
-        { id: crypto.randomUUID(), name: '课程表', color: '#7C3AED', icon: 'GraduationCap', description: '', sortOrder: 0, projectType: 'small', isDefault: true, moreRoute: '/more/schedule', createdAt: Date.now() },
-        { id: crypto.randomUUID(), name: '作息', color: '#6366F1', icon: 'Clock', description: '', sortOrder: 1, projectType: 'small', isDefault: true, moreRoute: '/more/routine', createdAt: Date.now() },
-        { id: crypto.randomUUID(), name: '记账', color: '#14B8A6', icon: 'Wallet', description: '', sortOrder: 2, projectType: 'small', isDefault: true, moreRoute: '/more/finance', createdAt: Date.now() },
+        { id: crypto.randomUUID(), name: '课程表', color: '#7C3AED', icon: 'GraduationCap', description: '', sortOrder: 0, projectType: 'small', isDefault: true, moreRoute: '/more/schedule/courses', createdAt: Date.now() },
+        { id: crypto.randomUUID(), name: '作息', color: '#6366F1', icon: 'Clock', description: '', sortOrder: 1, projectType: 'small', isDefault: true, moreRoute: '/more/schedule/routines', createdAt: Date.now() },
+        { id: crypto.randomUUID(), name: '记账', color: '#14B8A6', icon: 'Wallet', description: '', sortOrder: 2, projectType: 'small', isDefault: true, moreRoute: '/more/accounting', createdAt: Date.now() },
         { id: crypto.randomUUID(), name: '饮水', color: '#0EA5E9', icon: 'Droplets', description: '', sortOrder: 3, projectType: 'small', isDefault: true, moreRoute: '/more/water', createdAt: Date.now() },
         { id: crypto.randomUUID(), name: '睡眠', color: '#1E293B', icon: 'Moon', description: '', sortOrder: 4, projectType: 'small', isDefault: true, moreRoute: '/more/sleep', createdAt: Date.now() },
         { id: crypto.randomUUID(), name: '训练', color: '#EF4444', icon: 'Dumbbell', description: '', sortOrder: 5, projectType: 'small', isDefault: true, moreRoute: '/more/fitness', createdAt: Date.now() },
         { id: crypto.randomUUID(), name: '饮食', color: '#F97316', icon: 'Utensils', description: '', sortOrder: 6, projectType: 'small', isDefault: true, moreRoute: '/more/diet', createdAt: Date.now() },
         { id: crypto.randomUUID(), name: '养生', color: '#84CC16', icon: 'Flower2', description: '', sortOrder: 7, projectType: 'small', isDefault: true, moreRoute: '/more/wellness', createdAt: Date.now() },
-        { id: crypto.randomUUID(), name: '体态拉伸', color: '#06B6D4', icon: 'StretchHorizontal', description: '', sortOrder: 8, projectType: 'small', isDefault: true, moreRoute: '/more/stretch', createdAt: Date.now() },
+        { id: crypto.randomUUID(), name: '体态拉伸', color: '#06B6D4', icon: 'StretchHorizontal', description: '', sortOrder: 8, projectType: 'small', isDefault: true, moreRoute: '/more/posture', createdAt: Date.now() },
         { id: crypto.randomUUID(), name: '吃药', color: '#DC2626', icon: 'Pill', description: '', sortOrder: 9, projectType: 'small', isDefault: true, moreRoute: '/more/medication', createdAt: Date.now() },
       ];
       for (const sp of defaultSmallProjects) {
         await tx.table('projects').add(sp);
+      }
+    });
+    // v11: fix incorrect moreRoute paths for default small projects
+    this.version(11).stores({
+      projects: '&id, name, projectType, parentProjectId',
+    }).upgrade(async (tx) => {
+      const routeFixes: Record<string, string> = {
+        '/more/schedule': '/more/schedule/courses',
+        '/more/routine': '/more/schedule/routines',
+        '/more/finance': '/more/accounting',
+        '/more/stretch': '/more/posture',
+      };
+      const all = await tx.table('projects').toArray();
+      for (const p of all) {
+        if (p.isDefault && p.moreRoute && routeFixes[p.moreRoute]) {
+          await tx.table('projects').update(p.id, { moreRoute: routeFixes[p.moreRoute] });
+        }
       }
     });
   }

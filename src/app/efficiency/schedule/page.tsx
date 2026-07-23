@@ -392,8 +392,13 @@ export default function SchedulePage() {
   // ── 创建任务 Sheet ──
   const [showCreateSheet, setShowCreateSheet] = useState(false);
 
-  // ── 首次引导：作息模板 → 日程 ──
+  // ── 初始化加载今天 + 首次引导 ──
+  const todayStr = toDateStr(new Date());
   const [showOnboarding, setShowOnboarding] = useState(false);
+
+  useEffect(() => {
+    loadScheduleTasks(todayStr);
+  }, []); // only on mount
 
   useEffect(() => {
     const checkRoutines = async () => {

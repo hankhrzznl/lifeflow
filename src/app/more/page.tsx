@@ -11,13 +11,6 @@ import {
   Dumbbell,
   Pill,
   StretchHorizontal,
-  CheckSquare,
-  Timer,
-  CalendarRange,
-  StickyNote,
-  Bell,
-  BarChart3,
-  Settings,
   Utensils,
   Flower2,
 } from "lucide-react";
@@ -59,28 +52,6 @@ export default function MorePage() {
         { title: "训练", description: "记录训练数据", href: "/more/fitness", icon: Dumbbell },
         { title: "吃药", description: "用药提醒记录", href: "/more/medication", icon: Pill },
         { title: "体态拉伸", description: "拉伸放松指导", href: "/more/posture", icon: StretchHorizontal },
-      ],
-    },
-    {
-      label: "数据分析",
-      items: [
-        { title: "复盘", description: "周/月数据总览与回顾", href: "/more/review", icon: BarChart3 },
-      ],
-    },
-    {
-      label: "工具",
-      items: [
-        { title: "提醒", description: "统一提醒中心", href: "/reminders", icon: Bell },
-        { title: "习惯打卡", description: "培养好习惯", href: "/more/habits", icon: CheckSquare },
-        { title: "专注计时", description: "番茄钟计时", href: "/more/focus", icon: Timer },
-        { title: "倒数日", description: "重要日期倒数", href: "/more/countdown", icon: CalendarRange },
-        { title: "备忘录", description: "随手记录想法", href: "/more/notes", icon: StickyNote },
-      ],
-    },
-    {
-      label: "系统",
-      items: [
-        { title: "设置", description: "应用偏好设置", href: "/settings", icon: Settings },
       ],
     },
   ];

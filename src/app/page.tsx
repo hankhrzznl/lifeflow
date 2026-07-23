@@ -8,6 +8,8 @@ import { useLiveQuery } from "dexie-react-hooks";
 import {
   Zap, Check, Bell, Flame,
   Calendar, Droplets, Moon, Dumbbell, Pill,
+  ChevronRight, ListTodo,
+  Timer, CalendarRange, StickyNote, BarChart3, Settings, FolderKanban, Menu,
 } from "lucide-react";
 import { getScheduleTasksByDate, getAllScheduleTasks } from "@/lib/db/efficiency.db";
 import type { ScheduleTask } from "@/lib/db/efficiency.db";
@@ -63,6 +65,20 @@ const REMINDER_ICONS: Record<string, React.ComponentType<any>> = {
   fitness: Dumbbell,
   medication: Pill,
 };
+
+/* ────────── Quick Access Button ────────── */
+
+function QuickBtn({ href, icon: Icon }: { href: string; icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }> }) {
+  return (
+    <Link
+      href={href}
+      className="w-7 h-7 flex items-center justify-center rounded-lg active:opacity-60"
+      style={{ background: "var(--color-surface-card)", border: "1px solid var(--lifeflow-border)" }}
+    >
+      <Icon className="w-3.5 h-3.5" style={{ color: "var(--color-text-secondary)" }} />
+    </Link>
+  );
+}
 
 // ============================================================
 // 首页
@@ -140,11 +156,26 @@ export default function HomePage() {
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35, ease: "easeOut" }}
-        className="px-4 pt-12 pb-3"
+        className="px-4 pt-8 pb-2 flex items-center justify-between"
       >
         <p className="text-[13px] font-medium" style={{ color: "var(--color-text-secondary)" }}>
           {greeting()} · {formatDateChinese(now)}
         </p>
+        <div className="flex items-center gap-0.5">
+          {/* Quick-access buttons */}
+          <QuickBtn href="/more/focus" icon={Timer} />
+          <QuickBtn href="/more/countdown" icon={CalendarRange} />
+          <QuickBtn href="/more/notes" icon={StickyNote} />
+          <QuickBtn href="/more/review" icon={BarChart3} />
+          <QuickBtn href="/settings" icon={Settings} />
+          <Link
+            href="/more"
+            className="w-7 h-7 flex items-center justify-center rounded-lg active:opacity-60 ml-1"
+            style={{ background: "var(--color-surface-card)", border: "1px solid var(--lifeflow-border)" }}
+          >
+            <Menu className="w-3.5 h-3.5" style={{ color: "var(--color-text-secondary)" }} />
+          </Link>
+        </div>
       </motion.div>
 
       {/* ===== 核心待办高亮卡 ===== */}

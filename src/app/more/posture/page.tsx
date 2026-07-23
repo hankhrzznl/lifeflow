@@ -17,6 +17,7 @@ const QUICK_STRETCHES = [
   { name: "蝴蝶拉伸", desc: "髋部打开" },
   { name: "肩部拉伸", desc: "改善圆肩" },
   { name: "颈部放松", desc: "缓解头部前倾" },
+  { name: "90-90呼吸", desc: "核心呼吸激活" },
 ];
 
 function localToday(): string {

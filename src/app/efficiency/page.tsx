@@ -24,6 +24,13 @@ function todayStr(): string {
 }
 
 // ─── 迷你进度环（24px 外径，3px stroke） ────────────────────
+function daysRemaining(deadline: string): number {
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  const dl = new Date(deadline + "T00:00:00");
+  return Math.ceil((dl.getTime() - now.getTime()) / 86400000);
+}
+
 function MiniRing({ pct }: { pct: number }) {
   const clamped = Math.min(100, Math.max(0, pct));
   const size = 24;
@@ -430,6 +437,16 @@ export default function EfficiencyPage() {
                           ? `今日任务 · ${stats.done}/${stats.total} 项`
                           : "今日无任务"}
                       </span>
+                      {/* Deadline counter */}
+                      {goal.deadline && (
+                        <span className="text-[11px] font-medium" style={{ color: daysRemaining(goal.deadline) < 0 ? "var(--state-error)" : "var(--color-text-disabled)" }}>
+                          {daysRemaining(goal.deadline) < 0
+                            ? `已过期 ${Math.abs(daysRemaining(goal.deadline))} 天`
+                            : daysRemaining(goal.deadline) === 0
+                              ? "今天截止"
+                              : `还剩 ${daysRemaining(goal.deadline)} 天`}
+                        </span>
+                      )}
                     </div>
                     <MiniRing pct={pct} />
                   </motion.div>

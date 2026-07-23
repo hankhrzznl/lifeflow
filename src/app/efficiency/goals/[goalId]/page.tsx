@@ -5,7 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   ChevronLeft, Check, Plus, CheckCircle2, TrendingUp,
-  Circle, AlertTriangle,
+  Circle, AlertTriangle, X, Trash2, Pencil,
 } from "lucide-react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { useEfficiencyStore } from "@/lib/store/efficiencyStore";
@@ -38,7 +38,7 @@ export default function GoalDetailPage() {
   const params = useParams();
   const goalId = params.goalId as string;
 
-  const { goals, loadGoals, updateGoalStatus, toggleScheduleTask } = useEfficiencyStore();
+  const { goals, loadGoals, updateGoalStatus, toggleScheduleTask, removeScheduleTask } = useEfficiencyStore();
 
   // 从 live query 获取目标
   const goal = useLiveQuery(() => efficiencyDB.goals.get(goalId), [goalId]);
@@ -76,6 +76,11 @@ export default function GoalDetailPage() {
   const handleToggleTask = useCallback(async (taskId: string) => {
     await toggleScheduleTask(taskId);
   }, [toggleScheduleTask]);
+
+  const handleDeleteTask = useCallback(async (taskId: string) => {
+    await removeScheduleTask(taskId);
+    showToast({ type: "success", message: "任务已删除" });
+  }, [removeScheduleTask]);
 
   // 完成目标
   const handleCompleteGoal = useCallback(async () => {
@@ -196,6 +201,7 @@ export default function GoalDetailPage() {
                 key={task.id}
                 task={task}
                 onToggle={() => handleToggleTask(task.id)}
+                onDelete={() => handleDeleteTask(task.id)}
                 showDivider={i < normalTasks.length - 1}
               />
             ))}
@@ -239,12 +245,12 @@ export default function GoalDetailPage() {
 // ============================================================
 // 普通任务行
 // ============================================================
-function TaskRow({ task, onToggle, showDivider }: { task: ScheduleTask; onToggle: () => void; showDivider: boolean }) {
+function TaskRow({ task, onToggle, onDelete, showDivider }: { task: ScheduleTask; onToggle: () => void; onDelete: () => void; showDivider: boolean }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="relative flex items-center gap-3 px-4 py-3 min-h-[52px]"
+      className="relative flex items-center gap-3 px-4 py-3 min-h-[52px] group"
     >
       {showDivider && (
         <div className="absolute left-[52px] right-0 top-0" style={{ borderTop: "0.5px solid #EBEBEB" }} />
@@ -281,6 +287,15 @@ function TaskRow({ task, onToggle, showDivider }: { task: ScheduleTask; onToggle
           <p className="text-[13px] text-[#86868B] truncate mt-0.5">{task.note}</p>
         )}
       </div>
+      {/* Delete button */}
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); if (window.confirm('确定删除任务？')) onDelete(); }}
+        className="w-7 h-7 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+        style={{ background: "rgba(255,59,48,0.1)" }}
+      >
+        <X className="w-3.5 h-3.5" style={{ color: "#FF3B30" }} />
+      </button>
     </motion.div>
   );
 }

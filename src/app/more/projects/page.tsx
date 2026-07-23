@@ -20,7 +20,7 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string; style?:
   Utensils, Flower2, FolderKanban,
 };
 
-const COLORS = ["#5856D6", "#007AFF", "#34C759", "#FF9500", "#FF3B30", "#AF52DE", "#5AC8FA", "#FF2D55", "#FFCC00"];
+const COLORS = ["#5856D6", "#007AFF", "#34C759", "#FF9500", "#FF3B30", "#AF52DE", "#5AC8FA", "#FF2D55", "#FFCC00", "#00C7BE"];
 
 export default function ProjectsPage() {
   const router = useRouter();
@@ -36,8 +36,6 @@ export default function ProjectsPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState("");
   const [newColor, setNewColor] = useState(COLORS[0]);
-  const [newDesc, setNewDesc] = useState("");
-  const [newBigId, setNewBigId] = useState("");
   const [saving, setSaving] = useState(false);
 
   // ─── Edit form ───
@@ -51,8 +49,6 @@ export default function ProjectsPage() {
     setShowCreate(false);
     setNewName("");
     setNewColor(COLORS[0]);
-    setNewDesc("");
-    setNewBigId("");
   }, []);
 
   const closeEdit = useCallback(() => {
@@ -78,16 +74,15 @@ export default function ProjectsPage() {
         name: newName.trim(),
         color: newColor,
         icon: "FolderKanban",
-        description: newDesc.trim(),
+        description: "",
         sortOrder: 0,
-        parentProjectId: newBigId || undefined,
       });
       showToast({ type: "success", message: "项目已创建" });
       closeCreate();
     } finally {
       setSaving(false);
     }
-  }, [newName, newColor, newDesc, newBigId, closeCreate]);
+  }, [newName, newColor, closeCreate]);
 
   const handleEdit = useCallback(async () => {
     if (!editingId) return;
@@ -137,15 +132,7 @@ export default function ProjectsPage() {
           <ChevronLeft className="w-5 h-5" style={{ color: "var(--color-text-primary)" }} />
         </button>
         <h1 className="text-title-nav mx-2 truncate" style={{ color: "var(--color-text-primary)" }}>项目管理</h1>
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => setShowCreate(true)}
-            className="w-8 h-8 rounded-lg flex items-center justify-center"
-            style={{ background: "var(--lifeflow-primary)" }}
-          >
-            <Plus className="w-5 h-5" style={{ color: "var(--lifeflow-primary-foreground)" }} />
-          </button>
-        </div>
+        <div className="w-8" />
       </div>
 
       <div className="px-4 pt-4">
@@ -270,13 +257,9 @@ export default function ProjectsPage() {
       {/* ===== Create Modal ===== */}
       <AnimatePresence>
         {showCreate && (
-          <ProjectFormModal
-            title="新建项目"
+          <CreateProjectModal
             name={newName} onName={setNewName}
-            desc={newDesc} onDesc={setNewDesc}
             color={newColor} onColor={setNewColor}
-            bigId={newBigId} onBigId={setNewBigId}
-            bigProjects={bigProjects}
             onSave={handleCreate}
             onClose={closeCreate}
             saving={saving}
@@ -303,7 +286,72 @@ export default function ProjectsPage() {
   );
 }
 
-// ────────────── Form Modal ──────────────
+// ────────────── Create Modal (简化版：仅名称+颜色) ──────────────
+
+function CreateProjectModal({
+  name, onName, color, onColor, onSave, onClose, saving,
+}: {
+  name: string; onName: (v: string) => void;
+  color: string; onColor: (v: string) => void;
+  onSave: () => void;
+  onClose: () => void;
+  saving?: boolean;
+}) {
+  return (
+    <>
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        className="fixed inset-0 z-40" style={{ background: "rgba(0,0,0,0.35)" }}
+        onClick={onClose}
+      />
+      <motion.div
+        initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.92 }}
+        transition={{ duration: 0.2 }}
+        className="fixed inset-x-4 top-[25%] z-50 p-5 rounded-[24px] mx-auto"
+        style={{ background: "var(--color-surface-card)", boxShadow: "0 8px 32px rgba(0,0,0,0.18)", maxWidth: 380 }}
+      >
+        <h3 className="text-[17px] font-bold mb-4" style={{ color: "var(--color-text-primary)" }}>新建项目</h3>
+
+        <input value={name} onChange={e => onName(e.target.value)}
+          placeholder="项目名称" autoFocus
+          className="w-full h-11 rounded-xl px-3 text-[15px] outline-none mb-4"
+          style={{
+            background: "var(--color-surface-secondary)",
+            border: "1px solid var(--lifeflow-border)",
+            color: "var(--color-text-primary)",
+          }}
+        />
+
+        {/* Color picker */}
+        <p className="text-[12px] mb-2" style={{ color: "var(--color-text-secondary)" }}>颜色</p>
+        <div className="flex gap-2 flex-wrap mb-5">
+          {COLORS.map(c => (
+            <button key={c} onClick={() => onColor(c)}
+              className="w-7 h-7 rounded-full transition-all"
+              style={{
+                background: c,
+                boxShadow: color === c ? `0 0 0 3px ${c}40` : "none",
+                transform: color === c ? "scale(1.15)" : "scale(1)",
+              }}
+            />
+          ))}
+        </div>
+
+        <div className="flex gap-2">
+          <button onClick={onClose}
+            className="flex-1 h-11 rounded-xl text-[15px] font-medium"
+            style={{ background: "var(--color-surface-secondary)", color: "var(--color-text-secondary)" }}
+          >取消</button>
+          <button onClick={onSave} disabled={saving || !name.trim()}
+            className="flex-1 h-11 rounded-xl text-[15px] font-semibold text-white"
+            style={{ background: name.trim() ? "var(--lifeflow-primary)" : "var(--lifeflow-border)" }}
+          >{saving ? "保存中..." : "保存"}</button>
+        </div>
+      </motion.div>
+    </>
+  );
+}
+
+// ────────────── Edit Form Modal ──────────────
 
 function ProjectFormModal({
   title, name, onName, desc, onDesc, color, onColor, bigId, onBigId, bigProjects, onSave, onClose, saving,

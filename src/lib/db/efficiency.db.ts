@@ -229,6 +229,11 @@ export class EfficiencyDB extends Dexie {
         }
       }
     });
+    // v12: add title index to goals (required for where("title") queries)
+    this.version(12).stores({
+      goals: '&id, title, status, deadline, quadrant, goalType, streak',
+      projects: '&id, name, projectType, parentProjectId',
+    });
   }
 }
 

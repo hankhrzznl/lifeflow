@@ -297,12 +297,32 @@ export default function GoalDetailPage() {
 
       {/* ===== 空态 ===== */}
       {tasks.length === 0 && (
-        <div className="flex flex-col items-center pt-16">
-          <div className="w-16 h-16 rounded-full bg-[#F5F5F5] flex items-center justify-center mb-3">
-            <Plus className="w-8 h-8 text-[#C7C7CC]" />
+        <div className="flex flex-col items-center pt-12 px-8">
+          <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4" style={{ background: "var(--lifeflow-brand-50)" }}>
+            <TrendingUp className="w-8 h-8" style={{ color: "var(--lifeflow-primary)" }} />
           </div>
-          <p className="text-[15px] text-[#86868B]">还没有任务</p>
-          <p className="text-[13px] text-[#AEAEB2] mt-1">点击「添加任务」开始吧</p>
+          <p className="text-[16px] font-semibold" style={{ color: "var(--color-text-primary)" }}>拆解目标</p>
+          <p className="text-[13px] text-center mt-1 mb-6" style={{ color: "var(--color-text-secondary)" }}>
+            把目标拆成可执行的小任务，逐个击破
+          </p>
+          <div className="flex gap-3 w-full max-w-xs">
+            <button
+              onClick={() => router.push(`/efficiency/goals/${goalId}/tasks/new`)}
+              className="flex-1 h-11 rounded-xl text-white text-[15px] font-semibold flex items-center justify-center gap-1.5"
+              style={{ background: "var(--lifeflow-primary)" }}
+            >
+              <Plus className="w-4 h-4" />
+              添加任务
+            </button>
+            <button
+              onClick={() => setShowBulkImport(true)}
+              className="flex-1 h-11 rounded-xl text-[15px] font-medium flex items-center justify-center gap-1.5"
+              style={{ border: "1px solid var(--lifeflow-border)", color: "var(--color-text-secondary)" }}
+            >
+              <TrendingUp className="w-4 h-4" />
+              批量导入
+            </button>
+          </div>
         </div>
       )}
 

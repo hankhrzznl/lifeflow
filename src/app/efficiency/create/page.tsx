@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronRight, Minus, Plus, Sparkles } from "lucide-react";
+import { ChevronRight, Minus, Plus, Sparkles, Check, Target, Calendar } from "lucide-react";
 import { useEfficiencyStore } from "@/lib/store/efficiencyStore";
 import { useLiveQuery } from "dexie-react-hooks";
 import { efficiencyDB, getAllProjects, type ScheduleTask, type Project } from "@/lib/db/efficiency.db";
@@ -75,6 +75,7 @@ function CreateGoalInner() {
   const [saving, setSaving] = useState(false);
   const [loaded, setLoaded] = useState(!isEdit);
   const [focused, setFocused] = useState(false);
+  const [goalType, setGoalType] = useState<'task' | 'habit'>('task');
 
   const [useAI, setUseAI] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -123,7 +124,7 @@ function CreateGoalInner() {
       const data = {
         title: title.trim(),
         deadline,
-        goalType: "task" as const,
+        goalType: goalType,
         note: note.trim(),
         projectId: projectId || undefined,
       };
@@ -143,8 +144,9 @@ function CreateGoalInner() {
         setPreviewOpen(true);
         setSaving(false);
       } else {
-        await addGoal({ ...data, status: "active" });
-        router.push("/efficiency");
+        const goalId = await addGoal({ ...data, status: "active" });
+        // Redirect to detail page for breakdown flow
+        router.push(`/efficiency/goals/${goalId}`);
       }
     } catch {
       setSaving(false);
@@ -190,6 +192,15 @@ function CreateGoalInner() {
 
       {/* ===== 卡片组 ===== */}
       <div className="max-w-[430px] mx-auto px-4 pt-6 flex flex-col gap-6">
+        {/* Step indicator */}
+        <div className="flex items-center gap-2 mb-1">
+          <span className="text-[11px] font-medium px-2 py-0.5 rounded-full"
+            style={{ background: "var(--lifeflow-primary)", color: "#fff" }}>1</span>
+          <span className="text-[13px] font-medium" style={{ color: "var(--color-text-primary)" }}>设定目标</span>
+          <ChevronRight className="w-3 h-3" style={{ color: "var(--color-text-disabled)" }} />
+          <span className="text-[13px]" style={{ color: "var(--color-text-disabled)" }}>拆解任务</span>
+        </div>
+
         {/* 卡片 1 · 目标名称 */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
@@ -222,7 +233,44 @@ function CreateGoalInner() {
           </div>
         </motion.div>
 
-        {/* 卡片 2 · 所属项目 */}
+        {/* 卡片 2 · 目标类型 */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
+          className="rounded-[8px] px-4 py-4"
+          style={{
+            backgroundColor: "var(--color-surface-card)",
+            border: "1px solid var(--lifeflow-border)",
+          }}
+        >
+          <p className="text-[14px] mb-2" style={{ color: "var(--color-text-secondary)" }}>类型</p>
+          <div className="flex gap-2">
+            {[
+              { k: 'task' as const, label: '进度条任务', desc: '有截止日期，显示进度条' },
+              { k: 'habit' as const, label: '习惯打卡', desc: '无限期，追踪连续天数' },
+            ].map(opt => (
+              <button
+                key={opt.k}
+                type="button"
+                onClick={() => setGoalType(opt.k)}
+                className="flex-1 p-3 rounded-xl text-left transition-all"
+                style={{
+                  background: goalType === opt.k ? `${"var(--lifeflow-primary)"}12` : "var(--lifeflow-muted)",
+                  border: goalType === opt.k ? "2px solid var(--lifeflow-primary)" : "2px solid transparent",
+                }}
+              >
+                <div className="flex items-center gap-1.5">
+                  {goalType === opt.k && <Check className="w-3.5 h-3.5" style={{ color: "var(--lifeflow-primary)" }} />}
+                  <span className="text-[14px] font-semibold" style={{ color: "var(--color-text-primary)" }}>{opt.label}</span>
+                </div>
+                <p className="text-[11px] mt-0.5" style={{ color: "var(--color-text-disabled)" }}>{opt.desc}</p>
+              </button>
+            ))}
+          </div>
+        </motion.div>
+
+        {/* 卡片 3 · 所属项目 */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}

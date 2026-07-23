@@ -2,15 +2,16 @@
 
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronLeft, Check, Plus, CheckCircle2, TrendingUp,
   Circle, AlertTriangle, X, Trash2, Pencil,
 } from "lucide-react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { useEfficiencyStore } from "@/lib/store/efficiencyStore";
-import { efficiencyDB, type Goal, type ScheduleTask, type Project, getAllProjects } from "@/lib/db/efficiency.db";
+import { efficiencyDB, type Goal, type ScheduleTask, type Project, getAllProjects, addScheduleTask } from "@/lib/db/efficiency.db";
 import { showToast } from "@/components/ui/Toast";
+import { parseBulkTasks, flattenTasks } from "@/lib/bulkTaskParser";
 
 // ============================================================
 // 设计令牌
@@ -72,10 +73,69 @@ export default function GoalDetailPage() {
   const allCompleted = taskStats.total > 0 && taskStats.done === taskStats.total;
   const goalProgress = taskStats.total > 0 ? Math.round((taskStats.done / taskStats.total) * 100) : 0;
 
+  /* edit task sheet */
+  const [editingTask, setEditingTask] = useState<ScheduleTask | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editNote, setEditNote] = useState("");
+  const [editGoalId, setEditGoalId] = useState<string>("");
+  const [editReminderStr, setEditReminderStr] = useState("");
+
+  const openEdit = useCallback((task: ScheduleTask) => {
+    setEditingTask(task);
+    setEditTitle(task.title);
+    setEditNote(task.note || "");
+    setEditGoalId(task.goalId || "");
+    setEditReminderStr((task.reminderTimes || []).join(", "));
+  }, []);
+
+  const handleSaveEdit = useCallback(async () => {
+    if (!editingTask) return;
+    const reminders = editReminderStr
+      .split(",").map(s => s.trim()).filter(Boolean);
+    await useEfficiencyStore.getState().updateScheduleTask(editingTask.id, {
+      title: editTitle,
+      note: editNote,
+      goalId: editGoalId || null,
+      reminderTimes: reminders.length > 0 ? reminders : undefined,
+    });
+    showToast({ type: "success", message: "任务已更新" });
+    setEditingTask(null);
+  }, [editingTask, editTitle, editNote, editGoalId, editReminderStr]);
+
+  /* bulk import */
+  const [showBulkImport, setShowBulkImport] = useState(false);
+  const [bulkText, setBulkText] = useState("");
+  const [bulkLoading, setBulkLoading] = useState(false);
+
+  const handleBulkImport = useCallback(async () => {
+    if (!bulkText.trim()) return;
+    setBulkLoading(true);
+    try {
+      const parsed = parseBulkTasks(bulkText);
+      const flat = flattenTasks(parsed, goalId);
+      for (const t of flat) {
+        await addScheduleTask(t as any);
+      }
+      showToast({ type: "success", message: `已导入 ${flat.length} 条任务` });
+      setShowBulkImport(false);
+      setBulkText("");
+    } catch {
+      showToast({ type: "error", message: "导入失败，请检查格式" });
+    } finally {
+      setBulkLoading(false);
+    }
+  }, [bulkText, goalId]);
+
   // 切换任务完成状态
   const handleToggleTask = useCallback(async (taskId: string) => {
     await toggleScheduleTask(taskId);
-  }, [toggleScheduleTask]);
+    // Sync progress back to goal
+    const updated = allScheduleTasks?.map(t => t.id === taskId ? { ...t, isCompleted: !t.isCompleted } : t) ?? [];
+    const goalTasks = updated.filter(t => t.goalId === goalId);
+    const done = goalTasks.filter(t => t.isCompleted).length;
+    const pct = goalTasks.length > 0 ? Math.round((done / goalTasks.length) * 100) : 0;
+    await efficiencyDB.goals.update(goalId, { progress: pct } as any);
+  }, [toggleScheduleTask, allScheduleTasks, goalId]);
 
   const handleDeleteTask = useCallback(async (taskId: string) => {
     await removeScheduleTask(taskId);
@@ -176,6 +236,15 @@ export default function GoalDetailPage() {
         </button>
         <button
           type="button"
+          onClick={() => setShowBulkImport(true)}
+          className="flex-1 h-11 rounded-xl text-[15px] font-medium flex items-center justify-center gap-1.5"
+          style={{ border: "1px solid var(--lifeflow-border)", color: "var(--color-text-secondary)" }}
+        >
+          <TrendingUp className="w-4 h-4" />
+          批量导入
+        </button>
+        <button
+          type="button"
           onClick={handleCompleteGoal}
           disabled={!allCompleted}
           className="flex-1 h-11 rounded-xl border text-[15px] font-semibold flex items-center justify-center gap-1.5 transition-all"
@@ -202,6 +271,7 @@ export default function GoalDetailPage() {
                 task={task}
                 onToggle={() => handleToggleTask(task.id)}
                 onDelete={() => handleDeleteTask(task.id)}
+                onEdit={() => openEdit(task)}
                 showDivider={i < normalTasks.length - 1}
               />
             ))}
@@ -238,6 +308,120 @@ export default function GoalDetailPage() {
 
       {/* ===== 底部安全区 ===== */}
       <div className="h-10" />
+
+      {/* ===== 编辑任务弹层 ===== */}
+      <AnimatePresence>
+        {editingTask && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50" style={{ background: "rgba(0,0,0,0.3)" }}
+              onClick={() => setEditingTask(null)}
+            />
+            <motion.div
+              initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 30, stiffness: 300 }}
+              className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-8 pt-4 rounded-t-[24px]"
+              style={{ background: "var(--color-surface-card)", boxShadow: "0 -4px 20px rgba(0,0,0,0.1)" }}
+            >
+              <div className="w-8 h-1 rounded-full mx-auto mb-4" style={{ background: "var(--lifeflow-border)" }} />
+              <h3 className="text-[17px] font-bold mb-4" style={{ color: "var(--color-text-primary)" }}>编辑任务</h3>
+
+              <input
+                value={editTitle} onChange={e => setEditTitle(e.target.value)}
+                className="w-full h-11 rounded-xl px-3 text-[15px] outline-none mb-3"
+                style={{ background: "var(--color-surface-secondary)", border: "1px solid var(--lifeflow-border)" }}
+                placeholder="任务名称"
+              />
+              <input
+                value={editNote} onChange={e => setEditNote(e.target.value)}
+                className="w-full h-11 rounded-xl px-3 text-[15px] outline-none mb-3"
+                style={{ background: "var(--color-surface-secondary)", border: "1px solid var(--lifeflow-border)" }}
+                placeholder="备注（可选）"
+              />
+              <input
+                value={editReminderStr} onChange={e => setEditReminderStr(e.target.value)}
+                className="w-full h-11 rounded-xl px-3 text-[15px] outline-none mb-3"
+                style={{ background: "var(--color-surface-secondary)", border: "1px solid var(--lifeflow-border)" }}
+                placeholder="提醒时间，逗号分隔（如 09:00, 18:00）"
+              />
+
+              {/* Goal selector */}
+              <div className="mb-3">
+                <p className="text-[12px] font-medium mb-2" style={{ color: "var(--color-text-secondary)" }}>所属目标</p>
+                <select
+                  value={editGoalId}
+                  onChange={e => setEditGoalId(e.target.value)}
+                  className="w-full h-11 rounded-xl px-3 text-[15px] outline-none"
+                  style={{ background: "var(--color-surface-secondary)", border: "1px solid var(--lifeflow-border)", color: "var(--color-text-primary)" }}
+                >
+                  <option value="">无目标</option>
+                  {(!!(globalThis as any).__goals ? (globalThis as any).__goals as Goal[] : goals).map((g: Goal) => (
+                    <option key={g.id} value={g.id}>{g.title}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setEditingTask(null)}
+                  className="flex-1 h-11 rounded-xl text-[15px] font-medium"
+                  style={{ background: "var(--color-surface-secondary)", color: "var(--color-text-secondary)" }}
+                >取消</button>
+                <button
+                  onClick={handleSaveEdit}
+                  className="flex-1 h-11 rounded-xl text-[15px] font-semibold text-white"
+                  style={{ background: "var(--lifeflow-primary)" }}
+                >保存</button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* ===== 批量导入弹层 ===== */}
+      <AnimatePresence>
+        {showBulkImport && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50" style={{ background: "rgba(0,0,0,0.3)" }}
+              onClick={() => setShowBulkImport(false)}
+            />
+            <motion.div
+              initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 30, stiffness: 300 }}
+              className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-8 pt-4 rounded-t-[24px]"
+              style={{ background: "var(--color-surface-card)", boxShadow: "0 -4px 20px rgba(0,0,0,0.1)" }}
+            >
+              <div className="w-8 h-1 rounded-full mx-auto mb-4" style={{ background: "var(--lifeflow-border)" }} />
+              <h3 className="text-[17px] font-bold mb-4" style={{ color: "var(--color-text-primary)" }}>批量导入任务</h3>
+              <p className="text-[12px] mb-3" style={{ color: "var(--color-text-disabled)" }}>
+                每行一个任务，| 分隔字段，缩进表示子任务，# 开头为注释
+              </p>
+              <textarea
+                value={bulkText}
+                onChange={e => setBulkText(e.target.value)}
+                className="w-full h-40 rounded-xl p-3 text-[14px] outline-none resize-none mb-3 font-mono"
+                style={{ background: "var(--color-surface-secondary)", border: "1px solid var(--lifeflow-border)", color: "var(--color-text-primary)" }}
+                placeholder={`设计阶段 | 日期:7/24~7/30\n  原型设计 | 备注:使用Figma\n  交互评审\n开发阶段\n  前端开发 | 日期:7/31`}
+              />
+              <div className="flex gap-2">
+                <button onClick={() => setShowBulkImport(false)}
+                  className="flex-1 h-11 rounded-xl text-[15px] font-medium"
+                  style={{ background: "var(--color-surface-secondary)", color: "var(--color-text-secondary)" }}>
+                  取消
+                </button>
+                <button onClick={handleBulkImport} disabled={bulkLoading}
+                  className="flex-1 h-11 rounded-xl text-[15px] font-semibold text-white"
+                  style={{ background: "var(--lifeflow-primary)" }}>
+                  {bulkLoading ? "导入中..." : "导入"}
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -245,7 +429,7 @@ export default function GoalDetailPage() {
 // ============================================================
 // 普通任务行
 // ============================================================
-function TaskRow({ task, onToggle, onDelete, showDivider }: { task: ScheduleTask; onToggle: () => void; onDelete: () => void; showDivider: boolean }) {
+function TaskRow({ task, onToggle, onDelete, onEdit, showDivider }: { task: ScheduleTask; onToggle: () => void; onDelete: () => void; onEdit: () => void; showDivider: boolean }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
@@ -287,15 +471,25 @@ function TaskRow({ task, onToggle, onDelete, showDivider }: { task: ScheduleTask
           <p className="text-[13px] text-[#86868B] truncate mt-0.5">{task.note}</p>
         )}
       </div>
-      {/* Delete button */}
-      <button
-        type="button"
-        onClick={(e) => { e.stopPropagation(); if (window.confirm('确定删除任务？')) onDelete(); }}
-        className="w-7 h-7 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-        style={{ background: "rgba(255,59,48,0.1)" }}
-      >
-        <X className="w-3.5 h-3.5" style={{ color: "#FF3B30" }} />
-      </button>
+      {/* Edit + Delete buttons */}
+      <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onEdit(); }}
+          className="w-7 h-7 rounded-lg flex items-center justify-center"
+          style={{ background: "rgba(99,102,241,0.1)" }}
+        >
+          <Pencil className="w-3.5 h-3.5" style={{ color: "#6366F1" }} />
+        </button>
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); if (window.confirm('确定删除任务？')) onDelete(); }}
+          className="w-7 h-7 rounded-lg flex items-center justify-center"
+          style={{ background: "rgba(255,59,48,0.1)" }}
+        >
+          <X className="w-3.5 h-3.5" style={{ color: "#FF3B30" }} />
+        </button>
+      </div>
     </motion.div>
   );
 }

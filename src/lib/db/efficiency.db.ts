@@ -95,6 +95,7 @@ export interface ScheduleTask {
   actualTime: number;
   isImportant: boolean;
   note: string;
+  reminderTimes?: string[];     // 提醒时间 e.g. ["09:00", "18:00"]
   progressType?: 'normal' | 'progress';
   progressPeriod?: 'none' | 'daily' | 'weekly' | 'monthly';
   targetValue?: number;

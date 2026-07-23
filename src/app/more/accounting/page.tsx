@@ -347,7 +347,7 @@ export default function AccountingPage() {
   return (
     <div className="pb-[100px]" style={{ background: "var(--lifeflow-background)" }}>
       {/* ===== Header ===== */}
-      <div className="px-5 pt-5 flex items-center justify-between">
+      <div className="px-5 pt-[var(--safe-area-top)] pb-2 flex items-center justify-between">
         <h1 className="text-[34px] font-bold leading-tight" style={{ color: "var(--color-text-primary)", letterSpacing: "-0.022em" }}>记账</h1>
         <div className="flex items-center gap-1.5">
           <div className="relative">

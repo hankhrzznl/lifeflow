@@ -64,7 +64,7 @@ export default function AccountingPage() {
   const [recordType, setRecordType] = useState<"expense" | "income">("expense");
   const [recordAmount, setRecordAmount] = useState("");
   const [recordNote, setRecordNote] = useState("");
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
 
   // ─── 日期计算 ──────────────────────────────────────────────
   const { year, month } = useMemo(() => {
@@ -302,16 +302,9 @@ export default function AccountingPage() {
   const dayNames = ["日", "一", "二", "三", "四", "五", "六"];
   const todayDayIndex = new Date().getDay();
 
-  // ─── 记一笔 ─── 分类过滤 ──────────────────────────────────
-  const filteredRecordCategories = useMemo(
-    () => (categories ?? []).filter((c) => c.type === recordType),
-    [categories, recordType],
-  );
-
-  // 切换记录类型时重置分类
+  // 切换记录类型
   const handleRecordTypeChange = (t: "expense" | "income") => {
     setRecordType(t);
-    setSelectedCategoryId(null);
   };
 
   // ─── 记一笔 ─── 保存 ──────────────────────────────────────
@@ -321,8 +314,8 @@ export default function AccountingPage() {
       showToast({ type: "warning", message: "请输入有效金额" });
       return;
     }
-    if (!selectedCategoryId) {
-      showToast({ type: "warning", message: "请选择分类" });
+    if (!selectedAccountId) {
+      showToast({ type: "warning", message: "请选择账户" });
       return;
     }
     if (!defaultLedgerId) {
@@ -332,8 +325,7 @@ export default function AccountingPage() {
     try {
       await addTransaction({
         ledgerId: defaultLedgerId,
-        accountId: accounts[0]?.id ?? undefined,
-        categoryId: selectedCategoryId,
+        accountId: selectedAccountId,
         type: recordType,
         amount: amountFen,
         date: todayStr(),
@@ -343,11 +335,11 @@ export default function AccountingPage() {
       setShowRecordSheet(false);
       setRecordAmount("");
       setRecordNote("");
-      setSelectedCategoryId(null);
+      setSelectedAccountId(null);
     } catch {
       showToast({ type: "error", message: "保存失败" });
     }
-  }, [recordAmount, selectedCategoryId, defaultLedgerId, accounts, recordType, recordNote, addTransaction]);
+  }, [recordAmount, selectedAccountId, defaultLedgerId, recordType, recordNote]);
 
   // ============================================================
   // 渲染
@@ -942,28 +934,47 @@ export default function AccountingPage() {
                 </div>
               </div>
 
-              {/* Categories */}
+              {/* Account */}
               <div className="mb-5">
-                <label className="text-[13px] font-medium block mb-2" style={{ color: "var(--color-text-secondary)" }}>分类</label>
-                <div className="grid grid-cols-4 gap-3">
-                  {filteredRecordCategories.map((c) => {
-                    const selected = selectedCategoryId === c.id;
-                    const IconComp = getIcon(c.icon);
-                    return (
-                      <button
-                        key={c.id}
-                        onClick={() => setSelectedCategoryId(c.id)}
-                        className="flex flex-col items-center gap-1.5 p-3 rounded-2xl transition-all"
-                        style={selected
-                          ? { background: "var(--lifeflow-brand-50)", border: "1.5px solid var(--lifeflow-primary)" }
-                          : { background: "var(--lifeflow-muted)", border: "1.5px solid transparent" }
-                        }
-                      >
-                        <IconComp className="w-5 h-5" style={{ color: selected ? "var(--lifeflow-primary)" : "var(--color-text-secondary)" }} />
-                        <span className="text-[12px] font-medium" style={{ color: "var(--color-text-primary)" }}>{c.name}</span>
-                      </button>
-                    );
-                  })}
+                <label className="text-[13px] font-medium block mb-2" style={{ color: "var(--color-text-secondary)" }}>账户</label>
+                <div className="flex flex-col gap-2">
+                  {(accounts ?? []).length === 0 ? (
+                    <div className="py-4 text-center text-[13px]" style={{ color: "var(--color-text-disabled)" }}>
+                      暂无资产账户，请先在资产页添加
+                    </div>
+                  ) : (
+                    (accounts ?? []).map((acc) => {
+                      const selected = selectedAccountId === acc.id;
+                      const typeLabel: Record<string, string> = {
+                        cash: "现金", bank: "银行卡", alipay: "支付宝", wechat: "微信",
+                      };
+                      const typeIcon: Record<string, string> = {
+                        cash: "💵", bank: "🏦", alipay: "💳", wechat: "💬",
+                      };
+                      return (
+                        <button
+                          key={acc.id}
+                          onClick={() => setSelectedAccountId(selected ? null : acc.id)}
+                          className="flex items-center gap-3 px-4 py-3 rounded-2xl transition-all"
+                          style={selected
+                            ? { background: "var(--lifeflow-brand-50)", border: "1.5px solid var(--lifeflow-primary)" }
+                            : { background: "var(--lifeflow-muted)", border: "1.5px solid transparent" }
+                          }
+                        >
+                          <span className="text-xl">{typeIcon[acc.type] || "💰"}</span>
+                          <div className="flex-1 text-left">
+                            <span className="text-[14px] font-medium block" style={{ color: "var(--color-text-primary)" }}>{acc.name}</span>
+                            <span className="text-[11px]" style={{ color: "var(--color-text-disabled)" }}>{typeLabel[acc.type] || acc.type} · ¥{(acc.balance / 100).toFixed(2)}</span>
+                          </div>
+                          {selected && (
+                            <span className="w-5 h-5 rounded-full flex items-center justify-center" style={{ background: "var(--lifeflow-primary)" }}>
+                              <span className="text-white text-[11px]">✓</span>
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })
+                  )}
                 </div>
               </div>
 

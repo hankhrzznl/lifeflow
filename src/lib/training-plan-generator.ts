@@ -69,58 +69,52 @@ export function getMonthLabel(): string {
 }
 
 // ============================================================
-// 计划初始化（一个Goal「强健体魄」+ 5个TrainingPlan + ScheduleTask）
+// 计划初始化（5个TrainingPlan → 5个独立Goal → ScheduleTask）
 // ============================================================
-
-const MASTER_GOAL_TITLE = "强健体魄";
 
 export async function initializeTrainingPlans(): Promise<{ created: number }> {
   const existing = await healthDB.trainingPlans.count();
   if (existing > 0) {
-    // Already initialized — ensure all plans point to the correct master goal
     return await repairPlans();
   }
 
-  // 1. Create or find the master goal
-  const masterGoal = await ensureMasterGoal();
-
-  // 2. Clean up any orphan training goals
-  await cleanupOrphanTrainingGoals(masterGoal.id);
-
-  // 3. Create TrainingPlans
   const { primary, secondary } = getMonthlyRotation();
   let created = 0;
 
   for (const sys of TRAINING_SYSTEMS) {
+    // Each training system gets its own Goal
+    const goal = await createGoalForSystem(sys);
     const planDef = getPlanDefaults(sys, primary, secondary);
     const planId = crypto.randomUUID();
     await healthDB.trainingPlans.add({
-      ...planDef, id: planId, goalId: masterGoal.id, streak: 0, daysLog: {}, active: true, createdAt: Date.now(),
+      ...planDef, id: planId, goalId: goal.id, streak: 0, daysLog: {}, active: true, createdAt: Date.now(),
     } as TrainingPlan);
     created++;
-
-    await generateScheduleTasksForPlan({ ...planDef, id: planId, goalId: masterGoal.id, streak: 0, daysLog: {}, active: true, createdAt: Date.now() } as TrainingPlan, masterGoal.id);
+    await generateScheduleTasksForPlan(
+      { ...planDef, id: planId, goalId: goal.id, streak: 0, daysLog: {}, active: true, createdAt: Date.now() } as TrainingPlan,
+      goal.id
+    );
   }
 
   return { created };
 }
 
-/** Ensure master goal exists; returns it if already present */
-async function ensureMasterGoal(): Promise<Goal> {
-  const existing = await efficiencyDB.goals.where("title").equals(MASTER_GOAL_TITLE).first();
+/** Create a Goal for a single training system */
+async function createGoalForSystem(sys: TrainingSystemDef): Promise<Goal> {
+  const existing = await efficiencyDB.goals.where("title").equals(sys.label).first();
   if (existing) return existing;
 
   const goalId = crypto.randomUUID();
   await efficiencyDB.goals.add({
     id: goalId,
-    title: MASTER_GOAL_TITLE,
+    title: sys.label,
     deadline: getMonthEnd(),
     progress: 0,
     status: 'active',
-    goalType: 'count',
-    targetCount: 5,  // 5个训练体系
-    note: "健身房复合力量、低强度有氧、农夫行走、负重旋转、爆发力训练",
-    color: "#2563EB",
+    goalType: 'task',
+    targetCount: sys.role === 'staple' ? 12 : 6,
+    note: sys.exercises.join('、'),
+    color: sys.color,
     quadrant: 'q2',
     createdAt: Date.now(),
   } as Goal);
@@ -128,31 +122,22 @@ async function ensureMasterGoal(): Promise<Goal> {
   return { id: goalId } as Goal;
 }
 
-/** Delete orphan goals that were created by old initializeTrainingPlans */
-async function cleanupOrphanTrainingGoals(masterGoalId: string): Promise<void> {
-  const trainingLabels = TRAINING_SYSTEMS.map(s => s.label);
-  const allGoals = await efficiencyDB.goals.where("status").notEqual("archived").toArray();
-  for (const g of allGoals) {
-    if (g.id === masterGoalId) continue;
-    if (trainingLabels.includes(g.title)) {
-      await efficiencyDB.goals.delete(g.id);
-    }
-  }
-}
-
-/** Ensure existing plans' goalId points to master goal */
+/** Repair: ensure each training plan has its own Goal */
 async function repairPlans(): Promise<{ created: number }> {
-  const masterGoal = await ensureMasterGoal();
-  await cleanupOrphanTrainingGoals(masterGoal.id);
-
   const plans = await healthDB.trainingPlans.toArray();
   for (const p of plans) {
-    if (p.goalId !== masterGoal.id) {
-      await healthDB.trainingPlans.update(p.id, { goalId: masterGoal.id } as any);
+    const sys = TRAINING_SYSTEMS.find(s => s.type === p.trainingType);
+    if (sys) {
+      const goal = await createGoalForSystem(sys);
+      if (p.goalId !== goal.id) {
+        await healthDB.trainingPlans.update(p.id, { goalId: goal.id } as any);
+      }
     }
   }
   return { created: 0 };
 }
+
+
 
 function getPlanDefaults(sys: TrainingSystemDef, primary: TrainingType, secondary: TrainingType[]): Omit<TrainingPlan, 'id'> {
   const isStaple = sys.role === 'staple';
@@ -255,8 +240,4 @@ export async function getActiveTrainingPlans(): Promise<TrainingPlan[]> {
 
 export async function getTrainingPlansByRole(role: 'staple' | 'rotating'): Promise<TrainingPlan[]> {
   return healthDB.trainingPlans.filter(p => p.active && p.role === role).toArray();
-}
-
-export async function getMasterGoal(): Promise<Goal | undefined> {
-  return efficiencyDB.goals.where("title").equals(MASTER_GOAL_TITLE).first();
 }

@@ -10,7 +10,7 @@ export interface Goal {
   progress: number;     // 0-100
   status: 'active' | 'completed' | 'paused' | 'archived';
   completedAt?: number; // 完成时间戳(ms)，status→completed 时写入
-  goalType?: 'count' | 'habit';   // 目标类型，默认 'count'
+  goalType?: 'habit' | 'task';   // habit=习惯(打卡+streak), task=任务(进度条)
   targetCount?: number;           // 完成 N 次，默认 5
   note?: string;                  // 备注，默认 ''
   color?: string;                 // 项目标签颜色，默认 #5865F2

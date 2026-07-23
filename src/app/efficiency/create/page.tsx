@@ -123,7 +123,7 @@ function CreateGoalInner() {
       const data = {
         title: title.trim(),
         deadline,
-        goalType: "count" as const,
+        goalType: "task" as const,
         note: note.trim(),
         projectId: projectId || undefined,
       };

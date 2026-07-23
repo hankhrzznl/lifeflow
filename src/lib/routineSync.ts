@@ -26,12 +26,10 @@ export async function syncRoutineToSchedule(routine: RoutineTemplate): Promise<v
   const taskTitle = routine.name;        // "起床" / "午睡" / "入睡"
   const category = 'habit' as const;
 
-  // 查询今天是否已存在此类型的固定任务（不按date查，按sourceModule+title）
+  // 查询今天是否已存在此类型的固定任务
   const existing = await efficiencyDB.scheduleTasks
-    .where('title')
-    .equals(taskTitle)
-    .and(t => t.sourceModule === 'routine')
-    .filter(t => t.date === today)
+    .where('date').equals(today)
+    .and(t => t.sourceModule === 'routine' && t.title === taskTitle)
     .first();
 
   if (routine.isActive) {

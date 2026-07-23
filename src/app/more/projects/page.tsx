@@ -130,7 +130,7 @@ export default function ProjectsPage() {
       {/* Header */}
       <div className="flex items-center justify-between px-4 pt-[var(--safe-area-top)] pb-2">
         <button
-          type="button" onClick={() => router.push("/more")}
+          type="button" onClick={() => router.push("/")}
           className="inline-flex h-8 w-8 items-center justify-center rounded-lg"
           style={{ background: "var(--color-surface-secondary)" }}
         >

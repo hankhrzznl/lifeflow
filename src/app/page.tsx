@@ -7,7 +7,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import {
   Zap, Check, Bell, Flame,
   Calendar, Droplets, Moon, Dumbbell, Pill,
-  Timer, CalendarRange, StickyNote, BarChart3, Settings, Menu,
+  Timer, CalendarRange, StickyNote, BarChart3, Settings, FolderKanban,
   Plus, X, Clock,
 } from "lucide-react";
 import { getUpcomingItems, addManualItem, updateItem } from "@/lib/db/daylog.db";
@@ -204,11 +204,12 @@ export default function HomePage() {
           <QuickBtn href="/more/review" icon={BarChart3} />
           <QuickBtn href="/settings" icon={Settings} />
           <Link
-            href="/more"
-            className="w-7 h-7 flex items-center justify-center rounded-lg active:opacity-60 ml-1"
+            href="/more/projects"
+            className="h-7 flex items-center gap-1.5 px-2.5 rounded-lg active:opacity-60 ml-1"
             style={{ background: "var(--color-surface-card)", border: "1px solid var(--lifeflow-border)" }}
           >
-            <Menu className="w-3.5 h-3.5" style={{ color: "var(--color-text-secondary)" }} />
+            <FolderKanban className="w-3.5 h-3.5" style={{ color: "var(--color-text-secondary)" }} />
+            <span className="text-[11px] font-medium" style={{ color: "var(--color-text-secondary)" }}>项目管理</span>
           </Link>
         </div>
       </motion.div>

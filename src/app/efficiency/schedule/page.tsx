@@ -407,7 +407,7 @@ export default function SchedulePage() {
   return (
     <div className="mx-auto" style={{ maxWidth: 430, minHeight: "100vh", backgroundColor: "var(--lifeflow-background)", paddingBottom: 100 }}>
       {/* ===== Header ===== */}
-      <div className="px-5 pt-8 pb-2 flex items-center justify-between">
+      <div className="px-5 pt-[var(--safe-area-top)] pb-2 flex items-center justify-between">
         <div>
           <h1 className="text-[34px] font-bold" style={{ color: "var(--color-text-primary)", letterSpacing: "-0.022em", lineHeight: 1.2 }}>
             日程

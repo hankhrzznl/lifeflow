@@ -126,7 +126,7 @@ export default function ProjectsPage() {
   return (
     <div className="pb-[100px]">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 pt-3 pb-2">
+      <div className="flex items-center justify-between px-4 pt-[var(--safe-area-top)] pb-2">
         <button
           type="button"
           onClick={() => router.push("/more")}

@@ -260,7 +260,7 @@ export default function PluginsPage() {
   if (error) {
     return (
       <div className="flex-1 flex flex-col h-full bg-gray-50 dark:bg-gray-950">
-        <div className="px-5 pt-6 pb-3">
+        <div className="px-5 pt-[var(--safe-area-top)] pb-3">
           <h1 className="text-xl font-bold text-gray-900 dark:text-white">插件中心</h1>
         </div>
         <div className="flex-1 flex items-center justify-center px-5">
@@ -287,7 +287,7 @@ export default function PluginsPage() {
 
   return (
     <div className="flex-1 flex flex-col h-full bg-gray-50 dark:bg-gray-950">
-      <div className="px-5 pt-6 pb-3 flex items-center justify-between">
+      <div className="px-5 pt-[var(--safe-area-top)] pb-3 flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-gray-900 dark:text-white">插件中心</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">

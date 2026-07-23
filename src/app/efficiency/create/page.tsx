@@ -160,7 +160,7 @@ function CreateGoalInner() {
     <div className="min-h-screen" style={{ backgroundColor: "var(--lifeflow-background)" }}>
       {/* ===== 页头 ===== */}
       <div style={{ backgroundColor: "var(--color-surface-card)", borderBottom: "1px solid var(--lifeflow-border)" }}>
-        <div className="h-[44px] px-4 flex items-center justify-between relative max-w-[430px] mx-auto">
+        <div className="h-[44px] px-4 flex items-center justify-between relative max-w-[430px] mx-auto" style={{ paddingTop: "var(--safe-area-top)" }}>
           <button
             type="button"
             onClick={() => router.push("/efficiency")}

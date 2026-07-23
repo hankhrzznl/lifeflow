@@ -156,7 +156,7 @@ export default function GoalDetailPage() {
   if (!goal) {
     return (
       <div className="min-h-screen bg-[#FAFAFA]" style={{ maxWidth: 430, margin: "0 auto" }}>
-        <div className="flex items-center h-14 px-4">
+        <div className="flex items-center h-14 px-4" style={{ paddingTop: "var(--safe-area-top)" }}>
           <button onClick={() => router.push("/efficiency")} className="w-8 h-8 -ml-1 flex items-center justify-center">
             <ChevronLeft className="w-6 h-6 text-[#1D1D1F]" />
           </button>

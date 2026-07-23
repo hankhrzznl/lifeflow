@@ -156,7 +156,7 @@ export default function HomePage() {
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35, ease: "easeOut" }}
-        className="px-4 pt-8 pb-2 flex items-center justify-between"
+        className="px-4 pt-[var(--safe-area-top)] pb-2 flex items-center justify-between"
       >
         <p className="text-[13px] font-medium" style={{ color: "var(--color-text-secondary)" }}>
           {greeting()} · {formatDateChinese(now)}

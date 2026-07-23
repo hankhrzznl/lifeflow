@@ -71,7 +71,7 @@ export default function SettingsPage() {
   return (
     <div className="min-h-screen max-w-[430px] mx-auto pb-[100px]" style={{ background: "var(--lifeflow-background)" }}>
       {/* Header - 居中"设置"标题 */}
-      <div className="flex items-center justify-center h-[44px] px-4 pt-3 relative">
+      <div className="flex items-center justify-center h-[44px] px-4 pt-[var(--safe-area-top)] relative">
         <h1 className="text-title-nav" style={{ color: "var(--color-text-primary)" }}>设置</h1>
       </div>
 

@@ -90,7 +90,7 @@ export default function AssistantPage() {
   return (
     <div className="flex flex-col h-screen max-w-[430px] mx-auto" style={{ background: "var(--lifeflow-background)" }}>
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: "1px solid var(--lifeflow-border)" }}>
+      <div className="flex items-center justify-between px-4 pt-[var(--safe-area-top)] pb-3" style={{ borderBottom: "1px solid var(--lifeflow-border)" }}>
         <div className="flex items-center gap-2.5">
           <button onClick={() => router.back()} className="flex items-center justify-center w-8 h-8 rounded-lg active:opacity-60" style={{ background: "var(--color-surface-card)", border: "1px solid var(--lifeflow-border)" }}>
             <ChevronLeft className="w-5 h-5" style={{ color: "var(--color-text-primary)" }} />

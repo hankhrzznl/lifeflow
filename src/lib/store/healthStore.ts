@@ -65,6 +65,8 @@ const defaultSleepGoal: SleepGoalV2 = {
   targetTime: '23:30',
   reminderAdvance: 15,
   reminderEnabled: true,
+  earlySleepEnabled: false,
+  earlySleepStepMinutes: 15,
   createdAt: Date.now(),
   updatedAt: Date.now(),
 };

@@ -54,6 +54,8 @@ export interface SleepGoalV2 {
   targetTime: string;         // default "23:30"
   reminderAdvance: number;    // default 15, range 5-60
   reminderEnabled: boolean;   // default true
+  earlySleepEnabled: boolean;  // CBT-I渐进早睡开关
+  earlySleepStepMinutes: number; // 每晚安多少分钟(默认15)
   createdAt: number;
   updatedAt: number;
 }
@@ -447,6 +449,8 @@ const DEFAULT_SLEEP_GOAL: Omit<SleepGoalV2, 'id'> = {
   targetTime: '23:30',
   reminderAdvance: 15,
   reminderEnabled: true,
+  earlySleepEnabled: false,
+  earlySleepStepMinutes: 15,
   createdAt: Date.now(),
   updatedAt: Date.now(),
 };

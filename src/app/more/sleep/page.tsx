@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ChevronRight, Minus, Plus, Moon, BarChart3 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Minus, Plus, Moon, BarChart3, Sunset } from "lucide-react";
 import { useHealthStore } from "@/lib/store/healthStore";
 import {
   getSleepLogs,
@@ -11,6 +11,9 @@ import {
 } from "@/lib/db/health.db";
 import type { SleepLog } from "@/lib/db/health.db";
 import { showToast } from "@/components/ui/Toast";
+import { calcTonightTarget, getLastNightActual } from "@/lib/routineSync";
+import { getRoutines } from "@/lib/db/daylog.db";
+import type { RoutineTemplate } from "@/lib/db/daylog.db";
 
 /* ────────── Helpers ────────── */
 
@@ -66,6 +69,35 @@ export default function SleepPage() {
   /* 30-day trend */
   const [trendData, setTrendData] = useState<SleepLog[]>([]);
 
+  /* ─── CBT-I Early Sleep ─── */
+  const [sleepRoutine, setSleepRoutine] = useState<RoutineTemplate | null>(null);
+  const [lastNightActual, setLastNightActual] = useState<string | null>(null);
+
+  // Load sleep routine template
+  useEffect(() => {
+    getRoutines().then(routines => {
+      const sr = routines.find(r => r.type === 'sleep');
+      if (sr) setSleepRoutine(sr);
+    });
+  }, []);
+
+  // Load last night's actual sleep time
+  useEffect(() => {
+    if (sleepGoalV2?.earlySleepEnabled) {
+      getLastNightActual(localTodayStr()).then(setLastNightActual);
+    }
+  }, [sleepGoalV2?.earlySleepEnabled]);
+
+  const earlySleepEnabled = sleepGoalV2?.earlySleepEnabled ?? false;
+  const earlyStep = sleepGoalV2?.earlySleepStepMinutes ?? 15;
+  const targetTime = sleepGoalV2?.targetTime || "23:30";
+  const routineTarget = sleepRoutine?.startTime || targetTime;
+  const progressiveTarget = calcTonightTarget({
+    routineTargetTime: routineTarget,
+    lastNightActual,
+    stepMinutes: earlyStep,
+  });
+
   useEffect(() => {
     (async () => {
       await loadSleepData();
@@ -80,7 +112,6 @@ export default function SleepPage() {
 
   /* ─── target / norm ─── */
 
-  const targetTime = sleepGoalV2?.targetTime || "23:30";
   const targetNorm = normalizeMinutes(targetTime);
 
   /* window for time scale: target-60min → target+120min */
@@ -613,6 +644,72 @@ export default function SleepPage() {
               </div>
             )}
           </div>
+        </motion.div>
+
+        {/* ─── CBT-I 早睡渐进 ─── */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.12 }}
+          className="rounded-[20px] p-4"
+          style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}
+        >
+          <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "#F9731618" }}>
+                <Sunset className="w-4 h-4" style={{ color: "#F97316" }} />
+              </div>
+              <span className="text-[15px] font-semibold" style={{ color: "var(--color-text-primary)" }}>早睡渐进</span>
+            </div>
+            <button
+              onClick={() => updateSleepGoalV2({ earlySleepEnabled: !earlySleepEnabled, ...(sleepGoalV2?.earlySleepStepMinutes ? {} : { earlySleepStepMinutes: 15 }) })}
+              className="h-7 w-12 rounded-full transition-colors relative"
+              style={{ background: earlySleepEnabled ? "var(--lifeflow-primary)" : "var(--lifeflow-border)" }}
+            >
+              <motion.div
+                animate={{ left: earlySleepEnabled ? 24 : 2 }}
+                className="absolute top-1 w-5 h-5 rounded-full bg-white shadow-sm"
+                style={{ left: earlySleepEnabled ? 24 : 2 }}
+              />
+            </button>
+          </div>
+          <p className="text-[12px] mb-3" style={{ color: "var(--color-text-disabled)" }}>
+            根据前一晚入睡时间逐渐提前，目标：{routineTarget}（作息模板）
+          </p>
+
+          {earlySleepEnabled && (
+            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="overflow-hidden">
+              {/* Step selector */}
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[13px]" style={{ color: "var(--color-text-secondary)" }}>每晚提前</span>
+                <div className="flex gap-1">
+                  {[15, 30].map(step => (
+                    <button
+                      key={step}
+                      onClick={() => updateSleepGoalV2({ earlySleepStepMinutes: step })}
+                      className="h-7 px-2.5 rounded-full text-[12px] font-medium transition-colors"
+                      style={{
+                        background: earlyStep === step ? "var(--lifeflow-primary)" : "var(--color-surface-secondary)",
+                        color: earlyStep === step ? "#fff" : "var(--color-text-disabled)",
+                      }}
+                    >{step}分钟</button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Tonight target display */}
+              <div className="rounded-xl p-3 flex items-center justify-between"
+                style={{ background: "var(--color-surface-secondary)" }}>
+                <span className="text-[13px]" style={{ color: "var(--color-text-secondary)" }}>今晚目标入睡</span>
+                <span className="text-[18px] font-bold" style={{ color: "var(--lifeflow-primary)" }}>{progressiveTarget}</span>
+              </div>
+              {lastNightActual && (
+                <p className="text-[11px] mt-2 text-center" style={{ color: "var(--color-text-disabled)" }}>
+                  昨晚实际入睡 {lastNightActual} · 提前 {earlyStep} 分钟
+                </p>
+              )}
+            </motion.div>
+          )}
         </motion.div>
 
         {/* ─── Manual Calibrate ─── */}

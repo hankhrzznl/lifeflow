@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, Plus, Trash2, Clock } from "lucide-react";
@@ -8,6 +8,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { getRoutines, addRoutine, updateRoutine, deleteRoutine } from "@/lib/db/daylog.db";
 import type { RoutineTemplate } from "@/lib/db/daylog.db";
 import { showToast } from "@/components/ui/Toast";
+import { syncRoutineToSchedule } from "@/lib/routineSync";
 
 const COLORS = ["#5856D6", "#007AFF", "#34C759", "#FF9500", "#FF3B30", "#AF52DE", "#5AC8FA", "#FF2D55"];
 
@@ -40,16 +41,25 @@ export default function RoutinesPage() {
 
   const handleSave = useCallback(async () => {
     if (!formName.trim()) { showToast({ type: "warning", message: "请输入作息名称" }); return; }
-    const data = { name: formName.trim(), startTime: formStartTime, endTime: formEndTime, color: formColor, icon: "Moon", isActive: true, sortOrder: 0 };
+    const existing = editingId ? routines.find(r => r.id === editingId) : null;
+    const data = {
+      type: (existing?.type || 'custom') as RoutineTemplate['type'],
+      name: formName.trim(), startTime: formStartTime, endTime: formEndTime, color: formColor, icon: existing?.icon || "Moon", isActive: existing?.isActive ?? true, sortOrder: existing?.sortOrder ?? 0,
+    };
+    let saved: RoutineTemplate;
     if (editingId) {
       await updateRoutine(editingId, data);
       showToast({ type: "success", message: "作息已更新" });
+      saved = { ...existing!, ...data, id: editingId };
     } else {
-      await addRoutine(data);
+      const id = await addRoutine(data);
       showToast({ type: "success", message: "作息已添加" });
+      saved = { ...data, id, createdAt: Date.now() };
     }
     resetForm();
-  }, [formName, formStartTime, formEndTime, formColor, editingId, resetForm]);
+    // Sync sleep/wake/nap to schedule
+    syncRoutineToSchedule(saved);
+  }, [formName, formStartTime, formEndTime, formColor, editingId, resetForm, routines]);
 
   const handleEdit = useCallback((r: RoutineTemplate) => {
     setEditingId(r.id);
@@ -64,9 +74,19 @@ export default function RoutinesPage() {
   }, [editingId, resetForm]);
 
   const handleToggle = useCallback(async (r: RoutineTemplate) => {
+    const updated = { ...r, isActive: !r.isActive };
     await updateRoutine(r.id, { isActive: !r.isActive });
     showToast({ type: "success", message: r.isActive ? "已停用" : "已启用" });
+    // Sync to schedule if this is a sleep/wake/nap type
+    syncRoutineToSchedule(updated);
   }, []);
+
+  // Auto-sync all active sleep/wake/nap templates on first load
+  useEffect(() => {
+    for (const r of routines) {
+      if (r.type !== 'custom') syncRoutineToSchedule(r);
+    }
+  }, [routines]);
 
   const showForm = adding || editingId !== null;
 

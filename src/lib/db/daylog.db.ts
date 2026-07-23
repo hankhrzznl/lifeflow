@@ -56,8 +56,11 @@ export interface Course {
   createdAt: number;
 }
 
+export type RoutineType = 'custom' | 'wake' | 'sleep' | 'nap';
+
 export interface RoutineTemplate {
   id: string;              // uuid
+  type: RoutineType;       // sleep/wake/nap/custom
   name: string;            // "午睡"
   startTime: string;       // "12:30"
   endTime: string;         // "13:00"
@@ -81,6 +84,30 @@ export class DaylogDB extends Dexie {
       items: '&id, date, sourceType, sourceId, taskId, goalId',
       courses: '&id, name',
       routineTemplates: '&id, name',
+    });
+    // v2: add type field to routineTemplates + seed default templates
+    this.version(2).stores({
+      routineTemplates: '&id, name, type',
+    }).upgrade(async (tx) => {
+      // Migrate existing: set type='custom' for templates without type
+      const all = await tx.table('routineTemplates').toArray();
+      for (const r of all) {
+        if (!r.type) {
+          await tx.table('routineTemplates').update(r.id, { type: 'custom' });
+        }
+      }
+      // Seed default sleep/wake/nap templates if not exist
+      const defaults: { type: RoutineType; name: string; startTime: string; endTime: string; color: string; icon: string; sortOrder: number }[] = [
+        { type: 'wake',   name: '起床', startTime: '07:00', endTime: '07:30', color: '#FF9500', icon: 'Sunrise',      sortOrder: 0 },
+        { type: 'nap',    name: '午睡', startTime: '13:00', endTime: '13:30', color: '#5856D6', icon: 'CloudSun',     sortOrder: 1 },
+        { type: 'sleep',  name: '入睡', startTime: '22:30', endTime: '23:00', color: '#1E293B', icon: 'Moon',         sortOrder: 2 },
+      ];
+      for (const d of defaults) {
+        const existing = await tx.table('routineTemplates').where('type').equals(d.type).first();
+        if (!existing) {
+          await tx.table('routineTemplates').add({ ...d, id: crypto.randomUUID(), isActive: true, createdAt: Date.now() });
+        }
+      }
     });
   }
 }

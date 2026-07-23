@@ -6,12 +6,14 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence, type PanInfo } from "framer-motion";
 import {
   Check, Plus, ChevronLeft, ChevronRight, CalendarDays, Clock,
-  TrendingUp, X, ListTodo,
+  TrendingUp, X, ListTodo, Moon,
 } from "lucide-react";
 import { useEfficiencyStore } from "@/lib/store/efficiencyStore";
 import type { ScheduleTask } from "@/lib/db/efficiency.db";
 import { getScheduleTasksByDate } from "@/lib/db/efficiency.db";
 import { showToast } from "@/components/ui/Toast";
+import { getRoutines } from "@/lib/db/daylog.db";
+import { syncRoutineToSchedule } from "@/lib/routineSync";
 
 // ============================================================
 // 常量
@@ -390,6 +392,25 @@ export default function SchedulePage() {
   // ── 创建任务 Sheet ──
   const [showCreateSheet, setShowCreateSheet] = useState(false);
 
+  // ── 首次引导：作息模板 → 日程 ──
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  useEffect(() => {
+    const checkRoutines = async () => {
+      const routines = await getRoutines();
+      const activeRoutines = routines.filter(r => r.type !== 'custom' && r.isActive);
+      if (activeRoutines.length === 0) return;
+
+      // Check if today already has routine-sourced tasks
+      const todayTasks = await getScheduleTasksByDate(selectedDate);
+      const hasRoutineTasks = todayTasks.some(t => t.sourceModule === 'routine');
+      if (!hasRoutineTasks) {
+        setShowOnboarding(true);
+      }
+    };
+    checkRoutines();
+  }, [selectedDate]);
+
   // ── 格式化 ──
   const formatDateChinese = (date: Date) => {
     const weekDays = ["日", "一", "二", "三", "四", "五", "六"];
@@ -534,17 +555,52 @@ export default function SchedulePage() {
       {/* ===== 当日任务分组卡 ===== */}
       <div className="px-4 mt-3">
         {sortedTasks.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20">
-            <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4" style={{ backgroundColor: "var(--color-surface-secondary)" }}>
-              <CalendarDays className="w-7 h-7" style={{ color: "var(--color-text-disabled)" }} />
+          showOnboarding ? (
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="rounded-[20px] p-5 mt-2 flex flex-col items-center text-center"
+              style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}
+            >
+              <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-3" style={{ background: "var(--lifeflow-brand-50)" }}>
+                <Moon className="w-7 h-7" style={{ color: "var(--lifeflow-primary)" }} />
+              </div>
+              <p className="text-[16px] font-semibold mb-1" style={{ color: "var(--color-text-primary)" }}>还未设置今日日程</p>
+              <p className="text-[13px] mb-4" style={{ color: "var(--color-text-secondary)" }}>作息模板中有起床、午睡、入睡，是否同步到今天？</p>
+              <div className="flex gap-2 w-full max-w-xs">
+                <button
+                  onClick={() => setShowOnboarding(false)}
+                  className="flex-1 h-10 rounded-xl text-[14px] font-medium"
+                  style={{ background: "var(--color-surface-secondary)", color: "var(--color-text-secondary)" }}
+                >暂不需要</button>
+                <button
+                  onClick={async () => {
+                    const routines = await getRoutines();
+                    for (const r of routines) {
+                      if (r.type !== 'custom' && r.isActive) await syncRoutineToSchedule(r);
+                    }
+                    await loadScheduleTasks(selectedDate);
+                    setShowOnboarding(false);
+                    showToast({ type: "success", message: "作息已同步到今日日程" });
+                  }}
+                  className="flex-1 h-10 rounded-xl text-[14px] font-semibold text-white"
+                  style={{ background: "var(--lifeflow-primary)" }}
+                >同步作息</button>
+              </div>
+            </motion.div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-20">
+              <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4" style={{ backgroundColor: "var(--color-surface-secondary)" }}>
+                <CalendarDays className="w-7 h-7" style={{ color: "var(--color-text-disabled)" }} />
+              </div>
+              <p className="text-[16px] font-medium" style={{ color: "var(--color-text-secondary)", letterSpacing: "-0.01em" }}>
+                当日暂无安排
+              </p>
+              <p className="text-[12px] mt-1.5" style={{ color: "var(--color-text-disabled)" }}>
+                添加日程以开始规划你的时间
+              </p>
             </div>
-            <p className="text-[16px] font-medium" style={{ color: "var(--color-text-secondary)", letterSpacing: "-0.01em" }}>
-              当日暂无安排
-            </p>
-            <p className="text-[12px] mt-1.5" style={{ color: "var(--color-text-disabled)" }}>
-              添加日程以开始规划你的时间
-            </p>
-          </div>
+          )
         ) : (
           <div
             className="rounded-[20px] overflow-hidden"

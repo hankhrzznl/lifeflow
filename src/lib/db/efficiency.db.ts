@@ -28,6 +28,10 @@ export interface Project {
   description: string;
   sortOrder: number;
   createdAt: number;
+  projectType: 'big' | 'small';   // 大项目=分类标签, 小项目=功能模块
+  isDefault?: boolean;            // 默认小项目不可删改
+  parentProjectId?: string;       // 小项目所属大项目ID（可选）
+  moreRoute?: string;             // 关联的更多模块路由（如 /more/water）
 }
 
 export interface EfficiencyGoal {
@@ -165,6 +169,48 @@ export class EfficiencyDB extends Dexie {
       scheduleTasks: '&id, date, goalId, isCompleted, isImportant, category',
       projects: '&id, name',
     });
+    // v9: 项目层级结构（大项目+小项目）
+    this.version(9).stores({
+      projects: '&id, name, projectType, parentProjectId',
+    }).upgrade(async (tx) => {
+      // Migrate existing projects to 'small' type
+      const all = await tx.table('projects').toArray();
+      for (const p of all) {
+        await tx.table('projects').update(p.id, { projectType: 'small' as any });
+      }
+      // Seed 6 default big projects
+      const bigProjects = [
+        { id: crypto.randomUUID(), name: '学习', color: '#2563EB', icon: 'GraduationCap', description: '', sortOrder: 0, projectType: 'big', createdAt: Date.now() },
+        { id: crypto.randomUUID(), name: '健康', color: '#10B981', icon: 'Heart', description: '', sortOrder: 1, projectType: 'big', createdAt: Date.now() },
+        { id: crypto.randomUUID(), name: '琐事', color: '#F59E0B', icon: 'ClipboardList', description: '', sortOrder: 2, projectType: 'big', createdAt: Date.now() },
+        { id: crypto.randomUUID(), name: '长期主义', color: '#8B5CF6', icon: 'Target', description: '', sortOrder: 3, projectType: 'big', createdAt: Date.now() },
+        { id: crypto.randomUUID(), name: '娱乐', color: '#EC4899', icon: 'Gamepad2', description: '', sortOrder: 4, projectType: 'big', createdAt: Date.now() },
+        { id: crypto.randomUUID(), name: '无项目', color: '#94A3B8', icon: 'FolderOpen', description: '', sortOrder: 5, projectType: 'big', createdAt: Date.now() },
+      ];
+      for (const bp of bigProjects) {
+        await tx.table('projects').add(bp);
+      }
+    });
+    // v10: seed 10 default small projects
+    this.version(10).stores({
+      projects: '&id, name, projectType, parentProjectId',
+    }).upgrade(async (tx) => {
+      const defaultSmallProjects = [
+        { id: crypto.randomUUID(), name: '课程表', color: '#7C3AED', icon: 'GraduationCap', description: '', sortOrder: 0, projectType: 'small', isDefault: true, moreRoute: '/more/schedule', createdAt: Date.now() },
+        { id: crypto.randomUUID(), name: '作息', color: '#6366F1', icon: 'Clock', description: '', sortOrder: 1, projectType: 'small', isDefault: true, moreRoute: '/more/routine', createdAt: Date.now() },
+        { id: crypto.randomUUID(), name: '记账', color: '#14B8A6', icon: 'Wallet', description: '', sortOrder: 2, projectType: 'small', isDefault: true, moreRoute: '/more/finance', createdAt: Date.now() },
+        { id: crypto.randomUUID(), name: '饮水', color: '#0EA5E9', icon: 'Droplets', description: '', sortOrder: 3, projectType: 'small', isDefault: true, moreRoute: '/more/water', createdAt: Date.now() },
+        { id: crypto.randomUUID(), name: '睡眠', color: '#1E293B', icon: 'Moon', description: '', sortOrder: 4, projectType: 'small', isDefault: true, moreRoute: '/more/sleep', createdAt: Date.now() },
+        { id: crypto.randomUUID(), name: '训练', color: '#EF4444', icon: 'Dumbbell', description: '', sortOrder: 5, projectType: 'small', isDefault: true, moreRoute: '/more/fitness', createdAt: Date.now() },
+        { id: crypto.randomUUID(), name: '饮食', color: '#F97316', icon: 'Utensils', description: '', sortOrder: 6, projectType: 'small', isDefault: true, moreRoute: '/more/diet', createdAt: Date.now() },
+        { id: crypto.randomUUID(), name: '养生', color: '#84CC16', icon: 'Flower2', description: '', sortOrder: 7, projectType: 'small', isDefault: true, moreRoute: '/more/wellness', createdAt: Date.now() },
+        { id: crypto.randomUUID(), name: '体态拉伸', color: '#06B6D4', icon: 'StretchHorizontal', description: '', sortOrder: 8, projectType: 'small', isDefault: true, moreRoute: '/more/stretch', createdAt: Date.now() },
+        { id: crypto.randomUUID(), name: '吃药', color: '#DC2626', icon: 'Pill', description: '', sortOrder: 9, projectType: 'small', isDefault: true, moreRoute: '/more/medication', createdAt: Date.now() },
+      ];
+      for (const sp of defaultSmallProjects) {
+        await tx.table('projects').add(sp);
+      }
+    });
   }
 }
 
@@ -185,7 +231,8 @@ export async function initializeEfficiencyDB(): Promise<{ success: boolean; erro
         { name: "无项目", color: "#FFFFFF", icon: "Circle", description: "", sortOrder: 5 },
       ];
       for (const p of defaults) {
-        await addProject(p);
+        // Existing defaults from v4 become 'small' type
+        await efficiencyDB.projects.add({ ...p, id: crypto.randomUUID(), projectType: 'small' as any, createdAt: Date.now() });
       }
     }
     return { success: true };
@@ -288,9 +335,16 @@ export async function getAllHabits(): Promise<EfficiencyHabit[]> {
 
 // ─── Projects CRUD ───────────────────────────────────────────
 
-export async function addProject(p: Omit<Project, 'id' | 'createdAt'>): Promise<string> {
+export async function addProject(
+  p: Omit<Project, "id" | "createdAt" | "projectType"> & { projectType?: 'big' | 'small' }
+): Promise<string> {
   const id = crypto.randomUUID();
-  await efficiencyDB.projects.add({ ...p, id, createdAt: Date.now() });
+  await efficiencyDB.projects.add({
+    ...p,
+    id,
+    projectType: p.projectType || 'small',
+    createdAt: Date.now(),
+  } as Project);
   return id;
 }
 

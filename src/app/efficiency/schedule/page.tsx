@@ -9,7 +9,7 @@ import {
   ListTodo, X, Circle,
 } from "lucide-react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { getItemsByDateSorted, deleteItem, updateItem, addManualItem } from "@/lib/db/daylog.db";
+import { getItemsByDateSorted, deleteItem, updateItem, addManualItem, generateRoutineItems, generateCourseItems } from "@/lib/db/daylog.db";
 import type { Item } from "@/lib/db/daylog.db";
 import { showToast } from "@/components/ui/Toast";
 
@@ -82,6 +82,15 @@ export default function SchedulePage() {
   useEffect(() => {
     setSelectedDate(todayStr);
   }, [todayStr]);
+
+  // 当选中日期变化时，自动生成作息/课程事项
+  useEffect(() => {
+    if (!selectedDate) return;
+    (async () => {
+      await generateRoutineItems(selectedDate);
+      await generateCourseItems(selectedDate);
+    })();
+  }, [selectedDate]);
 
   // Live data for selected date
   const items = useLiveQuery(

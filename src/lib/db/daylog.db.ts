@@ -6,7 +6,7 @@ import Dexie, { type Table } from 'dexie';
 
 // ─── Types ───────────────────────────────────────────────────
 
-export type SourceType = "task" | "habit" | "course" | "routine";
+export type SourceType = "task" | "habit" | "course" | "routine" | "manual";
 
 export interface Item {
   id: string;              // uuid
@@ -118,6 +118,50 @@ export const daylogDB = new DaylogDB();
 
 export async function getItemsByDate(dateStr: string): Promise<Item[]> {
   return daylogDB.items.where('date').equals(dateStr).sortBy('sortOrder');
+}
+
+/** 按 plannedStart 升序返回当日事项 */
+export async function getItemsByDateSorted(dateStr: string): Promise<Item[]> {
+  return daylogDB.items.where('date').equals(dateStr).sortBy('plannedStart');
+}
+
+/** 获取当前时间之后的 N 个事项 */
+export async function getUpcomingItems(todayStr: string, nowTime: string, limit: number = 6): Promise<Item[]> {
+  const all = await daylogDB.items
+    .where('date').equals(todayStr)
+    .filter(item => item.plannedStart >= nowTime && !item.isCompleted)
+    .toArray();
+  return all.sort((a, b) => a.plannedStart.localeCompare(b.plannedStart)).slice(0, limit);
+}
+
+/** 手动新建事项（sourceType='manual'） */
+export async function addManualItem(data: {
+  date: string;
+  plannedStart: string;
+  plannedEnd: string;
+  title: string;
+  note?: string;
+  color?: string;
+  icon?: string;
+  projectId?: string;
+}): Promise<string> {
+  return addItem({
+    date: data.date,
+    plannedStart: data.plannedStart,
+    plannedEnd: data.plannedEnd,
+    actualStart: data.plannedStart,
+    actualEnd: data.plannedEnd,
+    isCorrected: false,
+    sourceType: 'manual',
+    sourceId: crypto.randomUUID(),
+    title: data.title,
+    color: data.color || '#6366F1',
+    icon: data.icon || 'CheckSquare',
+    note: data.note,
+    projectId: data.projectId,
+    isCompleted: false,
+    sortOrder: timeToSort(data.plannedStart),
+  });
 }
 
 export async function getAllItems(): Promise<Item[]> {

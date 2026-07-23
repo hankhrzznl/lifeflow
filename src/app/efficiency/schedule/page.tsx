@@ -3,22 +3,26 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { motion, AnimatePresence, type PanInfo } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Check, Plus, ChevronLeft, ChevronRight, CalendarDays, Clock,
-  TrendingUp, X, ListTodo, Moon,
+  ListTodo, X, Circle,
 } from "lucide-react";
-import { useEfficiencyStore } from "@/lib/store/efficiencyStore";
-import type { ScheduleTask } from "@/lib/db/efficiency.db";
-import { getScheduleTasksByDate } from "@/lib/db/efficiency.db";
+import { useLiveQuery } from "dexie-react-hooks";
+import { getItemsByDateSorted, deleteItem, updateItem, addManualItem } from "@/lib/db/daylog.db";
+import type { Item } from "@/lib/db/daylog.db";
 import { showToast } from "@/components/ui/Toast";
-import { getRoutines } from "@/lib/db/daylog.db";
-import { syncRoutineToSchedule } from "@/lib/routineSync";
 
 // ============================================================
 // 常量
 // ============================================================
 const WEEK_DAYS = ["一", "二", "三", "四", "五", "六", "日"];
+
+/** 时间轴范围 06:00 ~ 02:00（次日） */
+const HOURS = Array.from({ length: 21 }, (_, i) => {
+  const h = (6 + i) % 24;
+  return `${String(h).padStart(2, "0")}:00`;
+});
 
 // ============================================================
 // 工具函数
@@ -37,261 +41,33 @@ function getWeekMonday(baseDate: Date, weekOffset: number): Date {
   return addDays(addDays(baseDate, mondayOffset), weekOffset * 7);
 }
 
-const todayStr = toDateStr(new Date());
-
-// ============================================================
-// 任务行组件
-// ============================================================
-function TaskRow({
-  task,
-  onToggle,
-  onLongPress,
-}: {
-  task: ScheduleTask;
-  onToggle: () => void;
-  onLongPress: () => void;
-}) {
-  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const handleTouchStart = () => {
-    longPressTimer.current = setTimeout(onLongPress, 500);
-  };
-  const handleTouchEnd = () => {
-    if (longPressTimer.current) clearTimeout(longPressTimer.current);
-  };
-
-  return (
-    <div
-      className="flex items-center gap-3 px-4 min-h-[54px] py-2"
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
-      onTouchMove={handleTouchEnd}
-      onContextMenu={(e) => { e.preventDefault(); onLongPress(); }}
-    >
-      {/* 勾选圆 */}
-      <button
-        type="button"
-        onClick={(e) => { e.stopPropagation(); onToggle(); }}
-        className="shrink-0"
-        while-tap={{ scale: 0.95 } as never}
-      >
-        {task.isCompleted ? (
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            className="w-6 h-6 rounded-full flex items-center justify-center"
-            style={{ backgroundColor: "var(--lifeflow-primary)" }}
-          >
-            <Check className="w-[14px] h-[14px] text-white" strokeWidth={3} />
-          </motion.div>
-        ) : (
-          <div className="w-6 h-6 rounded-full border-2 bg-white" style={{ borderColor: "var(--color-text-disabled)" }} />
-        )}
-      </button>
-
-      {/* 内容 */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5">
-          <p
-            className="text-[17px] truncate"
-            style={{
-              color: task.isCompleted ? "var(--color-text-disabled)" : "var(--color-text-primary)",
-              textDecoration: task.isCompleted ? "line-through" : "none",
-            }}
-          >
-            {task.title}
-          </p>
-          {task.isImportant && !task.isCompleted && (
-            <span className="w-[6px] h-[6px] rounded-full shrink-0" style={{ backgroundColor: "var(--lifeflow-primary)" }} />
-          )}
-        </div>
-        {(task.plannedTime > 0 || task.progressType === "progress" || task.note) && (
-          <div className="mt-1 flex gap-2 flex-wrap">
-            {task.plannedTime > 0 && (
-              <span
-                className="inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded-md"
-                style={{ backgroundColor: "var(--lifeflow-background)", color: "var(--color-text-secondary)" }}
-              >
-                <Clock className="w-3 h-3" />
-                {task.plannedTime}分钟
-              </span>
-            )}
-            {task.progressType === "progress" && task.targetValue != null && (
-              <span
-                className="inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded-md"
-                style={{ backgroundColor: "var(--lifeflow-brand-50)", color: "var(--lifeflow-primary)" }}
-              >
-                <TrendingUp className="w-3 h-3" />
-                目标 {task.targetValue}{task.targetUnit || ""}
-              </span>
-            )}
-            {task.note && (
-              <span className="text-[13px] truncate max-w-[180px]" style={{ color: "var(--color-text-secondary)" }}>{task.note}</span>
-            )}
-          </div>
-        )}
-      </div>
-    </div>
-  );
+function timeToMinutes(time: string): number {
+  const [h, m] = time.split(":").map(Number);
+  if (h < 6) return (h + 24) * 60 + m; // wrap past midnight
+  return h * 60 + m;
 }
 
-// ============================================================
-// 创建任务 Sheet
-// ============================================================
-function CreateTaskSheet({
-  open,
-  onClose,
-  selectedDate,
-}: {
-  open: boolean;
-  onClose: () => void;
-  selectedDate: string;
-}) {
-  const { addScheduleTask, loadScheduleTasks } = useEfficiencyStore();
-  const [title, setTitle] = useState("");
-  const [note, setNote] = useState("");
-  const [plannedTime, setPlannedTime] = useState(30);
-  const [isImportant, setIsImportant] = useState(false);
-  const [saving, setSaving] = useState(false);
+/** 判断事项是否跨越了给定的小时 */
+function spansHour(item: Item, hourLabel: string): boolean {
+  const startM = timeToMinutes(item.plannedStart);
+  const endM = timeToMinutes(item.plannedEnd);
+  const hourM = timeToMinutes(hourLabel);
+  const nextHourM = hourM + 60;
+  return startM < nextHourM && endM > hourM;
+}
 
-  const handleSave = async () => {
-    if (!title.trim()) { showToast({ type: "warning", message: "请输入任务名称" }); return; }
-    setSaving(true);
-    try {
-      await addScheduleTask({
-        goalId: null,
-        title: title.trim(),
-        note,
-        type: "single",
-        date: selectedDate,
-        isCompleted: false,
-        plannedTime,
-        actualTime: 0,
-        isImportant,
-      });
-      await loadScheduleTasks(selectedDate);
-      showToast({ type: "success", message: "任务已保存" });
-      setTitle(""); setNote(""); setPlannedTime(30); setIsImportant(false);
-      onClose();
-    } catch {
-      showToast({ type: "error", message: "保存失败" });
-    }
-    setSaving(false);
-  };
+/** 事项的实际可见分钟数（在该小时块内占多少） */
+function itemDurationInSlot(item: Item, hourLabel: string): number {
+  const startM = timeToMinutes(item.plannedStart);
+  const endM = timeToMinutes(item.plannedEnd);
+  const hourM = timeToMinutes(hourLabel);
+  const slotStart = Math.max(startM, hourM);
+  const slotEnd = Math.min(endM, hourM + 60);
+  return Math.max(0, slotEnd - slotStart);
+}
 
-  return (
-    <AnimatePresence>
-      {open && (
-        <>
-          <motion.div
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            onClick={onClose}
-            className="fixed inset-0 z-50 bg-black/40"
-          />
-          <motion.div
-            initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
-            transition={{ duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
-            className="fixed bottom-0 left-0 right-0 z-[60] rounded-t-[20px] max-h-[85vh] overflow-y-auto"
-            style={{
-              backgroundColor: "var(--color-surface-card)",
-              paddingBottom: "env(safe-area-inset-bottom)",
-            }}
-          >
-            <div className="flex justify-center pt-2 pb-1">
-              <div className="w-9 h-1 rounded-full bg-[#D4D4D4]" />
-            </div>
-
-            {/* 页头 */}
-            <div className="flex items-center justify-between px-5 h-12">
-              <button onClick={onClose} className="text-[17px]" style={{ color: "var(--color-text-secondary)" }}>取消</button>
-              <span className="text-[17px] font-semibold" style={{ color: "var(--color-text-primary)" }}>新建任务</span>
-              <button
-                onClick={handleSave}
-                disabled={saving || !title.trim()}
-                className="text-[17px] font-medium"
-                style={{
-                  color: title.trim() ? "var(--lifeflow-primary)" : "var(--color-text-disabled)",
-                  opacity: saving ? 0.5 : 1,
-                }}
-              >
-                保存
-              </button>
-            </div>
-
-            {/* 表单 */}
-            <div className="px-5 pt-2 pb-6 flex flex-col gap-4">
-              {/* 任务名称 */}
-              <div>
-                <label className="text-[13px] mb-1.5 block" style={{ color: "var(--color-text-secondary)" }}>任务名称</label>
-                <input
-                  type="text"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="输入任务名称"
-                  className="w-full h-11 rounded-[10px] px-4 text-[15px] outline-none"
-                  style={{
-                    backgroundColor: "var(--lifeflow-background)",
-                    color: "var(--color-text-primary)",
-                  }}
-                  autoFocus
-                />
-              </div>
-
-              {/* 备注 */}
-              <div>
-                <label className="text-[13px] mb-1.5 block" style={{ color: "var(--color-text-secondary)" }}>备注</label>
-                <input
-                  type="text"
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  placeholder="添加备注"
-                  className="w-full h-11 rounded-[10px] px-4 text-[15px] outline-none"
-                  style={{
-                    backgroundColor: "var(--lifeflow-background)",
-                    color: "var(--color-text-primary)",
-                  }}
-                />
-              </div>
-
-              {/* 计划时长 */}
-              <div>
-                <label className="text-[13px] mb-1.5 block" style={{ color: "var(--color-text-secondary)" }}>计划时长（分钟）</label>
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => setPlannedTime((v) => Math.max(5, v - 15))}
-                    className="w-8 h-8 rounded-full flex items-center justify-center"
-                    style={{ backgroundColor: "var(--lifeflow-primary)" }}
-                  >
-                    <span className="text-white text-lg leading-none">−</span>
-                  </button>
-                  <span className="text-[17px] font-semibold min-w-[48px] text-center" style={{ color: "var(--color-text-primary)" }}>{plannedTime}</span>
-                  <button
-                    onClick={() => setPlannedTime((v) => Math.min(480, v + 15))}
-                    className="w-8 h-8 rounded-full flex items-center justify-center"
-                    style={{ backgroundColor: "var(--lifeflow-primary)" }}
-                  >
-                    <span className="text-white text-lg leading-none">+</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* 重要标记 */}
-              <button
-                onClick={() => setIsImportant(!isImportant)}
-                className="flex items-center gap-2 self-start px-4 h-9 rounded-full text-[15px]"
-                style={{
-                  backgroundColor: isImportant ? "var(--lifeflow-brand-50)" : "var(--lifeflow-background)",
-                  color: isImportant ? "var(--lifeflow-primary)" : "var(--color-text-secondary)",
-                }}
-              >
-                <span className="text-lg">!</span> 重要
-              </button>
-            </div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
-  );
+function formatTime(t: string): string {
+  return t.slice(0, 5);
 }
 
 // ============================================================
@@ -299,7 +75,20 @@ function CreateTaskSheet({
 // ============================================================
 export default function SchedulePage() {
   const router = useRouter();
-  const { scheduleTasks, selectedDate, loadScheduleTasks, toggleScheduleTask, removeScheduleTask } = useEfficiencyStore();
+  const [selectedDate, setSelectedDate] = useState<string>("");
+  const todayStr = toDateStr(new Date());
+
+  // Load today on mount
+  useEffect(() => {
+    setSelectedDate(todayStr);
+  }, [todayStr]);
+
+  // Live data for selected date
+  const items = useLiveQuery(
+    () => (selectedDate ? getItemsByDateSorted(selectedDate) : Promise.resolve([] as Item[])),
+    [selectedDate],
+    [] as Item[],
+  );
 
   // ── 周日历条 ──
   const [weekOffset, setWeekOffset] = useState(0);
@@ -308,73 +97,67 @@ export default function SchedulePage() {
     return Array.from({ length: 7 }, (_, i) => addDays(mon, i));
   }, [weekOffset]);
 
-  // 如果 selectedDate 不在当前可见周内，自动切到对应周
-  useEffect(() => {
-    if (!selectedDate) return;
-    const sd = new Date(selectedDate + "T00:00:00");
-    const monday = addDays(sd, sd.getDay() === 0 ? -6 : 1 - sd.getDay());
-    const currentMonday = getWeekMonday(new Date(), weekOffset);
-    const diffDays = Math.round((monday.getTime() - currentMonday.getTime()) / 86400000);
-    if (diffDays !== 0) {
-      setWeekOffset((o) => o + Math.round(diffDays / 7));
-    }
-  }, [selectedDate]);
-
   const handleSelectDay = useCallback((date: Date) => {
-    loadScheduleTasks(toDateStr(date));
-  }, [loadScheduleTasks]);
-
-  // 拖拽切周
-  const handleDragEnd = useCallback((_ev: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-    if (Math.abs(info.offset.x) > 60) {
-      setWeekOffset((o) => o + (info.offset.x > 0 ? -1 : 1));
-    }
+    setSelectedDate(toDateStr(date));
   }, []);
 
-  // ── 任务列表排序 ──
-  const sortedTasks = useMemo(() => {
-    return [...(scheduleTasks ?? [])].sort((a, b) => {
-      if (a.isCompleted !== b.isCompleted) return a.isCompleted ? 1 : -1;
-      if (a.isImportant !== b.isImportant) return a.isImportant ? -1 : 1;
-      return a.createdAt - b.createdAt;
-    });
-  }, [scheduleTasks]);
+  const isSelectedToday = selectedDate === todayStr;
 
-  // ── 即将到来 ──
-  const [upcoming, setUpcoming] = useState<{ date: string; tasks: ScheduleTask[] }[]>([]);
-  const refreshUpcoming = useCallback(async (fromDate: string) => {
-    const result: { date: string; tasks: ScheduleTask[] }[] = [];
-    for (let i = 1; i <= 7; i++) {
-      const d = addDays(new Date(fromDate + "T00:00:00"), i);
-      const ds = toDateStr(d);
-      const tasks = await getScheduleTasksByDate(ds);
-      if (tasks.length > 0) {
-        const sorted = tasks.sort((a, b) => {
-          if (a.isCompleted !== b.isCompleted) return a.isCompleted ? 1 : -1;
-          return a.createdAt - b.createdAt;
-        });
-        result.push({ date: ds, tasks: sorted.slice(0, 3) });
-        if (result.length >= 1) break;
-      }
-    }
-    setUpcoming(result);
-  }, []);
+  // ── 当前时间线 ──
+  const [nowTime, setNowTime] = useState("");
+  const timelineRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (selectedDate) refreshUpcoming(selectedDate);
-  }, [selectedDate, refreshUpcoming]);
+    const update = () => {
+      const now = new Date();
+      setNowTime(`${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`);
+    };
+    update();
+    const id = setInterval(update, 60000);
+    return () => clearInterval(id);
+  }, []);
 
-  // ── 任务操作 ──
-  const handleToggle = useCallback(async (taskId: string) => {
-    await toggleScheduleTask(taskId);
-  }, [toggleScheduleTask]);
-
-  const handleRefreshAfterOp = useCallback(async () => {
-    if (selectedDate) {
-      await loadScheduleTasks(selectedDate);
-      refreshUpcoming(selectedDate);
+  // Auto-scroll to now when mounted (only for today)
+  useEffect(() => {
+    if (isSelectedToday && nowTime && timelineRef.current) {
+      const range = timeToMinutes(nowTime);
+      const startBase = 6 * 60;
+      const scrollTarget = Math.max(0, range - startBase - 120); // offset -2h for context
+      timelineRef.current.scrollTop = (scrollTarget / 60) * 72;
     }
-  }, [selectedDate, loadScheduleTasks, refreshUpcoming]);
+  }, [items, isSelectedToday, nowTime]);
+
+  // ── 时间轴是否包含"现在" ──
+  const nowMinutes = nowTime ? timeToMinutes(nowTime) : 0;
+  const axisStart = 6 * 60;
+  const axisEnd = 26 * 60; // 02:00 next day
+  const showNowLine = isSelectedToday && nowMinutes >= axisStart && nowMinutes <= axisEnd;
+
+  // ── 分组：每个小时块中有哪些事项 ──
+  const hourBlocks = useMemo(() => {
+    if (!items) return HOURS.map(h => ({ hour: h, slotItems: [] as Item[], carryOver: false }));
+
+    return HOURS.map(hour => {
+      const slotItems = items.filter(item => {
+        const sm = timeToMinutes(item.plannedStart);
+        const hm = timeToMinutes(hour);
+        const nextHm = hm + 60;
+        return sm < nextHm && sm >= hm;
+      });
+      const carryOver = items.some(item => {
+        const sm = timeToMinutes(item.plannedStart);
+        const em = timeToMinutes(item.plannedEnd);
+        const hm = timeToMinutes(hour);
+        return sm < hm && em > hm;
+      });
+      return { hour, slotItems, carryOver };
+    });
+  }, [items]);
+
+  // ── 操作 ──
+  const handleToggle = useCallback(async (item: Item) => {
+    await updateItem(item.id, { isCompleted: !item.isCompleted });
+  }, []);
 
   // ── 删除 ──
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
@@ -382,48 +165,19 @@ export default function SchedulePage() {
 
   const handleDeleteConfirm = useCallback(async () => {
     if (!deleteTarget) return;
-    await removeScheduleTask(deleteTarget);
+    await deleteItem(deleteTarget);
     showToast({ type: "success", message: "已删除" });
     setDeleteTarget(null);
     setConfirmDelete(false);
-    handleRefreshAfterOp();
-  }, [deleteTarget, removeScheduleTask, handleRefreshAfterOp]);
+  }, [deleteTarget]);
 
-  // ── 创建任务 Sheet ──
-  const [showCreateSheet, setShowCreateSheet] = useState(false);
-
-  // ── 初始化加载今天 + 首次引导 ──
-  const todayStr = toDateStr(new Date());
-  const [showOnboarding, setShowOnboarding] = useState(false);
-
-  useEffect(() => {
-    loadScheduleTasks(todayStr);
-  }, []); // only on mount
-
-  useEffect(() => {
-    const checkRoutines = async () => {
-      const routines = await getRoutines();
-      const activeRoutines = routines.filter(r => r.type !== 'custom' && r.isActive);
-      if (activeRoutines.length === 0) return;
-
-      // Check if today already has routine-sourced tasks
-      const todayTasks = await getScheduleTasksByDate(selectedDate);
-      const hasRoutineTasks = todayTasks.some(t => t.sourceModule === 'routine');
-      if (!hasRoutineTasks) {
-        setShowOnboarding(true);
-      }
-    };
-    checkRoutines();
-  }, [selectedDate]);
-
-  // ── 格式化 ──
+  // ── 格式 ──
   const formatDateChinese = (date: Date) => {
     const weekDays = ["日", "一", "二", "三", "四", "五", "六"];
     return `${date.getMonth() + 1}月${date.getDate()}日 周${weekDays[date.getDay()]}`;
   };
 
   const selectedDateObj = selectedDate ? new Date(selectedDate + "T00:00:00") : new Date();
-  const isSelectedToday = toDateStr(selectedDateObj) === todayStr;
 
   const monthLabel = useMemo(() => {
     const m = weekDates[0];
@@ -439,7 +193,7 @@ export default function SchedulePage() {
             日程
           </h1>
           <p className="text-[13px] font-medium mt-1" style={{ color: "var(--color-text-secondary)", letterSpacing: "-0.01em" }}>
-            统一视图
+            时间轴
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -451,18 +205,11 @@ export default function SchedulePage() {
             <ListTodo className="w-3.5 h-3.5" />
             分类
           </Link>
-          <button
-            type="button"
-            onClick={() => setShowCreateSheet(true)}
-            className="w-8 h-8 flex items-center justify-center"
-          >
-            <Plus className="w-6 h-6" style={{ color: "var(--lifeflow-primary)" }} />
-          </button>
         </div>
       </div>
 
-      {/* ===== Week Strip ===== */}
-      <div className="px-5 mb-6 mt-2">
+      {/* ===== 周日历条 ===== */}
+      <div className="px-5 mb-2 mt-2">
         <div
           className="p-4 overflow-hidden"
           style={{
@@ -471,7 +218,6 @@ export default function SchedulePage() {
             boxShadow: "var(--shadow-card)",
           }}
         >
-          {/* 月份标签 + 左右箭头 */}
           <div className="flex items-center justify-between mb-4">
             <span className="text-[15px] font-semibold" style={{ color: "var(--color-text-primary)", letterSpacing: "-0.018em" }}>
               {monthLabel}
@@ -498,8 +244,7 @@ export default function SchedulePage() {
             </div>
           </div>
 
-          {/* 星期行 */}
-          <motion.div className="flex gap-0 overflow-x-auto no-scrollbar -mx-1 px-1" onPanEnd={handleDragEnd}>
+          <div className="flex gap-0 overflow-x-auto no-scrollbar -mx-1 px-1">
             {weekDates.map((date) => {
               const ds = toDateStr(date);
               const isActive = ds === selectedDate;
@@ -517,9 +262,7 @@ export default function SchedulePage() {
                   </span>
                   <div
                     className="w-9 h-9 rounded-full flex items-center justify-center"
-                    style={{
-                      backgroundColor: isActive ? "var(--lifeflow-primary)" : "transparent",
-                    }}
+                    style={{ backgroundColor: isActive ? "var(--lifeflow-primary)" : "transparent" }}
                   >
                     <span
                       className="text-[15px] leading-none"
@@ -531,23 +274,26 @@ export default function SchedulePage() {
                       {date.getDate()}
                     </span>
                   </div>
+                  {isToday && !isActive && (
+                    <div className="w-1 h-1 rounded-full" style={{ background: "var(--lifeflow-primary)" }} />
+                  )}
                 </button>
               );
             })}
-          </motion.div>
+          </div>
         </div>
       </div>
 
-      {/* ===== Date Title Row ===== */}
-      <div className="flex items-center justify-between px-4 mt-5">
+      {/* ===== Date Row ===== */}
+      <div className="flex items-center justify-between px-4 mt-4 mb-2">
         <span className="text-[16px] font-bold" style={{ color: "var(--color-text-primary)" }}>
           {formatDateChinese(selectedDateObj)}
         </span>
-        {(weekOffset !== 0 || !isSelectedToday) && (
+        {!isSelectedToday && (
           <button
             onClick={() => {
               setWeekOffset(0);
-              loadScheduleTasks(todayStr);
+              setSelectedDate(todayStr);
             }}
             className="text-[13px]"
             style={{ color: "var(--lifeflow-primary)" }}
@@ -557,117 +303,95 @@ export default function SchedulePage() {
         )}
       </div>
 
-      {/* ===== 当日任务分组卡 ===== */}
-      <div className="px-4 mt-3">
-        {sortedTasks.length === 0 ? (
-          showOnboarding ? (
-            <motion.div
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="rounded-[20px] p-5 mt-2 flex flex-col items-center text-center"
-              style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}
+      {/* ===== 时间轴 ===== */}
+      <div
+        ref={timelineRef}
+        className="px-4 overflow-y-auto"
+        style={{ maxHeight: "calc(100vh - 280px)", scrollBehavior: "smooth" }}
+      >
+        <div className="relative">
+          {/* 时间轴竖线 */}
+          <div
+            className="absolute left-[52px] top-0 bottom-0 w-px z-0"
+            style={{ background: "var(--lifeflow-border)" }}
+          />
+
+          {/* 现在线 */}
+          {showNowLine && (
+            <div
+              className="absolute left-0 right-3 z-10 pointer-events-none"
+              style={{
+                top: `${Math.max(0, Math.min((nowMinutes - axisStart) / 60 * 72, HOURS.length * 72))}px`,
+              }}
             >
-              <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-3" style={{ background: "var(--lifeflow-brand-50)" }}>
-                <Moon className="w-7 h-7" style={{ color: "var(--lifeflow-primary)" }} />
+              <div className="flex items-center gap-1">
+                <div className="w-2 h-2 rounded-full bg-[#FF3B30] flex-shrink-0" />
+                <div className="flex-1 h-px" style={{ background: "#FF3B30" }} />
               </div>
-              <p className="text-[16px] font-semibold mb-1" style={{ color: "var(--color-text-primary)" }}>还未设置今日日程</p>
-              <p className="text-[13px] mb-4" style={{ color: "var(--color-text-secondary)" }}>作息模板中有起床、午睡、入睡，是否同步到今天？</p>
-              <div className="flex gap-2 w-full max-w-xs">
-                <button
-                  onClick={() => setShowOnboarding(false)}
-                  className="flex-1 h-10 rounded-xl text-[14px] font-medium"
-                  style={{ background: "var(--color-surface-secondary)", color: "var(--color-text-secondary)" }}
-                >暂不需要</button>
-                <button
-                  onClick={async () => {
-                    const routines = await getRoutines();
-                    for (const r of routines) {
-                      if (r.type !== 'custom' && r.isActive) await syncRoutineToSchedule(r);
-                    }
-                    await loadScheduleTasks(selectedDate);
-                    setShowOnboarding(false);
-                    showToast({ type: "success", message: "作息已同步到今日日程" });
-                  }}
-                  className="flex-1 h-10 rounded-xl text-[14px] font-semibold text-white"
-                  style={{ background: "var(--lifeflow-primary)" }}
-                >同步作息</button>
+            </div>
+          )}
+
+          {/* 小时块 */}
+          {hourBlocks.map((block, bi) => {
+            const hourM = timeToMinutes(block.hour);
+            const topPx = ((hourM - axisStart) / 60) * 72;
+
+            return (
+              <div
+                key={block.hour}
+                className="flex relative"
+                style={{ minHeight: 72, marginTop: bi === 0 ? 0 : 0 }}
+              >
+                {/* 时间刻度 */}
+                <div
+                  className="w-12 shrink-0 pt-0.5 text-[12px] font-medium"
+                  style={{ color: "var(--color-text-disabled)" }}
+                >
+                  {block.hour}
+                </div>
+
+                {/* 内容区 */}
+                <div className="flex-1 ml-3 pb-1 relative">
+                  {block.carryOver && (
+                    <div className="h-5" />
+                  )}
+
+                  {block.slotItems.length === 0 && !block.carryOver && (
+                    <div className="h-full flex items-start pt-1">
+                      <span className="text-[11px]" style={{ color: "var(--color-text-disabled)" }} />
+                    </div>
+                  )}
+
+                  {block.carryOver && (
+                    <div className="flex items-center gap-2 px-2 py-0.5 mb-1 opacity-40 pointer-events-none">
+                      <div className="w-1.5 h-1.5 rounded-full" style={{ background: "var(--color-text-disabled)" }} />
+                      <span className="text-[11px] italic" style={{ color: "var(--color-text-disabled)" }}>延续</span>
+                    </div>
+                  )}
+
+                  {/* 事项卡片 */}
+                  {renderSlotItems(block.slotItems, block.hour, handleToggle, setDeleteTarget)}
+                </div>
               </div>
-            </motion.div>
-          ) : (
-            <div className="flex flex-col items-center justify-center py-20">
+            );
+          })}
+
+          {/* 无事项提示 */}
+          {(!items || items.length === 0) && (
+            <div className="flex flex-col items-center justify-center py-16">
               <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4" style={{ backgroundColor: "var(--color-surface-secondary)" }}>
                 <CalendarDays className="w-7 h-7" style={{ color: "var(--color-text-disabled)" }} />
               </div>
-              <p className="text-[16px] font-medium" style={{ color: "var(--color-text-secondary)", letterSpacing: "-0.01em" }}>
+              <p className="text-[16px] font-medium" style={{ color: "var(--color-text-secondary)" }}>
                 当日暂无安排
               </p>
               <p className="text-[12px] mt-1.5" style={{ color: "var(--color-text-disabled)" }}>
-                添加日程以开始规划你的时间
+                在首页新建事项以开始规划
               </p>
             </div>
-          )
-        ) : (
-          <div
-            className="rounded-[20px] overflow-hidden"
-            style={{
-              backgroundColor: "var(--color-surface-card)",
-              border: "1px solid var(--lifeflow-border)",
-              boxShadow: "var(--shadow-card)",
-            }}
-          >
-            {sortedTasks.map((task, idx) => (
-              <div key={task.id}>
-                {idx > 0 && <div className="h-px ml-[52px]" style={{ backgroundColor: "var(--lifeflow-border)" }} />}
-                <TaskRow
-                  task={task}
-                  onToggle={async () => {
-                    await handleToggle(task.id);
-                    handleRefreshAfterOp();
-                  }}
-                  onLongPress={() => { setDeleteTarget(task.id); setConfirmDelete(false); }}
-                />
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* ===== 即将到来 ===== */}
-      {upcoming.length > 0 && (
-        <div className="px-4 mt-6">
-          <h3 className="text-[18px] font-semibold mb-2" style={{ color: "var(--color-text-secondary)" }}>即将到来</h3>
-          {upcoming.map((u) => (
-            <div
-              key={u.date}
-              className="rounded-[20px] overflow-hidden"
-              style={{
-                backgroundColor: "var(--color-surface-card)",
-                border: "1px solid var(--lifeflow-border)",
-                boxShadow: "var(--shadow-card)",
-              }}
-            >
-              <div className="px-4 min-h-[44px] flex items-center">
-                <span className="text-[13px]" style={{ color: "var(--color-text-secondary)" }}>
-                  {formatDateChinese(new Date(u.date + "T00:00:00"))}
-                </span>
-              </div>
-              {u.tasks.map((t, i) => (
-                <div key={t.id}>
-                  <div className="h-px ml-[52px]" style={{ backgroundColor: "var(--lifeflow-border)" }} />
-                  <TaskRow
-                    task={t}
-                    onToggle={async () => {
-                      await handleToggle(t.id);
-                      handleRefreshAfterOp();
-                    }}
-                    onLongPress={() => { setDeleteTarget(t.id); setConfirmDelete(false); }}
-                  />
-                </div>
-              ))}
-            </div>
-          ))}
+          )}
         </div>
-      )}
+      </div>
 
       {/* ===== 删除确认弹窗 ===== */}
       <AnimatePresence>
@@ -679,9 +403,9 @@ export default function SchedulePage() {
               className="fixed inset-0 z-50 bg-black/40"
             />
             <motion.div
-              initial={{ y: "100%", x: "-50%" }} animate={{ y: 0, x: "-50%" }} exit={{ y: "100%", x: "-50%" }}
+              initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
               transition={{ duration: 0.4, ease: [0.32, 0.72, 0, 1] }}
-              className="fixed left-1/2 bottom-0 w-full max-w-[430px] z-[60] rounded-t-[20px]"
+              className="fixed left-0 right-0 bottom-0 z-[60] rounded-t-[20px] max-w-[430px] mx-auto"
               style={{
                 backgroundColor: "var(--color-surface-card)",
                 paddingBottom: "env(safe-area-inset-bottom)",
@@ -692,7 +416,7 @@ export default function SchedulePage() {
               </div>
               <div className="px-4 pb-6">
                 <p className="text-[17px] font-semibold mb-4" style={{ color: "var(--color-text-primary)" }}>
-                  {confirmDelete ? "确认删除？" : "删除任务"}
+                  {confirmDelete ? "确认删除？" : "删除事项"}
                 </p>
                 {!confirmDelete ? (
                   <button
@@ -724,14 +448,122 @@ export default function SchedulePage() {
         )}
       </AnimatePresence>
 
-      {/* ===== 创建任务 Sheet ===== */}
-      <CreateTaskSheet
-        open={showCreateSheet}
-        onClose={() => setShowCreateSheet(false)}
-        selectedDate={selectedDate || todayStr}
-      />
-
       <div className="h-4" />
     </div>
+  );
+}
+
+// ============================================================
+// 渲染某个小时块内的事项卡片（堆叠，最多2 + "+N"折叠）
+// ============================================================
+function renderSlotItems(
+  items: Item[],
+  hourLabel: string,
+  onToggle: (item: Item) => void,
+  onDelete: (id: string) => void,
+) {
+  if (items.length === 0) return null;
+
+  // Sort by plannedStart
+  const sorted = [...items].sort((a, b) => a.plannedStart.localeCompare(b.plannedStart));
+  const showItems = sorted.slice(0, 2);
+  const hiddenCount = sorted.length - 2;
+
+  return (
+    <div className="flex flex-col gap-1">
+      {showItems.map(item => (
+        <ItemCard
+          key={item.id}
+          item={item}
+          hourLabel={hourLabel}
+          onToggle={() => onToggle(item)}
+          onLongPress={() => onDelete(item.id)}
+        />
+      ))}
+      {hiddenCount > 0 && (
+        <button
+          className="text-[11px] font-medium px-2 py-1 rounded-lg self-start"
+          style={{ color: "var(--color-text-disabled)", background: "var(--color-surface-secondary)" }}
+        >
+          +{hiddenCount} 项
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ============================================================
+// 事项卡片
+// ============================================================
+function ItemCard({
+  item,
+  hourLabel,
+  onToggle,
+  onLongPress,
+}: {
+  item: Item;
+  hourLabel: string;
+  onToggle: () => void;
+  onLongPress: () => void;
+}) {
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleTouchStart = () => {
+    longPressTimer.current = setTimeout(onLongPress, 500);
+  };
+  const handleTouchEnd = () => {
+    if (longPressTimer.current) clearTimeout(longPressTimer.current);
+  };
+
+  const duration = itemDurationInSlot(item, hourLabel);
+  const isMultiHour = timeToMinutes(item.plannedEnd) - timeToMinutes(item.plannedStart) > 60;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 4 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="rounded-[12px] px-3 py-2 flex items-center gap-2 active:scale-[0.97] transition-transform cursor-pointer"
+      style={{
+        background: item.isCompleted ? "var(--color-surface-secondary)" : `${item.color}15`,
+        opacity: item.isCompleted ? 0.55 : 1,
+        borderLeft: `3px solid ${item.color}`,
+      }}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      onTouchMove={handleTouchEnd}
+      onContextMenu={(e) => { e.preventDefault(); onLongPress(); }}
+      onClick={onToggle}
+    >
+      {/* 勾选 */}
+      <div
+        className="w-5 h-5 rounded-full flex items-center justify-center shrink-0"
+        style={{
+          background: item.isCompleted ? item.color : "transparent",
+          border: item.isCompleted ? "none" : `2px solid ${item.color}40`,
+        }}
+      >
+        {item.isCompleted && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
+      </div>
+
+      {/* 内容 */}
+      <div className="flex-1 min-w-0">
+        <p
+          className="text-[14px] font-medium truncate"
+          style={{
+            color: item.isCompleted ? "var(--color-text-disabled)" : "var(--color-text-primary)",
+            textDecoration: item.isCompleted ? "line-through" : "none",
+          }}
+        >
+          {item.title}
+        </p>
+        <div className="flex items-center gap-1.5 mt-0.5">
+          <Clock className="w-3 h-3" style={{ color: "var(--color-text-disabled)" }} />
+          <span className="text-[11px]" style={{ color: "var(--color-text-disabled)" }}>
+            {formatTime(item.plannedStart)}
+            {isMultiHour && ` - ${formatTime(item.plannedEnd)}`}
+          </span>
+        </div>
+      </div>
+    </motion.div>
   );
 }

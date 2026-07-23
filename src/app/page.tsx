@@ -1,21 +1,21 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useLiveQuery } from "dexie-react-hooks";
 import {
   Zap, Check, Bell, Flame,
   Calendar, Droplets, Moon, Dumbbell, Pill,
-  ChevronRight, ListTodo,
-  Timer, CalendarRange, StickyNote, BarChart3, Settings, FolderKanban, Menu,
+  Timer, CalendarRange, StickyNote, BarChart3, Settings, Menu,
+  Plus, X, Clock,
 } from "lucide-react";
-import { getScheduleTasksByDate, getAllScheduleTasks } from "@/lib/db/efficiency.db";
-import type { ScheduleTask } from "@/lib/db/efficiency.db";
+import { getUpcomingItems, addManualItem, updateItem } from "@/lib/db/daylog.db";
+import type { Item } from "@/lib/db/daylog.db";
 import { getPendingReminders } from "@/lib/db";
 import type { Reminder } from "@/lib/types";
 import { useAgent } from "@/components/agent/AgentProvider";
+import { showToast } from "@/components/ui/Toast";
 
 // ============================================================
 // 工具函数
@@ -24,6 +24,11 @@ import { useAgent } from "@/components/agent/AgentProvider";
 function todayStr(): string {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function nowTimeStr(): string {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
 function formatDateChinese(date: Date): string {
@@ -36,6 +41,12 @@ function formatDuration(minutes: number): string {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
   return h > 0 ? `${h}h${m > 0 ? m : ""}` : `${m}min`;
+}
+
+function itemDuration(item: Item): number {
+  const [sh, sm] = item.plannedStart.split(":").map(Number);
+  const [eh, em] = item.plannedEnd.split(":").map(Number);
+  return (eh * 60 + em) - (sh * 60 + sm);
 }
 
 function greeting(): string {
@@ -80,6 +91,9 @@ function QuickBtn({ href, icon: Icon }: { href: string; icon: React.ComponentTyp
   );
 }
 
+// ─── 预设颜色 ───
+const PRESET_COLORS = ["#6366F1", "#FF9500", "#34C759", "#FF3B30", "#007AFF", "#5856D6", "#FF2D55", "#00C7BE"];
+
 // ============================================================
 // 首页
 // ============================================================
@@ -88,70 +102,92 @@ export default function HomePage() {
   const today = todayStr();
   const now = new Date();
   const { sendAndNavigate } = useAgent();
-  const router = useRouter();
 
-  // ── 数据源 ──
-  const todayScheduleTasks = useLiveQuery(() => getScheduleTasksByDate(today), [today], [] as ScheduleTask[]);
-  const allScheduleTasks = useLiveQuery(() => getAllScheduleTasks(), [], [] as ScheduleTask[]);
+  // ── 当前时间（每分钟更新） ──
+  const [nowTime, setNowTime] = useState(nowTimeStr);
+  useEffect(() => {
+    const update = () => setNowTime(nowTimeStr());
+    const id = setInterval(update, 60000);
+    return () => clearInterval(id);
+  }, []);
+
+  // ── 数据源：当前时间往后的 6 个事项 ──
+  const upcomingItems = useLiveQuery(
+    () => (today && nowTime ? getUpcomingItems(today, nowTime, 6) : Promise.resolve([])),
+    [today, nowTime],
+    [] as Item[],
+  );
+
+  // ── 提醒 ──
   const [pendingReminders, setPendingReminders] = useState<Reminder[]>([]);
-  useEffect(() => { getPendingReminders().then((r) => setPendingReminders(r.slice(0, 3))).catch(() => {}); }, []);
+  useEffect(() => {
+    getPendingReminders().then((r) => setPendingReminders(r.slice(0, 3))).catch(() => {});
+  }, []);
 
-  // ── 核心待办（今日 q1 第一条，fallback → q2 第一条） ──
-  const coreTask = useMemo(() => {
-    const uncompleted = (todayScheduleTasks ?? []).filter((t) => !t.isCompleted);
-    const q1 = uncompleted.find((t) => t.quadrant === "q1");
-    if (q1) return q1;
-    const q2 = uncompleted.find((t) => t.quadrant === "q2");
-    if (q2) return q2;
-    return null;
-  }, [todayScheduleTasks]);
+  // ── 核心事项（第一条未完成） ──
+  const coreItem = useMemo(() => {
+    return (upcomingItems ?? []).find((item) => !item.isCompleted) ?? null;
+  }, [upcomingItems]);
 
-  // ── 今日任务 ──
-  const todayTasks = useMemo(() => {
-    return (todayScheduleTasks ?? []).filter(
-      (t) =>
-        t.date === today ||
-        (t.type === "multi_day" && t.startDate && t.endDate && t.startDate <= today && t.endDate >= today),
-    );
-  }, [todayScheduleTasks, today]);
+  // ── 今日事项计数 ──
+  const todayTotal = (upcomingItems ?? []).length;
+  const completedCount = (upcomingItems ?? []).filter((i) => i.isCompleted).length;
 
-  const todayTasksTotal = todayTasks.length;
-
-  const sortedTodayTasks = useMemo(() => {
-    return [...todayTasks].sort((a, b) => {
+  // ── 排序 ──
+  const sortedItems = useMemo(() => {
+    return [...(upcomingItems ?? [])].sort((a, b) => {
       if (a.isCompleted !== b.isCompleted) return a.isCompleted ? 1 : -1;
-      if (a.isImportant !== b.isImportant) return a.isImportant ? -1 : 1;
-      return a.createdAt - b.createdAt;
+      return a.plannedStart.localeCompare(b.plannedStart);
     });
-  }, [todayTasks]);
+  }, [upcomingItems]);
 
-  // ── 即将开始（未来 7 天） ──
-  const upcomingTasks = useMemo(() => {
-    if (!allScheduleTasks) return [];
-    const futureTasks: { title: string; subtitle: string; time: string; type: "会议" | "审批" }[] = [];
-    const seen = new Set<string>();
-    for (const t of allScheduleTasks) {
-      if (seen.has(t.title)) continue;
-      seen.add(t.title);
-      if (t.date && t.date > today) {
-        const d = new Date(t.date);
-        const label = `${d.getMonth() + 1}/${d.getDate()}`;
-        futureTasks.push({
-          title: t.title,
-          subtitle: t.note || "待办事项",
-          time: `${label}`,
-          type: t.isImportant ? "审批" : "会议",
-        });
-      }
-    }
-    return futureTasks.slice(0, 5);
-  }, [allScheduleTasks, today]);
+  // ── 勾选切换 ──
+  const handleToggle = useCallback(async (item: Item) => {
+    await updateItem(item.id, { isCompleted: !item.isCompleted });
+  }, []);
+
+  // ── 创建弹窗 ──
+  const [showCreate, setShowCreate] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    title: "",
+    plannedStart: "",
+    plannedEnd: "",
+    note: "",
+    color: PRESET_COLORS[0],
+  });
+
+  const resetForm = () => {
+    const now = new Date();
+    const start = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+    const later = new Date(now.getTime() + 30 * 60000);
+    const end = `${String(later.getHours()).padStart(2, "0")}:${String(later.getMinutes()).padStart(2, "0")}`;
+    setCreateForm({ title: "", plannedStart: start, plannedEnd: end, note: "", color: PRESET_COLORS[0] });
+  };
+
+  const handleCreate = useCallback(async () => {
+    const title = createForm.title.trim();
+    if (!title) { showToast({ type: "error", message: "请输入事项名称" }); return; }
+    if (!createForm.plannedStart || !createForm.plannedEnd) { showToast({ type: "error", message: "请选择时间" }); return; }
+
+    await addManualItem({
+      date: today,
+      plannedStart: createForm.plannedStart,
+      plannedEnd: createForm.plannedEnd,
+      title,
+      note: createForm.note || undefined,
+      color: createForm.color,
+    });
+
+    showToast({ type: "success", message: "事项已创建" });
+    setShowCreate(false);
+    resetForm();
+  }, [createForm, today]);
 
   // ────────── Render ──────────
 
   return (
-    <div className="min-h-screen pb-[90px]">
-      {/* ===== 精简 Header ===== */}
+    <div className="min-h-screen pb-[90px] relative">
+      {/* ===== Header ===== */}
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
@@ -162,7 +198,6 @@ export default function HomePage() {
           {greeting()} · {formatDateChinese(now)}
         </p>
         <div className="flex items-center gap-0.5">
-          {/* Quick-access buttons */}
           <QuickBtn href="/more/focus" icon={Timer} />
           <QuickBtn href="/more/countdown" icon={CalendarRange} />
           <QuickBtn href="/more/notes" icon={StickyNote} />
@@ -178,7 +213,7 @@ export default function HomePage() {
         </div>
       </motion.div>
 
-      {/* ===== 核心待办高亮卡 ===== */}
+      {/* ===== 核心事项高亮卡 ===== */}
       <div className="px-4 mb-4">
         <motion.div
           initial={{ opacity: 0, y: 12 }}
@@ -191,60 +226,67 @@ export default function HomePage() {
             <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: "var(--lifeflow-brand-50)" }}>
               <Zap className="w-4 h-4" style={{ color: "var(--lifeflow-primary)" }} />
             </div>
-            <span className="text-[13px] font-semibold" style={{ color: "var(--lifeflow-primary)" }}>今日核心</span>
+            <span className="text-[13px] font-semibold" style={{ color: "var(--lifeflow-primary)" }}>下一个事项</span>
           </div>
 
-          {coreTask ? (
+          {coreItem ? (
             <>
               <p className="text-[20px] font-bold mb-1.5" style={{ color: "var(--color-text-primary)", letterSpacing: "-0.018em" }}>
-                {coreTask.title}
+                {coreItem.title}
               </p>
               <div className="flex items-center gap-3 text-[13px]" style={{ color: "var(--color-text-secondary)" }}>
-                {coreTask.plannedTime > 0 && <span>预计 {formatDuration(coreTask.plannedTime)}</span>}
-                <span className="px-2 py-0.5 rounded-md text-[11px]" style={{ background: "var(--lifeflow-brand-50)", color: "var(--lifeflow-primary)" }}>
-                  {coreTask.quadrant === "q1" ? "重要紧急" : "重要不紧急"}
+                <span className="flex items-center gap-1">
+                  <Clock className="w-3.5 h-3.5" />
+                  {coreItem.plannedStart}
+                  {itemDuration(coreItem) > 0 && ` · ${formatDuration(itemDuration(coreItem))}`}
+                </span>
+                <span
+                  className="px-2 py-0.5 rounded-md text-[11px]"
+                  style={{ background: `${coreItem.color}20`, color: coreItem.color }}
+                >
+                  {coreItem.color === "#FF9500" ? "作息" : coreItem.color === "#007AFF" ? "课程" : "事项"}
                 </span>
               </div>
               <div className="flex gap-2 mt-4">
                 <button
-                  onClick={() => router.push("/focus")}
+                  onClick={() => handleToggle(coreItem)}
                   className="flex-1 py-2.5 rounded-full text-white text-[14px] font-semibold active:opacity-90"
-                  style={{ background: "var(--lifeflow-primary)" }}
+                  style={{ background: coreItem.isCompleted ? "var(--color-text-disabled)" : "var(--lifeflow-primary)" }}
                 >
-                  开始专注
+                  {coreItem.isCompleted ? "已勾选" : "标记完成"}
                 </button>
                 <Link
-                  href="/tasks"
+                  href="/efficiency/schedule"
                   className="py-2.5 px-4 rounded-full text-[14px] font-medium active:opacity-70"
                   style={{ background: "var(--lifeflow-muted)", color: "var(--color-text-secondary)" }}
                 >
-                  查看全部
+                  日程
                 </Link>
               </div>
             </>
           ) : (
             <>
               <p className="text-[17px] font-semibold mb-1.5" style={{ color: "var(--color-text-primary)" }}>
-                今天还没有核心任务
+                今天接下来暂无安排
               </p>
               <p className="text-[13px] mb-4" style={{ color: "var(--color-text-secondary)" }}>
-                去事项页规划一个，或者问 AI 帮你安排
+                新建一个事项，或去日程页查看完整时间轴
               </p>
               <div className="flex gap-2">
-                <Link
-                  href="/tasks"
+                <button
+                  onClick={() => { resetForm(); setShowCreate(true); }}
                   className="flex-1 py-2.5 rounded-full text-center text-[14px] font-semibold text-white active:opacity-90"
                   style={{ background: "var(--lifeflow-primary)" }}
                 >
-                  去事项页
-                </Link>
-                <button
-                  onClick={() => { sendAndNavigate("帮我安排今天的重要任务"); }}
+                  新建事项
+                </button>
+                <Link
+                  href="/efficiency/schedule"
                   className="py-2.5 px-4 rounded-full text-[14px] font-medium active:opacity-70"
                   style={{ background: "var(--lifeflow-muted)", color: "var(--color-text-secondary)" }}
                 >
-                  问 AI
-                </button>
+                  日程
+                </Link>
               </div>
             </>
           )}
@@ -310,7 +352,7 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* ===== 今日任务列表 ===== */}
+      {/* ===== 今日事项（当前时间往后） ===== */}
       <div className="px-4 mb-6">
         <motion.div
           initial={{ opacity: 0, y: 8 }}
@@ -320,19 +362,19 @@ export default function HomePage() {
         >
           <div className="flex items-center gap-2">
             <h2 className="text-[18px] font-semibold" style={{ color: "var(--color-text-primary)", letterSpacing: "-0.018em" }}>
-              今日任务
+              今日待办
             </h2>
             <span className="text-[12px] font-semibold px-2 py-0.5 rounded-full" style={{ backgroundColor: "var(--lifeflow-brand-50)", color: "var(--lifeflow-primary)" }}>
-              {todayTasksTotal}
+              {completedCount}/{todayTotal}
             </span>
           </div>
-          <Link href="/tasks" className="text-[13px] font-medium" style={{ color: "var(--lifeflow-primary)" }}>
-            查看全部
+          <Link href="/efficiency/schedule" className="text-[13px] font-medium" style={{ color: "var(--lifeflow-primary)" }}>
+            完整时间轴
           </Link>
         </motion.div>
 
         <div className="flex flex-col gap-3">
-          {sortedTodayTasks.length === 0 && (
+          {sortedItems.length === 0 && (
             <motion.div
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
@@ -341,51 +383,60 @@ export default function HomePage() {
               style={{ backgroundColor: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}
             >
               <p className="text-[15px]" style={{ color: "var(--color-text-secondary)" }}>
-                今天暂无任务
+                今天接下来的事项将显示在这里
               </p>
+              <button
+                onClick={() => { resetForm(); setShowCreate(true); }}
+                className="mt-3 text-[13px] font-medium"
+                style={{ color: "var(--lifeflow-primary)" }}
+              >
+                新建事项
+              </button>
             </motion.div>
           )}
-          {sortedTodayTasks.slice(0, 5).map((task, i) => {
-            const isDone = task.isCompleted;
-            const priorityLabel = task.isImportant ? "高优先级" : "普通";
-            const priorityColor = task.isImportant
-              ? "var(--state-warning)"
-              : isDone ? "var(--color-text-disabled)" : "var(--color-text-secondary)";
-
+          {sortedItems.map((item, i) => {
+            const isDone = item.isCompleted;
             return (
               <motion.div
-                key={task.id}
+                key={item.id}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.18 + i * 0.04, duration: 0.3, ease: "easeOut" }}
                 className="rounded-[20px] p-4 flex items-center gap-3"
-                style={{ backgroundColor: "var(--color-surface-card)", boxShadow: "var(--shadow-card)", opacity: isDone ? 0.6 : 1 }}
+                style={{
+                  backgroundColor: "var(--color-surface-card)",
+                  boxShadow: "var(--shadow-card)",
+                  opacity: isDone ? 0.6 : 1,
+                  borderLeft: `3px solid ${item.color}`,
+                }}
               >
-                <div
-                  className="w-[22px] h-[22px] rounded-full border-2 flex items-center justify-center flex-shrink-0"
-                  style={{ borderColor: isDone ? "var(--color-text-disabled)" : "var(--lifeflow-primary)" }}
+                <button
+                  onClick={() => handleToggle(item)}
+                  className="w-[22px] h-[22px] rounded-full border-2 flex items-center justify-center flex-shrink-0 active:scale-90 transition-transform"
+                  style={{
+                    borderColor: isDone ? "var(--color-text-disabled)" : item.color,
+                    backgroundColor: isDone ? item.color : "transparent",
+                  }}
                 >
-                  {isDone ? (
-                    <Check className="w-[14px] h-[14px]" style={{ color: "var(--color-text-disabled)" }} strokeWidth={2} />
-                  ) : (
-                    <div className="w-[10px] h-[10px] rounded-full" style={{ backgroundColor: "var(--lifeflow-primary)" }} />
-                  )}
-                </div>
+                  {isDone && <Check className="w-[14px] h-[14px] text-white" strokeWidth={2} />}
+                </button>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[15px] font-medium truncate" style={{ color: isDone ? "var(--color-text-disabled)" : "var(--color-text-primary)", textDecoration: isDone ? "line-through" : "none" }}>
-                    {task.title}
+                  <p
+                    className="text-[15px] font-medium truncate"
+                    style={{
+                      color: isDone ? "var(--color-text-disabled)" : "var(--color-text-primary)",
+                      textDecoration: isDone ? "line-through" : "none",
+                    }}
+                  >
+                    {item.title}
                   </p>
-                  <p className="text-[12px] truncate" style={{ color: "var(--color-text-secondary)" }}>
-                    {task.note || (task.goalId ? "目标关联" : "待办事项")}
-                  </p>
-                </div>
-                <div className="flex-shrink-0 text-right">
-                  <p className="text-[13px] font-medium whitespace-nowrap" style={{ color: "var(--color-text-secondary)" }}>
-                    {task.plannedTime > 0 ? formatDuration(task.plannedTime) : "--"}
-                  </p>
-                  <p className="text-[11px] font-medium whitespace-nowrap" style={{ color: isDone ? "var(--color-text-disabled)" : priorityColor }}>
-                    {isDone ? "已完成" : priorityLabel}
-                  </p>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <Clock className="w-3 h-3" style={{ color: "var(--color-text-disabled)" }} />
+                    <span className="text-[12px]" style={{ color: "var(--color-text-secondary)" }}>
+                      {item.plannedStart}
+                      {itemDuration(item) > 0 && ` - ${item.plannedEnd}`}
+                    </span>
+                  </div>
                 </div>
               </motion.div>
             );
@@ -393,58 +444,149 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* ===== 即将开始 ===== */}
-      {upcomingTasks.length > 0 && (
-        <div className="px-4 mb-6">
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.35, duration: 0.35, ease: "easeOut" }}
-          >
-            <div className="flex items-center gap-2 mb-3">
-              <h2 className="text-[18px] font-semibold" style={{ color: "var(--color-text-primary)", letterSpacing: "-0.018em" }}>
-                即将开始
-              </h2>
-            </div>
-            <div className="flex flex-col gap-3">
-              {upcomingTasks.map((item, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.4 + i * 0.05, duration: 0.3, ease: "easeOut" }}
-                  className="rounded-[20px] p-4 flex items-center gap-3"
-                  style={{ backgroundColor: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}
+      {/* ===== 浮动创建按钮 ===== */}
+      <motion.button
+        initial={{ scale: 0 }}
+        animate={{ scale: 1 }}
+        transition={{ delay: 0.5, type: "spring", stiffness: 300, damping: 20 }}
+        onClick={() => { resetForm(); setShowCreate(true); }}
+        className="absolute w-14 h-14 rounded-full flex items-center justify-center shadow-lg active:scale-90 transition-transform z-40"
+        style={{
+          background: "var(--lifeflow-primary)",
+          bottom: 24,
+          right: 24,
+        }}
+        aria-label="新建事项"
+      >
+        <Plus className="w-6 h-6 text-white" strokeWidth={2.5} />
+      </motion.button>
+
+      {/* ===== 创建事项弹窗 ===== */}
+      <AnimatePresence>
+        {showCreate && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setShowCreate(false)}
+              className="fixed inset-0 z-50 bg-black/40"
+            />
+            <motion.div
+              initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
+              transition={{ duration: 0.4, ease: [0.32, 0.72, 0, 1] }}
+              className="fixed left-0 right-0 bottom-0 z-[60] rounded-t-[20px] max-w-[430px] mx-auto"
+              style={{
+                backgroundColor: "var(--color-surface-card)",
+                paddingBottom: "env(safe-area-inset-bottom)",
+              }}
+            >
+              <div className="flex justify-center pt-2 pb-3">
+                <div className="w-9 h-1 rounded-full bg-[#D4D4D4]" />
+              </div>
+
+              <div className="px-5 pb-6">
+                <div className="flex items-center justify-between mb-5">
+                  <h3 className="text-[20px] font-bold" style={{ color: "var(--color-text-primary)" }}>
+                    新建事项
+                  </h3>
+                  <button
+                    onClick={() => setShowCreate(false)}
+                    className="w-8 h-8 rounded-full flex items-center justify-center"
+                    style={{ background: "var(--lifeflow-muted)" }}
+                  >
+                    <X className="w-4 h-4" style={{ color: "var(--color-text-secondary)" }} />
+                  </button>
+                </div>
+
+                {/* 标题 */}
+                <div className="mb-4">
+                  <label className="text-[13px] font-medium mb-1.5 block" style={{ color: "var(--color-text-secondary)" }}>
+                    事项名称
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="例如：写周报"
+                    value={createForm.title}
+                    onChange={(e) => setCreateForm((f) => ({ ...f, title: e.target.value }))}
+                    className="w-full px-4 py-3 rounded-xl text-[15px] outline-none"
+                    style={{ backgroundColor: "var(--lifeflow-background)", color: "var(--color-text-primary)" }}
+                    autoFocus
+                  />
+                </div>
+
+                {/* 时间 */}
+                <div className="flex gap-3 mb-4">
+                  <div className="flex-1">
+                    <label className="text-[13px] font-medium mb-1.5 block" style={{ color: "var(--color-text-secondary)" }}>
+                      开始
+                    </label>
+                    <input
+                      type="time"
+                      value={createForm.plannedStart}
+                      onChange={(e) => setCreateForm((f) => ({ ...f, plannedStart: e.target.value }))}
+                      className="w-full px-4 py-3 rounded-xl text-[15px] outline-none"
+                      style={{ backgroundColor: "var(--lifeflow-background)", color: "var(--color-text-primary)" }}
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <label className="text-[13px] font-medium mb-1.5 block" style={{ color: "var(--color-text-secondary)" }}>
+                      结束
+                    </label>
+                    <input
+                      type="time"
+                      value={createForm.plannedEnd}
+                      onChange={(e) => setCreateForm((f) => ({ ...f, plannedEnd: e.target.value }))}
+                      className="w-full px-4 py-3 rounded-xl text-[15px] outline-none"
+                      style={{ backgroundColor: "var(--lifeflow-background)", color: "var(--color-text-primary)" }}
+                    />
+                  </div>
+                </div>
+
+                {/* 颜色 */}
+                <div className="mb-4">
+                  <label className="text-[13px] font-medium mb-2 block" style={{ color: "var(--color-text-secondary)" }}>
+                    颜色
+                  </label>
+                  <div className="flex gap-3">
+                    {PRESET_COLORS.map((c) => (
+                      <button
+                        key={c}
+                        onClick={() => setCreateForm((f) => ({ ...f, color: c }))}
+                        className="w-9 h-9 rounded-full flex items-center justify-center transition-transform active:scale-90"
+                        style={{ backgroundColor: c }}
+                      >
+                        {createForm.color === c && <Check className="w-4 h-4 text-white" strokeWidth={3} />}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 备注 */}
+                <div className="mb-6">
+                  <label className="text-[13px] font-medium mb-1.5 block" style={{ color: "var(--color-text-secondary)" }}>
+                    备注（可选）
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="添加备注..."
+                    value={createForm.note}
+                    onChange={(e) => setCreateForm((f) => ({ ...f, note: e.target.value }))}
+                    className="w-full px-4 py-3 rounded-xl text-[15px] outline-none"
+                    style={{ backgroundColor: "var(--lifeflow-background)", color: "var(--color-text-primary)" }}
+                  />
+                </div>
+
+                <button
+                  onClick={handleCreate}
+                  className="w-full py-3.5 rounded-full text-white text-[16px] font-semibold active:opacity-90"
+                  style={{ background: "var(--lifeflow-primary)" }}
                 >
-                  <div className="w-[22px] h-[22px] rounded-full border-2 flex items-center justify-center flex-shrink-0" style={{ borderColor: "var(--lifeflow-primary)" }} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[15px] font-medium truncate" style={{ color: "var(--color-text-primary)" }}>
-                      {item.title}
-                    </p>
-                    <p className="text-[12px] truncate" style={{ color: "var(--color-text-secondary)" }}>
-                      {item.subtitle}
-                    </p>
-                  </div>
-                  <div className="flex-shrink-0 text-right">
-                    <p className="text-[13px] font-medium whitespace-nowrap" style={{ color: "var(--color-text-secondary)" }}>
-                      {item.time}
-                    </p>
-                    <span
-                      className="inline-block text-[11px] font-medium px-2 py-0.5 rounded-full whitespace-nowrap"
-                      style={{
-                        backgroundColor: item.type === "会议" ? "var(--lifeflow-brand-50)" : "var(--lifeflow-muted)",
-                        color: item.type === "会议" ? "var(--lifeflow-primary)" : "var(--color-text-secondary)",
-                      }}
-                    >
-                      {item.type}
-                    </span>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </motion.div>
-        </div>
-      )}
+                  添加事项
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

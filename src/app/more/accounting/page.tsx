@@ -9,6 +9,7 @@ import { getTransactionsByMonth, getTransactionsByYear, getTransactionsByDate, d
 import type { Transaction, Category, Ledger, Account } from "@/lib/db/accounting.db";
 import { getIcon } from "@/components/accounting/CategoryIcon";
 import { showToast } from "@/components/ui/Toast";
+import { runPerceptionCheck } from "@/lib/perception-engine";
 
 // ============================================================
 // 设计令牌（CSS 变量）
@@ -349,6 +350,9 @@ export default function AccountingPage() {
         note: recordNote.trim() || undefined,
       });
       showToast({ type: "success", message: "已保存" });
+      runPerceptionCheck().then(cards => {
+        sessionStorage.setItem("perception_cards", JSON.stringify(cards));
+      }).catch(() => {});
       setShowRecordSheet(false);
       setRecordAmount("");
       setRecordNote("");

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { ChevronLeft, Droplets, Plus, Minus } from "lucide-react";
 import { useHealthStore } from "@/lib/store/healthStore";
+import { runPerceptionCheck } from "@/lib/perception-engine";
 
 /* ────────── Constants ────────── */
 
@@ -78,6 +79,9 @@ export default function WaterPage() {
       setAddingMap((p) => ({ ...p, [amount]: true }));
       try {
         await addWaterAction(amount);
+        runPerceptionCheck().then(cards => {
+          sessionStorage.setItem("perception_cards", JSON.stringify(cards));
+        }).catch(() => {});
       } finally {
         setAddingMap((p) => ({ ...p, [amount]: false }));
       }

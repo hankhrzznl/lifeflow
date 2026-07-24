@@ -11,6 +11,7 @@ import {
 } from "@/lib/db/health.db";
 import type { SleepLog } from "@/lib/db/health.db";
 import { showToast } from "@/components/ui/Toast";
+import { runPerceptionCheck } from "@/lib/perception-engine";
 import { calcTonightTarget, getLastNightActual } from "@/lib/routineSync";
 import { getRoutines } from "@/lib/db/daylog.db";
 import type { RoutineTemplate } from "@/lib/db/daylog.db";
@@ -144,6 +145,9 @@ export default function SleepPage() {
         minutesDiff: diff,
       });
       showToast({ type: "success", message: "已记录入睡时间" });
+      runPerceptionCheck().then(cards => {
+        sessionStorage.setItem("perception_cards", JSON.stringify(cards));
+      }).catch(() => {});
     } catch {
       showToast({ type: "error", message: "记录失败" });
     } finally {

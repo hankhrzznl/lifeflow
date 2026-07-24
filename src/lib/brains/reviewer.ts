@@ -64,6 +64,8 @@ export class ReviewerBrain {
       this.reviewWater(dateRange),
       this.reviewSleep(dateRange),
       this.reviewFitness(dateRange),
+      this.reviewSchedule(dateRange),
+      this.reviewMedication(dateRange),
     ]);
 
     const overviewText = this.buildOverview(summaries, period);
@@ -282,6 +284,136 @@ export class ReviewerBrain {
     }
   }
 
+  async reviewSchedule(range: DateRange): Promise<ReviewModuleSummary> {
+    try {
+      const { daylogDB } = await import("@/lib/db/daylog.db");
+      const items = await daylogDB.items
+        .where("date")
+        .between(range.start, range.end, true, true)
+        .toArray();
+
+      const totalCount = items.length;
+      const completedCount = items.filter((i: any) => i.isCompleted).length;
+      const completionRate = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+      const calibratedCount = items.filter((i: any) => i.isCorrected).length;
+      const calibrationRate = totalCount > 0 ? Math.round((calibratedCount / totalCount) * 100) : 0;
+      const uncompletedCount = totalCount - completedCount;
+
+      // 按 sourceType 分组统计
+      const bySource: Record<string, number> = {};
+      for (const item of items) {
+        const st = (item as any).sourceType || "unknown";
+        bySource[st] = (bySource[st] || 0) + 1;
+      }
+
+      // 找出最多未完成的一天
+      const byDate: Record<string, number> = {};
+      for (const item of items) {
+        if (!item.isCompleted) {
+          byDate[item.date] = (byDate[item.date] || 0) + 1;
+        }
+      }
+      let worstDay = "";
+      let worstCount = 0;
+      for (const [date, count] of Object.entries(byDate)) {
+        if (count > worstCount) {
+          worstDay = date;
+          worstCount = count;
+        }
+      }
+
+      const highlights: ReviewHighlight[] = [];
+      highlights.push({
+        module: "schedule",
+        label: "完成率",
+        value: `${completionRate}%`,
+        trend: completionRate >= 80 ? "up" : completionRate >= 50 ? "stable" : "down",
+      });
+      highlights.push({
+        module: "schedule",
+        label: "校准率",
+        value: `${calibrationRate}%`,
+        trend: calibrationRate >= 60 ? "up" : calibrationRate >= 30 ? "stable" : "down",
+      });
+      if (worstDay) {
+        highlights.push({
+          module: "schedule",
+          label: "最多未完成的一天",
+          value: worstDay,
+          trend: "down",
+          detail: `${worstCount} 项未完成`,
+        });
+      }
+
+      const stats: Record<string, string | number> = {
+        "总事项数": totalCount,
+        "已完成": completedCount,
+        "完成率": `${completionRate}%`,
+        "已校准": calibratedCount,
+        "校准率": `${calibrationRate}%`,
+        "未完成": uncompletedCount,
+      };
+      for (const [st, cnt] of Object.entries(bySource)) {
+        const labelMap: Record<string, string> = {
+          routine: "作息",
+          course: "课程",
+          manual: "手动",
+          habit: "习惯",
+          task: "任务",
+        };
+        stats[`${labelMap[st] || st}`] = cnt;
+      }
+
+      return {
+        module: "schedule",
+        icon: "Calendar",
+        label: "日程回顾",
+        stats,
+        highlights,
+      };
+    } catch {
+      return { module: "schedule", icon: "Calendar", label: "日程回顾", stats: {}, highlights: [] };
+    }
+  }
+
+  async reviewMedication(range: DateRange): Promise<ReviewModuleSummary> {
+    try {
+      const { healthDB } = await import("@/lib/db/health.db");
+      const logs = await healthDB.medicineLogs
+        .where("date")
+        .between(range.start, range.end, true, true)
+        .toArray();
+      const medicines = await healthDB.medicines.toArray();
+      const activeMeds = medicines.filter((m: any) => m.active);
+
+      const totalCount = logs.length;
+      const takenCount = logs.filter((l: any) => l.taken).length;
+      const complianceRate = totalCount > 0 ? Math.round((takenCount / totalCount) * 100) : 0;
+
+      const highlights: ReviewHighlight[] = [{
+        module: "medication",
+        label: "服药依从率",
+        value: `${complianceRate}%`,
+        trend: complianceRate >= 90 ? "up" : complianceRate >= 70 ? "stable" : "down",
+      }];
+
+      return {
+        module: "medication",
+        icon: "Pill",
+        label: "用药",
+        stats: {
+          "应吃次数": totalCount,
+          "已吃次数": takenCount,
+          "依从率": `${complianceRate}%`,
+          "有效药品数": activeMeds.length,
+        },
+        highlights,
+      };
+    } catch {
+      return { module: "medication", icon: "Pill", label: "用药", stats: {}, highlights: [] };
+    }
+  }
+
   private buildOverview(summaries: ReviewModuleSummary[], period: string): string {
     const periodLabel = period === "weekly" ? "本周" : "本月";
     const parts: string[] = [];
@@ -303,6 +435,12 @@ export class ReviewerBrain {
           break;
         case "fitness":
           parts.push(`${s.stats["总活动"] || 0} 次健身/拉伸`);
+          break;
+        case "schedule":
+          parts.push(`完成率 ${s.stats["完成率"] || "0%"}`);
+          break;
+        case "medication":
+          parts.push(`服药依从率 ${s.stats["依从率"] || "0%"}`);
           break;
       }
     }

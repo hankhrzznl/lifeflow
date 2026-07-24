@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, BarChart3, Wallet, Moon, Droplets, Dumbbell, Target, TrendingUp } from "lucide-react";
+import { ChevronLeft, BarChart3, Wallet, Moon, Droplets, Dumbbell, Target, TrendingUp, Calendar, Pill } from "lucide-react";
 import { reviewerBrain } from "@/lib/brains/reviewer";
 import type { ReviewResult, ReviewModuleSummary } from "@/lib/brains/reviewer";
 
@@ -12,6 +12,8 @@ const REVIEW_MODULES: Record<string, { icon: React.ComponentType<any>; color: st
   sleep: { icon: Moon, color: "#8B5CF6", href: "/more/review/sleep" },
   water: { icon: Droplets, color: "#3B82F6", href: "/more/review/water" },
   fitness: { icon: Dumbbell, color: "#F59E0B", href: "/more/review/fitness" },
+  schedule: { icon: Calendar, color: "#FF9500", href: "/more/review/schedule" },
+  medication: { icon: Pill, color: "#DC2626", href: "/more/review/medication" },
 };
 
 function ModuleCard({ summary }: { summary: ReviewModuleSummary }) {

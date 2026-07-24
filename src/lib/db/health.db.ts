@@ -164,6 +164,27 @@ export interface TrainingPlan {
   createdAt: number;
 }
 
+export interface MedicineDefinition {
+  id: string;            // uuid
+  name: string;          // "阿莫西林" / "维生素C"
+  dosage: string;        // "500mg" / "1片"
+  frequency: string;     // "每天3次" / "饭后"
+  icon: string;          // "Pill"
+  color: string;         // "#DC2626"
+  active: boolean;       // 是否正在服用
+  createdAt: number;
+}
+
+export interface MedicineLog {
+  id: string;            // uuid
+  medicineId: string;    // FK → MedicineDefinition
+  date: string;          // YYYY-MM-DD
+  timeSlot: string;      // "morning" | "noon" | "evening" | "bedtime"
+  taken: boolean;        // 是否已服用
+  note?: string;
+  createdAt: number;
+}
+
 // ─── Database ────────────────────────────────────────────────
 
 export class HealthDB extends Dexie {
@@ -181,6 +202,8 @@ export class HealthDB extends Dexie {
   workoutSessions!: Table<WorkoutSession, string>;
   stretchLogs!: Table<StretchLog, number>;
   trainingPlans!: Table<TrainingPlan, string>;
+  medicines!: Table<MedicineDefinition, string>;
+  medicineLogs!: Table<MedicineLog, string>;
 
   constructor() {
     super('LifeFlowHealth');
@@ -243,6 +266,11 @@ export class HealthDB extends Dexie {
     // v6: 训练计划
     this.version(6).stores({
       trainingPlans: "&id, trainingType, active, createdAt",
+    });
+    // v7: 吃药提醒
+    this.version(7).stores({
+      medicines: '&id, name',
+      medicineLogs: '&id, medicineId, date',
     });
   }
 }
@@ -523,4 +551,49 @@ export async function getWorkoutSessionByDate(date: string): Promise<WorkoutSess
 
 export async function deleteWorkoutSession(id: string): Promise<void> {
   await healthDB.workoutSessions.delete(id);
+}
+
+// ─── Medicine CRUD ────────────────────────────────────────────
+
+export async function addMedicine(data: Omit<MedicineDefinition, 'id' | 'createdAt'>): Promise<string> {
+  const id = crypto.randomUUID();
+  await healthDB.medicines.add({ ...data, id, createdAt: Date.now() });
+  return id;
+}
+
+export async function getMedicines(): Promise<MedicineDefinition[]> {
+  return healthDB.medicines.toArray();
+}
+
+export async function updateMedicine(id: string, updates: Partial<MedicineDefinition>): Promise<void> {
+  await healthDB.medicines.update(id, updates);
+}
+
+export async function deleteMedicine(id: string): Promise<void> {
+  await healthDB.medicines.delete(id);
+}
+
+// ─── Medicine Log CRUD ────────────────────────────────────────
+
+export async function getMedicineLogsByDate(date: string): Promise<MedicineLog[]> {
+  return healthDB.medicineLogs.where('date').equals(date).toArray();
+}
+
+export async function upsertMedicineLog(log: Omit<MedicineLog, 'id' | 'createdAt'>): Promise<void> {
+  const existing = await healthDB.medicineLogs
+    .where({ medicineId: log.medicineId, date: log.date, timeSlot: log.timeSlot })
+    .first();
+  if (existing) {
+    await healthDB.medicineLogs.update(existing.id, { ...log });
+  } else {
+    const id = crypto.randomUUID();
+    await healthDB.medicineLogs.add({ ...log, id, createdAt: Date.now() });
+  }
+}
+
+export async function getMedicineLogsByRange(startDate: string, endDate: string): Promise<MedicineLog[]> {
+  return healthDB.medicineLogs
+    .where('date')
+    .between(startDate, endDate, true, true)
+    .toArray();
 }

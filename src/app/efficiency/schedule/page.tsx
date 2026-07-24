@@ -849,15 +849,13 @@ function ItemCard({
 
       {/* 操作按钮 */}
       <div className="flex items-center gap-0.5 flex-shrink-0">
-        {!isPastDate && (
-          <button
-            onClick={(e) => { e.stopPropagation(); onCalibrate(); }}
-            className="w-6 h-6 rounded-full flex items-center justify-center active:opacity-70"
-            aria-label="校准时间"
-          >
-            <Target className="w-3.5 h-3.5" style={{ color: "var(--color-text-disabled)" }} />
-          </button>
-        )}
+        <button
+          onClick={(e) => { e.stopPropagation(); onCalibrate(); }}
+          className="w-6 h-6 rounded-full flex items-center justify-center active:opacity-70"
+          aria-label="校准时间"
+        >
+          <Target className="w-3.5 h-3.5" style={{ color: "var(--color-text-disabled)" }} />
+        </button>
         {isHistoryUncompleted && (
           <button
             onClick={(e) => { e.stopPropagation(); onNote(); }}

@@ -4,13 +4,13 @@ import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ChevronLeft, Plus, Trash2, Pencil, FolderKanban,
+  ChevronLeft, Trash2, Pencil, FolderKanban,
   GraduationCap, Heart, ClipboardList, Target, Gamepad2, FolderOpen,
   Clock, Wallet, Droplets, Moon, Dumbbell, Pill, StretchHorizontal,
   Utensils, Flower2, ExternalLink,
 } from "lucide-react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { getAllProjects, addProject, updateProject, deleteProject } from "@/lib/db/efficiency.db";
+import { getAllProjects, updateProject, deleteProject } from "@/lib/db/efficiency.db";
 import type { Project } from "@/lib/db/efficiency.db";
 import { showToast } from "@/components/ui/Toast";
 
@@ -32,24 +32,12 @@ export default function ProjectsPage() {
 
   const [activeBigId, setActiveBigId] = useState<string>("");
 
-  // ─── Create form ───
-  const [showCreate, setShowCreate] = useState(false);
-  const [newName, setNewName] = useState("");
-  const [newColor, setNewColor] = useState(COLORS[0]);
-  const [saving, setSaving] = useState(false);
-
   // ─── Edit form ───
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [editColor, setEditColor] = useState(COLORS[0]);
   const [editDesc, setEditDesc] = useState("");
   const [editBigId, setEditBigId] = useState("");
-
-  const closeCreate = useCallback(() => {
-    setShowCreate(false);
-    setNewName("");
-    setNewColor(COLORS[0]);
-  }, []);
 
   const closeEdit = useCallback(() => {
     setEditingId(null);
@@ -62,27 +50,6 @@ export default function ProjectsPage() {
     setEditDesc(p.description);
     setEditBigId(p.parentProjectId || "");
   }, []);
-
-  const handleCreate = useCallback(async () => {
-    if (!newName.trim()) {
-      showToast({ type: "warning", message: "请输入项目名称" });
-      return;
-    }
-    setSaving(true);
-    try {
-      await addProject({
-        name: newName.trim(),
-        color: newColor,
-        icon: "FolderKanban",
-        description: "",
-        sortOrder: 0,
-      });
-      showToast({ type: "success", message: "项目已创建" });
-      closeCreate();
-    } finally {
-      setSaving(false);
-    }
-  }, [newName, newColor, closeCreate]);
 
   const handleEdit = useCallback(async () => {
     if (!editingId) return;
@@ -193,31 +160,9 @@ export default function ProjectsPage() {
         )}
 
         {/* Custom Small Projects */}
-        <div className="mb-5">
-          <div className="flex items-center justify-between mb-2.5">
-            <p className="text-[12px] font-medium" style={{ color: "var(--color-text-disabled)" }}>自定义项目</p>
-            {customSmall.length > 0 && (
-              <button onClick={() => setShowCreate(true)} className="w-6 h-6 rounded-full flex items-center justify-center" style={{ background: "var(--lifeflow-primary)" }}>
-                <Plus className="w-3.5 h-3.5 text-white" />
-              </button>
-            )}
-          </div>
-
-          {customSmall.length === 0 ? (
-            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-              className="py-8 flex flex-col items-center text-center rounded-[20px]"
-              style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}
-            >
-              <div className="w-12 h-12 rounded-full flex items-center justify-center mb-3" style={{ background: "var(--lifeflow-brand-50)" }}>
-                <FolderKanban className="w-6 h-6" style={{ color: "var(--lifeflow-primary)" }} />
-              </div>
-              <p className="text-[14px] font-medium" style={{ color: "var(--color-text-secondary)" }}>暂无自定义项目</p>
-              <button onClick={() => setShowCreate(true)}
-                className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-[13px] font-medium text-white"
-                style={{ background: "var(--lifeflow-primary)" }}
-              ><Plus className="w-3.5 h-3.5" />新建项目</button>
-            </motion.div>
-          ) : (
+        {customSmall.length > 0 && (
+          <div className="mb-5">
+            <p className="text-[12px] font-medium mb-2.5" style={{ color: "var(--color-text-disabled)" }}>自定义项目</p>
             <div className="flex flex-col gap-2">
               {customSmall.map((p, i) => {
                 const Icon = getIcon(p.icon);
@@ -250,22 +195,9 @@ export default function ProjectsPage() {
                 );
               })}
             </div>
-          )}
-        </div>
-      </div>
-
-      {/* ===== Create Modal ===== */}
-      <AnimatePresence>
-        {showCreate && (
-          <CreateProjectModal
-            name={newName} onName={setNewName}
-            color={newColor} onColor={setNewColor}
-            onSave={handleCreate}
-            onClose={closeCreate}
-            saving={saving}
-          />
+          </div>
         )}
-      </AnimatePresence>
+      </div>
 
       {/* ===== Edit Modal ===== */}
       <AnimatePresence>
@@ -283,71 +215,6 @@ export default function ProjectsPage() {
         )}
       </AnimatePresence>
     </div>
-  );
-}
-
-// ────────────── Create Modal (简化版：仅名称+颜色) ──────────────
-
-function CreateProjectModal({
-  name, onName, color, onColor, onSave, onClose, saving,
-}: {
-  name: string; onName: (v: string) => void;
-  color: string; onColor: (v: string) => void;
-  onSave: () => void;
-  onClose: () => void;
-  saving?: boolean;
-}) {
-  return (
-    <>
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-        className="fixed inset-0 z-40" style={{ background: "rgba(0,0,0,0.35)" }}
-        onClick={onClose}
-      />
-      <motion.div
-        initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.92 }}
-        transition={{ duration: 0.2 }}
-        className="fixed inset-x-4 top-[25%] z-50 p-5 rounded-[24px] mx-auto"
-        style={{ background: "var(--color-surface-card)", boxShadow: "0 8px 32px rgba(0,0,0,0.18)", maxWidth: 380 }}
-      >
-        <h3 className="text-[17px] font-bold mb-4" style={{ color: "var(--color-text-primary)" }}>新建项目</h3>
-
-        <input value={name} onChange={e => onName(e.target.value)}
-          placeholder="项目名称" autoFocus
-          className="w-full h-11 rounded-xl px-3 text-[15px] outline-none mb-4"
-          style={{
-            background: "var(--color-surface-secondary)",
-            border: "1px solid var(--lifeflow-border)",
-            color: "var(--color-text-primary)",
-          }}
-        />
-
-        {/* Color picker */}
-        <p className="text-[12px] mb-2" style={{ color: "var(--color-text-secondary)" }}>颜色</p>
-        <div className="flex gap-2 flex-wrap mb-5">
-          {COLORS.map(c => (
-            <button key={c} onClick={() => onColor(c)}
-              className="w-7 h-7 rounded-full transition-all"
-              style={{
-                background: c,
-                boxShadow: color === c ? `0 0 0 3px ${c}40` : "none",
-                transform: color === c ? "scale(1.15)" : "scale(1)",
-              }}
-            />
-          ))}
-        </div>
-
-        <div className="flex gap-2">
-          <button onClick={onClose}
-            className="flex-1 h-11 rounded-xl text-[15px] font-medium"
-            style={{ background: "var(--color-surface-secondary)", color: "var(--color-text-secondary)" }}
-          >取消</button>
-          <button onClick={onSave} disabled={saving || !name.trim()}
-            className="flex-1 h-11 rounded-xl text-[15px] font-semibold text-white"
-            style={{ background: name.trim() ? "var(--lifeflow-primary)" : "var(--lifeflow-border)" }}
-          >{saving ? "保存中..." : "保存"}</button>
-        </div>
-      </motion.div>
-    </>
   );
 }
 

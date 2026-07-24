@@ -294,7 +294,7 @@ function CreateGoalInner() {
               padding: "0 12px",
             }}
           >
-            {(projects ?? []).map((p) => (
+            {(projects ?? []).filter((p: Project) => p.projectType === 'big').map((p: Project) => (
               <option key={p.id} value={p.id}>{p.name}</option>
             ))}
           </select>

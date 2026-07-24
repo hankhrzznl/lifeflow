@@ -121,6 +121,12 @@ export default function AccountingPage() {
     return map;
   }, [categories]);
 
+  const accountMap = useMemo(() => {
+    const map = new Map<string, Account>();
+    for (const a of accounts ?? []) map.set(a.id, a);
+    return map;
+  }, [accounts]);
+
   // ─── 明细计算 ──────────────────────────────────────────────
   const { monthExpense, monthIncome } = useMemo(() => {
     let expense = 0, income = 0;
@@ -552,6 +558,7 @@ export default function AccountingPage() {
                   <div className="rounded-[20px] overflow-hidden" style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}>
                     {g.items.map((t, idx) => {
                       const cat = t.categoryId ? categoryMap.get(t.categoryId) : undefined;
+                      const acc = t.accountId ? accountMap.get(t.accountId) : undefined;
                       const isExpense = t.type === "expense";
                       const IconComp = getIcon(cat?.icon ?? "help-circle");
                       return (
@@ -569,9 +576,16 @@ export default function AccountingPage() {
                             <p className="text-[15px] font-medium truncate" style={{ color: "var(--color-text-primary)" }}>
                               {t.note || cat?.name || "未分类"}
                             </p>
-                            <p className="text-[13px]" style={{ color: "var(--color-text-secondary)" }}>
-                              {new Date(t.createdAt).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })}
-                            </p>
+                            <div className="flex items-center gap-2">
+                              <p className="text-[13px]" style={{ color: "var(--color-text-secondary)" }}>
+                                {new Date(t.createdAt).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })}
+                              </p>
+                              {acc && (
+                                <span className="text-[11px] px-1.5 py-0.5 rounded-full" style={{ background: "var(--lifeflow-muted)", color: "var(--color-text-disabled)" }}>
+                                  {acc.name}
+                                </span>
+                              )}
+                            </div>
                           </div>
                           <span className="text-[16px] font-semibold shrink-0 tabular-nums" style={{ color: "var(--color-text-primary)" }}>
                             {isExpense ? "-" : "+"}¥{fmtFull(t.amount)}

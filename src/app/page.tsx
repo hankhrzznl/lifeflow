@@ -17,6 +17,8 @@ import type { Reminder } from "@/lib/types";
 import { useAgent } from "@/components/agent/AgentProvider";
 import { showToast } from "@/components/ui/Toast";
 import { runPerceptionCheck, type PerceptionCard } from "@/lib/perception-engine";
+import { getAllProjects } from "@/lib/db/efficiency.db";
+import type { Project } from "@/lib/db/efficiency.db";
 
 // ============================================================
 // 工具函数
@@ -125,6 +127,17 @@ export default function HomePage() {
     getPendingReminders().then((r) => setPendingReminders(r.slice(0, 3))).catch(() => {});
   }, []);
 
+  // ── 项目列表（用于颜色继承） ──
+  const projects = useLiveQuery(() => getAllProjects(), [], [] as Project[]);
+
+  const projectColorMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const p of projects ?? []) {
+      map.set(p.id, p.color);
+    }
+    return map;
+  }, [projects]);
+
   // ── 核心事项（第一条未完成） ──
   const coreItem = useMemo(() => {
     return (upcomingItems ?? []).find((item) => !item.isCompleted) ?? null;
@@ -155,6 +168,7 @@ export default function HomePage() {
     plannedEnd: "",
     note: "",
     color: PRESET_COLORS[0],
+    projectId: "",
   });
 
   const resetForm = () => {
@@ -162,7 +176,7 @@ export default function HomePage() {
     const start = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
     const later = new Date(now.getTime() + 30 * 60000);
     const end = `${String(later.getHours()).padStart(2, "0")}:${String(later.getMinutes()).padStart(2, "0")}`;
-    setCreateForm({ title: "", plannedStart: start, plannedEnd: end, note: "", color: PRESET_COLORS[0] });
+    setCreateForm({ title: "", plannedStart: start, plannedEnd: end, note: "", color: PRESET_COLORS[0], projectId: "" });
   };
 
   const [submitting, setSubmitting] = useState(false);
@@ -183,7 +197,8 @@ export default function HomePage() {
         plannedEnd: createForm.plannedEnd,
         title,
         note: createForm.note || undefined,
-        color: createForm.color,
+        color: createForm.projectId ? (projectColorMap.get(createForm.projectId) || PRESET_COLORS[0]) : createForm.color,
+        projectId: createForm.projectId || undefined,
       });
 
       showToast({ type: "success", message: "已添加" });
@@ -658,23 +673,26 @@ export default function HomePage() {
                   </div>
                 </div>
 
-                {/* 颜色 */}
+                {/* 所属项目 */}
                 <div className="mb-4">
-                  <label className="text-[13px] font-medium mb-2 block" style={{ color: "var(--color-text-secondary)" }}>
-                    颜色
+                  <label className="text-[13px] font-medium mb-1.5 block" style={{ color: "var(--color-text-secondary)" }}>
+                    所属项目（可选）
                   </label>
-                  <div className="flex gap-3">
-                    {PRESET_COLORS.map((c) => (
-                      <button
-                        key={c}
-                        onClick={() => setCreateForm((f) => ({ ...f, color: c }))}
-                        className="w-9 h-9 rounded-full flex items-center justify-center transition-transform active:scale-90"
-                        style={{ backgroundColor: c }}
-                      >
-                        {createForm.color === c && <Check className="w-4 h-4 text-white" strokeWidth={3} />}
-                      </button>
+                  <select
+                    value={createForm.projectId}
+                    onChange={(e) => {
+                      const pid = e.target.value;
+                      const pColor = pid ? projectColorMap.get(pid) : undefined;
+                      setCreateForm((f) => ({ ...f, projectId: pid, color: pColor || f.color }));
+                    }}
+                    className="w-full px-4 py-3 rounded-xl text-[15px] outline-none appearance-none"
+                    style={{ backgroundColor: "var(--lifeflow-background)", color: "var(--color-text-primary)" }}
+                  >
+                    <option value="">无项目</option>
+                    {(projects ?? []).filter(p => p.projectType === "big").map((p) => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
                     ))}
-                  </div>
+                  </select>
                 </div>
 
                 {/* 备注 */}

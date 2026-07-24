@@ -16,7 +16,8 @@ const DANGER = "#FF3B30";
 const GREEN = "#34C759";
 
 // ─── 分类筛选 ────────────────────────────────────────────────
-const CATEGORIES = ["全部", "学习", "健康", "琐事", "长期主义", "娱乐"];
+// Categories are dynamically derived from big-type projects in the DB
+const DEFAULT_CATEGORIES = ["全部"];
 
 function todayStr(): string {
   const d = new Date();
@@ -77,6 +78,22 @@ export default function EfficiencyPage() {
     const map = new Map<string, string>();
     for (const p of projects ?? []) {
       map.set(p.id, p.color);
+    }
+    return map;
+  }, [projects]);
+
+  // ─── 分类标签（从 big 类型项目动态生成） ─────────────────
+  const categories = useMemo(() => {
+    const bigProjects = (projects ?? []).filter(p => p.projectType === "big");
+    const names = bigProjects.map(p => p.name);
+    return [...DEFAULT_CATEGORIES, ...names];
+  }, [projects]);
+
+  // ─── Project name -> id 映射 ──────────────────────────────
+  const projectNameMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const p of projects ?? []) {
+      map.set(p.name, p.id);
     }
     return map;
   }, [projects]);
@@ -148,11 +165,23 @@ export default function EfficiencyPage() {
 
   // ─── 分组 ──────────────────────────────────────────────────
   const { activeGoals, completedGoals } = useMemo(() => {
-    const active = goals
+    // 如果选了分类，先按项目ID过滤
+    let filtered = goals;
+    if (activeCategory !== "全部") {
+      const pid = projectNameMap.get(activeCategory);
+      if (pid) {
+        filtered = goals.filter((g) => g.projectId === pid);
+      } else {
+        // 如果没找到对应项目（分类标签名和项目名不匹配），显示空
+        filtered = [];
+      }
+    }
+
+    const active = filtered
       .filter((g) => g.status === "active" || g.status === "paused")
       .sort((a, b) => b.createdAt - a.createdAt);
 
-    const completed = goals
+    const completed = filtered
       .filter((g) => g.status === "completed")
       .sort((a, b) => {
         const aTime = a.completedAt ?? 0;
@@ -162,7 +191,7 @@ export default function EfficiencyPage() {
       });
 
     return { activeGoals: active, completedGoals: completed };
-  }, [goals]);
+  }, [goals, activeCategory, projectNameMap]);
 
   // ─── 本月完成数 ────────────────────────────────────────────
   const monthlyCompleted = useMemo(() => {
@@ -235,7 +264,7 @@ export default function EfficiencyPage() {
       {/* ===== Category Filter Pills ===== */}
       <div className="px-5 pt-3 pb-4">
         <div className="flex flex-nowrap overflow-x-auto gap-2 no-scrollbar">
-          {CATEGORIES.map((cat) => {
+          {categories.map((cat) => {
             const isActive = activeCategory === cat;
             return (
               <button

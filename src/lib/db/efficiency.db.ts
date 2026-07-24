@@ -184,7 +184,7 @@ export class EfficiencyDB extends Dexie {
         { id: crypto.randomUUID(), name: '学习', color: '#2563EB', icon: 'GraduationCap', description: '', sortOrder: 0, projectType: 'big', createdAt: Date.now() },
         { id: crypto.randomUUID(), name: '健康', color: '#10B981', icon: 'Heart', description: '', sortOrder: 1, projectType: 'big', createdAt: Date.now() },
         { id: crypto.randomUUID(), name: '琐事', color: '#F59E0B', icon: 'ClipboardList', description: '', sortOrder: 2, projectType: 'big', createdAt: Date.now() },
-        { id: crypto.randomUUID(), name: '长期主义', color: '#8B5CF6', icon: 'Target', description: '', sortOrder: 3, projectType: 'big', createdAt: Date.now() },
+        { id: crypto.randomUUID(), name: '习惯养成', color: '#8B5CF6', icon: 'Target', description: '', sortOrder: 3, projectType: 'big', createdAt: Date.now() },
         { id: crypto.randomUUID(), name: '娱乐', color: '#EC4899', icon: 'Gamepad2', description: '', sortOrder: 4, projectType: 'big', createdAt: Date.now() },
         { id: crypto.randomUUID(), name: '无项目', color: '#94A3B8', icon: 'FolderOpen', description: '', sortOrder: 5, projectType: 'big', createdAt: Date.now() },
       ];
@@ -242,7 +242,7 @@ export class EfficiencyDB extends Dexie {
         { name: '工作', color: '#0EA5E9', icon: 'Briefcase', sortOrder: 2.5 },
         { name: '社交', color: '#F43F5E', icon: 'Users', sortOrder: 3.5 },
         { name: '财务', color: '#14B8A6', icon: 'Banknote', sortOrder: 4.5 },
-        { name: '个人成长', color: '#A855F7', icon: 'Sparkles', sortOrder: 5.5 },
+        { name: '技能提升', color: '#A855F7', icon: 'Sparkles', sortOrder: 5.5 },
       ];
       const existing = await tx.table('projects').toArray();
       const names = new Set(existing.map((p: any) => p.name));
@@ -253,6 +253,18 @@ export class EfficiencyDB extends Dexie {
             ...np, id: crypto.randomUUID(),
             description: '', projectType: 'big', createdAt: now,
           });
+        }
+      }
+    });
+    // v14: rename "长期主义"→"习惯养成", "个人成长"→"技能提升"
+    this.version(14).stores({
+      projects: '&id, name, projectType, parentProjectId',
+    }).upgrade(async (tx) => {
+      const all = await tx.table('projects').toArray() as Project[];
+      const renames: Record<string, string> = { '长期主义': '习惯养成', '个人成长': '技能提升' };
+      for (const p of all) {
+        if (renames[p.name]) {
+          await tx.table('projects').update(p.id, { name: renames[p.name] } as any);
         }
       }
     });
@@ -272,7 +284,7 @@ export async function initializeEfficiencyDB(): Promise<{ success: boolean; erro
         { name: "健康", color: "#10B981", icon: "Heart", description: "", sortOrder: 1, projectType: 'big' as const },
         { name: "琐事", color: "#F59E0B", icon: "ClipboardList", description: "", sortOrder: 2, projectType: 'big' as const },
         { name: "工作", color: "#0EA5E9", icon: "Briefcase", description: "", sortOrder: 2.5, projectType: 'big' as const },
-        { name: "长期主义", color: "#8B5CF6", icon: "Target", description: "", sortOrder: 3, projectType: 'big' as const },
+        { name: "习惯养成", color: "#8B5CF6", icon: "Target", description: "", sortOrder: 3, projectType: 'big' as const },
         { name: "社交", color: "#F43F5E", icon: "Users", description: "", sortOrder: 3.5, projectType: 'big' as const },
         { name: "娱乐", color: "#EC4899", icon: "Gamepad2", description: "", sortOrder: 4, projectType: 'big' as const },
         { name: "财务", color: "#14B8A6", icon: "Banknote", description: "", sortOrder: 4.5, projectType: 'big' as const },

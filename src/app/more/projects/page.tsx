@@ -53,11 +53,12 @@ export default function ProjectsPage() {
         >
           <ChevronLeft className="w-5 h-5" style={{ color: "var(--color-text-primary)" }} />
         </button>
-        <h1 className="text-title-nav mx-2 truncate" style={{ color: "var(--color-text-primary)" }}>项目管理</h1>
+        <h1 className="text-title-nav mx-2 truncate" style={{ color: "var(--color-text-primary)" }}>全部功能</h1>
         <div className="w-8" />
       </div>
 
-      <div className="px-4 pt-4">
+      <div className="px-4">
+        <p className="text-[12px] mb-2.5" style={{ color: "var(--color-text-disabled)" }}>13 个模块</p>
         {/* Big Project Tags */}
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mb-5">
           <p className="text-[12px] font-medium mb-2.5" style={{ color: "var(--color-text-disabled)" }}>项目分类</p>

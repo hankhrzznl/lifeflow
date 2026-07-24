@@ -4,7 +4,7 @@ import { useMemo, useState, useCallback } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Plus, ChevronDown, Trash2, Wallet, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, ChevronDown, Trash2, Wallet, Search, ChevronLeft, ChevronRight, ReceiptText } from "lucide-react";
 import { getTransactionsByMonth, getTransactionsByYear, getTransactionsByDate, deleteTransaction, getAllCategories, addTransaction, accountingDB, ensureDefaultLedger } from "@/lib/db/accounting.db";
 import type { Transaction, Category, Ledger, Account } from "@/lib/db/accounting.db";
 import { getIcon } from "@/components/accounting/CategoryIcon";
@@ -592,9 +592,27 @@ export default function AccountingPage() {
             )}
 
             {(filteredTxs ?? []).length === 0 ? (
-              <div className="py-12 text-center text-[13px]" style={{ color: "var(--color-text-disabled)" }}>
-                {kw ? "没有找到匹配的记录" : "本月暂无记录"}
-              </div>
+              kw ? (
+                <div className="py-12 text-center text-[13px]" style={{ color: "var(--color-text-disabled)" }}>
+                  没有找到匹配的记录
+                </div>
+              ) : (
+                <motion.div
+                  initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+                  className="py-12 flex flex-col items-center justify-center"
+                >
+                  <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4" style={{ background: "var(--lifeflow-muted)" }}>
+                    <ReceiptText className="w-8 h-8" style={{ color: "var(--color-text-disabled)" }} strokeWidth={1.5} />
+                  </div>
+                  <p className="text-[16px] font-medium mb-1" style={{ color: "var(--color-text-primary)" }}>记第一笔账</p>
+                  <p className="text-[13px] mb-5" style={{ color: "var(--color-text-secondary)" }}>开始记录，看清每一分钱的去向</p>
+                  <button
+                    onClick={() => setShowRecordSheet(true)}
+                    className="px-6 py-2.5 rounded-full text-[14px] font-semibold text-white active:opacity-90"
+                    style={{ background: "var(--lifeflow-primary)" }}
+                  >记一笔</button>
+                </motion.div>
+              )
             ) : (
               groups.map((g, gi) => (
                 <div key={g.date}>

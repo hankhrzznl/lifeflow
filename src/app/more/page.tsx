@@ -33,7 +33,7 @@ export default function MorePage() {
       items: [
         { title: "课程表", description: "管理课程安排", href: "/more/schedule/courses", icon: GraduationCap },
         { title: "作息", description: "设定日常作息", href: "/more/schedule/routines", icon: Clock },
-        { title: "项目管理", description: "跟踪项目进度", href: "/more/projects", icon: FolderKanban },
+        { title: "全部功能", description: "13 个功能模块入口", href: "/more/projects", icon: FolderKanban },
       ],
     },
     {

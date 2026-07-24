@@ -219,7 +219,7 @@ export default function HomePage() {
             style={{ background: "var(--color-surface-card)", border: "1px solid var(--lifeflow-border)" }}
           >
             <FolderKanban className="w-3.5 h-3.5" style={{ color: "var(--color-text-secondary)" }} />
-            <span className="text-[11px] font-medium" style={{ color: "var(--color-text-secondary)" }}>项目管理</span>
+            <span className="text-[11px] font-medium" style={{ color: "var(--color-text-secondary)" }}>全部功能</span>
           </Link>
         </div>
       </motion.div>
@@ -278,10 +278,10 @@ export default function HomePage() {
           ) : (
             <>
               <p className="text-[17px] font-semibold mb-1.5" style={{ color: "var(--color-text-primary)" }}>
-                今天接下来暂无安排
+                从这里开始你的一天 👋
               </p>
               <p className="text-[13px] mb-4" style={{ color: "var(--color-text-secondary)" }}>
-                新建一个事项，或去日程页查看完整时间轴
+                可以新建一个目标，或者直接添加今天要做的事项
               </p>
               <div className="flex gap-2">
                 <button
@@ -292,11 +292,11 @@ export default function HomePage() {
                   新建事项
                 </button>
                 <Link
-                  href="/efficiency/schedule"
+                  href="/efficiency"
                   className="py-2.5 px-4 rounded-full text-[14px] font-medium active:opacity-70"
                   style={{ background: "var(--lifeflow-muted)", color: "var(--color-text-secondary)" }}
                 >
-                  日程
+                  目标
                 </Link>
               </div>
             </>
@@ -458,8 +458,11 @@ export default function HomePage() {
       {/* ===== 浮动创建按钮 ===== */}
       <motion.button
         initial={{ scale: 0 }}
-        animate={{ scale: 1 }}
-        transition={{ delay: 0.5, type: "spring", stiffness: 300, damping: 20 }}
+        animate={{ scale: [1, 1.08, 1] }}
+        transition={{
+          delay: 0.5,
+          scale: { repeat: Infinity, repeatDelay: 3, duration: 1.2, ease: "easeInOut" },
+        }}
         onClick={() => { resetForm(); setShowCreate(true); }}
         className="absolute w-14 h-14 rounded-full flex items-center justify-center shadow-lg active:scale-90 transition-transform z-40"
         style={{

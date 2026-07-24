@@ -452,16 +452,18 @@ export default function SchedulePage() {
 
           {/* 无事项提示 */}
           {(!items || items.length === 0) && (
-            <div className="flex flex-col items-center justify-center py-16">
+            <div className="flex flex-col items-center justify-center py-20">
               <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4" style={{ backgroundColor: "var(--color-surface-secondary)" }}>
                 <CalendarDays className="w-7 h-7" style={{ color: "var(--color-text-disabled)" }} />
               </div>
               <p className="text-[16px] font-medium" style={{ color: "var(--color-text-secondary)" }}>
                 {isPastDate ? "当日无记录" : "当日暂无安排"}
               </p>
-              <p className="text-[12px] mt-1.5" style={{ color: "var(--color-text-disabled)" }}>
-                {isPastDate ? "该日期没有日程事项" : "在首页新建事项以开始规划"}
-              </p>
+              {!isPastDate && (
+                <p className="text-[13px] mt-2 text-center max-w-[260px] leading-relaxed" style={{ color: "var(--color-text-disabled)" }}>
+                  点击右下角新建事项，或语音告诉助手，把今天要做的事排进时间轴
+                </p>
+              )}
             </div>
           )}
         </div>

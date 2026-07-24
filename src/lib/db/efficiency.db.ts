@@ -234,6 +234,28 @@ export class EfficiencyDB extends Dexie {
       goals: '&id, title, status, deadline, quadrant, goalType, streak',
       projects: '&id, name, projectType, parentProjectId',
     });
+    // v13: seed 4 new big project categories
+    this.version(13).stores({
+      projects: '&id, name, projectType, parentProjectId',
+    }).upgrade(async (tx) => {
+      const newBigProjects = [
+        { name: '工作', color: '#0EA5E9', icon: 'Briefcase', sortOrder: 2.5 },
+        { name: '社交', color: '#F43F5E', icon: 'Users', sortOrder: 3.5 },
+        { name: '财务', color: '#14B8A6', icon: 'Banknote', sortOrder: 4.5 },
+        { name: '个人成长', color: '#A855F7', icon: 'Sparkles', sortOrder: 5.5 },
+      ];
+      const existing = await tx.table('projects').toArray();
+      const names = new Set(existing.map((p: any) => p.name));
+      const now = Date.now();
+      for (const np of newBigProjects) {
+        if (!names.has(np.name)) {
+          await tx.table('projects').add({
+            ...np, id: crypto.randomUUID(),
+            description: '', projectType: 'big', createdAt: now,
+          });
+        }
+      }
+    });
   }
 }
 
@@ -246,16 +268,19 @@ export async function initializeEfficiencyDB(): Promise<{ success: boolean; erro
     const projectCount = await efficiencyDB.projects.count();
     if (projectCount === 0) {
       const defaults = [
-        { name: "学习", color: "#FF9500", icon: "BookOpen", description: "", sortOrder: 0 },
-        { name: "健康", color: "#34C759", icon: "Activity", description: "", sortOrder: 1 },
-        { name: "琐事", color: "#5856D6", icon: "ClipboardList", description: "", sortOrder: 2 },
-        { name: "长期主义", color: "#AF52DE", icon: "Clock", description: "", sortOrder: 3 },
-        { name: "娱乐", color: "#FF2D55", icon: "Gamepad2", description: "", sortOrder: 4 },
-        { name: "无项目", color: "#FFFFFF", icon: "Circle", description: "", sortOrder: 5 },
+        { name: "学习", color: "#2563EB", icon: "GraduationCap", description: "", sortOrder: 0, projectType: 'big' as const },
+        { name: "健康", color: "#10B981", icon: "Heart", description: "", sortOrder: 1, projectType: 'big' as const },
+        { name: "琐事", color: "#F59E0B", icon: "ClipboardList", description: "", sortOrder: 2, projectType: 'big' as const },
+        { name: "工作", color: "#0EA5E9", icon: "Briefcase", description: "", sortOrder: 2.5, projectType: 'big' as const },
+        { name: "长期主义", color: "#8B5CF6", icon: "Target", description: "", sortOrder: 3, projectType: 'big' as const },
+        { name: "社交", color: "#F43F5E", icon: "Users", description: "", sortOrder: 3.5, projectType: 'big' as const },
+        { name: "娱乐", color: "#EC4899", icon: "Gamepad2", description: "", sortOrder: 4, projectType: 'big' as const },
+        { name: "财务", color: "#14B8A6", icon: "Banknote", description: "", sortOrder: 4.5, projectType: 'big' as const },
+        { name: "个人成长", color: "#A855F7", icon: "Sparkles", description: "", sortOrder: 5, projectType: 'big' as const },
+        { name: "无项目", color: "#94A3B8", icon: "FolderOpen", description: "", sortOrder: 5.5, projectType: 'big' as const },
       ];
       for (const p of defaults) {
-        // Existing defaults from v4 become 'small' type
-        await efficiencyDB.projects.add({ ...p, id: crypto.randomUUID(), projectType: 'small' as any, createdAt: Date.now() });
+        await efficiencyDB.projects.add({ ...p, id: crypto.randomUUID(), createdAt: Date.now() });
       }
     }
     return { success: true };

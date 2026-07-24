@@ -12,7 +12,7 @@ function debounce(key: string, fn: () => Promise<void>, delay: number = 120): vo
   if (existing) clearTimeout(existing);
   const id = window.setTimeout(async () => {
     debounceTimers.delete(key);
-    try { await fn(); } catch { /* silent */ }
+    try { await fn(); } catch (err) { console.error("[Linkage] 防抖操作失败:", err); }
   }, delay);
   debounceTimers.set(key, id);
 }

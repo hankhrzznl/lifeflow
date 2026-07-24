@@ -1,5 +1,6 @@
 import { db } from "./db";
 import type { AgentChatSession, AgentChatMessage } from "./types";
+import { showToast } from "@/components/ui/Toast";
 
 export async function saveAgentMemory(dateKey: string, summary: string): Promise<void> {
   try {
@@ -25,6 +26,7 @@ export async function deleteAgentMemory(dateKey: string): Promise<void> {
     await db.agentMemory.where("dateKey").equals(dateKey).delete();
   } catch (err) {
     console.error("deleteAgentMemory failed:", err);
+    showToast({ type: "error", message: "操作失败，请重试" });
   }
 }
 
@@ -59,6 +61,7 @@ export async function appendMessageToSession(
     }
   } catch (err) {
     console.error("appendMessageToSession failed:", err);
+    showToast({ type: "error", message: "操作失败，请重试" });
   }
 }
 
@@ -67,6 +70,7 @@ export async function clearChatHistory(sessionId: string): Promise<void> {
     await db.agentChats.delete(sessionId);
   } catch (err) {
     console.error("clearChatHistory failed:", err);
+    showToast({ type: "error", message: "操作失败，请重试" });
   }
 }
 

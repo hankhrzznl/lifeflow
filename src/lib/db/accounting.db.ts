@@ -160,20 +160,40 @@ export async function ensureDefaultLedger(): Promise<string> {
   if (existing) return existing.id;
 
   // 自愈：创建默认账本
-  const id = crypto.randomUUID();
-  const now = Date.now();
-  await accountingDB.ledgers.add({
-    id, name: '日常账本', type: 'personal', currency: 'CNY', isDefault: true, createdAt: now,
-  });
-  // 同时创建默认账户
-  const accounts = [
-    { id: crypto.randomUUID(), ledgerId: id, name: '微信钱包', type: 'wechat', balance: 0, currency: 'CNY', createdAt: now },
-    { id: crypto.randomUUID(), ledgerId: id, name: '支付宝', type: 'alipay', balance: 0, currency: 'CNY', createdAt: now },
-    { id: crypto.randomUUID(), ledgerId: id, name: '银行卡', type: 'bank', balance: 0, currency: 'CNY', createdAt: now },
-    { id: crypto.randomUUID(), ledgerId: id, name: '现金', type: 'cash', balance: 0, currency: 'CNY', createdAt: now },
-  ];
-  for (const a of accounts) await accountingDB.accounts.add(a);
-  return id;
+  const createDefault = async () => {
+    const id = crypto.randomUUID();
+    const now = Date.now();
+    await accountingDB.ledgers.add({
+      id, name: '日常账本', type: 'personal', currency: 'CNY', isDefault: true, createdAt: now,
+    });
+    // 同时创建默认账户
+    const accounts = [
+      { id: crypto.randomUUID(), ledgerId: id, name: '微信钱包', type: 'wechat', balance: 0, currency: 'CNY', createdAt: now },
+      { id: crypto.randomUUID(), ledgerId: id, name: '支付宝', type: 'alipay', balance: 0, currency: 'CNY', createdAt: now },
+      { id: crypto.randomUUID(), ledgerId: id, name: '银行卡', type: 'bank', balance: 0, currency: 'CNY', createdAt: now },
+      { id: crypto.randomUUID(), ledgerId: id, name: '现金', type: 'cash', balance: 0, currency: 'CNY', createdAt: now },
+    ];
+    for (const a of accounts) await accountingDB.accounts.add(a);
+    return id;
+  };
+
+  try {
+    return await createDefault();
+  } catch (err) {
+    console.error("[Accounting] 确保默认账本失败:", err);
+    // 重试一次
+    await new Promise((r) => setTimeout(r, 500));
+    try {
+      return await createDefault();
+    } catch (err2) {
+      console.error("[Accounting] 确保默认账本重试失败:", err2);
+      if (typeof window !== "undefined") {
+        const { showToast } = await import("@/components/ui/Toast");
+        showToast({ type: "error", message: "操作失败，请重试" });
+      }
+      throw err2;
+    }
+  }
 }
 
 // ─── Ledgers CRUD ────────────────────────────────────────────

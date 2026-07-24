@@ -406,7 +406,7 @@ export class LifeFlowDB extends Dexie {
     }).upgrade(async (tx) => {
       try {
         await tx.table("submodules").clear();
-      } catch { /* table may not exist */ }
+      } catch (err) { console.error("[LifeFlowDB] 移除submodules表失败:", err); }
       if (typeof window !== "undefined" && window.location.hostname === "localhost") {
         console.log("[LifeFlowDB v23] Removed deprecated submodules table");
       }
@@ -899,6 +899,7 @@ export async function executeTransaction<T>(
       return await db.transaction("rw", stores, operation);
     } catch (err) {
       lastError = err as Error;
+      console.error(`[DB] 事务执行失败 (attempt ${attempt}/${maxRetries}):`, err);
 
       if (
         (err as Error).name === "QuotaExceededError" ||
@@ -931,6 +932,7 @@ export async function writeWithRetry<T>(
       return await operation();
     } catch (err) {
       lastError = err as Error;
+      console.error(`[DB] 写入操作失败 (attempt ${attempt}/${maxRetries}):`, err);
 
       if (
         (err as Error).name === "QuotaExceededError" ||
@@ -962,6 +964,7 @@ export async function initializeDatabase(): Promise<{
     return { success: true };
   } catch (err) {
     const error = err as Error;
+    console.error("[DB] 数据库初始化失败:", error);
 
     if (error.name === "VersionError") {
       console.error("[DB] 数据库版本不匹配，可能需要清除数据");
@@ -1906,6 +1909,7 @@ export async function exportAllData(): Promise<string> {
     try {
       data[table] = await (db as any)[table].toArray();
     } catch (error) {
+      console.error(`[DB] 导出表 ${table} 失败:`, error);
       if (typeof window !== "undefined" && window.location.hostname === "localhost") {
         console.warn(`Failed to export table ${table}:`, error);
       }
@@ -1983,6 +1987,7 @@ export async function importAllData(data: any): Promise<void> {
       try {
         await (db as any)[table].clear();
       } catch (error) {
+        console.error(`[DB] 清除表 ${table} 失败:`, error);
         if (typeof window !== "undefined" && window.location.hostname === "localhost") {
           console.warn(`Failed to clear table ${table}:`, error);
         }
@@ -1997,6 +2002,7 @@ export async function importAllData(data: any): Promise<void> {
           try {
             await (db as any)[table].add(item);
           } catch (error) {
+            console.error(`[DB] 导入数据到表 ${table} 失败:`, error);
             if (typeof window !== "undefined" && window.location.hostname === "localhost") {
               console.warn(`Failed to import item to table ${table}:`, error);
             }

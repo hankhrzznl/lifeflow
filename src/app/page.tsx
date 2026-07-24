@@ -164,24 +164,34 @@ export default function HomePage() {
     setCreateForm({ title: "", plannedStart: start, plannedEnd: end, note: "", color: PRESET_COLORS[0] });
   };
 
+  const [submitting, setSubmitting] = useState(false);
+
   const handleCreate = useCallback(async () => {
+    if (submitting) return;
     const title = createForm.title.trim();
     if (!title) { showToast({ type: "error", message: "请输入事项名称" }); return; }
     if (!createForm.plannedStart || !createForm.plannedEnd) { showToast({ type: "error", message: "请选择时间" }); return; }
 
-    await addManualItem({
-      date: today,
-      plannedStart: createForm.plannedStart,
-      plannedEnd: createForm.plannedEnd,
-      title,
-      note: createForm.note || undefined,
-      color: createForm.color,
-    });
+    setSubmitting(true);
+    try {
+      await addManualItem({
+        date: today,
+        plannedStart: createForm.plannedStart,
+        plannedEnd: createForm.plannedEnd,
+        title,
+        note: createForm.note || undefined,
+        color: createForm.color,
+      });
 
-    showToast({ type: "success", message: "事项已创建" });
-    setShowCreate(false);
-    resetForm();
-  }, [createForm, today]);
+      showToast({ type: "success", message: "事项已创建" });
+      setShowCreate(false);
+      resetForm();
+    } catch {
+      showToast({ type: "error", message: "创建失败，请重试" });
+    } finally {
+      setSubmitting(false);
+    }
+  }, [createForm, today, submitting]);
 
   // ────────── Render ──────────
 
@@ -578,10 +588,11 @@ export default function HomePage() {
 
                 <button
                   onClick={handleCreate}
-                  className="w-full py-3.5 rounded-full text-white text-[16px] font-semibold active:opacity-90"
+                  disabled={submitting}
+                  className="w-full py-3.5 rounded-full text-white text-[16px] font-semibold active:opacity-90 disabled:opacity-50"
                   style={{ background: "var(--lifeflow-primary)" }}
                 >
-                  新建事项
+                  {submitting ? "创建中..." : "新建事项"}
                 </button>
               </div>
             </motion.div>

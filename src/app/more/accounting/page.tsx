@@ -65,6 +65,7 @@ export default function AccountingPage() {
   const [recordAmount, setRecordAmount] = useState("");
   const [recordNote, setRecordNote] = useState("");
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
+  const [recordSubmitting, setRecordSubmitting] = useState(false);
 
   // ─── 日期计算 ──────────────────────────────────────────────
   const { year, month } = useMemo(() => {
@@ -307,8 +308,14 @@ export default function AccountingPage() {
     setRecordType(t);
   };
 
+  const closeRecordSheet = useCallback(() => {
+    setShowRecordSheet(false);
+    setRecordSubmitting(false);
+  }, []);
+
   // ─── 记一笔 ─── 保存 ──────────────────────────────────────
   const handleSaveRecord = useCallback(async () => {
+    if (recordSubmitting) return;
     const amountFen = Math.round(parseFloat(recordAmount) * 100);
     if (isNaN(amountFen) || amountFen <= 0) {
       showToast({ type: "warning", message: "请输入有效金额" });
@@ -318,6 +325,7 @@ export default function AccountingPage() {
       showToast({ type: "warning", message: "请选择账户" });
       return;
     }
+    setRecordSubmitting(true);
     try {
       // 自愈：确保默认账本存在
       const ledgerId = await ensureDefaultLedger();
@@ -335,9 +343,11 @@ export default function AccountingPage() {
       setRecordNote("");
       setSelectedAccountId(null);
     } catch {
-      showToast({ type: "error", message: "保存失败" });
+      showToast({ type: "error", message: "保存失败，请重试" });
+    } finally {
+      setRecordSubmitting(false);
     }
-  }, [recordAmount, selectedAccountId, recordType, recordNote]);
+  }, [recordAmount, selectedAccountId, recordType, recordNote, recordSubmitting]);
 
   // ============================================================
   // 渲染
@@ -876,7 +886,7 @@ export default function AccountingPage() {
           <motion.div
             className="fixed inset-0 z-[100]"
             style={{ background: "rgba(0,0,0,0.4)" }}
-            onClick={() => setShowRecordSheet(false)}
+            onClick={closeRecordSheet}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -1001,10 +1011,11 @@ export default function AccountingPage() {
               {/* Save */}
               <button
                 onClick={handleSaveRecord}
-                className="w-full py-3.5 rounded-2xl text-[16px] font-semibold"
+                disabled={recordSubmitting}
+                className="w-full py-3.5 rounded-2xl text-[16px] font-semibold disabled:opacity-50"
                 style={{ background: "var(--lifeflow-primary)", color: "var(--lifeflow-primary-foreground)" }}
               >
-                保存
+                {recordSubmitting ? "保存中..." : "保存"}
               </button>
             </motion.div>
           </motion.div>

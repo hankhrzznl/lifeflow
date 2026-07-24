@@ -560,7 +560,7 @@ export async function createMainGoalFromTemplate(
       try {
         const { deleteGoal } = await import("./db");
         await deleteGoal(mainGoalId, false);
-      } catch { /* best effort */ }
+      } catch (err) { console.error("[GoalBridge] 级联清理失败:", err); }
     }
     throw err;
   }

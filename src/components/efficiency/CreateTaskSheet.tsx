@@ -183,7 +183,7 @@ export function CreateTaskSheet({
     return (
       <div className="min-h-screen bg-[#FAFAFA]" style={{ maxWidth: 430, margin: "0 auto" }}>
         {/* 导航栏 */}
-        <div className="flex items-center justify-between shrink-0 px-4 h-14" style={{ borderBottom: `0.5px solid ${BORDER}` }}>
+        <div className="flex items-center justify-between shrink-0 px-4 h-14" style={{ paddingTop: "var(--safe-area-top)", borderBottom: `0.5px solid ${BORDER}` }}>
           <button type="button" onClick={onBack} className="text-[17px] text-[#5865F2]">取消</button>
           <span className="absolute left-1/2 -translate-x-1/2 text-[17px] font-semibold text-[#1D1D1F]">创建任务</span>
           <button

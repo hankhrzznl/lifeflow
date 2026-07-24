@@ -2,9 +2,10 @@
 
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ChevronLeft, Check, Plus, CheckCircle2, TrendingUp,
+  ChevronLeft, Check, Plus, CheckCircle2, TrendingUp, ChevronDown,
   Circle, AlertTriangle, X, Trash2, Pencil,
 } from "lucide-react";
 import { useLiveQuery } from "dexie-react-hooks";
@@ -106,6 +107,9 @@ export default function GoalDetailPage() {
   const [showBulkImport, setShowBulkImport] = useState(false);
   const [bulkText, setBulkText] = useState("");
   const [bulkLoading, setBulkLoading] = useState(false);
+  const [detailTaskId, setDetailTaskId] = useState<string | null>(null);
+
+  const detailTask = useMemo(() => detailTaskId ? tasks.find(t => t.id === detailTaskId) ?? null : null, [detailTaskId, tasks]);
 
   const handleBulkImport = useCallback(async () => {
     if (!bulkText.trim()) return;
@@ -272,10 +276,50 @@ export default function GoalDetailPage() {
                 onToggle={() => handleToggleTask(task.id)}
                 onDelete={() => handleDeleteTask(task.id)}
                 onEdit={() => openEdit(task)}
+                onClick={() => setDetailTaskId(detailTaskId === task.id ? null : task.id)}
                 showDivider={i < normalTasks.length - 1}
               />
             ))}
           </div>
+
+          {/* 任务详情展开 */}
+          <AnimatePresence>
+            {detailTask && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="overflow-hidden"
+              >
+                <div className="px-4 py-4 border-t border-[#EBEBEB]" style={{ background: "#F9FAFB" }}>
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-[15px] font-semibold" style={{ color: "var(--color-text-primary)" }}>{detailTask.title}</p>
+                    <button onClick={() => setDetailTaskId(null)} className="w-6 h-6 flex items-center justify-center rounded-full" style={{ background: "var(--lifeflow-muted)" }}>
+                      <ChevronDown className="w-4 h-4" style={{ color: "var(--color-text-secondary)" }} />
+                    </button>
+                  </div>
+                  {detailTask.note && (
+                    <p className="text-[13px] mb-3" style={{ color: "var(--color-text-secondary)" }}>{detailTask.note}</p>
+                  )}
+                  <div className="flex items-center gap-2 text-[13px] mb-4" style={{ color: "var(--color-text-disabled)" }}>
+                    {detailTask.startDate && <span>{detailTask.startDate} 起</span>}
+                    {detailTask.progressType === "progress" && detailTask.targetValue !== undefined && (
+                      <span>· 目标 {detailTask.targetValue}{detailTask.targetUnit || ""}</span>
+                    )}
+                  </div>
+                  <Link
+                    href={`/efficiency/goals/${goalId}/tasks/${detailTask.id}`}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-[13px] font-medium active:opacity-70"
+                    style={{ background: "var(--lifeflow-primary)", color: "#fff" }}
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    创建事项
+                  </Link>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       )}
 
@@ -449,12 +493,13 @@ export default function GoalDetailPage() {
 // ============================================================
 // 普通任务行
 // ============================================================
-function TaskRow({ task, onToggle, onDelete, onEdit, showDivider }: { task: ScheduleTask; onToggle: () => void; onDelete: () => void; onEdit: () => void; showDivider: boolean }) {
+function TaskRow({ task, onToggle, onDelete, onEdit, showDivider, onClick }: { task: ScheduleTask; onToggle: () => void; onDelete: () => void; onEdit: () => void; showDivider: boolean; onClick?: () => void }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="relative flex items-center gap-3 px-4 py-3 min-h-[52px] group"
+      onClick={onClick}
+      className="relative flex items-center gap-3 px-4 py-3 min-h-[52px] group cursor-pointer active:bg-black/5"
     >
       {showDivider && (
         <div className="absolute left-[52px] right-0 top-0" style={{ borderTop: "0.5px solid #EBEBEB" }} />

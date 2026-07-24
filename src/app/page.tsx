@@ -7,7 +7,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import {
   Zap, Check, Bell, Flame,
   Calendar, Droplets, Moon, Dumbbell, Pill,
-  Timer, CalendarRange, StickyNote, BarChart3, Settings, FolderKanban,
+  FolderKanban, Target,
   Plus, X, Clock, ChevronRight,
 } from "lucide-react";
 import { getUpcomingItems, addManualItem, updateItem } from "@/lib/db/daylog.db";
@@ -77,20 +77,6 @@ const REMINDER_ICONS: Record<string, React.ComponentType<any>> = {
   fitness: Dumbbell,
   medication: Pill,
 };
-
-/* ────────── Quick Access Button ────────── */
-
-function QuickBtn({ href, icon: Icon }: { href: string; icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }> }) {
-  return (
-    <Link
-      href={href}
-      className="w-7 h-7 flex items-center justify-center rounded-lg active:opacity-60"
-      style={{ background: "var(--color-surface-card)", border: "1px solid var(--lifeflow-border)" }}
-    >
-      <Icon className="w-3.5 h-3.5" style={{ color: "var(--color-text-secondary)" }} />
-    </Link>
-  );
-}
 
 // ─── 预设颜色 ───
 const PRESET_COLORS = ["#6366F1", "#FF9500", "#34C759", "#FF3B30", "#007AFF", "#5856D6", "#FF2D55", "#00C7BE"];
@@ -253,19 +239,22 @@ export default function HomePage() {
         <p className="text-[13px] font-medium" style={{ color: "var(--color-text-secondary)" }}>
           {greeting()} · {formatDateChinese(now)}
         </p>
-        <div className="flex items-center gap-0.5">
-          <QuickBtn href="/more/focus" icon={Timer} />
-          <QuickBtn href="/more/countdown" icon={CalendarRange} />
-          <QuickBtn href="/more/notes" icon={StickyNote} />
-          <QuickBtn href="/more/review" icon={BarChart3} />
-          <QuickBtn href="/settings" icon={Settings} />
+        <div className="flex items-center gap-1.5">
           <Link
             href="/more/projects"
-            className="h-7 flex items-center gap-1.5 px-2.5 rounded-lg active:opacity-60 ml-1"
+            className="h-7 flex items-center gap-1 px-2 rounded-lg active:opacity-60"
             style={{ background: "var(--color-surface-card)", border: "1px solid var(--lifeflow-border)" }}
           >
             <FolderKanban className="w-3.5 h-3.5" style={{ color: "var(--color-text-secondary)" }} />
-            <span className="text-[11px] font-medium" style={{ color: "var(--color-text-secondary)" }}>全部功能</span>
+            <span className="text-[11px] font-medium" style={{ color: "var(--color-text-secondary)" }}>功能模块</span>
+          </Link>
+          <Link
+            href="/efficiency"
+            className="h-7 flex items-center gap-1 px-2 rounded-lg active:opacity-60"
+            style={{ background: "var(--color-surface-card)", border: "1px solid var(--lifeflow-border)" }}
+          >
+            <Target className="w-3.5 h-3.5" style={{ color: "var(--color-text-secondary)" }} />
+            <span className="text-[11px] font-medium" style={{ color: "var(--color-text-secondary)" }}>目标</span>
           </Link>
         </div>
       </motion.div>

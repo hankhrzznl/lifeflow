@@ -22,7 +22,7 @@ function generateReportContent(payload: WeeklyReportPayload): string {
 
   const hasData = stats.totalSessions > 0;
 
-  let report = `## ${periodLabel}专注回顾\n\n`;
+  let report = `## ${periodLabel}专注复盘\n\n`;
 
   if (!hasData) {
     report += `${periodLabel}暂无专注记录。开启一段专注旅程，让数据见证你的成长！\n\n`;

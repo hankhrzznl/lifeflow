@@ -316,10 +316,10 @@ export class PlannerBrain {
         taskDays: "everyday", targetValue: 21, targetUnit: "天", startValue: 0, dailyMin: 1,
       },
       {
-        title: "周度回顾调整", type: "multi_day", goalId, date: null,
+        title: "周度复盘调整", type: "multi_day", goalId, date: null,
         startDate: dateStr(start, 21), endDate: dateStr(start, 42),
         isCompleted: false, plannedTime: 15, actualTime: 0,
-        isImportant: false, note: "每周回顾执行情况，微调时间或方式", progressType: "normal",
+        isImportant: false, note: "每周复盘执行情况，微调时间或方式", progressType: "normal",
       },
       // 巩固期（第6-9周）
       {

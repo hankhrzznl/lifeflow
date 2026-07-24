@@ -30,7 +30,7 @@ export default function ReviewPage() {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">复盘</h1>
-            <p className="text-sm text-gray-500 mt-0.5">回顾过去, 更好前行</p>
+            <p className="text-sm text-gray-500 mt-0.5">复盘过去, 更好前行</p>
           </div>
         </div>
 
@@ -77,7 +77,7 @@ export default function ReviewPage() {
 
         {/* Review Items */}
         <div className="bg-white rounded-2xl shadow-sm p-4">
-          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">回顾记录</h2>
+          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">复盘记录</h2>
           <div className="space-y-3">
             {stubReviewItems.map((item, i) => (
               <motion.div

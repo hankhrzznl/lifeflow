@@ -64,9 +64,9 @@ function greeting(): string {
 // ============================================================
 
 const QUICK_PROMPTS = [
-  { label: "今天有什么提醒？", icon: Bell },
-  { label: "帮我排一下日程", icon: Calendar },
-  { label: "复盘一下这周", icon: Flame },
+  { label: "今日提醒", icon: Bell },
+  { label: "安排日程", icon: Calendar },
+  { label: "本周复盘", icon: Flame },
 ];
 
 // 提醒图标映射
@@ -254,7 +254,7 @@ export default function HomePage() {
                   className="flex-1 py-2.5 rounded-full text-white text-[14px] font-semibold active:opacity-90"
                   style={{ background: coreItem.isCompleted ? "var(--color-text-disabled)" : "var(--lifeflow-primary)" }}
                 >
-                  {coreItem.isCompleted ? "已勾选" : "标记完成"}
+                  {coreItem.isCompleted ? "已勾选" : "完成"}
                 </button>
                 <Link
                   href="/efficiency/schedule"
@@ -581,7 +581,7 @@ export default function HomePage() {
                   className="w-full py-3.5 rounded-full text-white text-[16px] font-semibold active:opacity-90"
                   style={{ background: "var(--lifeflow-primary)" }}
                 >
-                  添加事项
+                  新建事项
                 </button>
               </div>
             </motion.div>

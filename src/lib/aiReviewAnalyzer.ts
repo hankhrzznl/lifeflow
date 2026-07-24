@@ -61,7 +61,7 @@ async function aggregatePeriodData(start: number, end: number): Promise<{
 }
 
 /**
- * AI分析回顾数据
+ * AI分析复盘数据
  */
 export async function analyzeReview(
   start: number,

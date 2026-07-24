@@ -712,7 +712,7 @@ export class LifeFlowDB extends Dexie {
             ]},
             { name: "成长期", weight: 4, daysOffset: 7, tasks: [
               { title: "每日打卡记录", weight: 3, type: "habit" },
-              { title: "每周进度回顾", weight: 1, type: "daily" },
+              { title: "每周进度复盘", weight: 1, type: "daily" },
               { title: "调整行动策略", weight: 1, type: "daily" },
             ]},
             { name: "固化期", weight: 4, daysOffset: 33, tasks: [

@@ -1,6 +1,6 @@
 /**
- * ReviewerBrain — 周期回顾引擎
- * 跨模块聚合数据，生成周/月回顾摘要
+ * ReviewerBrain — 周期复盘引擎
+ * 跨模块聚合数据，生成周/月复盘摘要
  */
 
 export interface DateRange {
@@ -367,12 +367,12 @@ export class ReviewerBrain {
       return {
         module: "schedule",
         icon: "Calendar",
-        label: "日程回顾",
+        label: "日程复盘",
         stats,
         highlights,
       };
     } catch {
-      return { module: "schedule", icon: "Calendar", label: "日程回顾", stats: {}, highlights: [] };
+      return { module: "schedule", icon: "Calendar", label: "日程复盘", stats: {}, highlights: [] };
     }
   }
 

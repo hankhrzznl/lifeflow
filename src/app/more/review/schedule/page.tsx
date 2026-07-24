@@ -132,7 +132,7 @@ export default function ScheduleReviewPage() {
         <div className="flex items-center gap-2">
           <Calendar className="w-6 h-6" style={{ color: "#FF9500" }} />
           <h1 className="text-[17px] font-semibold" style={{ color: "var(--lifeflow-foreground)" }}>
-            日程回顾
+            日程复盘
           </h1>
         </div>
       </header>
@@ -335,7 +335,7 @@ export default function ScheduleReviewPage() {
                 暂无日程数据
               </p>
               <p className="text-[13px]" style={{ color: "var(--color-text-secondary)" }}>
-                本周还没有日程记录。添加课程、作息或手动事项后，这里会显示回顾。
+                本周还没有日程记录。添加课程、作息或手动事项后，这里会显示复盘。
               </p>
             </div>
           ) : null}

@@ -186,7 +186,7 @@ export default function MedicationPage() {
               <Pill className="w-10 h-10 mb-3" style={{ color: "var(--color-text-disabled)" }} />
               <p className="text-[14px]" style={{ color: "var(--color-text-secondary)" }}>暂无药品</p>
               <button onClick={openCreate} className="mt-3 text-[13px] font-medium" style={{ color: "var(--lifeflow-primary)" }}>
-                添加药品
+                新建药品
               </button>
             </div>
           ) : (
@@ -339,7 +339,7 @@ export default function MedicationPage() {
               <div className="px-5 pb-6">
                 <div className="flex items-center justify-between mb-5">
                   <h3 className="text-[20px] font-bold" style={{ color: "var(--color-text-primary)" }}>
-                    {editingMed ? "编辑药品" : "添加药品"}
+                    {editingMed ? "编辑药品" : "新建药品"}
                   </h3>
                   <button onClick={() => setShowForm(false)}
                     className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: "var(--lifeflow-muted)" }}>
@@ -415,7 +415,7 @@ export default function MedicationPage() {
                 <button onClick={handleSave}
                   className="w-full py-3.5 rounded-full text-white text-[16px] font-semibold active:opacity-90"
                   style={{ background: "var(--lifeflow-primary)" }}>
-                  {editingMed ? "保存修改" : "添加药品"}
+                  {editingMed ? "保存修改" : "新建药品"}
                 </button>
               </div>
             </motion.div>

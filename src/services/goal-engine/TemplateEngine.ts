@@ -203,7 +203,7 @@ function generateExamTemplate(params: TemplateParams): TemplateResult {
           // 只在截止日期前插入复习
           if (reviewDate <= params.deadline) {
             dailyAtoms.push({
-              title: `[复习] ${params.examSubject ?? '内容'}回顾（${interval}天前学习）`,
+              title: `[复习] ${params.examSubject ?? '内容'}复盘（${interval}天前学习）`,
               scheduledDate: reviewDate,
               quantity: 1,
               estimatedDuration: 20, // 复习比新学耗时少

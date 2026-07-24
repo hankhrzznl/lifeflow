@@ -448,7 +448,7 @@ export default function AccountingPage() {
               : { color: "var(--color-text-secondary)" }
             }
           >
-            图表
+            统计
           </button>
         </div>
       </div>
@@ -1004,7 +1004,7 @@ export default function AccountingPage() {
                 className="w-full py-3.5 rounded-2xl text-[16px] font-semibold"
                 style={{ background: "var(--lifeflow-primary)", color: "var(--lifeflow-primary-foreground)" }}
               >
-                保存记录
+                保存
               </button>
             </motion.div>
           </motion.div>

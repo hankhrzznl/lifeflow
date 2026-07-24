@@ -112,7 +112,7 @@ const INTENT_PATTERNS: IntentPattern[] = [
   { action: "query_schedule", keywords: ["今天的日程", "明天有什么", "日程安排", "今天有什么", "查看日程"], priority: 8 },
 
   // P2: Review
-  { action: "query_review", keywords: ["复盘", "回顾", "总结", "本周总结", "月度总结"], priority: 8 },
+  { action: "query_review", keywords: ["复盘", "总结", "本周总结", "月度总结"], priority: 8 },
   { action: "navigate_review", keywords: ["可视化复盘", "查看图表", "打开复盘"], priority: 8 },
 
   // P2: Projects

@@ -14,7 +14,7 @@ import DataValidator from "@/components/DataValidator";
 
 export const metadata: Metadata = {
   title: "LifeFlow",
-  description: "捕捉 · 规划 · 专注 · 回顾",
+  description: "捕捉 · 规划 · 专注 · 复盘",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,

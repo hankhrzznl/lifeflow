@@ -1,0 +1,338 @@
+# LifeFlow 上线审查与重构方案
+
+产品架构师 · 测试工程师 · 安全研究员 · 性能专家 · UX顾问 · 信息架构师 — 六视角联合审查
+
+2026-07-24
+可上线但需修复P0
+
+
+## 快速摘要
+
+P0 阻断问题: 4
+P1 严重问题: 7
+P2 优化建议: 12
+总发现数: 23
+
+总体评估：LifeFlow 核心功能（首页待办、日程管理、记账、目标系统、AI 助手）已具备可上线质量，但存在 4 个 P0 阻断问题——路由死链和缺少防重复提交防护——可能直接导致用户数据异常和页面白屏。建议在修复所有 P0 项后上线，P1 项可在上线首周跟进。产品信息架构方面，当前存在功能孤岛和导航断层，Part 2 提供了一份完整的重构方案，建议分阶段实施。
+
+
+# Part 1: 健壮性审查报告
+
+
+## P0 阻断问题（4项）
+
+### P0 #1 growth 和 learning 路由导向 404
+
+位置：src/app/growth/page.tsx 和 src/app/learning/page.tsx
+
+原因：两个页面均使用 router.replace("/overview") 做客户端跳转，但 /overview 路由在 Next.js App Router 中并不存在，用户会被重定向到一张空白 404 页面。
+
+风险：如果底部导航或任意内部链接指向这两个路径，用户将遭遇白屏无提示的 404。
+
+修复建议：将跳转目标改为 / (首页)，或完全删除这两个路由并在引用处替换链接；或使用 Next.js redirect() 在服务端完成 301 跳转。
+
+
+### P0 #2 首页新建事项无防重复提交
+
+位置：src/app/page.tsx，handleCreate 函数
+
+风险：当前逻辑仅校验了标题和时间非空，未设 isSubmitting 锁。用户快速连续点击"添加事项"按钮将触发多次 addManualItem 调用，导致数据库中出现完全相同的重复事项记录。这在性能较慢的设备或网络环境中极易复现。
+
+修复建议：添加 const [submitting, setSubmitting] = useState(false) 状态，在 handleCreate 入口处判断 if (submitting) return，操作完成后恢复。
+
+
+### P0 #3 记账保存无防重复提交
+
+位置：src/app/more/accounting/page.tsx，handleSaveRecord 函数
+
+风险：与首页问题相同。记账 BottomSheet 的保存按钮没有提交锁，反复点击"保存记录"将创建重复的 Transaction 记录，导致金额统计翻倍，严重影响记账数据准确性。
+
+修复建议：增加 submitting 状态锁，并在 handleSaveRecord 中做入口判断。
+
+
+### P0 #4 17 个静默 catch 吞掉错误
+
+概述：代码库中有大量 catch(err){} 块仅吞掉异常而不做任何日志或用户反馈，导致线上故障完全不可观测。以下是关键位置：
+
+| 文件 | 行号 | 上下文 | 风险 |
+| --- | --- | --- | --- |
+| src/lib/agent-db.ts | 26,60,68 | deleteAgentMemory, appendMessageToSession, clearChatHistory | 数据操作失败无声，UI 与 DB 状态不一致 |
+| src/lib/db.ts | 900,932,963 | DB 初始化回退逻辑 | 数据库迁移失败静默，新功能完全不可用 |
+| src/lib/db.ts | 1908,1985,1999 | 数据导出/导入回退 | 导出失败无提示，用户以为成功 |
+| src/lib/db/accounting.db.ts | 151 | ensureDefaultLedger catch | 默认账本创建失败，后续所有记账报错 |
+| src/lib/db/efficiency.db.ts | 299 | DB schema 升级迁移 | 迁移失败但老数据可能损坏 |
+| src/lib/db/health.db.ts | 289 | 健康数据迁移 | 升级后健康数据丢失 |
+| src/lib/db/life.db.ts | 123 | life DB schema 迁移 | 生活模块数据迁移失败 |
+| src/lib/plugin-host.ts | 335,452 | 插件初始化/销毁 | 插件异常静默，功能缺失无感知 |
+| src/lib/reminderService.ts | 60 | 提醒服务初始化 | 提醒功能完全静默失效 |
+| src/lib/goalBridge.ts | 76,106,557 | 目标桥接数据迁移 | 目标数据在引擎间迁移丢失 |
+| src/lib/linkage.ts | 658 | 模块联动初始化 | 自动联动功能静默失效 |
+
+修复建议：每个 catch 块至少添加 console.error 输出完整错误堆栈；对用户可见的操作需同时调用 showToast 反馈。建议在 ESLint 中配置 no-empty 规则覆盖 catch 块。
+
+
+## P1 严重体验问题（7项）
+
+### P1 #1 记账明细列表不显示账户信息
+
+位置：src/app/more/accounting/page.tsx，明细渲染区块
+
+问题：虽然代码中已有 accountMap 映射，但 t.accountId 字段在旧数据中可能为空，导致多数记录不显示账户来源。且当前明细项更侧重显示分类颜色和备注，账户信息作为辅助信息字体过小(11px)，在真实使用中容易被忽略。
+
+修复建议：确保所有历史数据迁移填充 accountId 字段；将账户名称在明细列表中的展示权重提升，或在筛选器中增加"按账户筛选"能力。
+
+
+### P1 #2 缺少 prefers-reduced-motion 支持
+
+位置：全局 framer-motion 动画配置
+
+问题：LifeFlow 大量使用 framer-motion 进行页面转场和微交互动画（首页入场动画、BottomSheet 弹入弹出、列表项交错动画等），但未检测 prefers-reduced-motion 媒体查询。对前庭功能障碍或动画敏感的用户，这可能引发眩晕和不适。
+
+修复建议：在 framer-motion 的 MotionConfig 或全局 CSS 中检测 @media (prefers-reduced-motion: reduce)，关闭所有非必要动画。framer-motion 提供了 useReducedMotion() hook 可直接使用。
+
+
+### P1 #3 各页面无独立 metadata title
+
+位置：src/app/layout.tsx
+
+问题：根布局中仅定义了全局 title: "LifeFlow"，所有子页面（记账、日程、睡眠、饮水等）均未设置独立标题。这导致用户在浏览器标签页中无法区分当前所在页面，也不利于 SEO 和 PWA 多页面体验。
+
+修复建议：为每个页面添加 export const metadata: Metadata = { title: "记账 - LifeFlow" }；对于动态路由使用 generateMetadata()。
+
+
+### P1 #4 defaultLedgerId 为空导致记账报错（已在本次会话修复但需标记）
+
+位置：src/lib/db/accounting.db.ts，ensureDefaultLedger() 函数
+
+问题：本次会话中已通过自愈逻辑修复（在 handleSaveRecord 中调用 ensureDefaultLedger），但此修复依赖于运行时自愈，若 ensureDefaultLedger 自身异常（见 P0#4 中 accounting.db.ts:151 的静默 catch），问题仍会复现。
+
+修复建议：加固 ensureDefaultLedger 的错误处理链路，增加重试和 fallback。
+
+
+### P1 #5 5 个复盘占位页仍可访问
+
+位置：src/app/more/review/sleep, goals, finance, fitness, water
+
+问题：复盘总览页列出了 7 个模块入口，其中 5 个子模块详情页均为占位页面，仅显示"即将上线"。用户点击后会感到困惑。
+
+修复建议：优先实现至少 2 个复盘子页面（如日程复盘 + 记账复盘）；对未实现页面的入口添加"即将推出"角标，或在总览页做条件渲染。
+
+
+### P1 #6 部分 useLiveQuery 无 loading 状态
+
+问题：多个页面将 useLiveQuery 第三个参数设为空数组作为兜底值，导致在数据加载期间直接渲染空列表而非 loading 骨架，造成短暂的"无数据闪烁"。
+
+修复建议：利用 Dexie 的 useLiveQuery 返回的 undefined 作为 loading 判断（移除第三个默认值参数），或使用项目自定义的 useLiveQuery wrapper。
+
+
+### P1 #7 SWProvider 中 SW 事件缺少 removeEventListener
+
+位置：src/components/pwa/SWProvider.tsx
+
+问题：registration.addEventListener("updatefound", ...) 和 newWorker.addEventListener("statechange", ...) 注册了两个事件监听器，但 useEffect 的清理函数仅清理了 online/offline 事件。在 React Strict Mode 下 useEffect 会执行两次导致重复注册。
+
+修复建议：将 registration 和 newWorker 的引用保存到 ref 中，在清理函数中调用 removeEventListener 移除。
+
+
+## P2 优化建议（12项）
+
+| # | 项目 | 位置 | 建议 |
+| --- | --- | --- | --- |
+| 1 | useLiveQuery 未统一使用 | src/lib/hooks/useLiveQuery.ts | 该 hook 已实现 loading/error 状态管理，但各页面仍直接使用 dexie-react-hooks 的原生版本。建议全局替换 |
+| 2 | 记账页面未按分类筛选 | src/app/more/accounting/page.tsx | 明细列表仅支持关键词搜索，缺少按支出/收入类型和按分类的快速筛选器 |
+| 3 | 首页事项创建缺少分类选择 | src/app/page.tsx | 新建事项弹窗只支持标题、时间、备注和颜色，无法关联到具体目标或项目 |
+| 4 | 日程页面缺少拖拽排序 | src/app/efficiency/schedule/page.tsx | 时间轴事项为只读展示，无法直接拖拽调整时间或重新排序 |
+| 5 | AgentProvider 过大(1200+ 行) | src/components/agent/AgentProvider.tsx | 建议拆分为多个子模块（消息管理、工具调用、流式处理、状态同步） |
+| 6 | 全局 CSS 变量未统一 | src/app/globals.css | 存在 var(--lifeflow-*) 和 var(--color-*) 两套命名空间混用 |
+| 7 | 缺少 ErrorBoundary 细粒度覆盖 | src/components/GlobalErrorBoundary.tsx | 仅在根布局挂载了一个全局 ErrorBoundary，建议为关键模块添加独立覆盖 |
+| 8 | PWA manifest 图标单一 | public/manifest.json | 仅配置了单一图标，缺少 192px 和 512px 的 maskable 图标 |
+| 9 | 没有离线数据同步策略 | 全局 | SW 实现了离线缓存，但 IndexedDB 数据与远程服务之间无同步机制 |
+| 10 | 滚动性能优化空间 | 多个长列表页面 | 记账明细列表、日程时间轴等长列表未使用虚拟滚动 |
+| 11 | TypeScript strict 模式未开启 | tsconfig.json | 当前关闭了 strict 模式，存在不少隐式 any 和 undefined 风险 |
+| 12 | 缺少自动化测试 | 全局 | 整个项目无单元测试或 E2E 测试文件 |
+
+
+# Part 2: 产品逻辑与语言重构方案
+
+
+## 产品语言定义
+
+### 核心任务
+
+LifeFlow 围绕三个核心任务构建：日程管理（日计划、时间轴、待办追踪）、习惯养成（饮水、睡眠、健身、吃药等日常行为的打卡与趋势追踪）、金融追踪（多账户收支记录、分类统计、月度/年度图表）。
+
+### 核心对象
+
+| 对象 | 英文名 | 定义 | 所属空间 |
+| --- | --- | --- | --- |
+| 目标 | Goal | 用户设定的中长期目标，可拆解为多个事项 | 目标、今日 |
+| 事项 | Item | 日程中的最小执行单元，具有计划时间、完成状态 | 今日、日程 |
+| 项目 | Project | 分类容器，组织功能模块的入口（饮水、记账、睡眠等） | 项目管理 |
+| 交易 | Transaction | 一笔收支记录，关联账本、账户、分类 | 记账 |
+| 药品 | Medicine | 用户服用的药品记录，关联剂量和提醒 | 吃药 |
+
+### 统一动词库
+
+| 操作 | 动词 | 适用对象 | 说明 |
+| --- | --- | --- | --- |
+| 创建 | 新建 | 目标、事项、交易、药品 | 统一使用"新建"而非混用"创建"/"添加"/"新增" |
+| 完成 | 完成 | 事项 | 勾选表示完成，已完成的不可再编辑 |
+| 记录 | 记录 / 记一笔 | 交易、睡眠、饮水、健身 | 行为数据的录入，尤其记账用"记一笔" |
+| 删除 | 删除 | 目标、事项、交易 | 统一使用"删除"，避免混用"移除" |
+| 编辑 | 编辑 | 目标、事项、交易 | 已创建条目的修改 |
+| 打卡 | 打卡 | 习惯（饮水、吃药、健身） | 一次性完成动作，区别于"记录"（可能含数值） |
+| 回顾 | 复盘 | 目标、日程、记账、睡眠等 | 统一使用"复盘"而非"回顾"/"查看报告" |
+| 校准 | 校准 | 日程 | 调整计划与实际执行的偏差 |
+
+### 空间定义
+
+| 空间 | 路由 | 用户意图 | 对应底部导航 |
+| --- | --- | --- | --- |
+| 今日 | / | 查看今天要做什么、快速查看状态 | 首页 |
+| 目标 | /efficiency | 管理长期目标、拆分任务、追踪进展 | 目标 |
+| 日程 | /efficiency/schedule | 以时间轴查看和安排全天活动 | 日程 |
+| 复盘 | /more/review | 回顾多模块数据、总结趋势 | (more 内入口) |
+| 我的 | /more (项目管理) | 进入各功能模块、管理设置 | (more 即项目管理) |
+
+
+## 全局信息架构
+
+```
+LifeFlow
+├── 首页 (/)
+│   ├── 核心待办卡片 (下一个事项)
+│   ├── AI 快捷指令 (3 条 prompt)
+│   ├── 今日提醒条
+│   ├── 今日事项时间线 (最多 6 个，含完成状态)
+│   └── 浮动创建按钮 (新建事项 BottomSheet)
+│
+├── 目标 (/efficiency)
+│   ├── 目标列表
+│   │   └── 目标详情 (/efficiency/goals/[id])
+│   │       └── 新建任务 (/efficiency/goals/[id]/tasks/new)
+│   └── 新建目标 (/efficiency/create)
+│
+├── 日程 (/efficiency/schedule)
+│   ├── 时间轴 (当天 + 历史双模式)
+│   ├── 校准功能
+│   └── 超时提醒
+│
+├── 助手 (/assistant)
+│   └── AI 对话 (AgentProvider 驱动)
+│
+├── 项目管理 (/more/projects)
+│   ├── 10 个大分类筛选
+│   └── 10 个功能模块入口卡片
+│
+├── 复盘 (/more/review)
+│   ├── 总览 (统计卡片 + 模块入口)
+│   ├── 日程回顾 (/more/review/schedule) — 已实现
+│   ├── 目标复盘 (/more/review/goals) — 占位
+│   ├── 记账复盘 (/more/review/finance) — 占位
+│   ├── 睡眠复盘 (/more/review/sleep) — 占位
+│   ├── 饮水复盘 (/more/review/water) — 占位
+│   └── 健身复盘 (/more/review/fitness) — 占位
+│
+├── 功能模块 (入口在项目管理页)
+│   ├── 记账 (/more/accounting)
+│   ├── 饮水 (/more/water)
+│   ├── 睡眠 (/more/sleep)
+│   ├── 吃药 (/more/medication)
+│   ├── 训练 (/more/fitness)
+│   ├── 饮食 (/more/diet)
+│   ├── 养生 (/more/wellness)
+│   ├── 体态 (/more/posture)
+│   ├── 课程 (/more/schedule/courses)
+│   └── 作息 (/more/schedule/routines)
+│
+├── 工具集 (首页右上角快捷入口)
+│   ├── 专注 (/more/focus)
+│   ├── 倒数日 (/more/countdown)
+│   ├── 备忘录 (/more/notes)
+│   ├── 复盘 (/more/review)
+│   └── 设置 (/settings)
+│
+├── 插件中心 (/plugins)
+│   ├── 财务插件
+│   ├── 习惯插件
+│   ├── 专注计时
+│   ├── 任务收件箱
+│   └── 时间线
+│
+└── [待清理] 死路由
+    ├── /growth → 重定向到 /overview (404)
+    ├── /learning → 重定向到 /overview (404)
+    └── /capture → 重定向到 /
+```
+
+
+## 消灭功能孤岛
+
+### 孤岛 #1: 专注、倒数日、备忘录仅首页可到达
+
+现状：/more/focus、/more/countdown、/more/notes 三个功能模块仅在首页右上角通过 QuickBtn 暴露入口，在项目管理页中找不到对应入口。
+建议：在项目管理页添加这三个功能的入口卡片。
+
+### 孤岛 #2: 复盘子模块 5 个详情页全为占位
+
+现状：/more/review/goals、finance、sleep、water、fitness 均为占位页面，但复盘总览页将其作为正常入口展示。
+建议：优先实现日程复盘和记账复盘两个子页面，其余三个页面添加"即将推出"标识。
+
+### 孤岛 #3: growth、learning、capture 三个无效路由
+
+现状：/growth 和 /learning 均客户端跳转到不存在的 /overview 导致 404；/capture 服务端 redirect("/") 跳回首页。
+建议：若这些功能短期内不实现，直接从路由表中删除并清理相关引用。
+
+
+## 文案规范化
+
+| 位置 | 当前文案 | 推荐文案 |
+| --- | --- | --- |
+| 首页核心卡片按钮 | 标记完成 | 完成 |
+| 首页浮动按钮 / 弹窗标题 | 新建事项 / 添加事项 | 新建事项 / 新建事项 |
+| 记账 BottomSheet 标题 | 记一笔 | 记一笔（保留，已成品牌认知） |
+| 记账 BottomSheet 保存按钮 | 保存记录 | 保存 |
+| 记账图表 Tab 标签 | 明细 / 图表 | 明细 / 统计 |
+| 日程页面"没有事项"状态 | 今天接下来的事项将显示在这里 | 暂无接下来的事项 |
+| 首页 AI 快捷指令按钮 | 今天有什么提醒？/ 帮我排一下日程 / 复盘一下这周 | 今日提醒 / 安排日程 / 本周复盘 |
+
+
+# Part 3: 实施路线图
+
+
+## Level 1: 立即修复（P0 + 导航骨架）— 预计 4-6 小时
+
+- 修复 growth 和 learning 路由 404 — 改为 redirect("/") 或删除路由文件
+- 首页新建事项添加 submitting 防重复提交锁
+- 记账保存添加 submitting 防重复提交锁
+- 为 17 个静默 catch 块添加 console.error 和用户可见的错误提示
+- 修复 SWProvider 中 SW 事件的 removeEventListener 缺失
+- 为 5 个主要页面添加独立 metadata title
+- 删除或修复 /capture、/growth、/learning 三个死路由
+
+
+## Level 2: 重要优化（P1 + 空间首页完善）— 预计 8-12 小时
+
+- 实现日程复盘详情页（数据已有）
+- 实现记账复盘详情页
+- 为其余 3 个复盘占位页添加"即将推出"角标
+- 添加全局 prefers-reduced-motion 检测和动画降级
+- 将专注、倒数日、备忘录入口加入项目管理页
+- 加固 ensureDefaultLedger 错误处理
+- 统一"新建事项"和"添加事项"命名
+- 为记账明细列表增加账户筛选能力
+
+
+## Level 3: 体验增强（P2 + 文案打磨）— 预计 4-8 小时
+
+- 统一使用项目自定义 useLiveQuery hook
+- 为记账页面添加分类筛选器
+- 首页新建事项支持关联目标或项目
+- 文案规范化：按 Part 2 对比表统一 7 处不一致文案
+- 日程时间轴添加虚拟滚动优化
+- 为关键模块添加独立 ErrorBoundary
+- 补充 PWA maskable 图标
+- 启动核心模块单元测试
+
+
+审查完成于 2026-07-24 · 六视角联合审查 · LifeFlow

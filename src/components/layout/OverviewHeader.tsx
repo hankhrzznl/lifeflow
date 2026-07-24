@@ -140,7 +140,7 @@ export default function OverviewHeader() {
       >
         {/* 捕捉 */}
         <motion.div variants={itemVariants}>
-          <IconButton icon={Zap} onClick={() => router.push("/capture")} />
+          <IconButton icon={Zap} onClick={() => router.push("/")} />
         </motion.div>
 
         {/* 专注 */}

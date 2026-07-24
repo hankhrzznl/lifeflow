@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LifeFlow 上线审查与重构方案</title>
+<style>
+/* ============================================================
+   CSS Reset & Base
+   ============================================================ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  font-family:Inter,system-ui,-apple-system,sans-serif;
+  font-size:15px;line-height:1.7;
+  background:#0f1117;color:#e1e4ea;
+  -webkit-font-smoothing:antialiased;
+}
+a{color:#6366f1;text-decoration:none}
+a:hover{text-decoration:underline}
+
+/* ============================================================
+   Layout
+   ============================================================ */
+.page-wrap{
+  display:flex;
+  max-width:960px;
+  margin:0 auto;
+  position:relative;
+  min-height:100vh;
+}
+
+/* ============================================================
+   TOC Sidebar
+   ============================================================ */
+.toc-sidebar{
+  position:sticky;
+  top:0;
+  width:240px;
+  min-width:240px;
+  height:100vh;
+  overflow-y:auto;
+  padding:32px 20px 32px 0;
+  border-right:1px solid rgba(255,255,255,0.06);
+  background:#0f1117;
+  z-index:100;
+}
+.toc-sidebar h2{
+  font-size:13px;
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:0.08em;
+  color:#8b8fa8;
+  margin-bottom:16px;
+}
+.toc-sidebar nav a{
+  display:block;
+  font-size:13px;
+  color:#8b8fa8;
+  padding:5px 0;
+  transition:color 0.15s;
+  border-left:2px solid transparent;
+  padding-left:10px;
+}
+.toc-sidebar nav a:hover,
+.toc-sidebar nav a.active{
+  color:#e1e4ea;
+  border-left-color:#6366f1;
+}
+.toc-sidebar nav a.sub{
+  padding-left:22px;
+  font-size:12px;
+}
+.toc-toggle{
+  display:none;
+  position:fixed;
+  top:12px;
+  left:12px;
+  z-index:200;
+  background:#1a1d27;
+  border:1px solid rgba(255,255,255,0.08);
+  color:#e1e4ea;
+  padding:8px 14px;
+  border-radius:8px;
+  font-size:13px;
+  cursor:pointer;
+}
+
+/* ============================================================
+   Main Content
+   ============================================================ */
+.main-content{
+  flex:1;
+  padding:48px 48px 64px;
+  min-width:0;
+  overflow-x:hidden;
+}
+
+/* ============================================================
+   Cover Section
+   ============================================================ */
+.cover{
+  text-align:center;
+  padding:80px 0 60px;
+  border-bottom:1px solid rgba(255,255,255,0.06);
+  margin-bottom:40px;
+}
+.cover h1{
+  font-size:36px;
+  font-weight:700;
+  letter-spacing:-0.025em;
+  line-height:1.2;
+  margin-bottom:16px;
+  color:#e1e4ea;
+}
+.cover .subtitle{
+  font-size:15px;
+  color:#8b8fa8;
+  max-width:520px;
+  margin:0 auto 24px;
+}
+.cover .meta{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:12px;
+  font-size:13px;
+  color:#8b8fa8;
+}
+.cover .badge{
+  display:inline-block;
+  padding:3px 10px;
+  border-radius:6px;
+  font-size:12px;
+  font-weight:600;
+  background:rgba(245,158,11,0.12);
+  color:#f59e0b;
+  border:1px solid rgba(245,158,11,0.2);
+}
+
+/* ============================================================
+   Quick Summary Cards
+   ============================================================ */
+.summary-grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:16px;
+  margin-bottom:40px;
+}
+.stat-card{
+  background:#1a1d27;
+  border-radius:12px;
+  padding:20px;
+  text-align:center;
+  border:1px solid rgba(255,255,255,0.04);
+}
+.stat-card .stat-num{
+  font-size:36px;
+  font-weight:700;
+  letter-spacing:-0.03em;
+}
+.stat-card .stat-label{
+  font-size:12px;
+  color:#8b8fa8;
+  margin-top:4px;
+}
+.stat-card.critical .stat-num{color:#ef4444}
+.stat-card.severe .stat-num{color:#f59e0b}
+.stat-card.minor .stat-num{color:#8b8fa8}
+.stat-card.total .stat-num{color:#6366f1}
+.overall-assessment{
+  background:#1a1d27;
+  border-radius:12px;
+  padding:20px 24px;
+  border:1px solid rgba(99,102,241,0.15);
+  margin-bottom:48px;
+  font-size:14px;
+  color:#8b8fa8;
+  line-height:1.7;
+}
+.overall-assessment strong{color:#e1e4ea}
+
+/* ============================================================
+   Section Headings
+   ============================================================ */
+section{margin-bottom:48px}
+h2.section-title{
+  font-size:24px;
+  font-weight:700;
+  letter-spacing:-0.02em;
+  margin-bottom:8px;
+  padding-bottom:12px;
+  border-bottom:2px solid #6366f1;
+  display:inline-block;
+}
+h3{font-size:18px;font-weight:700;margin:32px 0 16px;color:#e1e4ea}
+h4{font-size:15px;font-weight:700;margin:24px 0 12px;color:#e1e4ea}
+
+/* ============================================================
+   Issue Cards
+   ============================================================ */
+.issue-card{
+  background:#1a1d27;
+  border-radius:10px;
+  padding:18px 20px;
+  margin-bottom:14px;
+  border-left:3px solid #ef4444;
+  border:1px solid rgba(255,255,255,0.04);
+}
+.issue-card.p0{border-left-color:#ef4444}
+.issue-card.p1{border-left-color:#f59e0b}
+.issue-card.p2{border-left-color:#8b8fa8}
+.issue-card .issue-header{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-bottom:8px;
+}
+.issue-card .issue-tag{
+  font-size:11px;
+  font-weight:700;
+  padding:2px 8px;
+  border-radius:4px;
+  text-transform:uppercase;
+  letter-spacing:0.05em;
+}
+.issue-card .issue-tag.p0{background:rgba(239,68,68,0.12);color:#ef4444}
+.issue-card .issue-tag.p1{background:rgba(245,158,11,0.12);color:#f59e0b}
+.issue-card .issue-tag.p2{background:rgba(139,143,168,0.12);color:#8b8fa8}
+.issue-card .issue-title{font-weight:700;font-size:15px}
+.issue-card .issue-detail{font-size:13px;color:#8b8fa8;line-height:1.6;margin-top:6px}
+.issue-card .issue-detail strong{color:#e1e4ea}
+
+/* ============================================================
+   Code Blocks
+   ============================================================ */
+code{
+  font-family:"SF Mono","Fira Code","Cascadia Code",Consolas,monospace;
+  background:#252836;
+  color:#e1e4ea;
+  padding:1px 5px;
+  border-radius:4px;
+  font-size:12px;
+}
+pre{
+  background:#252836;
+  border-radius:10px;
+  padding:16px 20px;
+  overflow-x:auto;
+  font-size:12px;
+  line-height:1.6;
+  margin:12px 0;
+  border:1px solid rgba(255,255,255,0.04);
+}
+pre code{
+  background:none;
+  padding:0;
+  font-size:12px;
+}
+
+/* ============================================================
+   Tables
+   ============================================================ */
+table{
+  width:100%;
+  border-collapse:collapse;
+  margin:12px 0 20px;
+  font-size:13px;
+}
+thead th{
+  text-align:left;
+  font-size:11px;
+  text-transform:uppercase;
+  letter-spacing:0.06em;
+  color:#8b8fa8;
+  padding:10px 14px;
+  border-bottom:1px solid rgba(255,255,255,0.08);
+}
+tbody td{
+  padding:10px 14px;
+  border-bottom:1px solid rgba(255,255,255,0.04);
+  vertical-align:top;
+}
+tbody td:first-child{font-weight:600;color:#e1e4ea}
+tbody tr:hover{background:rgba(255,255,255,0.02)}
+
+/* ============================================================
+   Tag styles within tables/cards
+   ============================================================ */
+.tag{display:inline-block;font-size:10px;font-weight:700;padding:2px 6px;border-radius:3px;letter-spacing:0.04em}
+.tag.p0{background:rgba(239,68,68,0.12);color:#ef4444}
+.tag.p1{background:rgba(245,158,11,0.12);color:#f59e0b}
+.tag.p2{background:rgba(139,143,168,0.12);color:#8b8fa8}
+.tag.recommend{background:rgba(34,197,94,0.12);color:#22c55e}
+
+/* ============================================================
+   Comparison Table
+   ============================================================ */
+.compare-old{color:#ef4444;text-decoration:line-through;opacity:0.7}
+.compare-new{color:#22c55e;font-weight:600}
+
+/* ============================================================
+   Roadmap Levels
+   ============================================================ */
+.roadmap-level{
+  background:#1a1d27;
+  border-radius:12px;
+  padding:24px;
+  margin-bottom:20px;
+  border:1px solid rgba(255,255,255,0.04);
+}
+.roadmap-level .rl-header{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  margin-bottom:14px;
+}
+.roadmap-level .rl-icon{
+  width:40px;height:40px;
+  border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;font-weight:700;
+}
+.roadmap-level.l1 .rl-icon{background:rgba(239,68,68,0.12);color:#ef4444}
+.roadmap-level.l2 .rl-icon{background:rgba(245,158,11,0.12);color:#f59e0b}
+.roadmap-level.l3 .rl-icon{background:rgba(139,143,168,0.12);color:#8b8fa8}
+.roadmap-level .rl-title{font-size:17px;font-weight:700}
+.roadmap-level .rl-estimate{font-size:12px;color:#8b8fa8;margin-left:auto}
+.roadmap-level ul{list-style:none;padding-left:0}
+.roadmap-level li{font-size:13px;padding:4px 0;color:#8b8fa8;padding-left:18px;position:relative}
+.roadmap-level li::before{content:"-";position:absolute;left:0;color:#6366f1}
+
+/* ============================================================
+   Footer
+   ============================================================ */
+footer{
+  border-top:1px solid rgba(255,255,255,0.06);
+  padding-top:24px;
+  margin-top:48px;
+  font-size:12px;
+  color:#8b8fa8;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+
+/* ============================================================
+   Responsive
+   ============================================================ */
+@media(max-width:860px){
+  .page-wrap{flex-direction:column}
+  .toc-sidebar{
+    position:fixed;
+    left:-260px;
+    top:0;
+    transition:left 0.25s ease;
+    box-shadow:4px 0 20px rgba(0,0,0,0.4);
+  }
+  .toc-sidebar.open{left:0}
+  .toc-toggle{display:block}
+  .main-content{padding:32px 20px 48px}
+  .cover h1{font-size:26px}
+  .summary-grid{grid-template-columns:repeat(2,1fr)}
+  pre{font-size:11px;padding:12px}
+}
+@media(max-width:500px){
+  .cover h1{font-size:22px}
+  .cover .subtitle{font-size:13px}
+  .summary-grid{grid-template-columns:1fr 1fr}
+  .main-content{padding:24px 14px 40px}
+}
+</style>
+</head>
+<body>
+
+<button class="toc-toggle" onclick="document.querySelector('.toc-sidebar').classList.toggle('open')" aria-label="目录">
+  &#9776; 目录
+</button>
+
+<div class="page-wrap">
+
+<!-- ============================================================
+     TOC Sidebar
+     ============================================================ -->
+<aside class="toc-sidebar" id="toc">
+  <h2>目录</h2>
+  <nav>
+    <a href="#cover">封面</a>
+    <a href="#summary">快速摘要</a>
+    <a href="#part1">Part 1: 健壮性审查</a>
+    <a href="#p0" class="sub">P0 阻断问题 (4)</a>
+    <a href="#p1" class="sub">P1 严重体验 (7)</a>
+    <a href="#p2" class="sub">P2 优化建议 (12)</a>
+    <a href="#part2">Part 2: 产品重构方案</a>
+    <a href="#lang" class="sub">产品语言定义</a>
+    <a href="#ia" class="sub">全局信息架构</a>
+    <a href="#islands" class="sub">功能孤岛</a>
+    <a href="#copy" class="sub">文案规范化</a>
+    <a href="#part3">Part 3: 实施路线图</a>
+  </nav>
+</aside>
+
+<!-- ============================================================
+     Main Content
+     ============================================================ -->
+<main class="main-content">
+
+<!-- ─── 封面 ─── -->
+<section class="cover" id="cover">
+  <h1>LifeFlow 上线审查与重构方案</h1>
+  <p class="subtitle">
+    产品架构师 &middot; 测试工程师 &middot; 安全研究员 &middot; 性能专家 &middot; UX顾问 &middot; 信息架构师 &mdash; 六视角联合审查
+  </p>
+  <div class="meta">
+    <span>2026-07-24</span>
+    <span class="badge">可上线但需修复P0</span>
+  </div>
+</section>
+
+<!-- ─── 快速摘要 ─── -->
+<section id="summary">
+  <h2 class="section-title">快速摘要</h2>
+
+  <div class="summary-grid">
+    <div class="stat-card critical">
+      <div class="stat-num">4</div>
+      <div class="stat-label">P0 阻断问题</div>
+    </div>
+    <div class="stat-card severe">
+      <div class="stat-num">7</div>
+      <div class="stat-label">P1 严重问题</div>
+    </div>
+    <div class="stat-card minor">
+      <div class="stat-num">12</div>
+      <div class="stat-label">P2 优化建议</div>
+    </div>
+    <div class="stat-card total">
+      <div class="stat-num">23</div>
+      <div class="stat-label">总发现数</div>
+    </div>
+  </div>
+
+  <div class="overall-assessment">
+    <strong>总体评估：</strong>LifeFlow 核心功能（首页待办、日程管理、记账、目标系统、AI 助手）已具备可上线质量，但存在 4 个 P0 阻断问题——路由死链和缺少防重复提交防护——可能直接导致用户数据异常和页面白屏。建议在修复所有 P0 项后上线，P1 项可在上线首周跟进。产品信息架构方面，当前存在功能孤岛和导航断层，Part 2 提供了一份完整的重构方案，建议分阶段实施。
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════
+     Part 1: 健壮性审查报告
+     ═══════════════════════════════════════════════════════════ -->
+<section id="part1">
+  <h2 class="section-title">Part 1: 健壮性审查报告</h2>
+
+  <!-- → P0 -->
+  <h3 id="p0">P0 阻断问题（4项）</h3>
+
+  <div class="issue-card p0" id="p0-1">
+    <div class="issue-header">
+      <span class="issue-tag p0">P0</span>
+      <span class="issue-title">#1 growth 和 learning 路由导向 404</span>
+    </div>
+    <div class="issue-detail">
+      <p><strong>位置：</strong><code>src/app/growth/page.tsx</code> 和 <code>src/app/learning/page.tsx</code></p>
+      <p><strong>原因：</strong>两个页面均使用 <code>router.replace("/overview")</code> 做客户端跳转，但 <code>/overview</code> 路由在 Next.js App Router 中并不存在，用户会被重定向到一张空白 404 页面。</p>
+      <p><strong>风险：</strong>如果底部导航或任意内部链接指向这两个路径，用户将遭遇白屏无提示的 404。</p>
+      <p><strong>修复建议：</strong>将跳转目标改为 <code>/</code>（首页），或完全删除这两个路由并在引用处替换链接；或使用 Next.js <code>redirect()</code> 在服务端完成 301 跳转。</p>
+    </div>
+  </div>
+
+  <div class="issue-card p0" id="p0-2">
+    <div class="issue-header">
+      <span class="issue-tag p0">P0</span>
+      <span class="issue-title">#2 首页新建事项无防重复提交</span>
+    </div>
+    <div class="issue-detail">
+      <p><strong>位置：</strong><code>src/app/page.tsx</code>，<code>handleCreate</code> 函数（第 167-184 行）</p>
+      <p><strong>风险：</strong>当前逻辑仅校验了标题和时间非空，未设 <code>isSubmitting</code> 锁。用户快速连续点击"添加事项"按钮将触发多次 <code>addManualItem</code> 调用，导致数据库中出现完全相同的重复事项记录。这在性能较慢的设备或网络环境中极易复现。</p>
+      <p><strong>修复建议：</strong>添加 <code>const [submitting, setSubmitting] = useState(false)</code> 状态，在 <code>handleCreate</code> 入口处判断 <code>if (submitting) return</code>，操作完成后恢复。</p>
+    </div>
+  </div>
+
+  <div class="issue-card p0" id="p0-3">
+    <div class="issue-header">
+      <span class="issue-tag p0">P0</span>
+      <span class="issue-title">#3 记账保存无防重复提交</span>
+    </div>
+    <div class="issue-detail">
+      <p><strong>位置：</strong><code>src/app/more/accounting/page.tsx</code>，<code>handleSaveRecord</code> 函数（第 311-340 行）</p>
+      <p><strong>风险：</strong>与首页问题相同。记账 BottomSheet 的保存按钮没有提交锁，反复点击"保存记录"将创建重复的 Transaction 记录，导致金额统计翻倍，严重影响记账数据准确性。</p>
+      <p><strong>修复建议：</strong>增加 <code>submitting</code> 状态锁，并在 <code>handleSaveRecord</code> 中做入口判断。</p>
+    </div>
+  </div>
+
+  <div class="issue-card p0" id="p0-4">
+    <div class="issue-header">
+      <span class="issue-tag p0">P0</span>
+      <span class="issue-title">#4 17 个静默 catch 吞掉错误</span>
+    </div>
+    <div class="issue-detail">
+      <p><strong>概述：</strong>代码库中有大量 <code>catch(err){}</code> 块仅吞掉异常而不做任何日志或用户反馈，导致线上故障完全不可观测。以下是关键位置（共 17 处）：</p>
+      <table>
+        <thead><tr><th>文件</th><th>行号</th><th>上下文</th><th>风险</th></tr></thead>
+        <tbody>
+          <tr><td><code>src/lib/agent-db.ts</code></td><td>26,60,68</td><td>deleteAgentMemory, appendMessageToSession, clearChatHistory</td><td>数据操作失败无声，UI 与 DB 状态不一致</td></tr>
+          <tr><td><code>src/lib/db.ts</code></td><td>900,932,963</td><td>DB 初始化回退逻辑</td><td>数据库迁移失败静默，新功能完全不可用</td></tr>
+          <tr><td><code>src/lib/db.ts</code></td><td>1908,1985,1999</td><td>数据导出/导入回退</td><td>导出失败无提示，用户以为成功</td></tr>
+          <tr><td><code>src/lib/db/accounting.db.ts</code></td><td>151</td><td>ensureDefaultLedger catch</td><td>默认账本创建失败，后续所有记账报错</td></tr>
+          <tr><td><code>src/lib/db/efficiency.db.ts</code></td><td>299</td><td>DB schema 升级迁移</td><td>迁移失败但老数据可能损坏</td></tr>
+          <tr><td><code>src/lib/db/health.db.ts</code></td><td>289</td><td>健康数据迁移</td><td>升级后健康数据丢失</td></tr>
+          <tr><td><code>src/lib/db/life.db.ts</code></td><td>123</td><td>life DB schema 迁移</td><td>生活模块数据迁移失败</td></tr>
+          <tr><td><code>src/lib/plugin-host.ts</code></td><td>335,452</td><td>插件初始化/销毁</td><td>插件异常静默，功能缺失无感知</td></tr>
+          <tr><td><code>src/lib/reminderService.ts</code></td><td>60</td><td>提醒服务初始化</td><td>提醒功能完全静默失效</td></tr>
+          <tr><td><code>src/lib/goalBridge.ts</code></td><td>76,106,557</td><td>目标桥接数据迁移</td><td>目标数据在引擎间迁移丢失</td></tr>
+          <tr><td><code>src/lib/linkage.ts</code></td><td>658</td><td>模块联动初始化</td><td>自动联动功能静默失效</td></tr>
+        </tbody>
+      </table>
+      <p><strong>修复建议：</strong>每个 catch 块至少添加 <code>console.error</code> 输出完整错误堆栈；对用户可见的操作需同时调用 <code>showToast</code> 反馈。建议在 ESLint 中配置 <code>no-empty</code> 规则覆盖 catch 块。</p>
+    </div>
+  </div>
+
+  <!-- → P1 -->
+  <h3 id="p1">P1 严重体验问题（7项）</h3>
+
+  <div class="issue-card p1" id="p1-1">
+    <div class="issue-header">
+      <span class="issue-tag p1">P1</span>
+      <span class="issue-title">#1 记账明细列表不显示账户信息</span>
+    </div>
+    <div class="issue-detail">
+      <p><strong>位置：</strong><code>src/app/more/accounting/page.tsx</code>，明细渲染区块（第 559-604 行）</p>
+      <p><strong>问题：</strong>虽然代码中已有 <code>accountMap</code> 映射和 <code>acc</code> 变量渲染逻辑（第 583-586 行显示账户名称标签），但 <code>t.accountId</code> 字段在 <code>addTransaction</code> 调用中虽然传入了 <code>selectedAccountId</code>，在旧数据中 <code>accountId</code> 可能为空，导致多数记录不显示账户来源。且当前明细项更侧重显示分类颜色和备注，账户信息作为辅助信息字体过小（11px），在真实使用中容易被忽略。</p>
+      <p><strong>修复建议：</strong>确保所有历史数据迁移填充 <code>accountId</code> 字段；将账户名称在明细列表中的展示权重提升，或在筛选器中增加"按账户筛选"能力。</p>
+    </div>
+  </div>
+
+  <div class="issue-card p1" id="p1-2">
+    <div class="issue-header">
+      <span class="issue-tag p1">P1</span>
+      <span class="issue-title">#2 缺少 prefers-reduced-motion 支持</span>
+    </div>
+    <div class="issue-detail">
+      <p><strong>位置：</strong>全局 <code>framer-motion</code> 动画配置</p>
+      <p><strong>问题：</strong>LifeFlow 大量使用 <code>framer-motion</code> 进行页面转场和微交互动画（首页入场动画、BottomSheet 弹入弹出、列表项交错动画等），但未检测 <code>prefers-reduced-motion</code> 媒体查询。对前庭功能障碍或动画敏感的用户，这可能引发眩晕和不适。</p>
+      <p><strong>修复建议：</strong>在 <code>framer-motion</code> 的 <code>MotionConfig</code> 或全局 CSS 中检测 <code>@media (prefers-reduced-motion: reduce)</code>，关闭所有非必要动画。framer-motion 提供了 <code>useReducedMotion()</code> hook 可直接使用。</p>
+    </div>
+  </div>
+
+  <div class="issue-card p1" id="p1-3">
+    <div class="issue-header">
+      <span class="issue-tag p1">P1</span>
+      <span class="issue-title">#3 各页面无独立 metadata title</span>
+    </div>
+    <div class="issue-detail">
+      <p><strong>位置：</strong><code>src/app/layout.tsx</code>（第 15-24 行）</p>
+      <p><strong>问题：</strong>根布局中仅定义了全局 <code>title: "LifeFlow"</code>，所有子页面（记账、日程、睡眠、饮水等）均未通过 <code>generateMetadata()</code> 或页面级 <code>metadata</code> 导出来设置独立标题。这导致用户在浏览器标签页中无法区分当前所在页面，也不利于 SEO 和 PWA 多页面体验。</p>
+      <p><strong>修复建议：</strong>为每个页面添加 <code>export const metadata: Metadata = { title: "记账 - LifeFlow" }</code>；对于动态路由使用 <code>generateMetadata()</code>。</p>
+    </div>
+  </div>
+
+  <div class="issue-card p1" id="p1-4">
+    <div class="issue-header">
+      <span class="issue-tag p1">P1</span>
+      <span class="issue-title">#4 defaultLedgerId 为空导致记账报错（已修复但需标记）</span>
+    </div>
+    <div class="issue-detail">
+      <p><strong>位置：</strong><code>src/lib/db/accounting.db.ts</code>，<code>ensureDefaultLedger()</code> 函数及 <code>src/app/more/accounting/page.tsx</code> 第 322-324 行</p>
+      <p><strong>问题：</strong>在之前版本中，当用户首次打开记账页面时 <code>ensureDefaultLedger()</code> 返回的 ledgerId 可能为 <code>undefined</code>，导致 <code>addTransaction</code> 因 <code>ledgerId</code> 缺失而失败。本次会话中已通过自愈逻辑修复（在 <code>handleSaveRecord</code> 中调用 <code>ensureDefaultLedger</code>），但此修复依赖于运行时自愈，若 <code>ensureDefaultLedger</code> 自身异常（见 P0#4 中 accounting.db.ts:151 的静默 catch），问题仍会复现。</p>
+      <p><strong>修复建议：</strong>加固 <code>ensureDefaultLedger</code> 的错误处理链路，增加重试和 fallback。</p>
+    </div>
+  </div>
+
+  <div class="issue-card p1" id="p1-5">
+    <div class="issue-header">
+      <span class="issue-tag p1">P1</span>
+      <span class="issue-title">#5 3 个占位页仍可访问</span>
+    </div>
+    <div class="issue-detail">
+      <p><strong>位置：</strong></p>
+      <ul style="margin-left:16px;color:#8b8fa8;font-size:13px;line-height:1.8">
+        <li><code>src/app/more/review/sleep/page.tsx</code> &mdash; 睡眠复盘，显示"即将上线"</li>
+        <li><code>src/app/more/review/goals/page.tsx</code> &mdash; 目标复盘，显示"即将上线"</li>
+        <li><code>src/app/more/review/finance/page.tsx</code> &mdash; 记账复盘，显示"即将上线"</li>
+        <li><code>src/app/more/review/fitness/page.tsx</code> &mdash; 健身复盘，显示"即将上线"</li>
+        <li><code>src/app/more/review/water/page.tsx</code> &mdash; 饮水复盘，显示"即将上线"</li>
+      </ul>
+      <p><strong>问题：</strong>复盘总览页列出了 7 个模块入口，其中 5 个子模块详情页（睡眠/目标/记账/健身/饮水）均为占位页面，仅显示一条"即将上线"的文案和图标。用户点击后会感到困惑——既然功能未完成，为何在总览中展示入口？</p>
+      <p><strong>修复建议：</strong>优先实现至少 2 个复盘子页面（如日程复盘 + 记账复盘）；对未实现页面的入口添加"即将推出"角标，或在总览页做条件渲染。</p>
+    </div>
+  </div>
+
+  <div class="issue-card p1" id="p1-6">
+    <div class="issue-header">
+      <span class="issue-tag p1">P1</span>
+      <span class="issue-title">#6 部分 useLiveQuery 无 loading 状态</span>
+    </div>
+    <div class="issue-detail">
+      <p><strong>位置：</strong>多个使用 <code>dexie-react-hooks</code> 的 <code>useLiveQuery</code> 的组件</p>
+      <p><strong>问题：</strong>以记账页面为例，<code>txs</code>、<code>categories</code>、<code>ledgers</code>、<code>accounts</code> 等均通过 <code>useLiveQuery(()=&gt;..., [], [] as T[])</code> 获取，第三个参数为空数组 <code>[]</code> 作为兜底值。在 Dexie 数据库首次加载期间，这些值立即可用（空数组），页面直接渲染空列表而非 loading 骨架。这在数据库较大或 IndexedDB 初始化慢时会造成短暂的"无数据闪烁"，然后数据突然出现。</p>
+      <p><strong>修复建议：</strong>利用 Dexie 的 <code>useLiveQuery</code> 返回的 <code>undefined</code> 作为 loading 判断（移除第三个默认值参数），或使用自定义的 <code>useLiveQuery</code> wrapper（已有 <code>src/lib/hooks/useLiveQuery.ts</code> 但未广泛使用）来统一管理 loading/error 状态。</p>
+    </div>
+  </div>
+
+  <div class="issue-card p1" id="p1-7">
+    <div class="issue-header">
+      <span class="issue-tag p1">P1</span>
+      <span class="issue-title">#7 SWProvider 中 SW 事件缺少 removeEventListener</span>
+    </div>
+    <div class="issue-detail">
+      <p><strong>位置：</strong><code>src/components/pwa/SWProvider.tsx</code>，第 41-54 行</p>
+      <p><strong>问题：</strong>在 <code>registerSW</code> 函数中，<code>registration.addEventListener("updatefound", ...)</code> 和 <code>newWorker.addEventListener("statechange", ...)</code> 注册了两个事件监听器，但 useEffect 的清理函数（第 82-85 行）仅清理了 online/offline 事件，未清理这两个 SW 事件。在 React Strict Mode（开发环境）下 useEffect 会执行两次，导致重复注册监听器；在组件卸载时也可能产生内存泄漏。</p>
+      <p><strong>修复建议：</strong>将 <code>registration</code> 和 <code>newWorker</code> 的引用保存到 ref 中，在清理函数中调用 <code>removeEventListener</code> 移除。</p>
+    </div>
+  </div>
+
+  <!-- → P2 -->
+  <h3 id="p2">P2 优化建议（12项）</h3>
+
+  <table>
+    <thead>
+      <tr><th>#</th><th>项目</th><th>位置</th><th>建议</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>1</td>
+        <td>useLiveQuery 未统一使用</td>
+        <td><code>src/lib/hooks/useLiveQuery.ts</code></td>
+        <td>该 hook 已实现 loading/error 状态管理，但各页面仍直接使用 dexie-react-hooks 的原生 <code>useLiveQuery</code>。建议全局替换为项目自定义版本。</td>
+      </tr>
+      <tr>
+        <td>2</td>
+        <td>记账页面未按分类筛选</td>
+        <td><code>src/app/more/accounting/page.tsx</code></td>
+        <td>明细列表仅支持关键词搜索，缺少按支出/收入类型和按分类的快速筛选器。</td>
+      </tr>
+      <tr>
+        <td>3</td>
+        <td>首页事项创建缺少分类选择</td>
+        <td><code>src/app/page.tsx</code>，createForm</td>
+        <td>新建事项弹窗只支持标题、时间、备注和颜色，无法关联到具体目标或项目。</td>
+      </tr>
+      <tr>
+        <td>4</td>
+        <td>日程页面缺少拖拽排序</td>
+        <td><code>src/app/efficiency/schedule/page.tsx</code></td>
+        <td>时间轴事项为只读展示，无法直接拖拽调整时间或重新排序。</td>
+      </tr>
+      <tr>
+        <td>5</td>
+        <td>AgentProvider 过大（1200+ 行）</td>
+        <td><code>src/components/agent/AgentProvider.tsx</code></td>
+        <td>建议拆分为多个子模块（消息管理、工具调用、流式处理、状态同步），降低单文件复杂度。</td>
+      </tr>
+      <tr>
+        <td>6</td>
+        <td>全局 CSS 变量未统一</td>
+        <td><code>src/app/globals.css</code></td>
+        <td>存在 <code>var(--lifeflow-*)</code> 和 <code>var(--color-*)</code> 两套命名空间混用，建议统一为单一前缀。</td>
+      </tr>
+      <tr>
+        <td>7</td>
+        <td>缺少 ErrorBoundary 细粒度覆盖</td>
+        <td><code>src/components/GlobalErrorBoundary.tsx</code></td>
+        <td>仅在根布局挂载了一个全局 ErrorBoundary，建议为记账、日程、代理人等关键模块添加独立 ErrorBoundary。</td>
+      </tr>
+      <tr>
+        <td>8</td>
+        <td>PWA manifest 图标单一</td>
+        <td><code>public/manifest.json</code></td>
+        <td>仅配置了单一图标，缺少 192px 和 512px 的 maskable 图标，影响 Android PWA 添加到主屏幕体验。</td>
+      </tr>
+      <tr>
+        <td>9</td>
+        <td>没有离线数据同步策略</td>
+        <td>全局</td>
+        <td>SW 实现了离线缓存，但 IndexedDB 数据与远程服务之间无同步机制。若未来引入云端备份，需提前设计冲突解决策略。</td>
+      </tr>
+      <tr>
+        <td>10</td>
+        <td>滚动性能优化空间</td>
+        <td>多个长列表页面</td>
+        <td>记账明细列表、日程时间轴等长列表未使用虚拟滚动（如 <code>react-window</code> 或 <code>@tanstack/virtual</code>），在数据量大时可能卡顿。</td>
+      </tr>
+      <tr>
+        <td>11</td>
+        <td>TypeScript strict 模式未开启</td>
+        <td><code>tsconfig.json</code></td>
+        <td>当前关闭了 <code>strict</code> 模式，存在不少隐式 <code>any</code> 和 <code>undefined</code> 风险，建议逐步开启。</td>
+      </tr>
+      <tr>
+        <td>12</td>
+        <td>缺少自动化测试</td>
+        <td>全局</td>
+        <td>整个项目无单元测试或 E2E 测试文件。建议至少为核心数据操作（记账 CRUD、事项增删改）添加单元测试。</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════
+     Part 2: 产品逻辑与语言重构方案
+     ═══════════════════════════════════════════════════════════ -->
+<section id="part2">
+  <h2 class="section-title">Part 2: 产品逻辑与语言重构方案</h2>
+
+  <!-- → 产品语言定义 -->
+  <h3 id="lang">产品语言定义</h3>
+
+  <h4>核心任务</h4>
+  <p style="color:#8b8fa8;font-size:14px;margin-bottom:16px">
+    LifeFlow 围绕三个核心任务构建：<strong style="color:#e1e4ea">日程管理</strong>（日计划、时间轴、待办追踪）、<strong style="color:#e1e4ea">习惯养成</strong>（饮水、睡眠、健身、吃药等日常行为的打卡与趋势追踪）、<strong style="color:#e1e4ea">金融追踪</strong>（多账户收支记录、分类统计、月度/年度图表）。
+  </p>
+
+  <h4>核心对象</h4>
+  <table>
+    <thead><tr><th>对象</th><th>英文名</th><th>定义</th><th>所属空间</th></tr></thead>
+    <tbody>
+      <tr><td>目标</td><td>Goal</td><td>用户设定的中长期目标，可拆解为多个事项</td><td>目标、今日</td></tr>
+      <tr><td>事项</td><td>Item</td><td>日程中的最小执行单元，具有计划时间、完成状态</td><td>今日、日程</td></tr>
+      <tr><td>项目</td><td>Project</td><td>分类容器，组织功能模块的入口（饮水、记账、睡眠等）</td><td>项目管理</td></tr>
+      <tr><td>交易</td><td>Transaction</td><td>一笔收支记录，关联账本、账户、分类</td><td>记账</td></tr>
+      <tr><td>药品</td><td>Medicine</td><td>用户服用的药品记录，关联剂量和提醒</td><td>吃药</td></tr>
+    </tbody>
+  </table>
+
+  <h4>统一动词库</h4>
+  <table>
+    <thead><tr><th>操作</th><th>动词</th><th>适用对象</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td>创建</td><td>新建</td><td>目标、事项、交易、药品</td><td>统一使用"新建"而非混用"创建"/"添加"/"新增"</td></tr>
+      <tr><td>完成</td><td>完成</td><td>事项</td><td>勾选表示完成，已完成的不可再编辑</td></tr>
+      <tr><td>记录</td><td>记录 / 记一笔</td><td>交易、睡眠、饮水、健身</td><td>行为数据的录入，尤其记账用"记一笔"</td></tr>
+      <tr><td>删除</td><td>删除</td><td>目标、事项、交易</td><td>统一使用"删除"，避免混用"移除"</td></tr>
+      <tr><td>编辑</td><td>编辑</td><td>目标、事项、交易</td><td>已创建条目的修改</td></tr>
+      <tr><td>打卡</td><td>打卡</td><td>习惯（饮水、吃药、健身）</td><td>一次性完成动作，区别于"记录"（可能含数值）</td></tr>
+      <tr><td>回顾</td><td>复盘</td><td>目标、日程、记账、睡眠等</td><td>统一使用"复盘"而非"回顾"/"查看报告"</td></tr>
+      <tr><td>校准</td><td>校准</td><td>日程</td><td>调整计划与实际执行的偏差</td></tr>
+    </tbody>
+  </table>
+
+  <h4>空间定义</h4>
+  <p style="color:#8b8fa8;font-size:14px;margin-bottom:12px">
+    LifeFlow 的导航体系按用户心智模型划分为五个空间，每个空间承载不同的任务意图：
+  </p>
+  <table>
+    <thead><tr><th>空间</th><th>路由</th><th>用户意图</th><th>对应底部导航</th></tr></thead>
+    <tbody>
+      <tr><td>今日</td><td><code>/</code></td><td>查看今天要做什么、快速查看状态</td><td>首页</td></tr>
+      <tr><td>目标</td><td><code>/efficiency</code></td><td>管理长期目标、拆分任务、追踪进展</td><td>目标</td></tr>
+      <tr><td>日程</td><td><code>/efficiency/schedule</code></td><td>以时间轴查看和安排全天活动</td><td>日程</td></tr>
+      <tr><td>复盘</td><td><code>/more/review</code></td><td>回顾多模块数据、总结趋势</td><td>（more 内入口）</td></tr>
+      <tr><td>我的</td><td><code>/more</code>（项目管理）</td><td>进入各功能模块、管理设置</td><td>（more 即项目管理）</td></tr>
+    </tbody>
+  </table>
+
+  <!-- → 全局信息架构 -->
+  <h3 id="ia">全局信息架构</h3>
+
+  <p style="color:#8b8fa8;font-size:13px;margin-bottom:12px">
+    以下树状图展示了 LifeFlow 的完整页面结构和路由关系。标注"占位"的页面当前仅为静态占位内容，需在后续迭代中实现。
+  </p>
+
+<pre><code>LifeFlow
+├── 首页 (/)
+│   ├── 核心待办卡片 (下一个事项)
+│   ├── AI 快捷指令 (3 条 prompt)
+│   ├── 今日提醒条
+│   ├── 今日事项时间线 (最多 6 个，含完成状态)
+│   └── 浮动创建按钮 (新建事项 BottomSheet)
+│
+├── 目标 (/efficiency)
+│   ├── 目标列表
+│   │   └── 目标详情 (/efficiency/goals/[id])
+│   │       └── 新建任务 (/efficiency/goals/[id]/tasks/new)
+│   └── 新建目标 (/efficiency/create)
+│
+├── 日程 (/efficiency/schedule)
+│   ├── 时间轴 (当天 + 历史双模式)
+│   ├── 校准功能
+│   └── 超时提醒
+│
+├── 助手 (/assistant)
+│   └── AI 对话 (AgentProvider 驱动)
+│
+├── 项目管理 (/more/projects)
+│   ├── 10 个大分类筛选 (日程/财务/健康/学习/效率/工具/数据/设置/帮助/关于)
+│   └── 10 个功能模块入口卡片
+│
+├── 复盘 (/more/review)
+│   ├── 总览 (统计卡片 + 模块入口)
+│   ├── 日程回顾 (/more/review/schedule) — 已实现
+│   ├── 目标复盘 (/more/review/goals) — 占位
+│   ├── 记账复盘 (/more/review/finance) — 占位
+│   ├── 睡眠复盘 (/more/review/sleep) — 占位
+│   ├── 饮水复盘 (/more/review/water) — 占位
+│   └── 健身复盘 (/more/review/fitness) — 占位
+│
+├── 功能模块 (入口在项目管理页 /more/projects)
+│   ├── 记账 (/more/accounting) · 子页：分类管理、资产、账本·新建
+│   ├── 饮水 (/more/water)
+│   ├── 睡眠 (/more/sleep)
+│   ├── 吃药 (/more/medication)
+│   ├── 训练 (/more/fitness)
+│   ├── 饮食 (/more/diet)
+│   ├── 养生 (/more/wellness)
+│   ├── 体态 (/more/posture)
+│   ├── 课程 (/more/schedule/courses)
+│   └── 作息 (/more/schedule/routines)
+│
+├── 工具集 (首页右上角快捷入口)
+│   ├── 专注 (/more/focus)
+│   ├── 倒数日 (/more/countdown)
+│   ├── 备忘录 (/more/notes)
+│   ├── 复盘 (/more/review)
+│   └── 设置 (/settings)
+│
+├── 插件中心 (/plugins)
+│   ├── 财务插件 (/plugins/finance)
+│   ├── 习惯养成 (/plugins/habit)
+│   ├── 专注计时 (/plugins/focus-timer)
+│   ├── 任务收件箱 (/plugins/task-inbox)
+│   └── 时间线 (/plugins/timeline)
+│
+└── [待清理] 死路由
+    ├── /growth  → 重定向到 /overview (404)
+    ├── /learning → 重定向到 /overview (404)
+    └── /capture → 重定向到 /</code></pre>
+
+  <!-- → 功能孤岛 -->
+  <h3 id="islands">消灭功能孤岛</h3>
+
+  <h4>当前孤岛问题</h4>
+
+  <div class="issue-card p2">
+    <div class="issue-header">
+      <span class="issue-tag p2">P2</span>
+      <span class="issue-title">孤岛 #1: 专注、倒数日、备忘录仅首页可到达</span>
+    </div>
+    <div class="issue-detail">
+      <p><strong>现状：</strong><code>/more/focus</code>、<code>/more/countdown</code>、<code>/more/notes</code> 三个功能模块仅在首页右上角通过 <code>&lt;QuickBtn&gt;</code> 暴露入口（5 个小图标按钮），在项目管理页（<code>/more/projects</code>）中找不到对应入口。用户首次进入项目管理页时完全不知道这些功能的存在。</p>
+      <p><strong>建议：</strong>在项目管理页的"工具"分类下添加这三个功能的入口卡片，确保全站导航图完整。</p>
+    </div>
+  </div>
+
+  <div class="issue-card p2">
+    <div class="issue-header">
+      <span class="issue-tag p2">P2</span>
+      <span class="issue-title">孤岛 #2: 复盘子模块 5 个详情页全为占位</span>
+    </div>
+    <div class="issue-detail">
+      <p><strong>现状：</strong><code>/more/review/goals</code>、<code>/more/review/finance</code>、<code>/more/review/sleep</code>、<code>/more/review/water</code>、<code>/more/review/fitness</code> 均为占位页面，仅展示"即将上线"文案，但复盘总览页将其作为正常入口展示。</p>
+      <p><strong>建议：</strong>优先实现日程复盘和记账复盘两个子页面（数据已有），其余三个页面在总览页中添加"即将推出"标识。</p>
+    </div>
+  </div>
+
+  <div class="issue-card p2">
+    <div class="issue-header">
+      <span class="issue-tag p2">P2</span>
+      <span class="issue-title">孤岛 #3: growth、learning、capture 三个无效路由</span>
+    </div>
+    <div class="issue-detail">
+      <p><strong>现状：</strong></p>
+      <ul style="margin-left:16px;color:#8b8fa8;font-size:13px;line-height:1.8">
+        <li><code>/growth</code> 和 <code>/learning</code> 均客户端跳转到不存在的 <code>/overview</code>，导致 404</li>
+        <li><code>/capture</code> 服务端 <code>redirect("/")</code> 跳回首页，功能等效于被阉割</li>
+      </ul>
+      <p><strong>建议：</strong>若这些功能短期内不实现，直接从路由表中删除并清理相关引用；若计划实现，创建占位页并标注"开发中"。</p>
+    </div>
+  </div>
+
+  <!-- → 文案规范化 -->
+  <h3 id="copy">文案规范化</h3>
+
+  <p style="color:#8b8fa8;font-size:13px;margin-bottom:16px">
+    以下对比展示了多个界面中文案的不一致问题。建议统一为右侧"推荐"表述，确保全站语言风格一致。
+  </p>
+
+  <table>
+    <thead>
+      <tr><th style="width:28%">位置</th><th style="width:36%">当前文案</th><th style="width:36%">推荐文案</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>首页核心卡片按钮</td>
+        <td class="compare-old">标记完成</td>
+        <td class="compare-new">完成</td>
+      </tr>
+      <tr>
+        <td>首页浮动按钮 / 弹窗标题</td>
+        <td class="compare-old">新建事项 / 添加事项</td>
+        <td class="compare-new">新建事项 / 新建事项</td>
+      </tr>
+      <tr>
+        <td>记账 BottomSheet 标题</td>
+        <td class="compare-old">记一笔</td>
+        <td class="compare-new">记一笔（保留，已形成品牌认知）</td>
+      </tr>
+      <tr>
+        <td>记账 BottomSheet 保存按钮</td>
+        <td class="compare-old">保存记录</td>
+        <td class="compare-new">保存</td>
+      </tr>
+      <tr>
+        <td>记账图表 Tab 标签</td>
+        <td class="compare-old">明细 / 图表</td>
+        <td class="compare-new">明细 / 统计</td>
+      </tr>
+      <tr>
+        <td>日程页面"没有事项"状态</td>
+        <td class="compare-old">今天接下来的事项将显示在这里</td>
+        <td class="compare-new">暂无接下来的事项</td>
+      </tr>
+      <tr>
+        <td>首页 AI 快捷指令按钮</td>
+        <td class="compare-old">今天有什么提醒？/ 帮我排一下日程 / 复盘一下这周</td>
+        <td class="compare-new">今日提醒 / 安排日程 / 本周复盘</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════
+     Part 3: 实施路线图
+     ═══════════════════════════════════════════════════════════ -->
+<section id="part3">
+  <h2 class="section-title">Part 3: 实施路线图</h2>
+
+  <p style="color:#8b8fa8;font-size:13px;margin-bottom:24px">
+    以下路线图按优先级分为三个等级，建议在上线前至少完成 Level 1，Level 2 在上线首周内跟进，Level 3 在后续迭代中按节奏推进。
+  </p>
+
+  <div class="roadmap-level l1">
+    <div class="rl-header">
+      <div class="rl-icon">L1</div>
+      <div class="rl-title">Level 1: 立即修复（P0 + 导航骨架）</div>
+      <div class="rl-estimate">预计 4&ndash;6 小时</div>
+    </div>
+    <ul>
+      <li>修复 growth 和 learning 路由 404 — 改为 redirect("/") 或删除路由文件</li>
+      <li>首页新建事项添加 <code>submitting</code> 防重复提交锁</li>
+      <li>记账保存添加 <code>submitting</code> 防重复提交锁</li>
+      <li>为 17 个静默 catch 块添加 <code>console.error</code> 和用户可见的错误提示（至少覆盖 DB 初始化和数据导出/导入路径）</li>
+      <li>修复 SWProvider 中 SW 事件的 <code>removeEventListener</code> 缺失</li>
+      <li>为 5 个主要页面（首页、日程、记账、助手、复盘）添加独立 metadata title</li>
+      <li>删除或修复 /capture、/growth、/learning 三个死路由</li>
+    </ul>
+  </div>
+
+  <div class="roadmap-level l2">
+    <div class="rl-header">
+      <div class="rl-icon">L2</div>
+      <div class="rl-title">Level 2: 重要优化（P1 + 空间首页完善）</div>
+      <div class="rl-estimate">预计 8&ndash;12 小时</div>
+    </div>
+    <ul>
+      <li>实现日程复盘详情页（<code>/more/review/schedule</code> 已有数据源）</li>
+      <li>实现记账复盘详情页（<code>/more/review/finance</code>）</li>
+      <li>为其余 3 个复盘占位页添加"即将推出"角标</li>
+      <li>添加全局 <code>prefers-reduced-motion</code> 检测和动画降级</li>
+      <li>将专注、倒数日、备忘录入口加入项目管理页</li>
+      <li>加固 <code>ensureDefaultLedger</code> 错误处理，杜绝空 ledgerId</li>
+      <li>统一首页"新建事项"和"添加事项"的命名不一致问题</li>
+      <li>为记账明细列表增加账户筛选能力</li>
+    </ul>
+  </div>
+
+  <div class="roadmap-level l3">
+    <div class="rl-header">
+      <div class="rl-icon">L3</div>
+      <div class="rl-title">Level 3: 体验增强（P2 + 文案打磨）</div>
+      <div class="rl-estimate">预计 4&ndash;8 小时</div>
+    </div>
+    <ul>
+      <li>统一使用项目自定义 <code>useLiveQuery</code> hook（loading/error 状态）</li>
+      <li>为记账页面添加分类筛选器</li>
+      <li>首页新建事项支持关联目标或项目</li>
+      <li>文案规范化：按 Part 2 的对比表统一 7 处不一致文案</li>
+      <li>日程时间轴添加虚拟滚动优化（数据量 &gt; 50 条时）</li>
+      <li>为记账、日程、助手模块添加独立 ErrorBoundary</li>
+      <li>补充 PWA maskable 图标</li>
+      <li>启动核心模块单元测试（记账 CRUD、事项增删改）</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ─── 页脚 ─── -->
+<footer>
+  <span>审查完成于 2026-07-24 &middot; 六视角联合审查</span>
+  <span><a href="/">LifeFlow</a></span>
+</footer>
+
+</main>
+</div>
+
+<script>
+// ─── TOC active section tracking ───
+(function(){
+  const navLinks = document.querySelectorAll('.toc-sidebar nav a');
+  const sections = [];
+  navLinks.forEach(a => {
+    const id = a.getAttribute('href');
+    if(id && id.startsWith('#')){
+      const el = document.getElementById(id.substring(1));
+      if(el) sections.push({ el, a });
+    }
+  });
+  function onScroll(){
+    let current = sections[0];
+    for(const s of sections){
+      if(s.el.getBoundingClientRect().top <= 120) current = s;
+    }
+    navLinks.forEach(a => a.classList.remove('active'));
+    if(current) current.a.classList.add('active');
+  }
+  window.addEventListener('scroll', onScroll, {passive:true});
+  onScroll();
+
+  // ─── Close sidebar on mobile when clicking a link ───
+  document.querySelectorAll('.toc-sidebar nav a').forEach(a => {
+    a.addEventListener('click', () => {
+      document.querySelector('.toc-sidebar').classList.remove('open');
+    });
+  });
+})();
+</script>
+
+</body>
+</html>

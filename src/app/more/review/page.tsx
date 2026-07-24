@@ -6,12 +6,12 @@ import { ChevronLeft, BarChart3, Wallet, Moon, Droplets, Dumbbell, Target, Trend
 import { reviewerBrain } from "@/lib/brains/reviewer";
 import type { ReviewResult, ReviewModuleSummary } from "@/lib/brains/reviewer";
 
-const REVIEW_MODULES: Record<string, { icon: React.ComponentType<any>; color: string; href: string }> = {
-  goals: { icon: Target, color: "#6366F1", href: "/more/review/goals" },
+const REVIEW_MODULES: Record<string, { icon: React.ComponentType<any>; color: string; href: string; badge?: string }> = {
+  goals: { icon: Target, color: "#6366F1", href: "/more/review/goals", badge: "即将推出" },
   finance: { icon: Wallet, color: "#10B981", href: "/more/review/finance" },
-  sleep: { icon: Moon, color: "#8B5CF6", href: "/more/review/sleep" },
-  water: { icon: Droplets, color: "#3B82F6", href: "/more/review/water" },
-  fitness: { icon: Dumbbell, color: "#F59E0B", href: "/more/review/fitness" },
+  sleep: { icon: Moon, color: "#8B5CF6", href: "/more/review/sleep", badge: "即将推出" },
+  water: { icon: Droplets, color: "#3B82F6", href: "/more/review/water", badge: "即将推出" },
+  fitness: { icon: Dumbbell, color: "#F59E0B", href: "/more/review/fitness", badge: "即将推出" },
   schedule: { icon: Calendar, color: "#FF9500", href: "/more/review/schedule" },
   medication: { icon: Pill, color: "#DC2626", href: "/more/review/medication" },
 };
@@ -23,10 +23,18 @@ function ModuleCard({ summary }: { summary: ReviewModuleSummary }) {
 
   return (
     <div
-      className="rounded-[20px] p-4 cursor-pointer active:opacity-70 transition-opacity"
+      className="rounded-[20px] p-4 cursor-pointer active:opacity-70 transition-opacity relative"
       style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}
       onClick={() => router.push(config.href)}
     >
+      {config.badge && (
+        <span
+          className="absolute top-3 right-3 text-[10px] font-medium px-2 py-0.5 rounded-full"
+          style={{ background: "#EC4899", color: "#fff" }}
+        >
+          {config.badge}
+        </span>
+      )}
       <div className="flex items-center gap-3 mb-3">
         <div
           className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0"

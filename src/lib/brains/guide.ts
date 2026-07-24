@@ -19,7 +19,7 @@ const DEFAULT_STEPS: Omit<GuideStep, "completed">[] = [
   { id: "create_goal", title: "设定目标", description: "创建你的第一个目标", order: 2 },
   { id: "add_task", title: "添加任务", description: "在目标下添加第一个任务", order: 3 },
   { id: "first_focus", title: "开始专注", description: "体验番茄钟专注模式", order: 4 },
-  { id: "first_review", title: "首次回顾", description: "查看你的进度总结", order: 5 },
+  { id: "first_review", title: "首次复盘", description: "查看你的进度总结", order: 5 },
 ];
 
 function loadProgress(): string[] {

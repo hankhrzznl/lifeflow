@@ -9,7 +9,7 @@ import {
   ListTodo, X, Target, AlertCircle, Pencil,
 } from "lucide-react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { getItemsByDateSorted, deleteItem, updateItem, addManualItem, generateRoutineItems, generateCourseItems } from "@/lib/db/daylog.db";
+import { getItemsByDateSorted, deleteItem, updateItem, addManualItem, generateRoutineItems, generateCourseItems, getItemsByScheduleDay, getWakeTime } from "@/lib/db/daylog.db";
 import type { Item } from "@/lib/db/daylog.db";
 import { showToast } from "@/components/ui/Toast";
 
@@ -70,38 +70,6 @@ export default function SchedulePage() {
     setSelectedDate(todayStr);
   }, [todayStr]);
 
-  // 是否为过去日期
-  const isPastDate = selectedDate < todayStr;
-
-  // 自动生成作息/课程事项
-  useEffect(() => {
-    if (!selectedDate) return;
-    (async () => {
-      await generateRoutineItems(selectedDate);
-      await generateCourseItems(selectedDate);
-    })();
-  }, [selectedDate]);
-
-  // Live data
-  const items = useLiveQuery(
-    () => (selectedDate ? getItemsByDateSorted(selectedDate) : Promise.resolve([] as Item[])),
-    [selectedDate],
-    [] as Item[],
-  );
-
-  // ── 周日历条 ──
-  const [weekOffset, setWeekOffset] = useState(0);
-  const weekDates = useMemo(() => {
-    const mon = getWeekMonday(new Date(), weekOffset);
-    return Array.from({ length: 7 }, (_, i) => addDays(mon, i));
-  }, [weekOffset]);
-
-  const handleSelectDay = useCallback((date: Date) => {
-    setSelectedDate(toDateStr(date));
-  }, []);
-
-  const isSelectedToday = selectedDate === todayStr;
-
   // ── 当前时间线 ──
   const [nowTime, setNowTime] = useState("");
   const timelineRef = useRef<HTMLDivElement>(null);
@@ -117,7 +85,46 @@ export default function SchedulePage() {
     return () => clearInterval(id);
   }, []);
 
-  // Auto-scroll to now
+  // 起床时间
+  const [wakeTime, setWakeTime] = useState("07:00");
+  useEffect(() => { getWakeTime().then(setWakeTime).catch(() => {}); }, []);
+
+  // 当前日程日（按起床时间边界）
+  const currentScheduleDay = nowTime >= wakeTime ? todayStr : toDateStr(addDays(new Date(), -1));
+
+  // 是否为过去日期
+  const isPastDate = selectedDate < currentScheduleDay;
+
+  const isSelectedToday = selectedDate === currentScheduleDay;
+
+  // 自动生成作息/课程事项
+  useEffect(() => {
+    if (!selectedDate) return;
+    (async () => {
+      await generateRoutineItems(selectedDate);
+      await generateCourseItems(selectedDate);
+    })();
+  }, [selectedDate]);
+
+  // Live data — 按起床时间边界查询
+  const items = useLiveQuery(
+    () => (selectedDate ? getItemsByScheduleDay(selectedDate, wakeTime) : Promise.resolve([] as Item[])),
+    [selectedDate, wakeTime],
+    [] as Item[],
+  );
+
+  // ── 周日历条 ──
+  const [weekOffset, setWeekOffset] = useState(0);
+  const weekDates = useMemo(() => {
+    const mon = getWeekMonday(new Date(), weekOffset);
+    return Array.from({ length: 7 }, (_, i) => addDays(mon, i));
+  }, [weekOffset]);
+
+  const handleSelectDay = useCallback((date: Date) => {
+    setSelectedDate(toDateStr(date));
+  }, []);
+
+  // ── 时间轴范围 ──
   useEffect(() => {
     if (isSelectedToday && nowTime && timelineRef.current) {
       const range = timeToMinutes(nowTime);

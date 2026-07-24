@@ -125,6 +125,34 @@ export async function getItemsByDateSorted(dateStr: string): Promise<Item[]> {
   return daylogDB.items.where('date').equals(dateStr).sortBy('plannedStart');
 }
 
+/** 获取起床时间（从作息模板 type='wake' 读取，默认 07:00） */
+export async function getWakeTime(): Promise<string> {
+  const wake = await daylogDB.routineTemplates.where('type').equals('wake').first();
+  return wake?.startTime || '07:00';
+}
+
+/** 按起床时间为日期边界查询事项
+ *  例：wakeTime=07:00，查看 7月24日 → 获取 7/24 07:00 ~ 7/25 07:00 的事项
+ */
+export async function getItemsByScheduleDay(dateStr: string, wakeTime: string): Promise<Item[]> {
+  const nextDate = dateAddOne(dateStr);
+  const all = await daylogDB.items
+    .where('date').equals(dateStr)
+    .filter(item => item.plannedStart >= wakeTime)
+    .toArray();
+  const earlyNext = await daylogDB.items
+    .where('date').equals(nextDate)
+    .filter(item => item.plannedStart < wakeTime)
+    .toArray();
+  return [...all, ...earlyNext].sort((a, b) => a.plannedStart.localeCompare(b.plannedStart));
+}
+
+function dateAddOne(dateStr: string): string {
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() + 1);
+  return d.toISOString().slice(0, 10);
+}
+
 /** 获取当前时间之后的 N 个事项 */
 export async function getUpcomingItems(todayStr: string, nowTime: string, limit: number = 6): Promise<Item[]> {
   const all = await daylogDB.items

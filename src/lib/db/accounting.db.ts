@@ -112,6 +112,33 @@ export class AccountingDB extends Dexie {
       ];
       for (const c of [...expenseCategories, ...incomeCategories]) await tx.table('categories').add(c);
     });
+    // v3: set isDefault=true on the first ledger & add ensureDefaultLedger logic
+    this.version(3).stores({
+      ledgers: '&id, name',
+      accounts: '&id, ledgerId, name',
+      transactions: '&id, ledgerId, date',
+      categories: '&id, type',
+    }).upgrade(async (tx) => {
+      const allLedgers = await tx.table('ledgers').toArray();
+      if (allLedgers.length > 0) {
+        // Set first ledger as default
+        await tx.table('ledgers').update(allLedgers[0].id, { isDefault: true } as any);
+      } else {
+        // Seed if none exist
+        const ledgerId = crypto.randomUUID();
+        const now = Date.now();
+        await tx.table('ledgers').add({
+          id: ledgerId, name: '日常账本', type: 'personal', currency: 'CNY', isDefault: true, createdAt: now,
+        });
+        const accounts = [
+          { id: crypto.randomUUID(), ledgerId, name: '微信钱包', type: 'wechat', balance: 0, currency: 'CNY', createdAt: now },
+          { id: crypto.randomUUID(), ledgerId, name: '支付宝', type: 'alipay', balance: 0, currency: 'CNY', createdAt: now },
+          { id: crypto.randomUUID(), ledgerId, name: '银行卡', type: 'bank', balance: 0, currency: 'CNY', createdAt: now },
+          { id: crypto.randomUUID(), ledgerId, name: '现金', type: 'cash', balance: 0, currency: 'CNY', createdAt: now },
+        ];
+        for (const a of accounts) await tx.table('accounts').add(a);
+      }
+    });
   }
 }
 
@@ -124,6 +151,29 @@ export async function initializeAccountingDB(): Promise<{ success: boolean; erro
   } catch (err) {
     return { success: false, error: (err as Error).message };
   }
+}
+
+/** 确保至少存在一个默认账本，返回其 id */
+export async function ensureDefaultLedger(): Promise<string> {
+  const ledgers = await accountingDB.ledgers.toArray();
+  const existing = ledgers.find(l => l.isDefault) || ledgers[0];
+  if (existing) return existing.id;
+
+  // 自愈：创建默认账本
+  const id = crypto.randomUUID();
+  const now = Date.now();
+  await accountingDB.ledgers.add({
+    id, name: '日常账本', type: 'personal', currency: 'CNY', isDefault: true, createdAt: now,
+  });
+  // 同时创建默认账户
+  const accounts = [
+    { id: crypto.randomUUID(), ledgerId: id, name: '微信钱包', type: 'wechat', balance: 0, currency: 'CNY', createdAt: now },
+    { id: crypto.randomUUID(), ledgerId: id, name: '支付宝', type: 'alipay', balance: 0, currency: 'CNY', createdAt: now },
+    { id: crypto.randomUUID(), ledgerId: id, name: '银行卡', type: 'bank', balance: 0, currency: 'CNY', createdAt: now },
+    { id: crypto.randomUUID(), ledgerId: id, name: '现金', type: 'cash', balance: 0, currency: 'CNY', createdAt: now },
+  ];
+  for (const a of accounts) await accountingDB.accounts.add(a);
+  return id;
 }
 
 // ─── Ledgers CRUD ────────────────────────────────────────────

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLiveQuery } from "dexie-react-hooks";
 import { Plus, ChevronDown, Trash2, Wallet, Search, ChevronLeft, ChevronRight } from "lucide-react";
-import { getTransactionsByMonth, getTransactionsByYear, getTransactionsByDate, deleteTransaction, getAllCategories, addTransaction, accountingDB } from "@/lib/db/accounting.db";
+import { getTransactionsByMonth, getTransactionsByYear, getTransactionsByDate, deleteTransaction, getAllCategories, addTransaction, accountingDB, ensureDefaultLedger } from "@/lib/db/accounting.db";
 import type { Transaction, Category, Ledger, Account } from "@/lib/db/accounting.db";
 import { getIcon } from "@/components/accounting/CategoryIcon";
 import { showToast } from "@/components/ui/Toast";
@@ -113,12 +113,6 @@ export default function AccountingPage() {
     [last7Days.join(",")],
     [] as Transaction[][],
   );
-
-  // ─── 默认账本 ──────────────────────────────────────────────
-  const defaultLedgerId = useMemo(() => {
-    const dl = ledgers.find((l) => l.isDefault);
-    return dl?.id ?? ledgers[0]?.id ?? null;
-  }, [ledgers]);
 
   // ─── 分类映射 ──────────────────────────────────────────────
   const categoryMap = useMemo(() => {
@@ -318,13 +312,11 @@ export default function AccountingPage() {
       showToast({ type: "warning", message: "请选择账户" });
       return;
     }
-    if (!defaultLedgerId) {
-      showToast({ type: "error", message: "账本未就绪" });
-      return;
-    }
     try {
+      // 自愈：确保默认账本存在
+      const ledgerId = await ensureDefaultLedger();
       await addTransaction({
-        ledgerId: defaultLedgerId,
+        ledgerId,
         accountId: selectedAccountId,
         type: recordType,
         amount: amountFen,
@@ -339,7 +331,7 @@ export default function AccountingPage() {
     } catch {
       showToast({ type: "error", message: "保存失败" });
     }
-  }, [recordAmount, selectedAccountId, defaultLedgerId, recordType, recordNote]);
+  }, [recordAmount, selectedAccountId, recordType, recordNote]);
 
   // ============================================================
   // 渲染

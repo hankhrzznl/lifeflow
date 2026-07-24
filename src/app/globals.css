@@ -298,6 +298,17 @@ body {
 .fade-in { animation-name: fade-in; }
 .scale-in { animation-name: scale-in; }
 
+/* prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  .animate-in,
+  .slide-in-from-bottom,
+  .fade-in,
+  .scale-in {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
 /* ---- Scrollbar ---- */
 ::-webkit-scrollbar { display: none; }
 

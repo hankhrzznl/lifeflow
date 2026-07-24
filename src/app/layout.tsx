@@ -13,7 +13,10 @@ import UpgradeNotification from "@/components/UpgradeNotification";
 import DataValidator from "@/components/DataValidator";
 
 export const metadata: Metadata = {
-  title: "LifeFlow",
+  title: {
+    default: "今日 - LifeFlow",
+    template: "%s - LifeFlow",
+  },
   description: "捕捉 · 规划 · 专注 · 复盘",
   manifest: "/manifest.json",
   appleWebApp: {

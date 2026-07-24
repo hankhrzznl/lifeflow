@@ -52,6 +52,7 @@ export default function AccountingPage() {
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [monthPanelOpen, setMonthPanelOpen] = useState(false);
   const [keyword, setKeyword] = useState("");
+  const [accountFilter, setAccountFilter] = useState<string>("");
 
   // ─── 图表页状态 ────────────────────────────────────────────
   const [chartPeriod, setChartPeriod] = useState<"month" | "year">("month");
@@ -162,20 +163,30 @@ export default function AccountingPage() {
   const kw = keyword.trim().toLowerCase();
 
   const filteredTxs = useMemo(() => {
-    if (!kw) return txs;
-    const numKw = Number(kw);
-    return (txs ?? []).filter((t) => {
-      if (t.note?.toLowerCase().includes(kw)) return true;
-      const cat = t.categoryId ? categoryMap.get(t.categoryId) : undefined;
-      if (cat?.name.toLowerCase().includes(kw)) return true;
-      if (!isNaN(numKw)) {
-        if (Math.round(t.amount / 100) === Math.round(numKw)) return true;
-        const yuanStr = (t.amount / 100).toFixed(2);
-        if (yuanStr.startsWith(kw)) return true;
-      }
-      return false;
-    });
-  }, [txs, kw, categoryMap]);
+    let result = (txs ?? []);
+    // 按账户筛选
+    if (accountFilter) {
+      result = result.filter((t) => t.accountId === accountFilter);
+    }
+    // 关键词搜索
+    if (kw) {
+      const numKw = Number(kw);
+      result = result.filter((t) => {
+        if (t.note?.toLowerCase().includes(kw)) return true;
+        const cat = t.categoryId ? categoryMap.get(t.categoryId) : undefined;
+        if (cat?.name.toLowerCase().includes(kw)) return true;
+        const acc = accountMap.get(t.accountId || "");
+        if (acc?.name.toLowerCase().includes(kw)) return true;
+        if (!isNaN(numKw)) {
+          if (Math.round(t.amount / 100) === Math.round(numKw)) return true;
+          const yuanStr = (t.amount / 100).toFixed(2);
+          if (yuanStr.startsWith(kw)) return true;
+        }
+        return false;
+      });
+    }
+    return result;
+  }, [txs, kw, categoryMap, accountFilter, accountMap]);
 
   // ─── 明细分组 ──────────────────────────────────────────────
   const groups = useMemo(() => {
@@ -437,7 +448,32 @@ export default function AccountingPage() {
         </div>
       </div>
 
-      {/* ===== 明细 | 图表 pill tab ===== */}
+      {/* ===== 账户筛选 ===== */}
+      {(accounts ?? []).length > 0 && (
+        <div className="px-4 mt-2 flex gap-2 overflow-x-auto no-scrollbar">
+          <button
+            onClick={() => setAccountFilter("")}
+            className="shrink-0 h-8 px-3 rounded-full text-[12px] font-medium transition-colors"
+            style={{
+              background: !accountFilter ? "var(--lifeflow-primary)" : "var(--color-surface-secondary)",
+              color: !accountFilter ? "#fff" : "var(--color-text-secondary)",
+            }}
+          >全部</button>
+          {(accounts ?? []).map((a) => (
+            <button
+              key={a.id}
+              onClick={() => setAccountFilter(accountFilter === a.id ? "" : a.id)}
+              className="shrink-0 h-8 px-3 rounded-full text-[12px] font-medium transition-colors"
+              style={{
+                background: accountFilter === a.id ? "var(--lifeflow-primary)" : "var(--color-surface-secondary)",
+                color: accountFilter === a.id ? "#fff" : "var(--color-text-secondary)",
+              }}
+            >{a.name}</button>
+          ))}
+        </div>
+      )}
+
+      {/* ===== 明细 | 统计 pill tab ===== */}
       <div className="px-4 mt-4">
         <div className="flex rounded-full p-1" style={{ background: "var(--lifeflow-muted)" }}>
           <button
@@ -591,7 +627,7 @@ export default function AccountingPage() {
                                 {new Date(t.createdAt).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })}
                               </p>
                               {acc && (
-                                <span className="text-[11px] px-1.5 py-0.5 rounded-full" style={{ background: "var(--lifeflow-muted)", color: "var(--color-text-disabled)" }}>
+                                <span className="text-[13px] font-medium px-1.5 py-0.5 rounded-full" style={{ background: `${acc.type === 'wechat' ? '#07C160' : acc.type === 'alipay' ? '#1677FF' : acc.type === 'bank' ? '#F59E0B' : 'var(--lifeflow-muted)'}20`, color: "var(--color-text-primary)" }}>
                                   {acc.name}
                                 </span>
                               )}

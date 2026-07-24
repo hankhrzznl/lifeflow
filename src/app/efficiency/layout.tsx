@@ -1,18 +1,9 @@
-"use client";
+import type { Metadata } from "next";
 
-import { useEffect } from "react";
-import { initializeEfficiencyDB } from "@/lib/db/efficiency.db";
+export const metadata: Metadata = {
+  title: "目标",
+};
 
 export default function EfficiencyLayout({ children }: { children: React.ReactNode }) {
-  useEffect(() => {
-    initializeEfficiencyDB();
-  }, []);
-
-  return (
-    <div className="min-h-screen" style={{ backgroundColor: "var(--lifeflow-background)" }}>
-      <main className="w-full max-w-[430px] mx-auto pb-[80px]">
-        {children}
-      </main>
-    </div>
-  );
+  return <>{children}</>;
 }

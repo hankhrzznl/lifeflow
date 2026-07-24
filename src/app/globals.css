@@ -102,8 +102,8 @@
   --duration-instant: 100ms;
 
   /* ---- Spacing ---- */
-  --safe-area-top: 59px;
-  --safe-area-bottom: 34px;
+  --safe-area-top: calc(max(47px, env(safe-area-inset-top)));
+  --safe-area-bottom: calc(max(20px, env(safe-area-inset-bottom)));
   --tab-bar-height: 83px;
   --nav-bar-height: 44px;
   --bottom-nav-height: calc(83px + env(safe-area-inset-bottom));

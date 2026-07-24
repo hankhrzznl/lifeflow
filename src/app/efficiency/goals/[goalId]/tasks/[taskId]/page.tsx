@@ -129,8 +129,8 @@ export default function TaskDetailPage() {
             <motion.div
               initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
               transition={{ type: "spring", damping: 30, stiffness: 300 }}
-              className="fixed bottom-0 left-0 right-0 z-50 w-full max-w-[430px] mx-auto px-4 pb-8 pt-4 rounded-t-[24px]"
-              style={{ background: "#fff", boxShadow: "0 -4px 20px rgba(0,0,0,0.1)" }}
+              className="fixed bottom-0 left-0 right-0 z-50 w-full max-w-[430px] mx-auto px-4 pt-4 rounded-t-[24px]"
+              style={{ paddingBottom: "calc(24px + env(safe-area-inset-bottom))", background: "#fff", boxShadow: "0 -4px 20px rgba(0,0,0,0.1)" }}
             >
               <div className="w-8 h-1 rounded-full mx-auto mb-4" style={{ background: "var(--lifeflow-border)" }} />
               <h3 className="text-[17px] font-bold mb-4" style={{ color: "#1D1D1F" }}>

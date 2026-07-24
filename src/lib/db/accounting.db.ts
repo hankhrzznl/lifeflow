@@ -229,6 +229,16 @@ export async function getAllAccounts(): Promise<Account[]> {
 export async function addTransaction(transaction: Omit<Transaction, 'id' | 'createdAt'>): Promise<string> {
   const id = crypto.randomUUID();
   await accountingDB.transactions.add({ ...transaction, id, createdAt: Date.now() });
+
+  // 同步更新账户余额：支出减、收入加
+  if (transaction.accountId) {
+    const account = await accountingDB.accounts.get(transaction.accountId);
+    if (account) {
+      const delta = transaction.type === 'expense' ? -transaction.amount : transaction.amount;
+      await accountingDB.accounts.update(transaction.accountId, { balance: account.balance + delta });
+    }
+  }
+
   return id;
 }
 

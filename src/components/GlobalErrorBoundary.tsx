@@ -82,10 +82,10 @@ export class GlobalErrorBoundary extends Component<Props, State> {
             </div>
 
             <h2 className="text-lg font-semibold text-[var(--foreground)] mb-2">
-              发生意外错误
+              出了点问题
             </h2>
             <p className="text-sm text-[var(--muted-foreground)] mb-2">
-              应用遇到了未处理的错误，请尝试刷新页面
+              遇到了意料之外的问题，刷新试试？
             </p>
             {this.state.error && (
               <p className="text-xs text-[var(--muted-foreground)] bg-[var(--bg-secondary)] rounded-xl px-3 py-2 mb-6 max-w-full break-all opacity-70">

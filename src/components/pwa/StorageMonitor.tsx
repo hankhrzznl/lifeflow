@@ -17,7 +17,7 @@ export default function StorageMonitor() {
       if (result.isCritical && !warnedCritical.current) {
         warnedCritical.current = true;
         showToast({
-          message: "存储空间即将耗尽，请清理旧数据",
+          message: "存储空间快满了，清理一下旧数据？",
           type: "error",
           duration: 0,
           action: {
@@ -27,7 +27,7 @@ export default function StorageMonitor() {
         });
       } else if (result.isWarning && !result.isCritical) {
         showToast({
-          message: `存储空间已使用 ${Math.round(result.percentUsed)}%，建议清理`,
+          message: `存储空间用了 ${Math.round(result.percentUsed)}%，建议清理一下`,
           type: "warning",
           duration: 8000,
           action: {

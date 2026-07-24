@@ -118,7 +118,7 @@ export default function CaptureInbox({ visible, onRefresh }: { visible: boolean;
       await updateTask(id, { startTime: start, endTime: end });
       showToast({ message: "已安排到今天", type: "success" });
       await loadItems();
-    } catch { showToast({ message: "操作失败", type: "error" }); }
+    } catch { showToast({ message: "没有成功，再试一次？", type: "error" }); }
   }, [loadItems]);
 
   // 快速操作：明天
@@ -131,7 +131,7 @@ export default function CaptureInbox({ visible, onRefresh }: { visible: boolean;
       await updateTask(id, { startTime: start, endTime: end });
       showToast({ message: "已添加到明天", type: "success" });
       await loadItems();
-    } catch { showToast({ message: "操作失败", type: "error" }); }
+    } catch { showToast({ message: "没有成功，再试一次？", type: "error" }); }
   }, [loadItems]);
 
   // 快速操作：本周
@@ -147,7 +147,7 @@ export default function CaptureInbox({ visible, onRefresh }: { visible: boolean;
       await updateTask(id, { startTime: start, endTime: endOfWeek.getTime() });
       showToast({ message: "已添加到本周", type: "success" });
       await loadItems();
-    } catch { showToast({ message: "操作失败", type: "error" }); }
+    } catch { showToast({ message: "没有成功，再试一次？", type: "error" }); }
   }, [loadItems]);
 
   // 快速操作：完整安排（跳转到安排页处理中状态）
@@ -241,7 +241,7 @@ export default function CaptureInbox({ visible, onRefresh }: { visible: boolean;
       showToast({ message: `已创建为「${CLASSIFICATION_OPTIONS.find((o) => o.key === c)?.label}」`, type: "success" });
       closeFlow();
       await loadItems();
-    } catch { showToast({ message: "创建失败，请重试", type: "error" }); }
+    } catch { showToast({ message: "没有创建成功，再试一次？", type: "error" }); }
   }, [classifyTarget, taskDraft, selectedClassification, loadItems, closeFlow]);
 
   const handleCreateModule = async () => {
@@ -353,8 +353,7 @@ export default function CaptureInbox({ visible, onRefresh }: { visible: boolean;
                   <div className="w-14 h-14 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-3">
                     <Inbox className="w-7 h-7 text-gray-400 dark:text-gray-500" />
                   </div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">还没有任何想法</p>
-                  <p className="text-xs text-gray-400 mt-1">用上方捕捉栏快速记录</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">这里会收集你捕捉到的想法。在上方输入框写一个？</p>
                 </motion.div>
               ) : (
                 items.map((item) => (

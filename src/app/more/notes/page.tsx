@@ -100,14 +100,14 @@ export default function NotesPage() {
               <StickyNote className="h-8 w-8" style={{ color: "var(--lifeflow-primary)" }} />
             </div>
             <p className="text-[17px]" style={{ color: "var(--color-text-secondary)" }}>
-              暂无笔记
+              还没有笔记。写一条吧。
             </p>
             <button
               onClick={() => setShowAdd(true)}
               className="mt-6 inline-flex items-center justify-center rounded-full px-8 py-3 text-[16px] font-semibold transition-opacity hover:opacity-90 active:opacity-80"
               style={{ background: "var(--lifeflow-primary)", color: "var(--lifeflow-primary-foreground)" }}
             >
-              写笔记
+              写一条
             </button>
           </motion.div>
         </div>

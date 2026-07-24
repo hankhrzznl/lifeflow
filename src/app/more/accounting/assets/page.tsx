@@ -183,8 +183,7 @@ export default function AssetsPage() {
               <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full" style={{ background: "var(--lifeflow-muted)" }}>
                 <WalletCards className="h-8 w-8" style={{ color: "var(--color-text-secondary)" }} />
               </div>
-              <p className="mb-1 text-[16px] font-medium" style={{ color: "var(--color-text-primary)" }}>暂无账户</p>
-              <p className="mb-6 text-[13px] font-medium" style={{ color: "var(--color-text-secondary)" }}>添加您的第一个账户，开始记账</p>
+              <p className="mb-6 text-[16px] font-medium" style={{ color: "var(--color-text-primary)" }}>还没有账户。添加一个，开始记账。</p>
               <button type="button" onClick={openAddSheet}
                 className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-[15px] font-semibold"
                 style={{ background: "var(--lifeflow-primary)", color: "var(--lifeflow-primary-foreground)" }}>

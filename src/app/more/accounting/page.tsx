@@ -330,11 +330,11 @@ export default function AccountingPage() {
     if (recordSubmitting) return;
     const amountFen = Math.round(parseFloat(recordAmount) * 100);
     if (isNaN(amountFen) || amountFen <= 0) {
-      showToast({ type: "warning", message: "请输入有效金额" });
+      showToast({ type: "warning", message: "金额好像不太对" });
       return;
     }
     if (!selectedAccountId) {
-      showToast({ type: "warning", message: "请选择账户" });
+      showToast({ type: "warning", message: "先选一个账户" });
       return;
     }
     setRecordSubmitting(true);
@@ -358,7 +358,7 @@ export default function AccountingPage() {
       setRecordNote("");
       setSelectedAccountId(null);
     } catch {
-      showToast({ type: "error", message: "保存失败，请重试" });
+      showToast({ type: "error", message: "没有保存成功，再试一次？" });
     } finally {
       setRecordSubmitting(false);
     }
@@ -543,7 +543,7 @@ export default function AccountingPage() {
               <h2 className="text-[17px] font-semibold px-1 mb-3" style={{ color: "var(--color-text-primary)" }}>今天</h2>
               <div className="rounded-[20px] py-10 flex flex-col items-center justify-center gap-3" style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}>
                 <Wallet className="w-12 h-12 shrink-0" style={{ color: "var(--color-text-disabled)" }} strokeWidth={1.5} />
-                <p className="text-[13px] font-medium" style={{ color: "var(--color-text-secondary)" }}>今日暂无收支记录</p>
+                <p className="text-[13px] font-medium" style={{ color: "var(--color-text-secondary)" }}>今天还没有收支记录。</p>
               </div>
             </section>
           )}

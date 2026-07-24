@@ -29,10 +29,10 @@ export default function Error({
         </div>
 
         <h2 className="text-lg font-semibold text-[var(--foreground)] mb-2">
-          页面加载出错
+          页面加载出错了
         </h2>
         <p className="text-sm text-[var(--muted-foreground)] mb-6">
-          {error.message || "发生了一些意外错误，请稍后重试"}
+          {error.message || "遇到了一点小麻烦，刷新一下就好了"}
         </p>
 
         <div className="flex items-center gap-3">

@@ -7,7 +7,7 @@ export default function OfflineDetector() {
   useEffect(() => {
     const handleOffline = () => {
       showToast({
-        message: "网络已断开，部分功能可能不可用",
+        message: "网络断开了，部分功能暂时不可用",
         type: "warning",
         duration: 4000,
       });
@@ -15,7 +15,7 @@ export default function OfflineDetector() {
 
     const handleOnline = () => {
       showToast({
-        message: "网络已恢复",
+        message: "网络恢复了",
         type: "success",
         duration: 2000,
       });

@@ -89,7 +89,7 @@ export default function MedicationPage() {
   };
 
   const handleSave = useCallback(async () => {
-    if (!form.name.trim()) { showToast({ type: "warning", message: "请输入药品名称" }); return; }
+    if (!form.name.trim()) { showToast({ type: "warning", message: "药品名称还没填" }); return; }
 
     if (editingMed) {
       await updateMedicine(editingMed.id, {
@@ -98,7 +98,7 @@ export default function MedicationPage() {
         frequency: form.frequency,
         color: form.color,
       });
-      showToast({ type: "success", message: "药品已更新" });
+      showToast({ type: "success", message: "已更新" });
     } else {
       await addMedicine({
         name: form.name.trim(),
@@ -108,7 +108,7 @@ export default function MedicationPage() {
         color: form.color,
         active: true,
       });
-      showToast({ type: "success", message: "药品已添加" });
+      showToast({ type: "success", message: "已添加" });
     }
     setShowForm(false);
   }, [form, editingMed]);
@@ -184,7 +184,7 @@ export default function MedicationPage() {
           {activeMedicines.length === 0 ? (
             <div className="py-6 flex flex-col items-center">
               <Pill className="w-10 h-10 mb-3" style={{ color: "var(--color-text-disabled)" }} />
-              <p className="text-[14px]" style={{ color: "var(--color-text-secondary)" }}>暂无药品</p>
+              <p className="text-[14px]" style={{ color: "var(--color-text-secondary)" }}>还没有添加药品。点这里添加第一个。</p>
               <button onClick={openCreate} className="mt-3 text-[13px] font-medium" style={{ color: "var(--lifeflow-primary)" }}>
                 新建药品
               </button>

@@ -185,7 +185,7 @@ export default function EfficiencyPage() {
       switch (action) {
         case "complete":
           await updateGoalStatus(sheetGoal.id, "completed");
-          showToast({ message: "已标记完成", type: "success" });
+          showToast({ message: "已完成", type: "success" });
           break;
         case "pause":
           await updateGoalStatus(sheetGoal.id, "paused");
@@ -304,13 +304,7 @@ export default function EfficiencyPage() {
               className="text-[17px] font-medium"
               style={{ color: "var(--color-text-secondary)", letterSpacing: "-0.022em" }}
             >
-              开始创建一个目标吧！
-            </p>
-            <p
-              className="text-[14px] leading-relaxed"
-              style={{ color: "var(--color-text-disabled)" }}
-            >
-              从项目开始，分解为目标和任务，让每一步都有迹可循
+              还没有目标。新建一个，让每天要做的事有个方向。
             </p>
             <button
               type="button"
@@ -327,7 +321,7 @@ export default function EfficiencyPage() {
                 boxShadow: "var(--shadow-tab-center)",
               }}
             >
-              创建目标
+              新建目标
             </button>
           </div>
         </section>

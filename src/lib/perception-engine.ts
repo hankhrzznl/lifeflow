@@ -56,8 +56,8 @@ async function checkSleepInsufficient(): Promise<PerceptionCard | null> {
         ruleName: "sleep_insufficient",
         priority: 1,
         type: "insight",
-        headline: "昨晚没有按时睡觉",
-        body: "今天可能会累。重要的事放在精力最好的时段做。",
+        headline: "昨晚睡得偏晚了",
+        body: "今天把重要的事放在精力最好的时段，感觉会不一样。",
         action: { label: "看看日程", path: "/efficiency/schedule" },
       };
     }
@@ -96,7 +96,7 @@ async function checkSleepLateStreak(): Promise<PerceptionCard | null> {
         priority: 2,
         type: "care",
         headline: `连续${streakCount}天睡得偏晚了`,
-        body: "身体需要规律的节奏。今晚试着比昨天早半小时放下手机？",
+        body: "身体喜欢有规律的节奏。今晚试着比昨天早半小时放下手机？",
         action: { label: "看看睡眠", path: "/more/sleep" },
       };
     }
@@ -123,7 +123,7 @@ async function checkWaterLowAfternoon(): Promise<PerceptionCard | null> {
         ruleName: "water_low_afternoon",
         priority: 2,
         type: "care",
-        headline: "快到傍晚了，今天水喝得不多",
+        headline: "今天喝的水不多，现在还来得及",
         body: "现在喝一杯，还来得及轻松达标。",
         action: { label: "记一杯", path: "/more/water" },
       };
@@ -151,7 +151,7 @@ async function checkExpenseHighToday(): Promise<PerceptionCard | null> {
         ruleName: "expense_high_today",
         priority: 2,
         type: "insight",
-        headline: "今天有一笔不小的支出",
+        headline: "今天有一笔不小的花销",
         body: `花了¥${(todayExpense / 100).toFixed(0)}。是计划内的吗？`,
         action: { label: "查看账单", path: "/more/accounting" },
       };
@@ -201,8 +201,8 @@ async function checkDayComplete(): Promise<PerceptionCard | null> {
         ruleName: "day_complete",
         priority: 3,
         type: "celebration",
-        headline: "今天的事全部完成了",
-        body: "每一项都做完了。这就是值得庆祝的一天。",
+        headline: "今天的事全部做完了",
+        body: "全勤的一天，干得漂亮。",
         action: null,
       };
     }

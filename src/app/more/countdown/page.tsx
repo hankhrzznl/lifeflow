@@ -204,7 +204,7 @@ export default function CountdownPage() {
               </div>
               {/* Empty text */}
               <p className="text-[17px] text-center" style={{ color: "var(--color-text-secondary)" }}>
-                暂无重要日子
+                还没有倒数日。添加一个值得期待的日子。
               </p>
               {/* Add button — blue pill */}
               <button
@@ -212,7 +212,7 @@ export default function CountdownPage() {
                 className="inline-flex items-center justify-center rounded-full px-6 py-2.5 text-[15px] font-semibold whitespace-nowrap transition-colors active:opacity-80"
                 style={{ background: "var(--lifeflow-primary)", color: "var(--lifeflow-primary-foreground)" }}
               >
-                添加倒数日
+                添加一个日子
               </button>
             </motion.div>
           </section>

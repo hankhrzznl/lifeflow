@@ -292,8 +292,7 @@ export default function WellnessPage() {
             style={{ background: "var(--color-surface-card)", borderRadius: "20px", boxShadow: "var(--shadow-card)" }}
           >
             <Flower2 className="h-10 w-10 mb-3" style={{ color: "var(--color-text-disabled)" }} />
-            <p className="text-[15px] font-medium" style={{ color: "var(--color-text-secondary)" }}>暂无养生记录</p>
-            <p className="text-[12px] mt-1" style={{ color: "var(--color-text-disabled)" }}>开始练习吧</p>
+            <p className="text-[15px] font-medium" style={{ color: "var(--color-text-secondary)" }}>还没有养生记录。完成一次练习就出现了。</p>
           </motion.div>
         ) : (
           groupedLogs.map(({ date, items }, gi) => (

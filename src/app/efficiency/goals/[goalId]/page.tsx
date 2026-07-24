@@ -116,11 +116,11 @@ export default function GoalDetailPage() {
       for (const t of flat) {
         await addScheduleTask(t as any);
       }
-      showToast({ type: "success", message: `已导入 ${flat.length} 条任务` });
+      showToast({ type: "success", message: `已导入 ${flat.length} 条` });
       setShowBulkImport(false);
       setBulkText("");
     } catch {
-      showToast({ type: "error", message: "导入失败，请检查格式" });
+      showToast({ type: "error", message: "格式有问题，检查一下？" });
     } finally {
       setBulkLoading(false);
     }
@@ -139,14 +139,14 @@ export default function GoalDetailPage() {
 
   const handleDeleteTask = useCallback(async (taskId: string) => {
     await removeScheduleTask(taskId);
-    showToast({ type: "success", message: "任务已删除" });
+    showToast({ type: "success", message: "已删除" });
   }, [removeScheduleTask]);
 
   // 完成目标
   const handleCompleteGoal = useCallback(async () => {
     if (!goal || !allCompleted) return;
     await updateGoalStatus(goalId, "completed");
-    showToast({ type: "success", message: "目标已标记完成" });
+    showToast({ type: "success", message: "目标已完成" });
     router.push("/efficiency");
   }, [goal, goalId, allCompleted, updateGoalStatus, router]);
 

@@ -200,14 +200,14 @@ export default function HomePage() {
         color: createForm.color,
       });
 
-      showToast({ type: "success", message: "事项已创建" });
+      showToast({ type: "success", message: "已添加" });
       runPerceptionCheck().then(cards => {
         sessionStorage.setItem("perception_cards", JSON.stringify(cards));
       }).catch(() => {});
       setShowCreate(false);
       resetForm();
     } catch {
-      showToast({ type: "error", message: "创建失败，请重试" });
+      showToast({ type: "error", message: "没有添加成功，再试一次？" });
     } finally {
       setSubmitting(false);
     }
@@ -365,7 +365,7 @@ export default function HomePage() {
                   className="flex-1 py-2.5 rounded-full text-white text-[14px] font-semibold active:opacity-90"
                   style={{ background: coreItem.isCompleted ? "var(--color-text-disabled)" : "var(--lifeflow-primary)" }}
                 >
-                  {coreItem.isCompleted ? "已勾选" : "完成"}
+                  {coreItem.isCompleted ? "已完成" : "完成"}
                 </button>
                 <Link
                   href="/efficiency/schedule"
@@ -507,7 +507,7 @@ export default function HomePage() {
               style={{ backgroundColor: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}
             >
               <p className="text-[15px]" style={{ color: "var(--color-text-secondary)" }}>
-                今天接下来的事项将显示在这里
+                今天还没有安排事项。点击 + 号新建一个。
               </p>
               <button
                 onClick={() => { resetForm(); setShowCreate(true); }}
@@ -709,7 +709,7 @@ export default function HomePage() {
                   className="w-full py-3.5 rounded-full text-white text-[16px] font-semibold active:opacity-90 disabled:opacity-50"
                   style={{ background: "var(--lifeflow-primary)" }}
                 >
-                  {submitting ? "创建中..." : "新建事项"}
+                  {submitting ? "处理中..." : "新建事项"}
                 </button>
               </div>
             </motion.div>

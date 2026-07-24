@@ -324,11 +324,8 @@ export default function CoursesPage() {
               <div className="w-20 h-20 rounded-full flex items-center justify-center mb-5" style={{ backgroundColor: "var(--lifeflow-brand-50)" }}>
                 <BookOpen className="w-10 h-10" style={{ color: "var(--lifeflow-primary)" }} />
               </div>
-              <p className="text-[17px] font-semibold mb-2" style={{ color: "var(--color-text-primary)", letterSpacing: "-0.018em" }}>
-                暂无课程安排
-              </p>
-              <p className="text-[14px] mb-7" style={{ color: "var(--color-text-secondary)", letterSpacing: "-0.01em" }}>
-                本周还没有添加任何课程
+              <p className="text-[17px] font-semibold mb-7" style={{ color: "var(--color-text-primary)", letterSpacing: "-0.018em" }}>
+                这周还没有课程安排。添加第一门课？
               </p>
               <button
                 onClick={() => setAdding(true)}

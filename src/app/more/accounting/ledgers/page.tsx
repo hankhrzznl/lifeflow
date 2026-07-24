@@ -167,8 +167,7 @@ export default function LedgersPage() {
           <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-full" style={{ background: "var(--lifeflow-muted)" }}>
             <Bookmark className="h-7 w-7" style={{ color: "var(--color-text-disabled)" }} />
           </div>
-          <p className="text-[15px] font-medium" style={{ color: "var(--color-text-secondary)" }}>暂无其他账本</p>
-          <p className="text-[13px] mt-1 mb-6" style={{ color: "var(--color-text-disabled)" }}>创建专属账本，分类管理收支</p>
+          <p className="text-[15px] font-medium mb-6" style={{ color: "var(--color-text-secondary)" }}>还没有其他账本。创建一个分类管理收支？</p>
           <button
             type="button"
             onClick={() => router.push("/more/accounting/ledgers/new")}

@@ -99,7 +99,7 @@ function CreateGoalInner() {
           setProjectId(goal.projectId);
         }
       } else {
-        showToast({ type: "error", message: "目标不存在" });
+        showToast({ type: "error", message: "目标找不到了" });
       }
       setLoaded(true);
     });
@@ -150,7 +150,7 @@ function CreateGoalInner() {
       }
     } catch {
       setSaving(false);
-      showToast({ type: "error", message: "保存失败" });
+      showToast({ type: "error", message: "没有保存成功，再试一次？" });
     }
   }, [canSubmit, isEdit, editId, title, deadline, note, projectId, useAI, addGoal, loadGoals, router]);
 

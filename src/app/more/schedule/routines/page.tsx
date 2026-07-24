@@ -236,7 +236,7 @@ export default function RoutinesPage() {
                 <Clock className="w-8 h-8" style={{ color: "var(--lifeflow-primary)" }} />
               </div>
               <p className="text-[15px] mb-5" style={{ color: "var(--color-text-secondary)" }}>
-                暂无作息模板
+                还没有作息模板。设置一个，每天自动生成事项。
               </p>
               <button
                 onClick={() => setAdding(true)}

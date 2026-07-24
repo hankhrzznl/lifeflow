@@ -280,8 +280,7 @@ export default function WaterPage() {
           {sortedLogs.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-10">
               <Droplets className="h-10 w-10" style={{ color: "var(--color-text-disabled)" }} />
-              <p className="text-[13px] font-medium mt-3" style={{ color: "var(--color-text-secondary)" }}>还没有饮水记录</p>
-              <p className="text-[12px] mt-1" style={{ color: "var(--color-text-disabled)" }}>点击上方按钮快速记录</p>
+              <p className="text-[13px] font-medium mt-3" style={{ color: "var(--color-text-secondary)" }}>今天还没有喝水记录。现在喝一杯？</p>
             </div>
           ) : (
             <div className="mt-2">

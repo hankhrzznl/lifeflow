@@ -299,8 +299,7 @@ export default function DietPage() {
             style={{ background: "var(--color-surface-card)", borderRadius: "20px", boxShadow: "var(--shadow-card)" }}
           >
             <Utensils className="h-10 w-10 mb-3" style={{ color: "var(--color-text-disabled)" }} />
-            <p className="text-[15px] font-medium" style={{ color: "var(--color-text-secondary)" }}>暂无饮食记录</p>
-            <p className="text-[12px] mt-1" style={{ color: "var(--color-text-disabled)" }}>点击上方按钮开始记录</p>
+            <p className="text-[15px] font-medium" style={{ color: "var(--color-text-secondary)" }}>今天还没记录饮食。吃了什么？</p>
           </motion.div>
         ) : (
           groupedLogs.map(({ date, items }, gi) => (

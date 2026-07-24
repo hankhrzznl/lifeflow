@@ -10,7 +10,7 @@ export default function SWUpdateBanner() {
   useEffect(() => {
     if (isUpdateAvailable) {
       showToast({
-        message: "有新版本可用",
+        message: "有新版本，点我更新",
         type: "info",
         duration: 0,
         undoAction: applyUpdate,

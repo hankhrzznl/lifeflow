@@ -144,12 +144,12 @@ export default function SleepPage() {
         isOnTime: onTime,
         minutesDiff: diff,
       });
-      showToast({ type: "success", message: "已记录入睡时间" });
+      showToast({ type: "success", message: "已记录" });
       runPerceptionCheck().then(cards => {
         sessionStorage.setItem("perception_cards", JSON.stringify(cards));
       }).catch(() => {});
     } catch {
-      showToast({ type: "error", message: "记录失败" });
+      showToast({ type: "error", message: "没有记录成功，再试一次？" });
     } finally {
       setIsSaving(false);
     }
@@ -523,8 +523,7 @@ export default function SleepPage() {
             ) : (
               <>
                 <BarChart3 className="h-10 w-10 mb-3" style={{ color: "var(--color-text-disabled)" }} />
-                <p className="text-[13px] font-medium text-center" style={{ color: "var(--color-text-secondary)" }}>暂无睡眠数据</p>
-                <p className="text-[12px] mt-1 text-center" style={{ color: "var(--color-text-disabled)" }}>记录几晚睡眠后，查看入睡趋势分析</p>
+                <p className="text-[13px] font-medium text-center" style={{ color: "var(--color-text-secondary)" }}>还没有睡眠数据。记录几晚，就能看到入睡趋势了。</p>
               </>
             )}
           </div>

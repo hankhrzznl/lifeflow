@@ -967,10 +967,10 @@ export async function initializeDatabase(): Promise<{
     console.error("[DB] 数据库初始化失败:", error);
 
     if (error.name === "VersionError") {
-      console.error("[DB] 数据库版本不匹配，可能需要清除数据");
+      console.error("[DB] 数据格式需要升级，清除后重新加载就好");
       return {
         success: false,
-        error: "数据库版本不匹配",
+        error: "数据格式需要升级",
         recoverable: false,
       };
     }
@@ -978,7 +978,7 @@ export async function initializeDatabase(): Promise<{
     if (error.name === "QuotaExceededError") {
       return {
         success: false,
-        error: "存储空间已满",
+        error: "存储空间满了，清理一些旧数据？",
         recoverable: true,
       };
     }

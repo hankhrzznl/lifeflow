@@ -299,9 +299,9 @@ export default function FitnessPage() {
       setRpe(7);
       setSelectedTrainingType("gym_compound");
       setShowRecord(false);
-      showToast({ type: "success", message: "训练已记录" });
+      showToast({ type: "success", message: "已记录" });
     } catch {
-      showToast({ type: "error", message: "记录失败" });
+      showToast({ type: "error", message: "没有记录成功，再试一次？" });
     } finally {
       setSubmitting(false);
     }
@@ -725,8 +725,7 @@ export default function FitnessPage() {
             <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ background: "var(--lifeflow-brand-50)" }}>
               <Dumbbell className="w-8 h-8" style={{ color: "var(--lifeflow-muted-foreground)" }} />
             </div>
-            <p className="text-[15px] font-medium" style={{ color: "var(--color-text-primary)" }}>还没有训练记录</p>
-            <p className="text-[13px] mt-1" style={{ color: "var(--color-text-secondary)" }}>点击「记录训练」开始记录吧</p>
+            <p className="text-[15px] font-medium" style={{ color: "var(--color-text-primary)" }}>还没有训练记录。点击上方开始记录。</p>
           </motion.div>
         )}
       </div>

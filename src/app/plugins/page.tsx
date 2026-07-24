@@ -103,13 +103,13 @@ export default function PluginsPage() {
 
   async function handleInstall() {
     if (!pluginName.trim()) {
-      showToast({ message: "请输入插件名称", type: "error", duration: 3000 });
+      showToast({ message: "插件名称还没填", type: "error", duration: 3000 });
       return;
     }
 
     const validation = validatePluginCode(pluginCode);
     if (!validation.valid) {
-      showToast({ message: validation.error || "插件代码无效", type: "error", duration: 3000 });
+      showToast({ message: validation.error || "代码好像有问题，检查一下？", type: "error", duration: 3000 });
       return;
     }
 
@@ -136,7 +136,7 @@ export default function PluginsPage() {
       setShowInstall(false);
       await loadPlugins();
     } catch {
-      showToast({ message: "插件安装失败，请重试", type: "error", duration: 3000 });
+      showToast({ message: "安装失败了，再试一次？", type: "error", duration: 3000 });
     } finally {
       setIsInstalling(false);
     }

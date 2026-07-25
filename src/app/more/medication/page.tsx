@@ -27,17 +27,13 @@ const TIME_SLOTS = [
   { key: "bedtime", label: "睡前", time: "22:00", icon: "🌙" },
 ] as const;
 
+type TimeSlotKey = (typeof TIME_SLOTS)[number]["key"];
+
 const COLORS = ["#DC2626", "#FF9500", "#34C759", "#007AFF", "#5856D6", "#FF2D55", "#AF52DE", "#00C7BE"];
-const FREQUENCY_OPTIONS = ["每天1次", "每天2次", "每天3次", "每天4次", "饭后", "睡前", "必要时"];
 
 function todayStr(): string {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
-function formatDateChinese(date: Date): string {
-  const weekDays = ["日", "一", "二", "三", "四", "五", "六"];
-  return `${date.getMonth() + 1}月${date.getDate()}日 周${weekDays[date.getDay()]}`;
 }
 
 function addMinutes(time: string, minutes: number): string {
@@ -46,6 +42,42 @@ function addMinutes(time: string, minutes: number): string {
   const nh = Math.floor(total / 60) % 24;
   const nm = total % 60;
   return `${String(nh).padStart(2, "0")}:${String(nm).padStart(2, "0")}`;
+}
+
+// ─── frequency 字段兼容解析 ────────────────────────────
+
+/** 旧版 frequency 文本 → TimeSlotKey[] */
+function parseLegacyFrequency(freq: string): TimeSlotKey[] {
+  // 新版格式：逗号分隔的 slot key
+  const allKeys = TIME_SLOTS.map(s => s.key);
+  const parts = freq.split(",").map(s => s.trim());
+  if (parts.every(p => allKeys.includes(p as TimeSlotKey))) {
+    return parts as TimeSlotKey[];
+  }
+  // 旧版文本格式
+  const map: Record<string, TimeSlotKey[]> = {
+    "每天1次": ["morning"],
+    "每天2次": ["morning", "evening"],
+    "每天3次": ["morning", "noon", "evening"],
+    "每天4次": ["morning", "noon", "evening", "bedtime"],
+    "饭后":     ["morning", "noon", "evening"],
+    "睡前":     ["bedtime"],
+    "必要时":   [],
+  };
+  return map[freq] || [];
+}
+
+/** TimeSlotKey[] → 显示文本 */
+function slotListLabel(slots: TimeSlotKey[]): string {
+  if (slots.length === 0) return "必要时";
+  return slots.map(s => TIME_SLOTS.find(t => t.key === s)?.label || s).join("、");
+}
+
+/** TimeSlotKey[] → 频率概要（如"每天2次"） */
+function slotListSummary(slots: TimeSlotKey[]): string {
+  const n = slots.length;
+  if (n === 0) return "必要时";
+  return `每天${n}次`;
 }
 
 // ============================================================
@@ -67,6 +99,15 @@ export default function MedicationPage() {
     for (const l of todayLogs) map.set(`${l.medicineId}_${l.timeSlot}`, l);
     return map;
   }, [todayLogs]);
+
+  // ── 每个药品的已选时段缓存 ──
+  const medicineSlots = useMemo(() => {
+    const map = new Map<string, TimeSlotKey[]>();
+    for (const m of medicines) {
+      map.set(m.id, parseLegacyFrequency(m.frequency));
+    }
+    return map;
+  }, [medicines]);
 
   // ── 勾选切换 ──
   const handleToggle = useCallback(async (medicineId: string, timeSlot: string) => {
@@ -107,28 +148,45 @@ export default function MedicationPage() {
   // ── 新增/编辑弹窗 ──
   const [showForm, setShowForm] = useState(false);
   const [editingMed, setEditingMed] = useState<MedicineDefinition | null>(null);
-  const [form, setForm] = useState({ name: "", dosage: "", frequency: "每天1次", color: COLORS[0] });
+  const [form, setForm] = useState({ name: "", dosage: "", color: COLORS[0], selectedSlots: ["morning"] as TimeSlotKey[] });
 
   const openCreate = () => {
     setEditingMed(null);
-    setForm({ name: "", dosage: "", frequency: "每天1次", color: COLORS[0] });
+    setForm({ name: "", dosage: "", color: COLORS[0], selectedSlots: ["morning"] });
     setShowForm(true);
   };
 
   const openEdit = (m: MedicineDefinition) => {
     setEditingMed(m);
-    setForm({ name: m.name, dosage: m.dosage, frequency: m.frequency, color: m.color });
+    setForm({
+      name: m.name,
+      dosage: m.dosage,
+      color: m.color,
+      selectedSlots: parseLegacyFrequency(m.frequency),
+    });
     setShowForm(true);
+  };
+
+  const toggleFormSlot = (s: TimeSlotKey) => {
+    setForm(f => ({
+      ...f,
+      selectedSlots: f.selectedSlots.includes(s)
+        ? f.selectedSlots.filter(x => x !== s)
+        : [...f.selectedSlots, s],
+    }));
   };
 
   const handleSave = useCallback(async () => {
     if (!form.name.trim()) { showToast({ type: "warning", message: "药品名称还没填" }); return; }
+    if (form.selectedSlots.length === 0) { showToast({ type: "warning", message: "至少选择一个时段" }); return; }
+
+    const freqValue = form.selectedSlots.join(",");
 
     if (editingMed) {
       await updateMedicine(editingMed.id, {
         name: form.name.trim(),
         dosage: form.dosage.trim(),
-        frequency: form.frequency,
+        frequency: freqValue,
         color: form.color,
       });
       showToast({ type: "success", message: "已更新" });
@@ -136,7 +194,7 @@ export default function MedicationPage() {
       await addMedicine({
         name: form.name.trim(),
         dosage: form.dosage.trim(),
-        frequency: form.frequency,
+        frequency: freqValue,
         icon: "Pill",
         color: form.color,
         active: true,
@@ -157,20 +215,20 @@ export default function MedicationPage() {
     await updateMedicine(m.id, { active: !m.active });
   }, []);
 
-  // ── 今日统计 ──
+  // ── 今日统计（按实际已选时段计算） ──
   const todayStats = useMemo(() => {
     if (activeMedicines.length === 0) return { total: 0, taken: 0 };
     let total = 0, taken = 0;
     for (const m of activeMedicines) {
-      // 每个药品每个时段都需要吃
-      for (const slot of TIME_SLOTS) {
+      const slots = medicineSlots.get(m.id) || [];
+      for (const slotKey of slots) {
         total++;
-        const key = `${m.id}_${slot.key}`;
+        const key = `${m.id}_${slotKey}`;
         if (logMap.get(key)?.taken) taken++;
       }
     }
     return { total, taken };
-  }, [activeMedicines, logMap]);
+  }, [activeMedicines, medicineSlots, logMap]);
 
   return (
     <div className="mx-auto pb-[100px]" style={{ maxWidth: 430, minHeight: "100vh", background: "var(--lifeflow-background)" }}>
@@ -224,7 +282,9 @@ export default function MedicationPage() {
             </div>
           ) : (
             <div>
-              {activeMedicines.map((med, mi) => (
+              {activeMedicines.map((med, mi) => {
+                const slots = medicineSlots.get(med.id) || [];
+                return (
                 <div key={med.id}>
                   {mi > 0 && <div className="my-3 h-px" style={{ background: "var(--lifeflow-border)" }} />}
                   <div>
@@ -238,17 +298,21 @@ export default function MedicationPage() {
                           {med.dosage}
                         </span>
                       )}
-                      <span className="text-[11px] ml-auto" style={{ color: "var(--color-text-disabled)" }}>{med.frequency}</span>
+                      <span className="text-[11px] ml-auto" style={{ color: "var(--color-text-disabled)" }}>
+                        {slotListSummary(slots)}
+                      </span>
                     </div>
+                    {/* 只显示已选时段按钮 */}
                     <div className="flex gap-2">
-                      {TIME_SLOTS.map((slot) => {
-                        const key = `${med.id}_${slot.key}`;
+                      {slots.map((slotKey) => {
+                        const slot = TIME_SLOTS.find(s => s.key === slotKey)!;
+                        const key = `${med.id}_${slotKey}`;
                         const log = logMap.get(key);
                         const isTaken = log?.taken ?? false;
                         return (
                           <button
-                            key={slot.key}
-                            onClick={() => handleToggle(med.id, slot.key)}
+                            key={slotKey}
+                            onClick={() => handleToggle(med.id, slotKey)}
                             className="flex-1 flex flex-col items-center gap-1 py-2.5 rounded-xl transition-all active:scale-95"
                             style={{
                               background: isTaken ? `${med.color}15` : "var(--lifeflow-background)",
@@ -276,7 +340,8 @@ export default function MedicationPage() {
                     </div>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </motion.div>
@@ -300,7 +365,9 @@ export default function MedicationPage() {
             </div>
           ) : (
             <div className="flex flex-col gap-2">
-              {medicines.map((med, i) => (
+              {medicines.map((med, i) => {
+                const slots = medicineSlots.get(med.id) || [];
+                return (
                 <motion.div
                   key={med.id}
                   initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
@@ -323,7 +390,7 @@ export default function MedicationPage() {
                       {med.name}
                     </div>
                     <div className="text-[11px]" style={{ color: "var(--color-text-disabled)" }}>
-                      {med.dosage && `${med.dosage} · `}{med.frequency}
+                      {med.dosage && `${med.dosage} · `}{slotListLabel(slots)}
                       {!med.active && " · 已停用"}
                     </div>
                   </div>
@@ -341,7 +408,8 @@ export default function MedicationPage() {
                     </button>
                   </div>
                 </motion.div>
-              ))}
+                );
+              })}
             </div>
           )}
         </motion.div>
@@ -409,23 +477,37 @@ export default function MedicationPage() {
                   />
                 </div>
 
-                {/* 频率 */}
+                {/* 时段选择器（替代旧版频率选择） */}
                 <div className="mb-4">
                   <label className="text-[13px] font-medium mb-2 block" style={{ color: "var(--color-text-secondary)" }}>
-                    服用频率
+                    服用时段 · {slotListSummary(form.selectedSlots)}
                   </label>
-                  <div className="flex gap-2 flex-wrap">
-                    {FREQUENCY_OPTIONS.map(f => (
-                      <button
-                        key={f}
-                        onClick={() => setForm(fm => ({ ...fm, frequency: f }))}
-                        className="h-7 px-3 rounded-full text-[12px] font-medium"
-                        style={{
-                          background: form.frequency === f ? "var(--lifeflow-primary)" : "var(--lifeflow-muted)",
-                          color: form.frequency === f ? "#fff" : "var(--color-text-secondary)",
-                        }}
-                      >{f}</button>
-                    ))}
+                  <div className="flex gap-2">
+                    {TIME_SLOTS.map((slot) => {
+                      const active = form.selectedSlots.includes(slot.key);
+                      return (
+                        <button
+                          key={slot.key}
+                          onClick={() => toggleFormSlot(slot.key)}
+                          className="flex-1 flex flex-col items-center gap-1 py-3 rounded-xl transition-all active:scale-95"
+                          style={{
+                            background: active ? `${form.color}15` : "var(--lifeflow-background)",
+                            border: `1.5px solid ${active ? form.color : "var(--lifeflow-border)"}`,
+                          }}
+                        >
+                          <span className="text-[18px]">{slot.icon}</span>
+                          <span className="text-[12px] font-medium" style={{ color: active ? form.color : "var(--color-text-disabled)" }}>
+                            {slot.label}
+                          </span>
+                          <span className="text-[10px]" style={{ color: "var(--color-text-disabled)" }}>
+                            {slot.time}
+                          </span>
+                          {active && (
+                            <Check className="w-3 h-3" style={{ color: form.color }} strokeWidth={3} />
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 

@@ -13,6 +13,7 @@ import {
   getMedicineLogsByDate, upsertMedicineLog,
 } from "@/lib/db/health.db";
 import type { MedicineDefinition, MedicineLog } from "@/lib/db/health.db";
+import { ensureModuleItem, removeModuleItems } from "@/lib/db/daylog.db";
 import { showToast } from "@/components/ui/Toast";
 
 // ============================================================
@@ -39,6 +40,14 @@ function formatDateChinese(date: Date): string {
   return `${date.getMonth() + 1}月${date.getDate()}日 周${weekDays[date.getDay()]}`;
 }
 
+function addMinutes(time: string, minutes: number): string {
+  const [h, m] = time.split(":").map(Number);
+  const total = h * 60 + m + minutes;
+  const nh = Math.floor(total / 60) % 24;
+  const nm = total % 60;
+  return `${String(nh).padStart(2, "0")}:${String(nm).padStart(2, "0")}`;
+}
+
 // ============================================================
 // 主组件
 // ============================================================
@@ -63,13 +72,37 @@ export default function MedicationPage() {
   const handleToggle = useCallback(async (medicineId: string, timeSlot: string) => {
     const key = `${medicineId}_${timeSlot}`;
     const existing = logMap.get(key);
+    const nowTaken = !existing?.taken;
     await upsertMedicineLog({
       medicineId,
       date: today,
       timeSlot,
-      taken: !existing?.taken,
+      taken: nowTaken,
     });
-  }, [today, logMap]);
+
+    // 同步生成/清除日程事项
+    const med = medicines.find(m => m.id === medicineId);
+    if (med) {
+      const slotDef = TIME_SLOTS.find(s => s.key === timeSlot);
+      if (slotDef) {
+        const sourceId = `med_${medicineId}_${timeSlot}`;
+        if (nowTaken) {
+          await ensureModuleItem({
+            date: today,
+            sourceType: "medication",
+            sourceId,
+            title: `${med.name}`,
+            plannedStart: slotDef.time,
+            plannedEnd: addMinutes(slotDef.time, 15),
+            color: med.color,
+            icon: "Pill",
+          });
+        } else {
+          await removeModuleItems(today, "medication", sourceId);
+        }
+      }
+    }
+  }, [today, logMap, medicines]);
 
   // ── 新增/编辑弹窗 ──
   const [showForm, setShowForm] = useState(false);

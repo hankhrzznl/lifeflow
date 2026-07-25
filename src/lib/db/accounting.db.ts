@@ -85,29 +85,31 @@ export class AccountingDB extends Dexie {
       ];
       for (const a of accounts) await tx.table('accounts').add(a);
 
-      // Expense categories (12)
+      // Expense categories (12) — new standard
       const expenseCategories = [
         { id: crypto.randomUUID(), name: '餐饮', type: 'expense', icon: 'utensils-crossed', color: '#FF3B30', ledgerId },
-        { id: crypto.randomUUID(), name: '购物', type: 'expense', icon: 'shopping-bag', color: '#FF9500', ledgerId },
-        { id: crypto.randomUUID(), name: '日用', type: 'expense', icon: 'package', color: '#5856D6', ledgerId },
         { id: crypto.randomUUID(), name: '交通', type: 'expense', icon: 'car', color: '#007AFF', ledgerId },
-        { id: crypto.randomUUID(), name: '蔬菜', type: 'expense', icon: 'leaf', color: '#34C759', ledgerId },
-        { id: crypto.randomUUID(), name: '水果', type: 'expense', icon: 'apple', color: '#FF3B30', ledgerId },
-        { id: crypto.randomUUID(), name: '零食', type: 'expense', icon: 'candy', color: '#FF9500', ledgerId },
-        { id: crypto.randomUUID(), name: '运动', type: 'expense', icon: 'dumbbell', color: '#34C759', ledgerId },
+        { id: crypto.randomUUID(), name: '购物', type: 'expense', icon: 'shopping-bag', color: '#FF9500', ledgerId },
+        { id: crypto.randomUUID(), name: '住房', type: 'expense', icon: 'home', color: '#1E293B', ledgerId },
         { id: crypto.randomUUID(), name: '娱乐', type: 'expense', icon: 'gamepad-2', color: '#5856D6', ledgerId },
-        { id: crypto.randomUUID(), name: '通讯', type: 'expense', icon: 'smartphone', color: '#007AFF', ledgerId },
-        { id: crypto.randomUUID(), name: '服饰', type: 'expense', icon: 'shirt', color: '#AF52DE', ledgerId },
-        { id: crypto.randomUUID(), name: '美容', type: 'expense', icon: 'sparkles', color: '#FF9500', ledgerId },
+        { id: crypto.randomUUID(), name: '医疗', type: 'expense', icon: 'heart-pulse', color: '#DC2626', ledgerId },
+        { id: crypto.randomUUID(), name: '教育', type: 'expense', icon: 'graduation-cap', color: '#2563EB', ledgerId },
+        { id: crypto.randomUUID(), name: '社交', type: 'expense', icon: 'users', color: '#F43F5E', ledgerId },
+        { id: crypto.randomUUID(), name: '通讯', type: 'expense', icon: 'smartphone', color: '#0EA5E9', ledgerId },
+        { id: crypto.randomUUID(), name: '服饰美容', type: 'expense', icon: 'shirt', color: '#AF52DE', ledgerId },
+        { id: crypto.randomUUID(), name: '运动健身', type: 'expense', icon: 'dumbbell', color: '#34C759', ledgerId },
+        { id: crypto.randomUUID(), name: '其他', type: 'expense', icon: 'more-horizontal', color: '#8E8E93', ledgerId },
       ];
 
-      // Income categories (6)
+      // Income categories (8) — new standard
       const incomeCategories = [
         { id: crypto.randomUUID(), name: '工资', type: 'income', icon: 'banknote', color: '#34C759', ledgerId },
-        { id: crypto.randomUUID(), name: '红包', type: 'income', icon: 'gift', color: '#FF3B30', ledgerId },
-        { id: crypto.randomUUID(), name: '理财', type: 'income', icon: 'trending-up', color: '#FF9500', ledgerId },
         { id: crypto.randomUUID(), name: '奖金', type: 'income', icon: 'trophy', color: '#5856D6', ledgerId },
-        { id: crypto.randomUUID(), name: '租金', type: 'income', icon: 'home', color: '#007AFF', ledgerId },
+        { id: crypto.randomUUID(), name: '投资', type: 'income', icon: 'trending-up', color: '#FF9500', ledgerId },
+        { id: crypto.randomUUID(), name: '兼职', type: 'income', icon: 'briefcase', color: '#0EA5E9', ledgerId },
+        { id: crypto.randomUUID(), name: '红包/礼金', type: 'income', icon: 'gift', color: '#FF3B30', ledgerId },
+        { id: crypto.randomUUID(), name: '报销', type: 'income', icon: 'receipt', color: '#007AFF', ledgerId },
+        { id: crypto.randomUUID(), name: '退款', type: 'income', icon: 'rotate-ccw', color: '#8E8E93', ledgerId },
         { id: crypto.randomUUID(), name: '其他', type: 'income', icon: 'help-circle', color: '#8E8E93', ledgerId },
       ];
       for (const c of [...expenseCategories, ...incomeCategories]) await tx.table('categories').add(c);
@@ -138,6 +140,55 @@ export class AccountingDB extends Dexie {
         ];
         for (const a of accounts) await tx.table('accounts').add(a);
       }
+    });
+
+    // v4: clear old categories and seed new standard categories
+    this.version(4).stores({
+      ledgers: '&id, name',
+      accounts: '&id, ledgerId, name',
+      transactions: '&id, ledgerId, date',
+      categories: '&id, type',
+    }).upgrade(async (tx) => {
+      // Clear all existing categories
+      await tx.table('categories').clear();
+
+      // Get the first/default ledger
+      const allLedgers = await tx.table('ledgers').toArray();
+      if (allLedgers.length === 0) {
+        // No ledger exists — nothing to seed categories against
+        return;
+      }
+      const ledgerId = allLedgers[0].id;
+
+      // Expense categories (12) — new standard
+      const expenseCategories = [
+        { id: crypto.randomUUID(), name: '餐饮', type: 'expense', icon: 'utensils-crossed', color: '#FF3B30', ledgerId },
+        { id: crypto.randomUUID(), name: '交通', type: 'expense', icon: 'car', color: '#007AFF', ledgerId },
+        { id: crypto.randomUUID(), name: '购物', type: 'expense', icon: 'shopping-bag', color: '#FF9500', ledgerId },
+        { id: crypto.randomUUID(), name: '住房', type: 'expense', icon: 'home', color: '#1E293B', ledgerId },
+        { id: crypto.randomUUID(), name: '娱乐', type: 'expense', icon: 'gamepad-2', color: '#5856D6', ledgerId },
+        { id: crypto.randomUUID(), name: '医疗', type: 'expense', icon: 'heart-pulse', color: '#DC2626', ledgerId },
+        { id: crypto.randomUUID(), name: '教育', type: 'expense', icon: 'graduation-cap', color: '#2563EB', ledgerId },
+        { id: crypto.randomUUID(), name: '社交', type: 'expense', icon: 'users', color: '#F43F5E', ledgerId },
+        { id: crypto.randomUUID(), name: '通讯', type: 'expense', icon: 'smartphone', color: '#0EA5E9', ledgerId },
+        { id: crypto.randomUUID(), name: '服饰美容', type: 'expense', icon: 'shirt', color: '#AF52DE', ledgerId },
+        { id: crypto.randomUUID(), name: '运动健身', type: 'expense', icon: 'dumbbell', color: '#34C759', ledgerId },
+        { id: crypto.randomUUID(), name: '其他', type: 'expense', icon: 'more-horizontal', color: '#8E8E93', ledgerId },
+      ];
+
+      // Income categories (8) — new standard
+      const incomeCategories = [
+        { id: crypto.randomUUID(), name: '工资', type: 'income', icon: 'banknote', color: '#34C759', ledgerId },
+        { id: crypto.randomUUID(), name: '奖金', type: 'income', icon: 'trophy', color: '#5856D6', ledgerId },
+        { id: crypto.randomUUID(), name: '投资', type: 'income', icon: 'trending-up', color: '#FF9500', ledgerId },
+        { id: crypto.randomUUID(), name: '兼职', type: 'income', icon: 'briefcase', color: '#0EA5E9', ledgerId },
+        { id: crypto.randomUUID(), name: '红包/礼金', type: 'income', icon: 'gift', color: '#FF3B30', ledgerId },
+        { id: crypto.randomUUID(), name: '报销', type: 'income', icon: 'receipt', color: '#007AFF', ledgerId },
+        { id: crypto.randomUUID(), name: '退款', type: 'income', icon: 'rotate-ccw', color: '#8E8E93', ledgerId },
+        { id: crypto.randomUUID(), name: '其他', type: 'income', icon: 'help-circle', color: '#8E8E93', ledgerId },
+      ];
+
+      for (const c of [...expenseCategories, ...incomeCategories]) await tx.table('categories').add(c);
     });
   }
 }
@@ -343,24 +394,26 @@ export async function clearAllAccountingData(): Promise<void> {
       // 重新创建默认分类
       const expenseCategories = [
         { id: crypto.randomUUID(), name: "餐饮", type: "expense", icon: "utensils-crossed", color: "#FF3B30", ledgerId },
-        { id: crypto.randomUUID(), name: "购物", type: "expense", icon: "shopping-bag", color: "#FF9500", ledgerId },
-        { id: crypto.randomUUID(), name: "日用", type: "expense", icon: "package", color: "#5856D6", ledgerId },
         { id: crypto.randomUUID(), name: "交通", type: "expense", icon: "car", color: "#007AFF", ledgerId },
-        { id: crypto.randomUUID(), name: "蔬菜", type: "expense", icon: "leaf", color: "#34C759", ledgerId },
-        { id: crypto.randomUUID(), name: "水果", type: "expense", icon: "apple", color: "#FF3B30", ledgerId },
-        { id: crypto.randomUUID(), name: "零食", type: "expense", icon: "candy", color: "#FF9500", ledgerId },
-        { id: crypto.randomUUID(), name: "运动", type: "expense", icon: "dumbbell", color: "#34C759", ledgerId },
+        { id: crypto.randomUUID(), name: "购物", type: "expense", icon: "shopping-bag", color: "#FF9500", ledgerId },
+        { id: crypto.randomUUID(), name: "住房", type: "expense", icon: "home", color: "#1E293B", ledgerId },
         { id: crypto.randomUUID(), name: "娱乐", type: "expense", icon: "gamepad-2", color: "#5856D6", ledgerId },
-        { id: crypto.randomUUID(), name: "通讯", type: "expense", icon: "smartphone", color: "#007AFF", ledgerId },
-        { id: crypto.randomUUID(), name: "服饰", type: "expense", icon: "shirt", color: "#AF52DE", ledgerId },
-        { id: crypto.randomUUID(), name: "美容", type: "expense", icon: "sparkles", color: "#FF9500", ledgerId },
+        { id: crypto.randomUUID(), name: "医疗", type: "expense", icon: "heart-pulse", color: "#DC2626", ledgerId },
+        { id: crypto.randomUUID(), name: "教育", type: "expense", icon: "graduation-cap", color: "#2563EB", ledgerId },
+        { id: crypto.randomUUID(), name: "社交", type: "expense", icon: "users", color: "#F43F5E", ledgerId },
+        { id: crypto.randomUUID(), name: "通讯", type: "expense", icon: "smartphone", color: "#0EA5E9", ledgerId },
+        { id: crypto.randomUUID(), name: "服饰美容", type: "expense", icon: "shirt", color: "#AF52DE", ledgerId },
+        { id: crypto.randomUUID(), name: "运动健身", type: "expense", icon: "dumbbell", color: "#34C759", ledgerId },
+        { id: crypto.randomUUID(), name: "其他", type: "expense", icon: "more-horizontal", color: "#8E8E93", ledgerId },
       ];
       const incomeCategories = [
         { id: crypto.randomUUID(), name: "工资", type: "income", icon: "banknote", color: "#34C759", ledgerId },
-        { id: crypto.randomUUID(), name: "红包", type: "income", icon: "gift", color: "#FF3B30", ledgerId },
-        { id: crypto.randomUUID(), name: "理财", type: "income", icon: "trending-up", color: "#FF9500", ledgerId },
         { id: crypto.randomUUID(), name: "奖金", type: "income", icon: "trophy", color: "#5856D6", ledgerId },
-        { id: crypto.randomUUID(), name: "租金", type: "income", icon: "home", color: "#007AFF", ledgerId },
+        { id: crypto.randomUUID(), name: "投资", type: "income", icon: "trending-up", color: "#FF9500", ledgerId },
+        { id: crypto.randomUUID(), name: "兼职", type: "income", icon: "briefcase", color: "#0EA5E9", ledgerId },
+        { id: crypto.randomUUID(), name: "红包/礼金", type: "income", icon: "gift", color: "#FF3B30", ledgerId },
+        { id: crypto.randomUUID(), name: "报销", type: "income", icon: "receipt", color: "#007AFF", ledgerId },
+        { id: crypto.randomUUID(), name: "退款", type: "income", icon: "rotate-ccw", color: "#8E8E93", ledgerId },
         { id: crypto.randomUUID(), name: "其他", type: "income", icon: "help-circle", color: "#8E8E93", ledgerId },
       ];
       for (const c of [...expenseCategories, ...incomeCategories]) await accountingDB.categories.add(c);

@@ -127,7 +127,7 @@ interface HealthState {
 
   // Fitness V2 actions
   loadFitnessDataV2: () => Promise<void>;
-  addWorkoutSessionV2: (session: Omit<WorkoutSession, 'id' | 'createdAt'>) => Promise<void>;
+  addWorkoutSessionV2: (session: Omit<WorkoutSession, 'id' | 'createdAt'>) => Promise<string>;
   deleteWorkoutSessionV2: (id: string) => Promise<void>;
 
   loadAll: () => Promise<void>;
@@ -385,8 +385,9 @@ export const useHealthStore = create<HealthState>()((set, get) => ({
   },
 
   addWorkoutSessionV2: async (session) => {
-    await addWorkoutSession(session);
+    const id = await addWorkoutSession(session);
     await get().loadFitnessDataV2();
+    return id;
   },
 
   deleteWorkoutSessionV2: async (id) => {

@@ -8,6 +8,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { getHabits, addHabit, deleteHabit, toggleHabitDay } from "@/lib/db/life.db";
 import type { Habit } from "@/lib/db/life.db";
 import { showToast } from "@/components/ui/Toast";
+import { ensureModuleItem, removeModuleItems } from "@/lib/db/daylog.db";
 
 const COLORS = ["#6366F1", "#FF9500", "#34C759", "#007AFF", "#FF3B30", "#AF52DE", "#FF6B8A", "#5AC8FA"];
 const ICONS = ["BookOpen", "Footprints", "Droplets", "Sunrise", "Dumbbell", "Brain", "Pencil", "Music"];
@@ -40,7 +41,22 @@ export default function HabitsPage() {
   const [adding, setAdding] = useState(false);
 
   const toggleHabit = useCallback(async (habit: Habit) => {
+    const wasChecked = habit.days[today];
     await toggleHabitDay(habit.id, today);
+    if (!wasChecked) {
+      await ensureModuleItem({
+        date: today,
+        sourceType: "habit",
+        sourceId: `habit_${habit.id}`,
+        title: habit.name,
+        plannedStart: "07:00",
+        plannedEnd: "07:15",
+        color: habit.color,
+        icon: habit.icon,
+      });
+    } else {
+      await removeModuleItems(today, "habit", `habit_${habit.id}`);
+    }
   }, [today]);
 
   const handleAdd = useCallback(async () => {

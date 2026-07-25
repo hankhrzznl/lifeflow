@@ -6,10 +6,13 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Check, Plus, ChevronLeft, ChevronRight, CalendarDays, Clock,
-  ListTodo, X, Target, AlertCircle, Pencil,
+  ListTodo, X, Target, AlertCircle, Pencil, Moon,
+  Ellipsis, Wallet, Droplets, Timer, StickyNote,
 } from "lucide-react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { getItemsByDateSorted, deleteItem, updateItem, addManualItem, generateRoutineItems, generateCourseItems, getItemsByScheduleDay, getWakeTime } from "@/lib/db/daylog.db";
+import { getSleepGoal } from "@/lib/db/health.db";
+import { addWaterLog } from "@/lib/db/health.db";
 import type { Item } from "@/lib/db/daylog.db";
 import { showToast } from "@/components/ui/Toast";
 
@@ -46,6 +49,10 @@ function timeToMinutes(time: string): number {
   return h * 60 + m;
 }
 
+function timeDiff(start: string, end: string): number {
+  return Math.max(0, timeToMinutes(end) - timeToMinutes(start));
+}
+
 function itemDurationInSlot(item: Item, hourLabel: string): number {
   const startM = timeToMinutes(item.plannedStart);
   const endM = timeToMinutes(item.plannedEnd);
@@ -63,6 +70,7 @@ function formatTimeHM(t: string): string {
 // 主组件
 // ============================================================
 export default function SchedulePage() {
+  const router = useRouter();
   const [selectedDate, setSelectedDate] = useState<string>("");
   const todayStr = toDateStr(new Date());
 
@@ -88,6 +96,55 @@ export default function SchedulePage() {
   // 起床时间
   const [wakeTime, setWakeTime] = useState("07:00");
   useEffect(() => { getWakeTime().then(setWakeTime).catch(() => {}); }, []);
+
+  // ── 入睡提醒 ──
+  const [sleepReminder, setSleepReminder] = useState<{
+    targetTime: string;
+    minutesLeft: number;
+  } | null>(null);
+
+  useEffect(() => {
+    let intervalId: ReturnType<typeof setInterval>;
+
+    const checkReminder = async () => {
+      // 仅今天显示，历史日期不显示
+      if (selectedDate !== todayStr) {
+        setSleepReminder(null);
+        return;
+      }
+
+      try {
+        const goal = await getSleepGoal();
+        if (!goal.reminderEnabled) {
+          setSleepReminder(null);
+          return;
+        }
+
+        const [targetH, targetM] = goal.targetTime.split(":").map(Number);
+        const targetMinutes = targetH * 60 + targetM;
+        const reminderStart = targetMinutes - goal.reminderAdvance;
+
+        const now = new Date();
+        const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+        if (currentMinutes >= reminderStart && currentMinutes < targetMinutes) {
+          setSleepReminder({
+            targetTime: goal.targetTime,
+            minutesLeft: targetMinutes - currentMinutes,
+          });
+        } else {
+          setSleepReminder(null);
+        }
+      } catch {
+        setSleepReminder(null);
+      }
+    };
+
+    checkReminder();
+    intervalId = setInterval(checkReminder, 30000);
+
+    return () => clearInterval(intervalId);
+  }, [selectedDate, todayStr]);
 
   // 当前日程日（按起床时间边界）
   const currentScheduleDay = nowTime >= wakeTime ? todayStr : toDateStr(addDays(new Date(), -1));
@@ -219,9 +276,30 @@ export default function SchedulePage() {
     setCalibrateId(null);
   }, [calibrateId, calibrateStart, calibrateEnd]);
 
-  // ── 未完成备注（历史日期） ──
+  // ── 复盘备注（历史日期） ──
   const [noteId, setNoteId] = useState<string | null>(null);
   const [noteText, setNoteText] = useState("");
+
+  // ── 事项操作栏展开状态 ──
+  const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
+
+  // ── 快捷饮水 ──
+  const handleQuickWater = useCallback(async (item: Item) => {
+    try {
+      await addWaterLog({ date: item.date, amount: 200, timestamp: Date.now() } as any);
+      showToast({ type: "success", message: "已记一杯水" });
+    } catch { showToast({ type: "error", message: "记录失败" }); }
+  }, []);
+
+  // ── 快捷记账 ──
+  const handleQuickAccounting = useCallback((item: Item) => {
+    router.push(`/more/accounting?note=${encodeURIComponent(item.title)}`);
+  }, [router]);
+
+  // ── 快捷专注 ──
+  const handleQuickFocus = useCallback((item: Item) => {
+    router.push(`/focus?title=${encodeURIComponent(item.title)}&duration=${timeDiff(item.plannedStart, item.plannedEnd)}`);
+  }, [router]);
 
   const openNote = useCallback((item: Item) => {
     setNoteId(item.id);
@@ -374,6 +452,27 @@ export default function SchedulePage() {
         )}
       </div>
 
+      {/* ===== 入睡提醒横幅 ===== */}
+      {sleepReminder && (
+        <div className="px-4 mb-2">
+          <Link
+            href="/more/sleep"
+            className="flex items-center gap-2.5 px-4 rounded-xl transition-colors active:opacity-80"
+            style={{
+              height: 40,
+              background: "linear-gradient(135deg, rgba(251,146,60,0.12), rgba(245,158,11,0.08))",
+              border: "1px solid rgba(251,146,60,0.2)",
+            }}
+          >
+            <Moon className="w-4 h-4 flex-shrink-0" style={{ color: "#F59E0B" }} />
+            <span className="text-[13px] font-medium flex-1 truncate" style={{ color: "var(--color-text-primary)" }}>
+              距离目标入睡（{sleepReminder.targetTime}）还有 {sleepReminder.minutesLeft} 分钟
+            </span>
+            <ChevronRight className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "var(--color-text-disabled)" }} />
+          </Link>
+        </div>
+      )}
+
       {/* ===== 时间轴 ===== */}
       <div
         ref={timelineRef}
@@ -444,6 +543,11 @@ export default function SchedulePage() {
                     onDelete: setDeleteTarget,
                     onCalibrate: openCalibrate,
                     onNote: openNote,
+                    expandedItemId,
+                    setExpandedItemId,
+                    onWater: handleQuickWater,
+                    onFocus: handleQuickFocus,
+                    onAccounting: handleQuickAccounting,
                   })}
                 </div>
               </div>
@@ -604,7 +708,7 @@ export default function SchedulePage() {
         )}
       </AnimatePresence>
 
-      {/* ===== 未完成备注弹窗（历史日期） ===== */}
+      {/* ===== 复盘备注弹窗（历史日期） ===== */}
       <AnimatePresence>
         {noteId && (
           <>
@@ -629,7 +733,7 @@ export default function SchedulePage() {
               <div className="px-5 pb-6">
                 <div className="flex items-center justify-between mb-5">
                   <h3 className="text-[20px] font-bold" style={{ color: "var(--color-text-primary)" }}>
-                    未完成原因
+                    复盘备注
                   </h3>
                   <button
                     onClick={() => setNoteId(null)}
@@ -641,7 +745,7 @@ export default function SchedulePage() {
                 </div>
 
                 <textarea
-                  placeholder="记录未完成的原因..."
+                  placeholder="记录对这件事的反思和总结..."
                   value={noteText}
                   onChange={(e) => setNoteText(e.target.value)}
                   className="w-full px-4 py-3 rounded-xl text-[15px] outline-none resize-none mb-5"
@@ -682,8 +786,14 @@ function renderSlotItems(args: {
   onDelete: (id: string) => void;
   onCalibrate: (item: Item) => void;
   onNote: (item: Item) => void;
+  expandedItemId: string | null;
+  setExpandedItemId: (id: string | null) => void;
+  onWater: (item: Item) => void;
+  onFocus: (item: Item) => void;
+  onAccounting: (item: Item) => void;
 }) {
-  const { items, hourLabel, isPastDate, onToggle, onDelete, onCalibrate, onNote } = args;
+  const { items, hourLabel, isPastDate, onToggle, onDelete, onCalibrate, onNote,
+    expandedItemId, setExpandedItemId, onWater, onFocus, onAccounting } = args;
   if (items.length === 0) return null;
 
   const sorted = [...items].sort((a, b) => a.plannedStart.localeCompare(b.plannedStart));
@@ -702,6 +812,11 @@ function renderSlotItems(args: {
           onLongPress={() => { if (!isPastDate) onDelete(item.id); }}
           onCalibrate={() => onCalibrate(item)}
           onNote={() => onNote(item)}
+          expanded={expandedItemId === item.id}
+          onExpandToggle={() => setExpandedItemId(expandedItemId === item.id ? null : item.id)}
+          onWater={() => onWater(item)}
+          onFocus={() => onFocus(item)}
+          onAccounting={() => onAccounting(item)}
         />
       ))}
       {hiddenCount > 0 && (
@@ -727,6 +842,11 @@ function ItemCard({
   onLongPress,
   onCalibrate,
   onNote,
+  expanded,
+  onExpandToggle,
+  onWater,
+  onFocus,
+  onAccounting,
 }: {
   item: Item;
   hourLabel: string;
@@ -735,6 +855,11 @@ function ItemCard({
   onLongPress: () => void;
   onCalibrate: () => void;
   onNote: () => void;
+  expanded: boolean;
+  onExpandToggle: () => void;
+  onWater: () => void;
+  onFocus: () => void;
+  onAccounting: () => void;
 }) {
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -787,6 +912,7 @@ function ItemCard({
   };
 
   return (
+    <>
     <motion.div
       initial={{ opacity: 0, y: 4 }}
       animate={{ opacity: 1, y: 0 }}
@@ -867,7 +993,46 @@ function ItemCard({
             <Pencil className="w-3.5 h-3.5" style={{ color: "#FF3B30" }} />
           </button>
         )}
+        <button
+          onClick={(e) => { e.stopPropagation(); onExpandToggle(); }}
+          className="w-6 h-6 rounded-full flex items-center justify-center active:opacity-70"
+          aria-label="更多操作"
+        >
+          <Ellipsis className="w-3.5 h-3.5" style={{ color: expanded ? "var(--lifeflow-primary)" : "var(--color-text-disabled)" }} />
+        </button>
       </div>
     </motion.div>
+    {/* 操作栏 */}
+    <AnimatePresence>
+      {expanded && (
+        <motion.div
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: "auto", opacity: 1 }}
+          exit={{ height: 0, opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          className="flex items-center gap-1.5 px-2 pb-2 overflow-hidden"
+        >
+          <ActionButton icon={<Wallet className="w-3.5 h-3.5" />} label="记账" onClick={onAccounting} color="var(--lifeflow-primary)" />
+          <ActionButton icon={<Droplets className="w-3.5 h-3.5" />} label="饮水" onClick={onWater} color="#0EA5E9" />
+          <ActionButton icon={<Timer className="w-3.5 h-3.5" />} label="专注" onClick={onFocus} color="#FF9500" />
+          <ActionButton icon={<StickyNote className="w-3.5 h-3.5" />} label="备忘" onClick={onNote} color="#8B5CF6" />
+        </motion.div>
+      )}
+    </AnimatePresence>
+  </>
+  );
+}
+
+/** 操作栏小按钮 */
+function ActionButton({ icon, label, onClick, color }: { icon: React.ReactNode; label: string; onClick: () => void; color: string }) {
+  return (
+    <button
+      onClick={(e) => { e.stopPropagation(); onClick(); }}
+      className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-[11px] font-medium active:scale-95 transition-transform"
+      style={{ background: `${color}12`, color, border: `1px solid ${color}20` }}
+    >
+      {icon}
+      {label}
+    </button>
   );
 }

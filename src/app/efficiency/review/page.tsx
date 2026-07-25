@@ -1,102 +1,184 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { CheckCircle2, Target, Zap, TrendingUp } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
+import ReviewDaily from "./ReviewDaily";
+import ReviewWeekly from "./ReviewWeekly";
+import ReviewMonthly from "./ReviewMonthly";
+import ReviewYearly from "./ReviewYearly";
 
-const periods = ["本周", "本月"];
+// ============================================================
+// 工具
+// ============================================================
+function todayStr(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
 
-const stubStats = {
-  completionRate: 78,
-  totalTasks: 42,
-  streaks: 5,
-  focusHours: 18.5,
-};
+function getWeekRange(offset: number = 0): { start: string; end: string } {
+  const now = new Date();
+  const day = now.getDay();
+  const diffToMon = day === 0 ? 6 : day - 1;
+  const mon = new Date(now);
+  mon.setDate(now.getDate() - diffToMon + offset * 7);
+  const sun = new Date(mon);
+  sun.setDate(mon.getDate() + 6);
+  return {
+    start: fmtDate(mon),
+    end: fmtDate(sun),
+  };
+}
 
-const stubReviewItems = [
-  { id: "1", title: "项目A里程碑完成", date: "07-15", type: "achievement", color: "text-sys-green" },
-  { id: "2", title: "学习进度落后计划", date: "07-14", type: "warning", color: "text-sys-orange" },
-  { id: "3", title: "本周专注时长提升20%", date: "07-13", type: "improvement", color: "text-sys-blue" },
-  { id: "4", title: "会议时间过多需优化", date: "07-12", type: "note", color: "text-sys-gray" },
-];
+function fmtDate(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
 
+const PERIOD_TABS = [
+  { key: "daily", label: "日" },
+  { key: "weekly", label: "周" },
+  { key: "monthly", label: "月" },
+  { key: "yearly", label: "年" },
+] as const;
+
+type Period = (typeof PERIOD_TABS)[number]["key"];
+
+// ============================================================
+// 主组件
+// ============================================================
 export default function ReviewPage() {
-  const [period, setPeriod] = useState("本周");
+  const router = useRouter();
+  const [period, setPeriod] = useState<Period>("daily");
+  const today = todayStr();
+  const now = new Date();
+
+  // 周范围
+  const weekRange = useMemo(() => getWeekRange(0), []);
+
+  // 月/年
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1;
 
   return (
-    <div className="min-h-screen bg-[#F5F5F7] pb-24">
-      <div className="max-w-2xl mx-auto px-5 pt-8">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">复盘</h1>
-            <p className="text-sm text-gray-500 mt-0.5">复盘过去, 更好前行</p>
-          </div>
+    <div
+      className="mx-auto pb-[120px]"
+      style={{
+        maxWidth: 430,
+        minHeight: "100vh",
+        background: "var(--lifeflow-background)",
+      }}
+    >
+      {/* Header */}
+      <div
+        className="px-5 pt-[var(--safe-area-top)] pb-3 flex items-center justify-between"
+      >
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => router.back()}
+            className="w-8 h-8 -ml-1 flex items-center justify-center"
+          >
+            <ChevronLeft
+              className="w-6 h-6"
+              style={{ color: "var(--color-text-primary)" }}
+            />
+          </button>
+          <h1
+            className="text-[28px] font-bold font-['SF_Pro_Display',_-apple-system] leading-tight"
+            style={{
+              color: "var(--color-text-primary)",
+              letterSpacing: "-0.022em",
+            }}
+          >
+            复盘
+          </h1>
         </div>
+      </div>
 
-        {/* Period Selector */}
-        <div className="flex gap-2 mb-6">
-          {periods.map((p) => (
+      {/* Period Tabs */}
+      <div className="px-4 mb-4">
+        <div
+          className="flex rounded-full p-1"
+          style={{ background: "var(--color-surface-secondary)" }}
+        >
+          {PERIOD_TABS.map((tab) => (
             <button
-              key={p}
-              onClick={() => setPeriod(p)}
-              className={`px-5 py-2 rounded-full text-sm font-medium transition-colors ${
-                period === p
-                  ? "bg-indigo-500 text-white"
-                  : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"
-              }`}
+              key={tab.key}
+              onClick={() => setPeriod(tab.key)}
+              className="flex-1 py-2 rounded-full text-[14px] font-medium transition-all"
+              style={{
+                background:
+                  period === tab.key
+                    ? "var(--color-surface-card)"
+                    : "transparent",
+                color:
+                  period === tab.key
+                    ? "var(--color-text-primary)"
+                    : "var(--color-text-disabled)",
+                boxShadow:
+                  period === tab.key ? "var(--shadow-card)" : "none",
+              }}
             >
-              {p}
+              {tab.label}
             </button>
           ))}
         </div>
+      </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 gap-3 mb-6">
-          {[
-            { label: "完成率", value: `${stubStats.completionRate}%`, icon: CheckCircle2, color: "text-sys-green", bg: "bg-green-50" },
-            { label: "总任务", value: stubStats.totalTasks, icon: Target, color: "text-sys-indigo", bg: "bg-indigo-50" },
-            { label: "连续天数", value: `${stubStats.streaks}天`, icon: Zap, color: "text-sys-orange", bg: "bg-orange-50" },
-            { label: "专注时长", value: `${stubStats.focusHours}h`, icon: TrendingUp, color: "text-sys-blue", bg: "bg-blue-50" },
-          ].map((stat, i) => (
-            <motion.div
-              key={stat.label}
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.06 }}
-              className="bg-white rounded-2xl shadow-sm p-4"
+      {/* Content */}
+      <motion.div
+        key={period}
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.2 }}
+      >
+        {period === "daily" && <ReviewDaily date={today} />}
+        {period === "weekly" && (
+          <ReviewWeekly
+            startDate={weekRange.start}
+            endDate={weekRange.end}
+          />
+        )}
+        {period === "monthly" && (
+          <ReviewMonthly year={currentYear} month={currentMonth} />
+        )}
+        {period === "yearly" && <ReviewYearly year={currentYear} />}
+      </motion.div>
+
+      {/* AI Insight placeholder */}
+      <div className="px-4 mt-4">
+        <div
+          className="p-4 rounded-[20px] flex items-center gap-3"
+          style={{
+            background: "var(--color-surface-card)",
+            boxShadow: "var(--shadow-card)",
+            border: "1px dashed var(--lifeflow-border)",
+          }}
+        >
+          <div
+            className="w-8 h-8 rounded-full flex items-center justify-center"
+            style={{ background: "var(--lifeflow-brand-50)" }}
+          >
+            <span className="text-[16px]">✨</span>
+          </div>
+          <div>
+            <p
+              className="text-[13px] font-medium"
+              style={{ color: "var(--color-text-secondary)" }}
             >
-              <div className={`w-9 h-9 rounded-xl ${stat.bg} flex items-center justify-center mb-2`}>
-                <stat.icon className={`w-5 h-5 ${stat.color}`} />
-              </div>
-              <div className="text-xl font-bold text-gray-900">{stat.value}</div>
-              <div className="text-xs text-gray-500">{stat.label}</div>
-            </motion.div>
-          ))}
-        </div>
-
-        {/* Review Items */}
-        <div className="bg-white rounded-2xl shadow-sm p-4">
-          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">复盘记录</h2>
-          <div className="space-y-3">
-            {stubReviewItems.map((item, i) => (
-              <motion.div
-                key={item.id}
-                initial={{ opacity: 0, x: -12 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.1 + i * 0.06 }}
-                className="flex items-center gap-3 p-3 rounded-xl bg-gray-50"
-              >
-                <div className={`w-2 h-2 rounded-full ${item.color.replace("text", "bg")}`} />
-                <div className="flex-1">
-                  <div className="text-sm font-medium text-gray-900">{item.title}</div>
-                  <div className="text-xs text-gray-400 mt-0.5">{item.date}</div>
-                </div>
-              </motion.div>
-            ))}
+              AI 分析即将上线
+            </p>
+            <p
+              className="text-[11px]"
+              style={{ color: "var(--color-text-disabled)" }}
+            >
+              未来会自动分析你的数据，给出个性化的行动建议
+            </p>
           </div>
         </div>
       </div>
+
+      <div className="h-4" />
     </div>
   );
 }

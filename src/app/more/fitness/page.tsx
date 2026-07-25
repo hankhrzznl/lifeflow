@@ -8,6 +8,7 @@ import { useHealthStore } from "@/lib/store/healthStore";
 import type { WorkoutSession, TrainingType, TrainingPlan } from "@/lib/db/health.db";
 import { showToast } from "@/components/ui/Toast";
 import { initializeTrainingPlans, getActiveTrainingPlans, getMonthLabel } from "@/lib/training-plan-generator";
+import { ensureModuleItem, removeModuleItems } from "@/lib/db/daylog.db";
 
 /* ────────── Training Systems Definitions ────────── */
 
@@ -272,7 +273,7 @@ export default function FitnessPage() {
     setSubmitting(true);
     try {
       const exId = crypto.randomUUID();
-      await addWorkoutSessionV2({
+      const sessionId = await addWorkoutSessionV2({
         date: localTodayStr(),
         exercises: [
           {
@@ -292,6 +293,24 @@ export default function FitnessPage() {
         trainingType: selectedTrainingType,
       });
 
+      // Auto-generate schedule item
+      try {
+        const trainingTypeLabel = TRAINING_SYSTEMS.find((s) => s.type === selectedTrainingType)?.label;
+        const title = trainingTypeLabel || exerciseName.trim();
+        await ensureModuleItem({
+          date: localTodayStr(),
+          sourceType: "fitness",
+          sourceId: `fitness_${sessionId}`,
+          title,
+          plannedStart: "09:00",
+          plannedEnd: "10:00",
+          color: "#EF4444",
+          icon: "Dumbbell",
+        });
+      } catch {
+        // schedule generation failure is non-blocking
+      }
+
       setExerciseName("");
       setSets(3);
       setReps(10);
@@ -309,8 +328,14 @@ export default function FitnessPage() {
 
   /* ─── Delete session ─── */
   const handleDelete = useCallback(
-    async (id: string) => {
+    async (id: string, date: string) => {
       await deleteWorkoutSessionV2(id);
+      // Remove corresponding schedule item
+      try {
+        await removeModuleItems(date, "fitness", `fitness_${id}`);
+      } catch {
+        // non-blocking
+      }
       setExpandedSession(null);
       showToast({ type: "success", message: "已删除" });
     },
@@ -697,7 +722,7 @@ export default function FitnessPage() {
                                 ))}
                                 <button
                                   type="button"
-                                  onClick={() => handleDelete(s.id!)}
+                                  onClick={() => handleDelete(s.id!, s.date)}
                                   className="inline-flex items-center gap-1 text-[12px] mt-1 active:opacity-70"
                                   style={{ color: "var(--color-expense)" }}
                                 >

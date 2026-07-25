@@ -6,7 +6,7 @@ import Dexie, { type Table } from 'dexie';
 
 // ─── Types ───────────────────────────────────────────────────
 
-export type SourceType = "task" | "habit" | "course" | "routine" | "manual";
+export type SourceType = "task" | "habit" | "course" | "routine" | "manual" | "medication" | "fitness" | "wellness" | "diet" | "water";
 
 export interface Item {
   id: string;              // uuid
@@ -350,9 +350,55 @@ export async function generateHabitItems(
   });
 }
 
+// ─── 模块事项自动生成 ──────────────────────────────────────
+
+/** 确保某日存在指定来源模块的事项（幂等：已存在同名同源则跳过） */
+export async function ensureModuleItem(params: {
+  date: string;
+  sourceType: SourceType;
+  sourceId: string;
+  title: string;
+  plannedStart: string;
+  plannedEnd: string;
+  color?: string;
+  icon?: string;
+  projectId?: string;
+}): Promise<string | null> {
+  const existing = await daylogDB.items
+    .where('date').equals(params.date)
+    .filter(i => i.sourceType === params.sourceType && i.sourceId === params.sourceId)
+    .first();
+  if (existing) return existing.id;
+
+  return addItem({
+    date: params.date,
+    sourceType: params.sourceType,
+    sourceId: params.sourceId,
+    title: params.title,
+    color: params.color || '#6366F1',
+    icon: params.icon || 'CheckSquare',
+    plannedStart: params.plannedStart,
+    plannedEnd: params.plannedEnd,
+    actualStart: params.plannedStart,
+    actualEnd: params.plannedEnd,
+    isCorrected: false,
+    projectId: params.projectId,
+    isCompleted: true,   // 模块产生的记录默认已完成
+    sortOrder: timeToSort(params.plannedStart),
+  });
+}
+
+/** 删除某日指定来源的事项（用于撤回/修正） */
+export async function removeModuleItems(date: string, sourceType: SourceType, sourceId: string): Promise<void> {
+  await daylogDB.items
+    .where('date').equals(date)
+    .filter(i => i.sourceType === sourceType && i.sourceId === sourceId)
+    .delete();
+}
+
 // ─── 工具 ────────────────────────────────────────────────────
 
-function timeToSort(time: string): number {
+export function timeToSort(time: string): number {
   const [h, m] = time.split(':').map(Number);
   return h * 60 + m;
 }

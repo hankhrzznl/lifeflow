@@ -11,6 +11,7 @@ import {
 } from "@/lib/db/life.db";
 import type { WellnessLog } from "@/lib/db/life.db";
 import { showToast } from "@/components/ui/Toast";
+import { ensureModuleItem, removeModuleItems } from "@/lib/db/daylog.db";
 
 // ============================================================
 // Helpers
@@ -95,11 +96,21 @@ export default function WellnessPage() {
     if (!name) return;
     setIsSaving(true);
     try {
-      await addWellnessLog({
+      const logId = await addWellnessLog({
         name,
         type: "gongfa",
         duration: gongfaDuration,
         date: todayStr(),
+      });
+      await ensureModuleItem({
+        date: todayStr(),
+        sourceType: "wellness",
+        sourceId: `wellness_${logId}`,
+        title: name,
+        plannedStart: "07:30",
+        plannedEnd: "08:00",
+        color: "#84CC16",
+        icon: "Flower2",
       });
       showToast({ type: "success", message: "已记录" });
       setShowGongfa(false);
@@ -117,10 +128,20 @@ export default function WellnessPage() {
   const handleAddTigang = useCallback(async () => {
     setIsSaving(true);
     try {
-      await addWellnessLog({
+      const logId = await addWellnessLog({
         name: "提肛",
         type: "tigang",
         date: todayStr(),
+      });
+      await ensureModuleItem({
+        date: todayStr(),
+        sourceType: "wellness",
+        sourceId: `wellness_${logId}`,
+        title: "提肛",
+        plannedStart: "07:00",
+        plannedEnd: "07:05",
+        color: "#84CC16",
+        icon: "Flower2",
       });
       showToast({ type: "success", message: "已记录" });
       await loadLogs();
@@ -137,6 +158,7 @@ export default function WellnessPage() {
     if (deleteTarget === null) return;
     try {
       await deleteWellnessLog(deleteTarget);
+      await removeModuleItems(todayStr(), "wellness", `wellness_${deleteTarget}`);
       showToast({ type: "success", message: "已删除" });
       setDeleteTarget(null);
       await loadLogs();

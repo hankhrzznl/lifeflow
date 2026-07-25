@@ -30,6 +30,38 @@ function todayStr(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+// 图标名 → emoji 映射
+function categoryIconEmoji(iconName: string): string {
+  const map: Record<string, string> = {
+    "utensils-crossed": "🍽️",
+    "car": "🚗",
+    "shopping-bag": "🛍️",
+    "home": "🏠",
+    "gamepad-2": "🎮",
+    "heart-pulse": "💊",
+    "graduation-cap": "🎓",
+    "users": "👥",
+    "smartphone": "📱",
+    "shirt": "👔",
+    "dumbbell": "🏋️",
+    "more-horizontal": "⋯",
+    "banknote": "💵",
+    "trophy": "🏆",
+    "trending-up": "📈",
+    "briefcase": "💼",
+    "gift": "🎁",
+    "receipt": "🧾",
+    "rotate-ccw": "↩️",
+    "help-circle": "❓",
+    "leaf": "🌿",
+    "apple": "🍎",
+    "candy": "🍬",
+    "sparkles": "✨",
+    "package": "📦",
+  };
+  return map[iconName] || "📌";
+}
+
 // ─── 年视图 12 月桶 ─────────────────────────────────────────
 function buildMonthlyBuckets(year: number, txs: Transaction[]): number[] {
   const buckets: number[] = new Array(12).fill(0);
@@ -67,6 +99,7 @@ export default function AccountingPage() {
   const [recordAmount, setRecordAmount] = useState("");
   const [recordNote, setRecordNote] = useState("");
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [recordSubmitting, setRecordSubmitting] = useState(false);
 
   // ─── 日期计算 ──────────────────────────────────────────────
@@ -123,6 +156,11 @@ export default function AccountingPage() {
     for (const c of categories ?? []) map.set(c.id, c);
     return map;
   }, [categories]);
+
+  // 按类型过滤的分类列表（用于记一笔表单）
+  const filteredCategories = useMemo(() => {
+    return (categories ?? []).filter((c) => c.type === recordType);
+  }, [categories, recordType]);
 
   const accountMap = useMemo(() => {
     const map = new Map<string, Account>();
@@ -318,11 +356,13 @@ export default function AccountingPage() {
   // 切换记录类型
   const handleRecordTypeChange = (t: "expense" | "income") => {
     setRecordType(t);
+    setSelectedCategoryId(null);
   };
 
   const closeRecordSheet = useCallback(() => {
     setShowRecordSheet(false);
     setRecordSubmitting(false);
+    setSelectedCategoryId(null);
   }, []);
 
   // ─── 记一笔 ─── 保存 ──────────────────────────────────────
@@ -344,6 +384,7 @@ export default function AccountingPage() {
       await addTransaction({
         ledgerId,
         accountId: selectedAccountId,
+        categoryId: selectedCategoryId || undefined,
         type: recordType,
         amount: amountFen,
         date: todayStr(),
@@ -1050,6 +1091,46 @@ export default function AccountingPage() {
                     })
                   )}
                 </div>
+              </div>
+
+              {/* Category */}
+              <div className="mb-5">
+                <label className="text-[13px] font-medium block mb-2" style={{ color: "var(--color-text-secondary)" }}>
+                  {recordType === "expense" ? "支出分类" : "收入分类"}
+                </label>
+                <div
+                  className="flex flex-wrap gap-2"
+                  style={{
+                    padding: "2px",
+                  }}
+                >
+                  {filteredCategories.map((cat) => (
+                    <button
+                      key={cat.id}
+                      onClick={() => setSelectedCategoryId(cat.id)}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[13px] font-medium transition-all active:scale-95"
+                      style={{
+                        background: selectedCategoryId === cat.id
+                          ? `${cat.color}20`
+                          : "var(--lifeflow-muted)",
+                        color: selectedCategoryId === cat.id
+                          ? cat.color
+                          : "var(--color-text-secondary)",
+                        border: selectedCategoryId === cat.id
+                          ? `1.5px solid ${cat.color}`
+                          : "1.5px solid transparent",
+                      }}
+                    >
+                      <span className="text-[14px]">{categoryIconEmoji(cat.icon)}</span>
+                      {cat.name}
+                    </button>
+                  ))}
+                </div>
+                {filteredCategories.length === 0 && (
+                  <p className="text-[12px] py-2" style={{ color: "var(--color-text-disabled)" }}>
+                    暂无分类，请先到分类管理添加
+                  </p>
+                )}
               </div>
 
               {/* Note */}

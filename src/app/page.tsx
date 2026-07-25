@@ -7,7 +7,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import {
   FolderKanban, Zap, Check, Bell, Flame,
   Calendar, Droplets, Moon, Dumbbell, Pill,
-  Plus, X, Clock, ChevronRight,
+  Plus, X, Clock, ChevronRight, Clock9,
 } from "lucide-react";
 import { getUpcomingItems, addManualItem, updateItem } from "@/lib/db/daylog.db";
 import type { Item } from "@/lib/db/daylog.db";
@@ -18,6 +18,8 @@ import { showToast } from "@/components/ui/Toast";
 import { runPerceptionCheck, type PerceptionCard } from "@/lib/perception-engine";
 import { getAllProjects } from "@/lib/db/efficiency.db";
 import type { Project } from "@/lib/db/efficiency.db";
+import { getCountdowns } from "@/lib/db/life.db";
+import type { Countdown } from "@/lib/db/life.db";
 
 // ============================================================
 // 工具函数
@@ -155,6 +157,23 @@ export default function HomePage() {
     }
     return map;
   }, [projects]);
+
+  // ── 倒数日 ──
+  const countdowns = useLiveQuery(() => getCountdowns(), [], [] as Countdown[]);
+
+  const upcomingCountdowns = useMemo(() => {
+    const today = todayStr();
+    return (countdowns ?? [])
+      .filter((c) => c.date >= today)
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .slice(0, 3);
+  }, [countdowns]);
+
+  const countdownDays = useCallback((date: string) => {
+    const now = new Date(todayStr() + "T00:00:00");
+    const target = new Date(date + "T00:00:00");
+    return Math.ceil((target.getTime() - now.getTime()) / 86400000);
+  }, []);
 
   // ── 核心事项（第一条未完成） ──
   const coreItem = useMemo(() => {
@@ -439,6 +458,56 @@ export default function HomePage() {
           </div>
         </motion.div>
       </div>
+
+      {/* ===== 倒数日 ===== */}
+      {upcomingCountdowns.length > 0 && (
+        <div className="px-4 mb-4">
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.10, duration: 0.35, ease: "easeOut" }}
+          >
+            <Link
+              href="/more/countdown"
+              className="block p-4 rounded-[20px] active:opacity-70"
+              style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <Clock9 className="w-4 h-4" style={{ color: "var(--lifeflow-primary)" }} />
+                  <span className="text-[13px] font-semibold" style={{ color: "var(--color-text-primary)" }}>
+                    倒数日
+                  </span>
+                </div>
+                <ChevronRight className="w-4 h-4" style={{ color: "var(--color-text-disabled)" }} />
+              </div>
+              <div className="flex gap-3">
+                {upcomingCountdowns.map((c) => {
+                  const days = countdownDays(c.date);
+                  return (
+                    <div
+                      key={c.id}
+                      className="flex-1 text-center py-2 px-1 rounded-xl"
+                      style={{ background: days <= 7 ? "var(--lifeflow-brand-50)" : "var(--lifeflow-background)" }}
+                    >
+                      <span className="text-[20px]">{c.icon}</span>
+                      <p className="text-[12px] font-medium mt-1 truncate" style={{ color: "var(--color-text-primary)" }}>
+                        {c.name}
+                      </p>
+                      <p
+                        className="text-[22px] font-bold font-['SF_Pro_Display']"
+                        style={{ color: days <= 3 ? "#FF3B30" : days <= 7 ? "#FF9500" : "var(--lifeflow-primary)" }}
+                      >
+                        {days === 0 ? "今天" : `${days}天`}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            </Link>
+          </motion.div>
+        </div>
+      )}
 
       {/* ===== 今日提醒条 ===== */}
       {pendingReminders.length > 0 && (

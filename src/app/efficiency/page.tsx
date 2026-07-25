@@ -165,21 +165,21 @@ export default function EfficiencyPage() {
 
   // ─── 分组 ──────────────────────────────────────────────────
   const { activeGoals, completedGoals } = useMemo(() => {
-    // 如果选了分类，先按项目ID过滤
     let filtered = goals;
     if (activeCategory !== "全部") {
       const pid = projectNameMap.get(activeCategory);
-      console.warn("[Efficiency] 分类筛选:", { activeCategory, pid, totalGoals: goals.length, projectNameMapSize: projectNameMap.size });
       if (pid) {
+        // 首先按 projectId 严格匹配
         filtered = goals.filter((g) => g.projectId === pid);
+        // 降级：如果严格匹配为空，按项目名称匹配（goal.projectId → project.name）
         if (filtered.length === 0) {
-          // 诊断：打印所有 goal 的 projectId，帮助定位不匹配
-          const goalPids = goals.map(g => ({ title: g.title, projectId: g.projectId }));
-          console.warn("[Efficiency] 过滤后为空，所有goal的projectId:", goalPids, "目标pid:", pid);
+          filtered = goals.filter((g) => {
+            if (!g.projectId) return false;
+            const proj = (projects ?? []).find((p) => p.id === g.projectId);
+            return proj?.name === activeCategory;
+          });
         }
       } else {
-        // 如果没找到对应项目（分类标签名和项目名不匹配），显示空
-        console.warn("[Efficiency] projectNameMap中找不到:", activeCategory, "可用keys:", [...projectNameMap.keys()]);
         filtered = [];
       }
     }
@@ -198,7 +198,7 @@ export default function EfficiencyPage() {
       });
 
     return { activeGoals: active, completedGoals: completed };
-  }, [goals, activeCategory, projectNameMap]);
+  }, [goals, activeCategory, projectNameMap, projects]);
 
   // ─── 本月完成数 ────────────────────────────────────────────
   const monthlyCompleted = useMemo(() => {

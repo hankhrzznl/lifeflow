@@ -1050,7 +1050,7 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
       case "record_stretch": await handleRecordStretch(intent); break;
       case "create_reminder": await handleCreateReminder(intent); break;
       case "query_review": await handleQueryReview(); break;
-      case "navigate_review": setTimeout(() => router.push("/more/review"), 300); break;
+      case "navigate_review": setTimeout(() => router.push("/efficiency/review"), 300); break;
       case "record_medication": await handleRecordMedication(intent); break;
       case "record_habit": await handleRecordHabit(intent); break;
       case "query_habit": await handleQueryHabit(); break;
@@ -1209,7 +1209,7 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
     async (suggestion: SuggestionCardData) => {
       // Handle review navigation
       if (suggestion.tags.includes("review")) {
-        router.push("/more/review");
+        router.push("/efficiency/review");
         return;
       }
       // Legacy: accept schedule suggestion
@@ -1244,7 +1244,7 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
   const handleModifySuggestion = useCallback(
     async (suggestion: SuggestionCardData, newTitle: string) => {
       if (suggestion.tags.includes("review")) {
-        router.push("/more/review");
+        router.push("/efficiency/review");
         return;
       }
       setStateCtx((prev) => transitionState(prev, "executing"));

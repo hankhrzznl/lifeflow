@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo, useCallback } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLiveQuery } from "dexie-react-hooks";
 import {
@@ -68,9 +69,9 @@ function greeting(): string {
 // ============================================================
 
 const QUICK_PROMPTS = [
-  { label: "今日提醒", icon: Bell },
-  { label: "安排日程", icon: Calendar },
-  { label: "本周复盘", icon: Flame },
+  { label: "今日提醒", icon: Bell, route: null as string | null },
+  { label: "安排日程", icon: Calendar, route: null as string | null },
+  { label: "本周复盘", icon: Flame, route: "/efficiency/review?period=weekly" as string | null },
 ];
 
 // 提醒图标映射
@@ -89,6 +90,7 @@ const PRESET_COLORS = ["#6366F1", "#FF9500", "#34C759", "#FF3B30", "#007AFF", "#
 // ============================================================
 
 export default function HomePage() {
+  const router = useRouter();
   const today = todayStr();
   const now = new Date();
   const { sendAndNavigate } = useAgent();
@@ -447,7 +449,7 @@ export default function HomePage() {
             {QUICK_PROMPTS.map((p) => (
               <button
                 key={p.label}
-                onClick={() => { sendAndNavigate(p.label); }}
+                onClick={() => { p.route ? router.push(p.route) : sendAndNavigate(p.label); }}
                 className="flex-1 py-2.5 px-2 rounded-full text-[12px] font-medium flex items-center justify-center gap-1.5 active:opacity-70 transition-opacity"
                 style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)", color: "var(--color-text-primary)" }}
               >

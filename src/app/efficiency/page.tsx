@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus, CheckCircle2, Pause, Play, SquarePen, Copy, Trash2, Pencil, Target,
+  BarChart3,
 } from "lucide-react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { useEfficiencyStore } from "@/lib/store/efficiencyStore";
@@ -260,11 +261,21 @@ export default function EfficiencyPage() {
     <div className="mx-auto relative" style={{ maxWidth: 430, minHeight: "100vh", paddingBottom: 100 }}>
       {/* ===== Header ===== */}
       <div className="px-5 pt-[var(--safe-area-top)] pb-2">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-title-large" style={{ color: "var(--color-text-primary)" }}>目标</h1>
-          <p className="text-label" style={{ color: "var(--color-text-secondary)" }}>
-            项目 · 目标 · 任务
-          </p>
+        <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-1">
+            <h1 className="text-title-large" style={{ color: "var(--color-text-primary)" }}>目标</h1>
+            <p className="text-label" style={{ color: "var(--color-text-secondary)" }}>
+              项目 · 目标 · 任务
+            </p>
+          </div>
+          <button
+            onClick={() => router.push("/efficiency/review")}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-[13px] font-medium active:scale-95 transition-transform"
+            style={{ background: "var(--lifeflow-brand-50)", color: "var(--lifeflow-primary)" }}
+          >
+            <BarChart3 className="w-4 h-4" />
+            复盘
+          </button>
         </div>
       </div>
 

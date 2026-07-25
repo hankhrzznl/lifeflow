@@ -13,6 +13,7 @@ import {
   StretchHorizontal,
   Utensils,
   Flower2,
+  BarChart3,
 } from "lucide-react";
 
 // ============================================================
@@ -34,6 +35,12 @@ export default function MorePage() {
         { title: "课程表", description: "管理课程安排", href: "/more/schedule/courses", icon: GraduationCap },
         { title: "作息", description: "设定日常作息", href: "/more/schedule/routines", icon: Clock },
         { title: "全部功能", description: "13 个功能模块入口", href: "/more/projects", icon: FolderKanban },
+      ],
+    },
+    {
+      label: "回顾",
+      items: [
+        { title: "复盘", description: "日/周/月/年数据回顾", href: "/efficiency/review", icon: BarChart3 },
       ],
     },
     {

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLiveQuery } from "dexie-react-hooks";
 import {
-  Zap, Check, Bell, Flame,
+  FolderKanban, Zap, Check, Bell, Flame,
   Calendar, Droplets, Moon, Dumbbell, Pill,
   Plus, X, Clock, ChevronRight,
 } from "lucide-react";
@@ -253,6 +253,14 @@ export default function HomePage() {
         <p className="text-[13px] font-medium" style={{ color: "var(--color-text-secondary)" }}>
           {greeting()} · {formatDateChinese(now)}
         </p>
+        <Link
+          href="/more/projects"
+          className="h-7 flex items-center gap-1 px-2 rounded-lg active:opacity-60"
+          style={{ background: "var(--color-surface-card)", border: "1px solid var(--lifeflow-border)" }}
+        >
+          <FolderKanban className="w-3.5 h-3.5" style={{ color: "var(--color-text-secondary)" }} />
+          <span className="text-[11px] font-medium" style={{ color: "var(--color-text-secondary)" }}>功能模块</span>
+        </Link>
       </motion.div>
 
       {/* ===== 感知卡片区 ===== */}

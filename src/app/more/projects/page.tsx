@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
@@ -25,10 +25,7 @@ export default function ProjectsPage() {
 
   const allProjects = useLiveQuery(() => getAllProjects(), [], [] as Project[]);
 
-  const bigProjects = allProjects.filter(p => p.projectType === 'big');
   const smallProjects = allProjects.filter(p => p.projectType === 'small');
-
-  const [activeBigId, setActiveBigId] = useState<string>("");
 
   const navigateTo = useCallback((p: Project) => {
     if (p.moreRoute) router.push(p.moreRoute);
@@ -37,10 +34,8 @@ export default function ProjectsPage() {
   const getIcon = (name: string) => ICON_MAP[name] || FolderKanban;
 
   const defaultSmall = useMemo(() => {
-    return activeBigId
-      ? smallProjects.filter(p => p.isDefault && p.parentProjectId === activeBigId)
-      : smallProjects.filter(p => p.isDefault);
-  }, [smallProjects, activeBigId]);
+    return smallProjects.filter(p => p.isDefault);
+  }, [smallProjects]);
 
   return (
     <div className="pb-[120px]">
@@ -58,36 +53,7 @@ export default function ProjectsPage() {
       </div>
 
       <div className="px-4">
-        <p className="text-[12px] mb-2.5" style={{ color: "var(--color-text-disabled)" }}>13 个模块</p>
-        {/* Big Project Tags */}
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mb-5">
-          <p className="text-[12px] font-medium mb-2.5" style={{ color: "var(--color-text-disabled)" }}>项目分类</p>
-          <div className="flex gap-2 flex-wrap">
-            <button
-              onClick={() => setActiveBigId("")}
-              className="h-9 px-4 rounded-full text-[13px] font-medium transition-colors"
-              style={{
-                background: !activeBigId ? "var(--lifeflow-primary)" : "var(--color-surface-secondary)",
-                color: !activeBigId ? "var(--lifeflow-primary-foreground)" : "var(--color-text-secondary)",
-              }}
-            >全部</button>
-            {bigProjects.map(bp => {
-              const Icon = getIcon(bp.icon);
-              return (
-                <button key={bp.id} onClick={() => setActiveBigId(activeBigId === bp.id ? "" : bp.id)}
-                  className="h-9 px-3.5 rounded-full text-[13px] font-medium transition-colors flex items-center gap-1.5"
-                  style={{
-                    background: activeBigId === bp.id ? bp.color : "var(--color-surface-secondary)",
-                    color: activeBigId === bp.id ? "#fff" : "var(--color-text-secondary)",
-                    border: activeBigId !== bp.id ? "1px solid var(--lifeflow-border)" : "none",
-                  }}
-                ><Icon className="w-3.5 h-3.5" />{bp.name}</button>
-              );
-            })}
-          </div>
-        </motion.div>
-
-        {/* Default Small Projects */}
+        {/* 功能模块 */}
         {defaultSmall.length > 0 && (
           <div className="mb-5">
             <p className="text-[12px] font-medium mb-2.5" style={{ color: "var(--color-text-disabled)" }}>功能模块</p>

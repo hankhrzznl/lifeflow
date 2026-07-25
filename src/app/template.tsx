@@ -6,7 +6,7 @@ import type { ReactNode } from "react";
 
 const pageVariants = {
   initial: {
-    opacity: 0,
+    opacity: 0.7,
     y: 12,
     scale: 0.985,
   },
@@ -20,7 +20,7 @@ const pageVariants = {
     opacity: 0,
     y: -12,
     scale: 0.985,
-    transition: { duration: 0.15, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] },
+    transition: { duration: 0.10, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] },
   },
 };
 
@@ -28,7 +28,7 @@ export default function Template({ children }: { children: ReactNode }) {
   const pathname = usePathname();
 
   return (
-    <AnimatePresence mode="wait" initial={false}>
+    <AnimatePresence mode="popLayout" initial={false}>
       <motion.div
         key={pathname}
         variants={pageVariants}

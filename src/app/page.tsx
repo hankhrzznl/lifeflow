@@ -120,6 +120,25 @@ export default function HomePage() {
     [] as Item[],
   );
 
+  // ── 缓存：返回时避免空白加载 ──
+  const [cachedUpcoming, setCachedUpcoming] = useState<Item[]>(() => {
+    try {
+      const cached = sessionStorage.getItem("home_upcoming");
+      return cached ? JSON.parse(cached) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    if (upcomingItems.length > 0) {
+      setCachedUpcoming(upcomingItems);
+      sessionStorage.setItem("home_upcoming", JSON.stringify(upcomingItems));
+    }
+  }, [upcomingItems]);
+
+  const displayUpcoming = upcomingItems.length > 0 ? upcomingItems : cachedUpcoming;
+
   // ── 提醒 ──
   const [pendingReminders, setPendingReminders] = useState<Reminder[]>([]);
   useEffect(() => {
@@ -139,20 +158,20 @@ export default function HomePage() {
 
   // ── 核心事项（第一条未完成） ──
   const coreItem = useMemo(() => {
-    return (upcomingItems ?? []).find((item) => !item.isCompleted) ?? null;
-  }, [upcomingItems]);
+    return (displayUpcoming ?? []).find((item) => !item.isCompleted) ?? null;
+  }, [displayUpcoming]);
 
   // ── 今日事项计数 ──
-  const todayTotal = (upcomingItems ?? []).length;
-  const completedCount = (upcomingItems ?? []).filter((i) => i.isCompleted).length;
+  const todayTotal = (displayUpcoming ?? []).length;
+  const completedCount = (displayUpcoming ?? []).filter((i) => i.isCompleted).length;
 
   // ── 排序 ──
   const sortedItems = useMemo(() => {
-    return [...(upcomingItems ?? [])].sort((a, b) => {
+    return [...(displayUpcoming ?? [])].sort((a, b) => {
       if (a.isCompleted !== b.isCompleted) return a.isCompleted ? 1 : -1;
       return a.plannedStart.localeCompare(b.plannedStart);
     });
-  }, [upcomingItems]);
+  }, [displayUpcoming]);
 
   // ── 勾选切换 ──
   const handleToggle = useCallback(async (item: Item) => {

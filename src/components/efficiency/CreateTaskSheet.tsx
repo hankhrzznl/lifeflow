@@ -136,13 +136,15 @@ export interface CreateTaskSheetProps {
   inline?: boolean;
   /** 内联模式下的返回按钮回调 */
   onBack?: () => void;
+  /** 轻量模式：仅展示核心字段（标题、日期、重要），隐藏进度条任务 tab */
+  lite?: boolean;
 }
 
 // ============================================================
 // 主组件
 // ============================================================
 export function CreateTaskSheet({
-  open, selectedDate, goalId, onClose, onSubmit, inline, onBack,
+  open, selectedDate, goalId, onClose, onSubmit, inline, onBack, lite,
 }: CreateTaskSheetProps) {
   const defaultDate = selectedDate || toDateStr(new Date());
   const [form, setForm] = useState<TaskFormData>(getDefaultTaskForm(defaultDate));
@@ -150,6 +152,7 @@ export function CreateTaskSheet({
   const [isSaving, setIsSaving] = useState(false);
   const [showTimeSheet, setShowTimeSheet] = useState(false);
   const [reminderTime, setReminderTime] = useState("");
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -157,6 +160,7 @@ export function CreateTaskSheet({
       setForm(getDefaultTaskForm(d));
       setTab("normal");
       setIsSaving(false);
+      setShowAdvanced(false);
     }
   }, [open, selectedDate]);
 
@@ -264,14 +268,31 @@ export function CreateTaskSheet({
 
             {/* 滚动内容 */}
             <div className="flex-1 overflow-y-auto px-4 pt-4 pb-10 flex flex-col gap-3">
-              <TaskFormFields form={form} patch={patch} tab={tab} onTabChange={(t) => {
-                setTab(t);
-                patch({
-                  isProgressTask: t === "progress",
-                  endDate: t === "progress" ? NO_END_DATE
-                    : form.endDate === NO_END_DATE ? form.startDate : form.endDate,
-                });
-              }} suggestedDailyMin={suggestedDailyMin} onTimeClick={() => setShowTimeSheet(true)} />
+              {lite ? (
+                <LiteTaskFormFields
+                  form={form} patch={patch}
+                  showAdvanced={showAdvanced} onToggleAdvanced={() => setShowAdvanced(!showAdvanced)}
+                  tab={tab} onTabChange={(t) => {
+                    setTab(t);
+                    patch({
+                      isProgressTask: t === "progress",
+                      endDate: t === "progress" ? NO_END_DATE
+                        : form.endDate === NO_END_DATE ? form.startDate : form.endDate,
+                    });
+                  }}
+                  suggestedDailyMin={suggestedDailyMin}
+                  onTimeClick={() => setShowTimeSheet(true)}
+                />
+              ) : (
+                <TaskFormFields form={form} patch={patch} tab={tab} onTabChange={(t) => {
+                  setTab(t);
+                  patch({
+                    isProgressTask: t === "progress",
+                    endDate: t === "progress" ? NO_END_DATE
+                      : form.endDate === NO_END_DATE ? form.startDate : form.endDate,
+                  });
+                }} suggestedDailyMin={suggestedDailyMin} onTimeClick={() => setShowTimeSheet(true)} />
+              )}
               {/* 收起键盘 */}
               <div className="flex items-center justify-center gap-1 pt-1 pb-2">
                 <span className="text-[13px] text-[#86868B]">收起键盘</span>
@@ -302,10 +323,77 @@ export function CreateTaskSheet({
 }
 
 // ============================================================
+// 轻量模式表单字段（底部弹窗精简版）
+// ============================================================
+function LiteTaskFormFields({
+  form, patch, showAdvanced, onToggleAdvanced,
+  tab, onTabChange, suggestedDailyMin, onTimeClick,
+}: {
+  form: TaskFormData;
+  patch: (p: Partial<TaskFormData>) => void;
+  showAdvanced: boolean;
+  onToggleAdvanced: () => void;
+  tab: "normal" | "progress";
+  onTabChange: (t: "normal" | "progress") => void;
+  suggestedDailyMin: number;
+  onTimeClick: () => void;
+}) {
+  return (
+    <>
+      {/* 标题输入 */}
+      <div className="bg-white rounded-xl border border-[#EBEBEB] overflow-hidden">
+        <input type="text" value={form.title} onChange={(e) => patch({ title: e.target.value })}
+          placeholder="任务名称" autoFocus
+          className="block w-full h-[54px] px-4 border-none outline-none text-[17px] text-[#1D1D1F] bg-transparent placeholder-[#86868B]"
+          style={{ caretColor: ACCENT }} />
+      </div>
+
+      {/* 日期选择 */}
+      <div className="bg-white rounded-xl border border-[#EBEBEB] p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <Calendar className="w-5 h-5 text-[#86868B]" />
+            <span className="text-[15px] text-[#1D1D1F]">选择日期</span>
+          </div>
+        </div>
+        <div className="flex gap-3">
+          <DateTile label="开始日期" value={form.startDate} display={formatSlashDate(form.startDate)}
+            onChange={(v) => { const next: Partial<TaskFormData> = { startDate: v }; if (form.endDate !== NO_END_DATE && form.endDate < v) next.endDate = v; patch(next); }} />
+          <DateTile label="结束日期" value={form.endDate === NO_END_DATE ? form.startDate : form.endDate}
+            display={formatSlashDate(form.endDate === NO_END_DATE ? form.startDate : form.endDate)}
+            min={form.startDate} onChange={(v) => patch({ endDate: v })} />
+        </div>
+      </div>
+
+      {/* 重要 */}
+      <ImportantRow value={form.isImportant} onChange={(v) => patch({ isImportant: v })} />
+
+      {/* 高级设置 展开/收起 */}
+      <button type="button" onClick={onToggleAdvanced}
+        className="flex items-center justify-center gap-1.5 py-2 w-full text-[15px] text-[#5865F2]">
+        <span>{showAdvanced ? "收起高级设置" : "高级设置"}</span>
+        <ChevronDown className="w-[14px] h-[14px] transition-transform" style={{ transform: showAdvanced ? "rotate(180deg)" : "none" }} />
+      </button>
+
+      {/* 高级设置展开内容 */}
+      <AnimatePresence initial={false}>
+        {showAdvanced && (
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.3, ease: [0.32, 0.72, 0, 1] }} className="overflow-hidden flex flex-col gap-3">
+            <TaskFormFields form={form} patch={patch} tab={tab} onTabChange={onTabChange}
+              suggestedDailyMin={suggestedDailyMin} onTimeClick={onTimeClick} hideProgressTab />
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
+  );
+}
+
+// ============================================================
 // 表单字段区域（共享）
 // ============================================================
 export function TaskFormFields({
-  form, patch, tab, onTabChange, suggestedDailyMin, onTimeClick,
+  form, patch, tab, onTabChange, suggestedDailyMin, onTimeClick, hideProgressTab,
 }: {
   form: TaskFormData;
   patch: (p: Partial<TaskFormData>) => void;
@@ -313,6 +401,7 @@ export function TaskFormFields({
   onTabChange: (t: "normal" | "progress") => void;
   suggestedDailyMin: number;
   onTimeClick: () => void;
+  hideProgressTab?: boolean;
 }) {
   return (
     <>
@@ -330,22 +419,24 @@ export function TaskFormFields({
       </div>
 
       {/* 类型切换 */}
-      <div className="flex shrink-0 h-9 rounded-[18px] bg-[#EBEBEB] p-0.5">
-        {([{ key: "normal", label: "普通任务" }, { key: "progress", label: "进度条任务" }] as const).map((t) => {
-          const active = tab === t.key;
-          return (
-            <button key={t.key} type="button" onClick={() => onTabChange(t.key)}
-              className="flex-1 flex items-center justify-center rounded-[16px] text-[15px]"
-              style={{
-                background: active ? "#FFFFFF" : "transparent",
-                boxShadow: active ? "0 1px 3px rgba(0,0,0,0.08)" : "none",
-                color: active ? "#1D1D1F" : MUTED, fontWeight: active ? 600 : 400,
-              }}>{t.label}</button>
-          );
-        })}
-      </div>
+      {!hideProgressTab && (
+        <div className="flex shrink-0 h-9 rounded-[18px] bg-[#EBEBEB] p-0.5">
+          {([{ key: "normal", label: "普通任务" }, { key: "progress", label: "进度条任务" }] as const).map((t) => {
+            const active = tab === t.key;
+            return (
+              <button key={t.key} type="button" onClick={() => onTabChange(t.key)}
+                className="flex-1 flex items-center justify-center rounded-[16px] text-[15px]"
+                style={{
+                  background: active ? "#FFFFFF" : "transparent",
+                  boxShadow: active ? "0 1px 3px rgba(0,0,0,0.08)" : "none",
+                  color: active ? "#1D1D1F" : MUTED, fontWeight: active ? 600 : 400,
+                }}>{t.label}</button>
+            );
+          })}
+        </div>
+      )}
 
-      {tab === "normal"
+      {tab === "normal" || hideProgressTab
         ? <NormalFields form={form} patch={patch} onTimeClick={onTimeClick} />
         : <ProgressFields form={form} patch={patch} suggestedDailyMin={suggestedDailyMin} onTimeClick={onTimeClick} />
       }

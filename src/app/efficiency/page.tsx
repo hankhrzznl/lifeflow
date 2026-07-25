@@ -169,10 +169,17 @@ export default function EfficiencyPage() {
     let filtered = goals;
     if (activeCategory !== "全部") {
       const pid = projectNameMap.get(activeCategory);
+      console.warn("[Efficiency] 分类筛选:", { activeCategory, pid, totalGoals: goals.length, projectNameMapSize: projectNameMap.size });
       if (pid) {
         filtered = goals.filter((g) => g.projectId === pid);
+        if (filtered.length === 0) {
+          // 诊断：打印所有 goal 的 projectId，帮助定位不匹配
+          const goalPids = goals.map(g => ({ title: g.title, projectId: g.projectId }));
+          console.warn("[Efficiency] 过滤后为空，所有goal的projectId:", goalPids, "目标pid:", pid);
+        }
       } else {
         // 如果没找到对应项目（分类标签名和项目名不匹配），显示空
+        console.warn("[Efficiency] projectNameMap中找不到:", activeCategory, "可用keys:", [...projectNameMap.keys()]);
         filtered = [];
       }
     }

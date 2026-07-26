@@ -18,7 +18,7 @@
     { "src": "/screenshots/today.png", "sizes": "390x844", "type": "image/png", "form_factor": "narrow", "label": "今日任务" }
   ],
   "shortcuts": [
-    { "name": "今日任务", "short_name": "今天", "description": "查看今日待办", "url": "/today", "icons": [{ "src": "/icons/shortcut-today.png", "sizes": "96x96" }] },
-    { "name": "目标列表", "short_name": "目标", "description": "查看所有目标", "url": "/goals", "icons": [{ "src": "/icons/shortcut-goals.png", "sizes": "96x96" }] }
+    { "name": "今日事项", "short_name": "首页", "description": "查看今日待办", "url": "/", "icons": [{ "src": "/icons/shortcut-today.png", "sizes": "96x96" }] },
+    { "name": "目标", "short_name": "目标", "description": "查看所有目标", "url": "/efficiency", "icons": [{ "src": "/icons/shortcut-goals.png", "sizes": "96x96" }] }
   ]
 }

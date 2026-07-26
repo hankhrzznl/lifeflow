@@ -29,6 +29,28 @@ function GoalEngineInitializer({ children }: { children: React.ReactNode }) {
           console.warn("[Retirement] 退役迁移失败(已跳过):", e);
         }
       }, 500);
+
+      // PWA 兜底：确保各 DB 种子数据存在（尤其是 PWA 独立存储分区场景）
+      setTimeout(async () => {
+        if (cancelled) return;
+        try {
+          const [{ initializeEfficiencyDB }, { initializeAccountingDB }, { initializeHealthDB }, { initializeLifeDB }]
+            = await Promise.all([
+              import("@/lib/db/efficiency.db"),
+              import("@/lib/db/accounting.db"),
+              import("@/lib/db/health.db"),
+              import("@/lib/db/life.db"),
+            ]);
+          await Promise.allSettled([
+            initializeEfficiencyDB(),
+            initializeAccountingDB(),
+            initializeHealthDB(),
+            initializeLifeDB(),
+          ]);
+        } catch (e) {
+          console.warn("[DB] 初始化兜底失败:", e);
+        }
+      }, 300);
     });
     return () => { cancelled = true; };
   }, []);

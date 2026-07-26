@@ -8,7 +8,7 @@ import {
   GraduationCap, Heart, ClipboardList, Target, Gamepad2, FolderOpen,
   Clock, Wallet, Droplets, Moon, Dumbbell, Pill, StretchHorizontal,
   Utensils, Flower2, ExternalLink,
-  Timer, CalendarRange, StickyNote,
+  Timer, CalendarRange, StickyNote, Settings,
 } from "lucide-react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { getAllProjects } from "@/lib/db/efficiency.db";
@@ -81,7 +81,7 @@ export default function ProjectsPage() {
               <motion.button
                 initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: defaultSmall.length * 0.03 + 0.03 }}
-                onClick={() => router.push("/more/focus")}
+                onClick={() => router.push("/focus")}
                 className="p-3.5 rounded-[16px] flex items-center gap-3 text-left active:scale-[0.98] transition-transform"
                 style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}
               >
@@ -122,6 +122,22 @@ export default function ProjectsPage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="text-[14px] font-semibold truncate" style={{ color: "var(--color-text-primary)" }}>备忘录</div>
+                </div>
+                <ExternalLink className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "var(--color-text-disabled)" }} />
+              </motion.button>
+              {/* 设置 */}
+              <motion.button
+                initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: defaultSmall.length * 0.03 + 0.12 }}
+                onClick={() => router.push("/settings")}
+                className="p-3.5 rounded-[16px] flex items-center gap-3 text-left active:scale-[0.98] transition-transform"
+                style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}
+              >
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "#64748B20" }}>
+                  <Settings className="w-5 h-5" style={{ color: "#64748B" }} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[14px] font-semibold truncate" style={{ color: "var(--color-text-primary)" }}>设置</div>
                 </div>
                 <ExternalLink className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "var(--color-text-disabled)" }} />
               </motion.button>

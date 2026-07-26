@@ -279,7 +279,7 @@ export async function initializeEfficiencyDB(): Promise<{ success: boolean; erro
     // Seed 默认项目（仅在 projects 表为空时）
     const projectCount = await efficiencyDB.projects.count();
     if (projectCount === 0) {
-      const defaults = [
+      const bigDefaults = [
         { name: "学习", color: "#2563EB", icon: "GraduationCap", description: "", sortOrder: 0, projectType: 'big' as const },
         { name: "健康", color: "#10B981", icon: "Heart", description: "", sortOrder: 1, projectType: 'big' as const },
         { name: "琐事", color: "#F59E0B", icon: "ClipboardList", description: "", sortOrder: 2, projectType: 'big' as const },
@@ -291,8 +291,27 @@ export async function initializeEfficiencyDB(): Promise<{ success: boolean; erro
         { name: "个人成长", color: "#A855F7", icon: "Sparkles", description: "", sortOrder: 5, projectType: 'big' as const },
         { name: "无项目", color: "#94A3B8", icon: "FolderOpen", description: "", sortOrder: 5.5, projectType: 'big' as const },
       ];
-      for (const p of defaults) {
+      for (const p of bigDefaults) {
         await efficiencyDB.projects.add({ ...p, id: crypto.randomUUID(), createdAt: Date.now() });
+      }
+
+      // 种子 small 功能模块（PWA 兜底：这些原本只在 v10 upgrade 回调中播种）
+      const smallDefaults = [
+        { name: '课程表', color: '#7C3AED', icon: 'GraduationCap', sortOrder: 0, moreRoute: '/more/schedule/courses' },
+        { name: '作息', color: '#6366F1', icon: 'Clock', sortOrder: 1, moreRoute: '/more/schedule/routines' },
+        { name: '记账', color: '#14B8A6', icon: 'Wallet', sortOrder: 2, moreRoute: '/more/accounting' },
+        { name: '饮水', color: '#0EA5E9', icon: 'Droplets', sortOrder: 3, moreRoute: '/more/water' },
+        { name: '睡眠', color: '#1E293B', icon: 'Moon', sortOrder: 4, moreRoute: '/more/sleep' },
+        { name: '训练', color: '#EF4444', icon: 'Dumbbell', sortOrder: 5, moreRoute: '/more/fitness' },
+        { name: '饮食', color: '#F97316', icon: 'Utensils', sortOrder: 6, moreRoute: '/more/diet' },
+        { name: '养生', color: '#84CC16', icon: 'Flower2', sortOrder: 7, moreRoute: '/more/wellness' },
+        { name: '体态拉伸', color: '#06B6D4', icon: 'StretchHorizontal', sortOrder: 8, moreRoute: '/more/posture' },
+        { name: '吃药', color: '#DC2626', icon: 'Pill', sortOrder: 9, moreRoute: '/more/medication' },
+      ];
+      for (const p of smallDefaults) {
+        await efficiencyDB.projects.add({
+          ...p, id: crypto.randomUUID(), description: '', projectType: 'small' as const, isDefault: true, createdAt: Date.now(),
+        });
       }
     }
     return { success: true };

@@ -45,6 +45,8 @@ import {
   deleteWorkoutSession,
 } from '../db/health.db';
 
+import { generatePostureStretchItems } from '../postureStretchSync';
+
 // ─── Helpers ─────────────────────────────────────────────────
 
 /** 本地时区日期键（YYYY-MM-DD），严禁用 toISOString（UTC 口径会错位一天） */
@@ -249,6 +251,10 @@ export const useHealthStore = create<HealthState>()((set, get) => ({
       await addSleepLog(newRecord);
     }
     await get().loadSleepData();
+    // Auto-generate posture stretch items from this sleep record
+    if (record.actualTime) {
+      generatePostureStretchItems(record.actualTime, record.date).catch(() => {});
+    }
   },
 
   updateSleepGoalV2: async (updates) => {

@@ -3,9 +3,9 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, Plus, Minus, X } from "lucide-react";
-import { healthDB } from "@/lib/db/health.db";
-import type { StretchLog } from "@/lib/db/health.db";
+import { ChevronLeft, Plus, Minus, X, Settings } from "lucide-react";
+import { healthDB, getPostureSettings, updatePostureSettings } from "@/lib/db/health.db";
+import type { StretchLog, PostureSettings } from "@/lib/db/health.db";
 import { showToast } from "@/components/ui/Toast";
 
 const POSTURE_ISSUES = ["驼背", "圆肩", "骨盆前倾", "头部前倾", "脊柱侧弯"] as const;
@@ -50,6 +50,12 @@ export default function PosturePage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
 
+  // ─── Posture Settings State ───
+  const [preSleepOffset, setPreSleepOffset] = useState(40);
+  const [postWakeOffset, setPostWakeOffset] = useState(2);
+  const [napExclude, setNapExclude] = useState(true);
+  const [settingsLoading, setSettingsLoading] = useState(true);
+
   const [exName, setExName] = useState("");
   const [sets, setSets] = useState(1);
   const [reps, setReps] = useState(15);
@@ -64,6 +70,16 @@ export default function PosturePage() {
   }, []);
 
   useEffect(() => { loadLogs(); }, [loadLogs]);
+
+  // Load posture settings
+  useEffect(() => {
+    getPostureSettings().then(s => {
+      setPreSleepOffset(s.preSleepOffset);
+      setPostWakeOffset(s.postWakeOffset);
+      setNapExclude(s.napExclude);
+      setSettingsLoading(false);
+    }).catch(() => setSettingsLoading(false));
+  }, []);
 
   const weekStats = useMemo(() => {
     const week = logs.filter(l => isDateInWeek(l.date));
@@ -109,6 +125,25 @@ export default function PosturePage() {
     await healthDB.stretchLogs.delete(id);
     showToast({ type: "success", message: "已删除" });
     await loadLogs();
+  };
+
+  // ─── Settings handlers ───
+  const handlePreSleepOffsetChange = async (val: number) => {
+    const clamped = Math.max(1, Math.min(120, val));
+    setPreSleepOffset(clamped);
+    await updatePostureSettings({ preSleepOffset: clamped });
+  };
+
+  const handlePostWakeOffsetChange = async (val: number) => {
+    const clamped = Math.max(1, Math.min(60, val));
+    setPostWakeOffset(clamped);
+    await updatePostureSettings({ postWakeOffset: clamped });
+  };
+
+  const handleNapExcludeToggle = async () => {
+    const next = !napExclude;
+    setNapExclude(next);
+    await updatePostureSettings({ napExclude: next });
   };
 
   const quickFill = (name: string, relatedIssue?: string) => {
@@ -167,6 +202,71 @@ export default function PosturePage() {
             记录拉伸
           </button>
         </motion.div>
+
+        {/* ── Settings Card ── */}
+        {!settingsLoading && (
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.07 }}>
+            <div className="p-5" style={{ background: "var(--color-surface-card)", borderRadius: "20px", boxShadow: "var(--shadow-card)" }}>
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: "var(--lifeflow-brand-50)" }}>
+                  <Settings className="w-4 h-4" style={{ color: "var(--lifeflow-primary)" }} />
+                </div>
+                <h2 className="text-[17px] font-semibold" style={{ color: "var(--color-text-primary)" }}>设置</h2>
+              </div>
+
+              {/* 睡前拉伸 */}
+              <div className="flex items-center justify-between py-2">
+                <span className="text-[15px]" style={{ color: "var(--color-text-primary)" }}>睡前拉伸</span>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min={1}
+                    max={120}
+                    value={preSleepOffset}
+                    onChange={(e) => handlePreSleepOffsetChange(Number(e.target.value))}
+                    className="w-16 h-9 text-center rounded-lg text-[15px] outline-none"
+                    style={{ border: "1px solid var(--lifeflow-border)", color: "var(--color-text-primary)", background: "var(--lifeflow-input)" }}
+                  />
+                  <span className="text-[13px]" style={{ color: "var(--color-text-secondary)" }}>分钟前</span>
+                </div>
+              </div>
+
+              {/* 睡醒拉伸 */}
+              <div className="flex items-center justify-between py-2" style={{ borderTop: "1px solid var(--lifeflow-border)" }}>
+                <span className="text-[15px]" style={{ color: "var(--color-text-primary)" }}>睡醒拉伸</span>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min={1}
+                    max={60}
+                    value={postWakeOffset}
+                    onChange={(e) => handlePostWakeOffsetChange(Number(e.target.value))}
+                    className="w-16 h-9 text-center rounded-lg text-[15px] outline-none"
+                    style={{ border: "1px solid var(--lifeflow-border)", color: "var(--color-text-primary)", background: "var(--lifeflow-input)" }}
+                  />
+                  <span className="text-[13px]" style={{ color: "var(--color-text-secondary)" }}>分钟后</span>
+                </div>
+              </div>
+
+              {/* 午睡不触发 */}
+              <div className="flex items-center justify-between py-2" style={{ borderTop: "1px solid var(--lifeflow-border)" }}>
+                <span className="text-[15px]" style={{ color: "var(--color-text-primary)" }}>午睡不触发</span>
+                <button
+                  type="button"
+                  onClick={handleNapExcludeToggle}
+                  className="relative w-[51px] h-[31px] rounded-full transition-colors"
+                  style={{ background: napExclude ? "var(--lifeflow-primary)" : "var(--color-text-disabled)" }}
+                >
+                  <motion.div
+                    className="absolute top-[2px] w-[27px] h-[27px] rounded-full bg-white shadow-sm"
+                    animate={{ left: napExclude ? 22 : 2 }}
+                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                  />
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
 
         {/* Quick Stretch Cards */}
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>

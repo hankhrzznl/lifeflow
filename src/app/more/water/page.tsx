@@ -1,69 +1,218 @@
 "use client";
 
-import { useEffect, useState, useMemo, useCallback, useRef } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { useLiveQuery } from "dexie-react-hooks";
 import { motion } from "framer-motion";
-import { ChevronLeft, Droplets, Plus, Minus } from "lucide-react";
+import { ChevronLeft, Droplets, Plus, Minus, RefreshCw, Check } from "lucide-react";
+import { daylogDB, ensureModuleItem, updateItem } from "@/lib/db/daylog.db";
+import { healthDB, getSleepLogByDate, getWaterGoal, updateWaterGoal } from "@/lib/db/health.db";
 import { useHealthStore } from "@/lib/store/healthStore";
 import { runPerceptionCheck } from "@/lib/perception-engine";
+import { sendNotification } from "@/lib/notificationService";
 
-/* ────────── Constants ────────── */
+/* ────────── Helpers ────────── */
 
-const QUICK_AMOUNTS = [100, 200, 300, 500] as const;
-const INTERVAL_OPTIONS = [
-  { label: "30分钟", value: 30 },
-  { label: "1小时", value: 60 },
-  { label: "2小时", value: 120 },
-] as const;
-const CUP_OPTIONS = [200, 300, 500] as const;
+function todayStr(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function addMinutes(time: string, mins: number): string {
+  const [h, m] = time.split(":").map(Number);
+  const total = h * 60 + m + mins;
+  const nh = Math.floor(total / 60) % 24;
+  const nm = total % 60;
+  return `${String(nh).padStart(2, "0")}:${String(nm).padStart(2, "0")}`;
+}
+
+function dateAddDays(dateStr: string, days: number): string {
+  const d = new Date(dateStr + "T00:00:00");
+  d.setDate(d.getDate() + days);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function isNapHour(hour: number, napStart: string, napEnd: string): boolean {
+  if (!napStart || !napEnd) return false;
+  const ns = parseInt(napStart.split(":")[0]);
+  const ne = parseInt(napEnd.split(":")[0]);
+  if (isNaN(ns) || isNaN(ne)) return false;
+  return hour >= ns && hour < ne;
+}
+
+function generateWaterSourceId(date: string, timeStr: string): string {
+  return `water_${date}_${timeStr}`;
+}
+
+/* ────────── Settings type ────────── */
+
+interface WaterSettings {
+  wakeStart: string;
+  wakeEnd: string;
+  napStart: string;
+  napEnd: string;
+  dailyTarget: number;
+}
+
+const DEFAULT_SETTINGS: WaterSettings = {
+  wakeStart: "08:00",
+  wakeEnd: "22:00",
+  napStart: "",
+  napEnd: "",
+  dailyTarget: 2000,
+};
 
 /* ────────── Component ────────── */
 
 export default function WaterPage() {
   const router = useRouter();
+  const today = todayStr();
 
-  const waterLogs = useHealthStore((s) => s.waterLogs);
-  const todayWaterTotal = useHealthStore((s) => s.todayWaterTotal);
-  const waterGoal = useHealthStore((s) => s.waterGoal);
-  const loadWaterData = useHealthStore((s) => s.loadWaterData);
-  const addWaterAction = useHealthStore((s) => s.addWater);
-  const deleteWaterLogAction = useHealthStore((s) => s.deleteWaterLog);
-  const updateWaterGoalAction = useHealthStore((s) => s.updateWaterGoal);
+  const [settings, setSettings] = useState<WaterSettings>(DEFAULT_SETTINGS);
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
+  const [generating, setGenerating] = useState(false);
 
-  const [addingMap, setAddingMap] = useState<Record<number, boolean>>({});
-  const [pageLoading, setPageLoading] = useState(true);
-  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
-  const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const dailyTarget = waterGoal?.dailyTarget ?? 2000;
-
-  /* ─── Load ─── */
+  /* ─── Load settings from WaterGoal ─── */
 
   useEffect(() => {
     (async () => {
-      setPageLoading(true);
-      await loadWaterData();
-      setPageLoading(false);
+      try {
+        const goal = await getWaterGoal();
+        setSettings({
+          wakeStart: goal.wakeStart || DEFAULT_SETTINGS.wakeStart,
+          wakeEnd: goal.wakeEnd || DEFAULT_SETTINGS.wakeEnd,
+          napStart: goal.napStart || DEFAULT_SETTINGS.napStart,
+          napEnd: goal.napEnd || DEFAULT_SETTINGS.napEnd,
+          dailyTarget: goal.dailyTarget || DEFAULT_SETTINGS.dailyTarget,
+        });
+      } catch {
+        // Use defaults on error
+      }
+      setSettingsLoaded(true);
     })();
-  }, [loadWaterData]);
+  }, []);
 
-  /* ─── Derived ─── */
+  /* ─── Auto-generate items for next 7 days when settings load ─── */
 
-  const percent = useMemo(() => {
-    if (dailyTarget <= 0) return 0;
-    return Math.min(100, Math.round((todayWaterTotal / dailyTarget) * 100));
-  }, [todayWaterTotal, dailyTarget]);
+  useEffect(() => {
+    if (!settingsLoaded) return;
+    generateItemsForNext7Days();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settingsLoaded]);
 
-  const remaining = Math.max(0, dailyTarget - todayWaterTotal);
-  const cupSize = waterGoal?.cupSize ?? 200;
-  const cupsRemaining = Math.ceil(remaining / Math.max(cupSize, 1));
+  /* ─── Live query: today's water items ─── */
 
-  const sortedLogs = useMemo(
-    () => [...waterLogs].sort((a, b) => b.timestamp - a.timestamp),
-    [waterLogs],
+  const todayItems = useLiveQuery(
+    () =>
+      daylogDB.items
+        .where("date")
+        .equals(today)
+        .filter((item) => item.sourceType === "water")
+        .sortBy("plannedStart"),
+    [today],
   );
 
-  /* ─── SVG Ring ─── */
+  /* ─── Core: generate water items ─── */
+
+  const generateItemsForNext7Days = useCallback(async () => {
+    setGenerating(true);
+    try {
+      const startH = parseInt(settings.wakeStart.split(":")[0]);
+      const endH = parseInt(settings.wakeEnd.split(":")[0]);
+      const stopH = endH - 2; // 2 hours before sleep
+
+      for (let d = 0; d < 7; d++) {
+        const date = dateAddDays(today, d);
+
+        for (let h = startH; h < stopH; h++) {
+          // Skip nap hours
+          if (isNapHour(h, settings.napStart, settings.napEnd)) continue;
+
+          const timeStr = `${String(h).padStart(2, "0")}:30`;
+          const endTime = addMinutes(timeStr, 5);
+          const sourceId = generateWaterSourceId(date, timeStr);
+
+          await ensureModuleItem({
+            date,
+            sourceType: "water",
+            sourceId,
+            title: "喝口水然后动一动不要久坐",
+            plannedStart: timeStr,
+            plannedEnd: endTime,
+            color: "#0EA5E9",
+            icon: "Droplets",
+            isCompleted: false,
+          });
+        }
+      }
+      sendNotification("💧 今天的喝水提醒已就绪", "", "water-reminder");
+    } finally {
+      setGenerating(false);
+    }
+  }, [settings, today]);
+
+  /* ─── Regenerate: clear + recreate ─── */
+
+  const handleRegenerate = useCallback(async () => {
+    setGenerating(true);
+    try {
+      // Clear all water items for next 7 days
+      for (let d = 0; d < 7; d++) {
+        const date = dateAddDays(today, d);
+        await daylogDB.items
+          .where("date")
+          .equals(date)
+          .filter((item) => item.sourceType === "water")
+          .delete();
+      }
+      // Recreate
+      await generateItemsForNext7Days();
+    } finally {
+      setGenerating(false);
+    }
+  }, [today, generateItemsForNext7Days]);
+
+  /* ─── Toggle item completion ─── */
+
+  const handleToggle = useCallback(async (id: string, current: boolean) => {
+    await updateItem(id, { isCompleted: !current });
+  }, []);
+
+  /* ─── Save settings to WaterGoal ─── */
+
+  const handleSaveSettings = useCallback(
+    async (updates: Partial<WaterSettings>) => {
+      const merged = { ...settings, ...updates };
+      setSettings(merged);
+      try {
+        await updateWaterGoal({
+          dailyTarget: merged.dailyTarget,
+          wakeStart: merged.wakeStart,
+          wakeEnd: merged.wakeEnd,
+          napStart: merged.napStart || undefined,
+          napEnd: merged.napEnd || undefined,
+        });
+      } catch {
+        // Silently fail
+      }
+    },
+    [settings],
+  );
+
+  /* ─── Derived stats ─── */
+
+  const completedCount = useMemo(
+    () => todayItems?.filter((i) => i.isCompleted).length ?? 0,
+    [todayItems],
+  );
+  const totalCount = todayItems?.length ?? 0;
+  const totalWaterMl = totalCount * 100; // 100ml per item
+
+  const percent = settings.dailyTarget > 0
+    ? Math.min(100, Math.round((totalWaterMl / settings.dailyTarget) * 100))
+    : 0;
+
+  /* ─── SVG Ring measurements ─── */
 
   const ringSize = 196;
   const ringStroke = 10;
@@ -71,88 +220,33 @@ export default function WaterPage() {
   const circumference = 2 * Math.PI * ringRadius;
   const dashOffset = circumference * (1 - percent / 100);
 
-  /* ─── Actions ─── */
+  /* ─── Loading state ─── */
 
-  const handleAdd = useCallback(
-    async (amount: number) => {
-      if (addingMap[amount]) return;
-      setAddingMap((p) => ({ ...p, [amount]: true }));
-      try {
-        await addWaterAction(amount);
-        runPerceptionCheck().then(cards => {
-          sessionStorage.setItem("perception_cards", JSON.stringify(cards));
-        }).catch(() => {});
-      } finally {
-        setAddingMap((p) => ({ ...p, [amount]: false }));
-      }
-    },
-    [addWaterAction, addingMap],
-  );
-
-  const handleStepperChange = useCallback(
-    (delta: number) => {
-      const next = clamp(dailyTarget + delta * 100, 100, 10000);
-      updateWaterGoalAction({ dailyTarget: next });
-    },
-    [dailyTarget, updateWaterGoalAction],
-  );
-
-  const handleCupSizeChange = useCallback(
-    (size: number) => {
-      updateWaterGoalAction({ cupSize: size });
-    },
-    [updateWaterGoalAction],
-  );
-
-  const handleIntervalChange = useCallback(
-    (interval: number) => {
-      updateWaterGoalAction({ reminderInterval: interval });
-    },
-    [updateWaterGoalAction],
-  );
-
-  const handleNightModeToggle = useCallback(() => {
-    updateWaterGoalAction({ nightMode: !waterGoal?.nightMode });
-  }, [waterGoal?.nightMode, updateWaterGoalAction]);
-
-  /* ─── Long press delete ─── */
-
-  const handlePressStart = useCallback((id: string) => {
-    pressTimer.current = setTimeout(() => {
-      setDeleteTarget(id);
-    }, 500);
-  }, []);
-
-  const handlePressEnd = useCallback(() => {
-    if (pressTimer.current) {
-      clearTimeout(pressTimer.current);
-      pressTimer.current = null;
-    }
-  }, []);
-
-  const handleConfirmDelete = useCallback(async () => {
-    if (!deleteTarget) return;
-    await deleteWaterLogAction(deleteTarget);
-    setDeleteTarget(null);
-  }, [deleteTarget, deleteWaterLogAction]);
-
-  /* ─── Helpers ─── */
-
-  function formatTimestamp(ts: number): string {
-    const d = new Date(ts);
-    return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-  }
-
-  /* ─── Loading ─── */
-
-  if (pageLoading) {
+  if (!settingsLoaded || todayItems === undefined) {
     return (
       <div className="min-h-screen" style={{ background: "var(--lifeflow-background)" }}>
         <header className="flex items-center h-11 px-4">
-          <div className="inline-flex h-8 w-8 items-center justify-center rounded-lg" style={{ background: "var(--color-surface-card)", border: "1px solid var(--lifeflow-border)" }} />
+          <div
+            className="inline-flex h-8 w-8 items-center justify-center rounded-lg"
+            style={{
+              background: "var(--color-surface-card)",
+              border: "1px solid var(--lifeflow-border)",
+            }}
+          />
         </header>
-        <div className="px-4 pt-4 flex flex-col items-center gap-5">
-          <div className="w-48 h-48 rounded-full animate-pulse" style={{ background: "var(--lifeflow-muted)" }} />
+        <div className="px-4 pt-4 flex flex-col gap-4">
+          <div
+            className="animate-pulse h-48 rounded-[20px]"
+            style={{ background: "var(--lifeflow-muted)" }}
+          />
+          <div
+            className="animate-pulse h-32 rounded-[20px]"
+            style={{ background: "var(--lifeflow-muted)" }}
+          />
+          <div
+            className="animate-pulse h-40 rounded-[20px]"
+            style={{ background: "var(--lifeflow-muted)" }}
+          />
         </div>
       </div>
     );
@@ -168,25 +262,35 @@ export default function WaterPage() {
           type="button"
           onClick={() => router.push("/more")}
           className="inline-flex h-8 w-8 items-center justify-center rounded-lg shrink-0"
-          style={{ background: "var(--color-surface-card)", border: "1px solid var(--lifeflow-border)" }}
+          style={{
+            background: "var(--color-surface-card)",
+            border: "1px solid var(--lifeflow-border)",
+          }}
           aria-label="返回"
         >
           <ChevronLeft className="h-5 w-5" style={{ color: "var(--color-text-primary)" }} />
         </button>
-        <h1 className="flex-1 text-center text-[17px] font-semibold tracking-[-0.018em]" style={{ color: "var(--color-text-primary)" }}>
+        <h1
+          className="flex-1 text-center text-[17px] font-semibold tracking-[-0.018em]"
+          style={{ color: "var(--color-text-primary)" }}
+        >
           饮水
         </h1>
         <div className="w-8" />
       </header>
 
-      {/* ─── Circular Progress Card ─── */}
+      {/* ─── Progress Ring Card ─── */}
       <div className="px-4 pt-4">
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
           className="flex flex-col items-center p-6"
-          style={{ background: "var(--color-surface-card)", borderRadius: "20px", boxShadow: "var(--shadow-card)" }}
+          style={{
+            background: "var(--color-surface-card)",
+            borderRadius: "20px",
+            boxShadow: "var(--shadow-card)",
+          }}
         >
           <div className="relative flex items-center justify-center" style={{ width: 196, height: 196 }}>
             <svg
@@ -215,269 +319,362 @@ export default function WaterPage() {
                 strokeDasharray={circumference}
                 strokeDashoffset={dashOffset}
                 strokeLinecap="round"
-                style={{ transition: "stroke-dashoffset 0.6s cubic-bezier(0.32, 0.72, 0, 1)" }}
+                style={{
+                  transition: "stroke-dashoffset 0.6s cubic-bezier(0.32, 0.72, 0, 1)",
+                }}
               />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
               <Droplets className="h-9 w-9" style={{ color: "var(--lifeflow-primary)" }} />
-              <span className="text-[28px] font-bold mt-1 tracking-[-0.022em]" style={{ color: "var(--color-text-primary)" }}>
-                {todayWaterTotal} ml
+              <span
+                className="text-[28px] font-bold mt-1 tracking-[-0.022em]"
+                style={{ color: "var(--color-text-primary)" }}
+              >
+                {completedCount}/{totalCount}
+              </span>
+              <span
+                className="text-[13px] font-medium"
+                style={{ color: "var(--color-text-secondary)" }}
+              >
+                {totalWaterMl} / {settings.dailyTarget} ml
               </span>
             </div>
           </div>
-          <p className="text-[13px] font-medium mt-2" style={{ color: "var(--color-text-secondary)", letterSpacing: "-0.01em" }}>
-            今日目标 {dailyTarget} ml
-          </p>
         </motion.div>
       </div>
 
-      {/* ─── Quick-add Buttons ─── */}
-      <div className="px-4 pt-5">
+      {/* ─── Settings Card ─── */}
+      <div className="px-4 pt-4">
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.05, duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
-          className="grid grid-cols-4 gap-3"
+          className="p-4"
+          style={{
+            background: "var(--color-surface-card)",
+            borderRadius: "20px",
+            boxShadow: "var(--shadow-card)",
+          }}
         >
-          {QUICK_AMOUNTS.map((amount) => {
-            const isAccent = amount === 500;
-            return (
+          <h2
+            className="text-[17px] font-semibold mb-3"
+            style={{ color: "var(--color-text-primary)" }}
+          >
+            时间设置
+          </h2>
+
+          {/* Wake Start */}
+          <div className="flex items-center justify-between h-10">
+            <span className="text-[15px]" style={{ color: "var(--color-text-primary)" }}>
+              起床时间
+            </span>
+            <input
+              type="time"
+              value={settings.wakeStart}
+              onChange={(e) => handleSaveSettings({ wakeStart: e.target.value })}
+              className="h-8 px-3 rounded-lg text-[14px] font-medium outline-none"
+              style={{
+                background: "var(--lifeflow-muted)",
+                color: "var(--color-text-primary)",
+                border: "1px solid var(--lifeflow-border)",
+              }}
+            />
+          </div>
+
+          {/* Wake End */}
+          <div className="flex items-center justify-between h-10 mt-1">
+            <span className="text-[15px]" style={{ color: "var(--color-text-primary)" }}>
+              入睡时间
+            </span>
+            <input
+              type="time"
+              value={settings.wakeEnd}
+              onChange={(e) => handleSaveSettings({ wakeEnd: e.target.value })}
+              className="h-8 px-3 rounded-lg text-[14px] font-medium outline-none"
+              style={{
+                background: "var(--lifeflow-muted)",
+                color: "var(--color-text-primary)",
+                border: "1px solid var(--lifeflow-border)",
+              }}
+            />
+          </div>
+
+          <div
+            className="my-3"
+            style={{ height: "0.5px", background: "var(--lifeflow-border)" }}
+          />
+
+          {/* Nap Start */}
+          <div className="flex items-center justify-between h-10">
+            <span className="text-[15px]" style={{ color: "var(--color-text-primary)" }}>
+              午睡开始（可选）
+            </span>
+            <input
+              type="time"
+              value={settings.napStart}
+              onChange={(e) => handleSaveSettings({ napStart: e.target.value })}
+              className="h-8 px-3 rounded-lg text-[14px] font-medium outline-none"
+              style={{
+                background: "var(--lifeflow-muted)",
+                color: "var(--color-text-primary)",
+                border: "1px solid var(--lifeflow-border)",
+              }}
+            />
+          </div>
+
+          {/* Nap End */}
+          <div className="flex items-center justify-between h-10 mt-1">
+            <span className="text-[15px]" style={{ color: "var(--color-text-primary)" }}>
+              午睡结束（可选）
+            </span>
+            <input
+              type="time"
+              value={settings.napEnd}
+              onChange={(e) => handleSaveSettings({ napEnd: e.target.value })}
+              className="h-8 px-3 rounded-lg text-[14px] font-medium outline-none"
+              style={{
+                background: "var(--lifeflow-muted)",
+                color: "var(--color-text-primary)",
+                border: "1px solid var(--lifeflow-border)",
+              }}
+            />
+          </div>
+
+          <div
+            className="my-3"
+            style={{ height: "0.5px", background: "var(--lifeflow-border)" }}
+          />
+
+          {/* Daily Target Stepper */}
+          <div className="flex items-center justify-between h-10">
+            <span className="text-[15px]" style={{ color: "var(--color-text-primary)" }}>
+              每日目标
+            </span>
+            <div className="flex items-center gap-4">
               <motion.button
-                key={amount}
                 type="button"
-                whileTap={{ scale: 0.96 }}
-                disabled={addingMap[amount]}
-                onClick={() => handleAdd(amount)}
-                className="inline-flex items-center justify-center py-2.5 rounded-full text-sm font-semibold tracking-[-0.018em] whitespace-nowrap disabled:opacity-50"
+                whileTap={{ scale: 0.9 }}
+                onClick={() =>
+                  handleSaveSettings({ dailyTarget: Math.max(100, settings.dailyTarget - 100) })
+                }
+                className="w-7 h-7 rounded-full border-[1.5px] flex items-center justify-center"
                 style={{
-                  background: isAccent ? "var(--lifeflow-primary)" : "var(--lifeflow-brand-50)",
-                  color: isAccent ? "var(--lifeflow-primary-foreground)" : "var(--lifeflow-primary)",
+                  borderColor: "var(--lifeflow-primary)",
+                  background: "var(--color-surface-card)",
                 }}
               >
-                +{amount} ml
+                <Minus className="w-3.5 h-3.5" style={{ color: "var(--lifeflow-primary)" }} />
               </motion.button>
-            );
-          })}
+              <span
+                className="text-[16px] font-bold min-w-[60px] text-center"
+                style={{ color: "var(--color-text-primary)" }}
+              >
+                {settings.dailyTarget}ml
+              </span>
+              <motion.button
+                type="button"
+                whileTap={{ scale: 0.9 }}
+                onClick={() =>
+                  handleSaveSettings({ dailyTarget: settings.dailyTarget + 100 })
+                }
+                className="w-7 h-7 rounded-full border-[1.5px] flex items-center justify-center"
+                style={{
+                  borderColor: "var(--lifeflow-primary)",
+                  background: "var(--color-surface-card)",
+                }}
+              >
+                <Plus className="w-3.5 h-3.5" style={{ color: "var(--lifeflow-primary)" }} />
+              </motion.button>
+            </div>
+          </div>
+
+          <div
+            className="my-3"
+            style={{ height: "0.5px", background: "var(--lifeflow-border)" }}
+          />
+
+          {/* Regenerate Button */}
+          <motion.button
+            type="button"
+            whileTap={{ scale: 0.96 }}
+            disabled={generating}
+            onClick={handleRegenerate}
+            className="w-full h-10 rounded-full text-[15px] font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
+            style={{
+              background: "var(--lifeflow-brand-50)",
+              color: "var(--lifeflow-primary)",
+            }}
+          >
+            <RefreshCw className={`w-4 h-4 ${generating ? "animate-spin" : ""}`} />
+            重新生成事项
+          </motion.button>
         </motion.div>
       </div>
 
-      {/* ─── Today's Log ─── */}
-      <div className="px-4 pt-5">
+      {/* ─── Today's Items Preview Card ─── */}
+      <div className="px-4 pt-4">
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1, duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
           className="p-4"
-          style={{ background: "var(--color-surface-card)", borderRadius: "20px", boxShadow: "var(--shadow-card)" }}
+          style={{
+            background: "var(--color-surface-card)",
+            borderRadius: "20px",
+            boxShadow: "var(--shadow-card)",
+          }}
         >
-          <div className="flex items-center justify-between">
-            <h2 className="text-base font-semibold" style={{ color: "var(--color-text-primary)" }}>今日记录</h2>
-            <span className="text-[13px] font-medium" style={{ color: "var(--color-text-secondary)", letterSpacing: "-0.01em" }}>
-              共 {sortedLogs.length} 次
+          <div className="flex items-center justify-between mb-3">
+            <h2
+              className="text-[17px] font-semibold"
+              style={{ color: "var(--color-text-primary)" }}
+            >
+              今日事项
+            </h2>
+            <span
+              className="text-[13px] font-medium"
+              style={{ color: "var(--color-text-secondary)" }}
+            >
+              {completedCount}/{totalCount} 杯
             </span>
           </div>
 
-          {sortedLogs.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-10">
+          {totalCount === 0 ? (
+            <div className="flex flex-col items-center justify-center py-8">
               <Droplets className="h-10 w-10" style={{ color: "var(--color-text-disabled)" }} />
-              <p className="text-[13px] font-medium mt-3" style={{ color: "var(--color-text-secondary)" }}>今天还没有喝水记录。现在喝一杯？</p>
+              <p
+                className="text-[13px] font-medium mt-3 text-center"
+                style={{ color: "var(--color-text-secondary)" }}
+              >
+                还没有今天的饮水事项
+                <br />
+                请确认时间设置后点击「重新生成事项」
+              </p>
             </div>
           ) : (
-            <div className="mt-2">
-              {sortedLogs.map((entry, i) => (
-                <div
-                  key={entry.id}
-                  className="flex items-center justify-between h-[42px]"
-                  style={{ borderTop: i > 0 ? "1px solid var(--lifeflow-border)" : undefined }}
-                  onMouseDown={() => handlePressStart(entry.id)}
-                  onMouseUp={handlePressEnd}
-                  onMouseLeave={handlePressEnd}
-                  onTouchStart={() => handlePressStart(entry.id)}
-                  onTouchEnd={handlePressEnd}
+            <div className="flex flex-col gap-0.5">
+              {todayItems!.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => handleToggle(item.id, item.isCompleted)}
+                  className="flex items-center gap-3 h-[46px] px-3 rounded-xl transition-colors w-full text-left"
+                  style={{ background: "transparent" }}
                 >
-                  <span className="text-[13px]" style={{ color: "var(--color-text-secondary)" }}>
-                    {formatTimestamp(entry.timestamp)}
-                  </span>
-                  <span className="text-[15px] font-semibold" style={{ color: "var(--color-text-primary)" }}>
-                    +{entry.amount}ml
-                  </span>
-                </div>
+                  {/* Custom Checkbox */}
+                  <div
+                    className="w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors"
+                    style={{
+                      borderColor: item.isCompleted
+                        ? "var(--lifeflow-primary)"
+                        : "var(--lifeflow-border)",
+                      background: item.isCompleted
+                        ? "var(--lifeflow-primary)"
+                        : "transparent",
+                    }}
+                  >
+                    {item.isCompleted && <Check className="w-3 h-3 text-white" />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div
+                      className="text-[14px] font-medium truncate"
+                      style={{
+                        color: item.isCompleted
+                          ? "var(--color-text-disabled)"
+                          : "var(--color-text-primary)",
+                        textDecoration: item.isCompleted ? "line-through" : "none",
+                      }}
+                    >
+                      喝口水然后动一动不要久坐
+                    </div>
+                    <div
+                      className="text-[12px]"
+                      style={{ color: "var(--color-text-secondary)" }}
+                    >
+                      {item.plannedStart} - {item.plannedEnd} · 100ml
+                    </div>
+                  </div>
+                </button>
               ))}
             </div>
           )}
         </motion.div>
       </div>
 
-      {/* ─── Goal Settings Card ─── */}
+      {/* ─── Stats Card ─── */}
       <div className="px-4 pt-4">
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15, duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
           className="p-4"
-          style={{ background: "var(--color-surface-card)", borderRadius: "20px", boxShadow: "var(--shadow-card)" }}
+          style={{
+            background: "var(--color-surface-card)",
+            borderRadius: "20px",
+            boxShadow: "var(--shadow-card)",
+          }}
         >
-          <h2 className="text-[17px] font-semibold" style={{ color: "var(--color-text-primary)" }}>目标设置</h2>
-
-          {/* Daily target stepper */}
-          <div className="mt-3 flex items-center justify-center gap-6">
-            <motion.button
-              type="button"
-              whileTap={{ scale: 0.9 }}
-              onClick={() => handleStepperChange(-1)}
-              className="w-7 h-7 rounded-full border-[1.5px] flex items-center justify-center"
-              style={{ borderColor: "var(--lifeflow-primary)", background: "var(--color-surface-card)" }}
-            >
-              <Minus className="w-3.5 h-3.5" style={{ color: "var(--lifeflow-primary)" }} />
-            </motion.button>
-            <span className="text-[20px] font-bold min-w-[80px] text-center" style={{ color: "var(--color-text-primary)" }}>
-              {dailyTarget}ml
-            </span>
-            <motion.button
-              type="button"
-              whileTap={{ scale: 0.9 }}
-              onClick={() => handleStepperChange(1)}
-              className="w-7 h-7 rounded-full border-[1.5px] flex items-center justify-center"
-              style={{ borderColor: "var(--lifeflow-primary)", background: "var(--color-surface-card)" }}
-            >
-              <Plus className="w-3.5 h-3.5" style={{ color: "var(--lifeflow-primary)" }} />
-            </motion.button>
-          </div>
-
-          {/* Divider */}
-          <div className="my-3" style={{ height: "0.5px", background: "var(--lifeflow-border)" }} />
-
-          {/* Cup size */}
-          <div className="flex gap-2">
-            {CUP_OPTIONS.map((size) => (
-              <motion.button
-                key={size}
-                type="button"
-                whileTap={{ scale: 0.95 }}
-                onClick={() => handleCupSizeChange(size)}
-                className="h-8 px-4 rounded-full text-[13px] font-medium transition-colors"
-                style={{
-                  background: cupSize === size ? "var(--lifeflow-brand-50)" : "transparent",
-                  color: cupSize === size ? "var(--lifeflow-primary)" : "var(--color-text-secondary)",
-                }}
-              >
-                {size}ml
-              </motion.button>
-            ))}
-          </div>
-        </motion.div>
-      </div>
-
-      {/* ─── Reminder Card ─── */}
-      <div className="px-4 pt-4">
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2, duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
-          className="p-4"
-          style={{ background: "var(--color-surface-card)", borderRadius: "20px", boxShadow: "var(--shadow-card)" }}
-        >
-          {/* Interval pills */}
-          <div className="flex gap-2">
-            {INTERVAL_OPTIONS.map((opt) => (
-              <motion.button
-                key={opt.value}
-                type="button"
-                whileTap={{ scale: 0.95 }}
-                onClick={() => handleIntervalChange(opt.value)}
-                className="h-8 px-4 rounded-full text-[13px] font-medium transition-colors"
-                style={{
-                  background: waterGoal?.reminderInterval === opt.value ? "var(--lifeflow-brand-50)" : "transparent",
-                  color: waterGoal?.reminderInterval === opt.value ? "var(--lifeflow-primary)" : "var(--color-text-secondary)",
-                }}
-              >
-                {opt.label}
-              </motion.button>
-            ))}
-          </div>
-
-          {/* Divider */}
-          <div className="my-3" style={{ height: "0.5px", background: "var(--lifeflow-border)" }} />
-
-          {/* Night mode */}
-          <div className="flex items-center justify-between">
-            <div className="flex flex-col">
-              <span className="text-[15px]" style={{ color: "var(--color-text-primary)" }}>夜间免打扰</span>
-              <span className="text-[13px]" style={{ color: "var(--color-text-secondary)" }}>22:00 - 08:00</span>
-            </div>
-            <button
-              type="button"
-              onClick={handleNightModeToggle}
-              className="relative cursor-pointer"
-              style={{ width: 48, height: 30 }}
-            >
-              <motion.div
-                className="absolute inset-0 rounded-full"
-                animate={{
-                  backgroundColor: waterGoal?.nightMode ? "var(--lifeflow-primary)" : "var(--lifeflow-border)",
-                }}
-                transition={{ duration: 0.2 }}
-              />
-              <motion.div
-                className="absolute top-[2px] rounded-full bg-white shadow-sm"
-                style={{ width: 26, height: 26 }}
-                animate={{
-                  left: waterGoal?.nightMode ? 20 : 2,
-                }}
-                transition={{ duration: 0.2 }}
-              />
-            </button>
-          </div>
-        </motion.div>
-      </div>
-
-      {/* ─── Delete confirm modal ─── */}
-      {deleteTarget && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
-          onClick={() => setDeleteTarget(null)}
-        >
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="p-5 mx-8 w-full max-w-[280px]"
-            style={{ background: "var(--color-surface-card)", borderRadius: "20px", boxShadow: "var(--shadow-card-elevated)" }}
-            onClick={(e) => e.stopPropagation()}
+          <h2
+            className="text-[17px] font-semibold mb-3"
+            style={{ color: "var(--color-text-primary)" }}
           >
-            <p className="text-[15px] font-semibold text-center" style={{ color: "var(--color-text-primary)" }}>
-              确定删除这条饮水记录？
-            </p>
-            <div className="flex gap-3 mt-4">
-              <motion.button
-                type="button"
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setDeleteTarget(null)}
-                className="flex-1 h-10 rounded-full text-[15px] font-medium"
-                style={{ background: "var(--lifeflow-muted)", color: "var(--color-text-primary)" }}
+            今日统计
+          </h2>
+          <div className="grid grid-cols-3 gap-3">
+            <div
+              className="text-center p-3 rounded-xl"
+              style={{ background: "var(--lifeflow-muted)" }}
+            >
+              <div
+                className="text-[22px] font-bold"
+                style={{ color: "var(--lifeflow-primary)" }}
               >
-                取消
-              </motion.button>
-              <motion.button
-                type="button"
-                whileTap={{ scale: 0.95 }}
-                onClick={handleConfirmDelete}
-                className="flex-1 h-10 rounded-full text-[15px] text-white font-medium"
-                style={{ background: "#FF3B30" }}
+                {completedCount}
+              </div>
+              <div
+                className="text-[12px] font-medium mt-0.5"
+                style={{ color: "var(--color-text-secondary)" }}
               >
-                删除
-              </motion.button>
+                已完成
+              </div>
             </div>
-          </motion.div>
+            <div
+              className="text-center p-3 rounded-xl"
+              style={{ background: "var(--lifeflow-muted)" }}
+            >
+              <div
+                className="text-[22px] font-bold"
+                style={{ color: "var(--color-text-primary)" }}
+              >
+                {totalCount}
+              </div>
+              <div
+                className="text-[12px] font-medium mt-0.5"
+                style={{ color: "var(--color-text-secondary)" }}
+              >
+                总杯数
+              </div>
+            </div>
+            <div
+              className="text-center p-3 rounded-xl"
+              style={{ background: "var(--lifeflow-muted)" }}
+            >
+              <div
+                className="text-[22px] font-bold"
+                style={{ color: totalWaterMl >= settings.dailyTarget ? "var(--lifeflow-primary)" : "var(--color-text-primary)" }}
+              >
+                {totalWaterMl}ml
+              </div>
+              <div
+                className="text-[12px] font-medium mt-0.5"
+                style={{ color: "var(--color-text-secondary)" }}
+              >
+                已饮水
+              </div>
+            </div>
+          </div>
         </motion.div>
-      )}
+      </div>
     </div>
   );
-}
-
-/* ────────── Local helper ────────── */
-
-function clamp(v: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, v));
 }

@@ -365,6 +365,7 @@ export async function ensureModuleItem(params: {
   color?: string;
   icon?: string;
   projectId?: string;
+  isCompleted?: boolean;
 }): Promise<string | null> {
   const existing = await daylogDB.items
     .where('date').equals(params.date)
@@ -385,7 +386,7 @@ export async function ensureModuleItem(params: {
     actualEnd: params.plannedEnd,
     isCorrected: false,
     projectId: params.projectId,
-    isCompleted: true,   // 模块产生的记录默认已完成
+    isCompleted: params.isCompleted ?? true,
     sortOrder: timeToSort(params.plannedStart),
   });
 }

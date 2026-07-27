@@ -649,6 +649,39 @@ export default function GoalDetailPage() {
                 })}
               </div>
 
+              {/* 归属任务 */}
+              <label className="text-[13px] mb-1 block" style={{ color: "var(--color-text-secondary)" }}>归属任务（可选）</label>
+              <div className="flex flex-wrap gap-2 mb-3">
+                <button
+                  onClick={() => setItemTaskId(null)}
+                  className="h-9 px-3 rounded-full text-[13px] font-medium transition-all"
+                  style={{
+                    background: !itemTaskId ? goalColor : "var(--lifeflow-background)",
+                    color: !itemTaskId ? "#fff" : "var(--color-text-secondary)",
+                    border: !itemTaskId ? "none" : "1px solid var(--lifeflow-border)",
+                  }}
+                >
+                  无归属
+                </button>
+                {tasks.map((task) => {
+                  const active = itemTaskId === task.id;
+                  return (
+                    <button
+                      key={task.id}
+                      onClick={() => setItemTaskId(task.id)}
+                      className="h-9 px-3 rounded-full text-[13px] font-medium transition-all truncate max-w-[160px]"
+                      style={{
+                        background: active ? goalColor : "var(--lifeflow-background)",
+                        color: active ? "#fff" : "var(--color-text-secondary)",
+                        border: active ? "none" : "1px solid var(--lifeflow-border)",
+                      }}
+                    >
+                      {task.title}
+                    </button>
+                  );
+                })}
+              </div>
+
               {/* Note */}
               <label className="text-[13px] mb-1 block" style={{ color: "var(--color-text-secondary)" }}>备注（可选）</label>
               <input

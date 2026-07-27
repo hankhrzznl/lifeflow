@@ -24,6 +24,10 @@ export interface WaterGoal {
   reminderInterval: number;  // 提醒间隔分钟 (30/60/90/120, 0=关闭)
   nightMode: boolean;        // 夜间免打扰
   cupSize?: number;          // 杯量 ml (default 200)
+  wakeStart?: string;        // 起床时间 "08:00"
+  wakeEnd?: string;          // 入睡时间 "22:00"
+  napStart?: string;         // 午睡开始时间 "13:00"
+  napEnd?: string;           // 午睡结束时间 "13:30"
   createdAt: number;
   updatedAt: number;
 }
@@ -102,6 +106,16 @@ export interface StretchLog {
   note?: string;
   date: string;               // "YYYY-MM-DD"
   createdAt: number;
+}
+
+// ─── Posture Settings Types ────────────────────────────────────
+
+export interface PostureSettings {
+  id?: number;
+  preSleepOffset: number;     // 睡前拉伸提前量（分钟），default 40
+  postWakeOffset: number;     // 睡醒拉伸延后量（分钟），default 2
+  napExclude: boolean;        // 午睡不触发睡前拉伸，default true
+  updatedAt: number;
 }
 
 // ─── V2 Types ─────────────────────────────────────────────────
@@ -201,6 +215,7 @@ export class HealthDB extends Dexie {
   exercisesV2!: Table<ExerciseV2, string>;
   workoutSessions!: Table<WorkoutSession, string>;
   stretchLogs!: Table<StretchLog, number>;
+  postureSettings!: Table<PostureSettings, number>;
   trainingPlans!: Table<TrainingPlan, string>;
   medicines!: Table<MedicineDefinition, string>;
   medicineLogs!: Table<MedicineLog, string>;
@@ -272,6 +287,10 @@ export class HealthDB extends Dexie {
       medicines: '&id, name',
       medicineLogs: '&id, medicineId, date',
     });
+    // v8: 体态拉伸设置
+    this.version(8).stores({
+      postureSettings: '++id',
+    });
   }
 }
 
@@ -332,6 +351,10 @@ const DEFAULT_WATER_GOAL: Omit<WaterGoal, 'id'> = {
   reminderInterval: 0,
   nightMode: false,
   cupSize: 200,
+  wakeStart: '08:00',
+  wakeEnd: '22:00',
+  napStart: '',
+  napEnd: '',
   createdAt: Date.now(),
   updatedAt: Date.now(),
 };
@@ -345,15 +368,13 @@ export async function getWaterGoal(): Promise<WaterGoal> {
   return goals[0];
 }
 
-export async function saveWaterGoal(goal: Omit<WaterGoal, 'id' | 'createdAt' | 'updatedAt'>): Promise<void> {
+export async function saveWaterGoal(goal: Partial<WaterGoal> & Pick<WaterGoal, 'dailyTarget' | 'reminderInterval' | 'nightMode'>): Promise<void> {
   const now = Date.now();
-  // Delete all existing goals (should be only one)
+  // Merge with existing goal to preserve fields not being updated
+  const existing = await healthDB.waterGoals.toArray();
+  const merged = { ...DEFAULT_WATER_GOAL, ...(existing[0] || {}), ...goal, createdAt: now, updatedAt: now };
   await healthDB.waterGoals.clear();
-  await healthDB.waterGoals.add({
-    ...goal,
-    createdAt: now,
-    updatedAt: now,
-  });
+  await healthDB.waterGoals.add(merged);
 }
 
 export async function updateWaterGoal(updates: Partial<WaterGoal>): Promise<void> {
@@ -596,4 +617,33 @@ export async function getMedicineLogsByRange(startDate: string, endDate: string)
     .where('date')
     .between(startDate, endDate, true, true)
     .toArray();
+}
+
+// ─── Posture Settings CRUD ────────────────────────────────────
+
+const DEFAULT_POSTURE_SETTINGS: Omit<PostureSettings, 'id'> = {
+  preSleepOffset: 40,
+  postWakeOffset: 2,
+  napExclude: true,
+  updatedAt: Date.now(),
+};
+
+export async function getPostureSettings(): Promise<PostureSettings> {
+  const all = await healthDB.postureSettings.toArray();
+  if (all.length === 0) {
+    const id = await healthDB.postureSettings.add(DEFAULT_POSTURE_SETTINGS);
+    return { ...DEFAULT_POSTURE_SETTINGS, id };
+  }
+  return all[0];
+}
+
+export async function updatePostureSettings(updates: Partial<PostureSettings>): Promise<void> {
+  const existing = await getPostureSettings();
+  if (existing.id !== undefined) {
+    await healthDB.postureSettings.update(existing.id, {
+      ...existing,
+      ...updates,
+      updatedAt: Date.now(),
+    });
+  }
 }

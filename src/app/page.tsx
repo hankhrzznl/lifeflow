@@ -10,7 +10,7 @@ import {
   Calendar, Droplets, Moon, Dumbbell, Pill,
   Plus, X, Clock, ChevronRight, Clock9,
 } from "lucide-react";
-import { getUpcomingItems, addManualItem, updateItem } from "@/lib/db/daylog.db";
+import { getUpcomingItems, addManualItem, updateItem, getItemsByDate } from "@/lib/db/daylog.db";
 import type { Item } from "@/lib/db/daylog.db";
 import { getPendingReminders } from "@/lib/db";
 import type { Reminder } from "@/lib/types";
@@ -123,6 +123,34 @@ export default function HomePage() {
     [today, nowTime],
     [] as Item[],
   );
+
+  // ── 未矫正事项 ──
+  const allTodayItems = useLiveQuery(
+    () => getItemsByDate(today),
+    [today],
+    [] as Item[],
+  );
+
+  const uncorrectedItems = useMemo(() => {
+    return (allTodayItems ?? []).filter(i => i.isCorrected === false && i.isCompleted === false);
+  }, [allTodayItems]);
+
+  // ── 都矫正完了 handler ──
+  const [correctingAll, setCorrectingAll] = useState(false);
+  const handleMarkAllCorrected = useCallback(async () => {
+    if (correctingAll) return;
+    setCorrectingAll(true);
+    try {
+      for (const item of uncorrectedItems) {
+        await updateItem(item.id, { isCorrected: true });
+      }
+      showToast({ type: "success", message: "已全部标记为矫正完毕" });
+    } catch {
+      showToast({ type: "error", message: "操作失败，请再试一次" });
+    } finally {
+      setCorrectingAll(false);
+    }
+  }, [uncorrectedItems, correctingAll]);
 
   // ── 缓存：返回时避免空白加载 ──
   const [cachedUpcoming, setCachedUpcoming] = useState<Item[]>(() => {
@@ -369,6 +397,44 @@ export default function HomePage() {
             style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}
           >
             <p className="text-[14px]" style={{ color: "var(--color-text-secondary)" }}>一切如常，享受今天 ☀️</p>
+          </motion.div>
+        </div>
+      )}
+
+      {/* ===== 矫正聚合提醒卡 ===== */}
+      {uncorrectedItems.length > 0 && (
+        <div className="px-4 mb-4">
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="rounded-[16px] p-4"
+            style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)", borderLeft: "3px solid #FF9500" }}
+          >
+            <div className="mb-2">
+              <p className="text-[15px] font-semibold" style={{ color: "var(--color-text-primary)" }}>
+                今日还有 {uncorrectedItems.length} 个事项未矫正
+              </p>
+              <p className="text-[13px] mt-0.5" style={{ color: "var(--color-text-secondary)" }}>
+                点击去矫正或标记全部已矫正
+              </p>
+            </div>
+            <div className="flex gap-2 mt-3">
+              <button
+                onClick={() => router.push("/efficiency/schedule")}
+                className="flex-1 py-2.5 rounded-full text-[14px] font-semibold text-white active:opacity-90"
+                style={{ background: "var(--lifeflow-primary)" }}
+              >
+                去矫正
+              </button>
+              <button
+                onClick={handleMarkAllCorrected}
+                disabled={correctingAll}
+                className="flex-1 py-2.5 rounded-full text-[14px] font-medium active:opacity-70 disabled:opacity-50"
+                style={{ background: "var(--lifeflow-muted)", color: "var(--color-text-secondary)" }}
+              >
+                {correctingAll ? "处理中..." : "都矫正完了"}
+              </button>
+            </div>
           </motion.div>
         </div>
       )}

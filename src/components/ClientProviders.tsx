@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { AgentProvider } from "@/components/agent/AgentProvider";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { GoalEngine } from "@/services/goal-engine";
+import { requestPermission as requestNotificationPermission } from "@/lib/notificationService";
 
 function GoalEngineInitializer({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
@@ -16,6 +17,11 @@ function GoalEngineInitializer({ children }: { children: React.ReactNode }) {
         console.warn("[GoalEngine] 初始化失败:", result.error);
       }
       setReady(true);
+
+      // 请求浏览器通知权限
+      requestNotificationPermission().then(granted => {
+        if (granted) console.log("[Notification] 通知权限已获取");
+      }).catch(() => {});
       // 延迟执行引擎退役迁移，不阻塞首屏
       setTimeout(async () => {
         if (cancelled) return;

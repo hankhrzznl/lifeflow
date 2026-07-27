@@ -5,26 +5,82 @@ import { useRouter, useParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronLeft, Check, Plus, CheckCircle2, TrendingUp, ChevronDown,
-  Circle, AlertTriangle, X, Trash2, Pencil, Zap,
+  Circle, X, Trash2, Pencil, Zap, RotateCcw,
 } from "lucide-react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { useEfficiencyStore } from "@/lib/store/efficiencyStore";
 import { efficiencyDB, type Goal, type ScheduleTask, type Project, getAllProjects, addScheduleTask } from "@/lib/db/efficiency.db";
-import { addManualItem } from "@/lib/db/daylog.db";
+import { daylogDB, type Item, addItem, timeToSort } from "@/lib/db/daylog.db";
 import { showToast } from "@/components/ui/Toast";
 import { parseBulkTasks, flattenTasks } from "@/lib/bulkTaskParser";
 import { CreateTaskSheet } from "@/components/efficiency/CreateTaskSheet";
 
 // ============================================================
-// 设计令牌
+// 常量
 // ============================================================
 const ACCENT = "#6366F1";
 const GREEN = "#34C759";
-const PRESET_COLORS = ["#6366F1", "#FF9500", "#34C759", "#FF3B30", "#007AFF", "#5856D6"];
+
+const TIME_SLOTS_MULTI = [
+  { key: "morning", label: "早上", time: "08:00" },
+  { key: "forenoon", label: "上午", time: "10:00" },
+  { key: "noon", label: "中午", time: "12:00" },
+  { key: "afternoon", label: "下午", time: "15:00" },
+  { key: "evening", label: "晚上", time: "18:00" },
+  { key: "night", label: "睡前", time: "22:00" },
+] as const;
+
+const REPEAT_OPTIONS = [
+  { value: "none", label: "无" },
+  { value: "daily", label: "每天" },
+  { value: "weekdays", label: "工作日" },
+  { value: "weekly", label: "每周" },
+] as const;
 
 function todayStr(): string {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function addDays(dateStr: string, days: number): string {
+  const d = new Date(dateStr + "T00:00:00");
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+function endTimeFrom(start: string): string {
+  const [h, m] = start.split(":").map(Number);
+  const total = h * 60 + m + 30;
+  const eh = Math.floor(total / 60) % 24;
+  const em = total % 60;
+  return `${String(eh).padStart(2, "0")}:${String(em).padStart(2, "0")}`;
+}
+
+// ============================================================
+// Item 分组类型
+// ============================================================
+interface ItemGroup {
+  key: string;
+  title: string;
+  items: Item[];
+  completedCount: number;
+  totalCount: number;
+}
+
+function groupItems(items: Item[]): ItemGroup[] {
+  const map = new Map<string, Item[]>();
+  for (const item of items) {
+    const key = item.repeatGroupId || item.title;
+    if (!map.has(key)) map.set(key, []);
+    map.get(key)!.push(item);
+  }
+  return Array.from(map.entries()).map(([key, groupItems]) => ({
+    key,
+    title: groupItems[0]?.title || key,
+    items: groupItems,
+    completedCount: groupItems.filter(i => i.isCompleted).length,
+    totalCount: groupItems.length,
+  }));
 }
 
 // ============================================================
@@ -35,11 +91,17 @@ export default function GoalDetailPage() {
   const params = useParams();
   const goalId = params.goalId as string;
 
-  const { goals, loadGoals, updateGoalStatus, toggleScheduleTask, removeScheduleTask } = useEfficiencyStore();
+  const { loadGoals, updateGoalStatus, toggleScheduleTask, removeScheduleTask } = useEfficiencyStore();
 
+  /* ── 数据 ── */
   const goal = useLiveQuery(() => efficiencyDB.goals.get(goalId), [goalId]);
   const allScheduleTasks = useLiveQuery(() => efficiencyDB.scheduleTasks.toArray(), []);
   const projects = useLiveQuery(() => getAllProjects(), [], [] as Project[]);
+  const allItems = useLiveQuery(
+    () => daylogDB.items.where("goalId").equals(goalId).toArray(),
+    [goalId],
+    [] as Item[],
+  );
 
   const goalColor = useMemo(() => {
     if (!goal) return ACCENT;
@@ -52,51 +114,55 @@ export default function GoalDetailPage() {
     return allScheduleTasks.filter((t) => t.goalId === goalId);
   }, [allScheduleTasks, goalId]);
 
-  const normalTasks = useMemo(() => tasks.filter((t) => t.progressType !== "progress"), [tasks]);
-  const progressTasks = useMemo(() => tasks.filter((t) => t.progressType === "progress"), [tasks]);
+  const goalProgress = useMemo(() => {
+    if (allItems.length === 0) return 0;
+    return Math.round(allItems.filter(i => i.isCompleted).length / allItems.length * 100);
+  }, [allItems]);
 
-  const taskStats = useMemo(() => {
-    const total = tasks.length;
-    const done = tasks.filter((t) => t.isCompleted).length;
-    return { total, done };
-  }, [tasks]);
+  const directItems = useMemo(() => allItems.filter(i => !i.taskId), [allItems]);
+  const directGroups = useMemo(() => groupItems(directItems), [directItems]);
 
-  const allCompleted = taskStats.total > 0 && taskStats.done === taskStats.total;
-  const goalProgress = taskStats.total > 0 ? Math.round((taskStats.done / taskStats.total) * 100) : 0;
+  const taskItemsMap = useMemo(() => {
+    const map = new Map<string, Item[]>();
+    for (const item of allItems) {
+      if (!item.taskId) continue;
+      if (!map.has(item.taskId)) map.set(item.taskId, []);
+      map.get(item.taskId)!.push(item);
+    }
+    return map;
+  }, [allItems]);
 
-  /* ── 任务 BottomSheet ── */
-  const [showTaskSheet, setShowTaskSheet] = useState(false);
-  const handleTaskSubmit = useCallback(async (task: Omit<ScheduleTask, "id" | "createdAt">) => {
-    await addScheduleTask({ ...task, goalId } as any);
-    showToast({ type: "success", message: "任务已添加" });
-    setShowTaskSheet(false);
-  }, [goalId]);
+  const allCompleted = useMemo(() => {
+    return allItems.length > 0 && allItems.every(i => i.isCompleted);
+  }, [allItems]);
 
-  /* ── 事项创建 ── */
+  /* ── 任务展开状态 ── */
+  const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
+
+  /* ── 事项创建表单 ── */
   const [showItemSheet, setShowItemSheet] = useState(false);
   const [itemTitle, setItemTitle] = useState("");
   const [itemStart, setItemStart] = useState("09:00");
   const [itemEnd, setItemEnd] = useState("09:30");
   const [itemNote, setItemNote] = useState("");
-  const [itemColor, setItemColor] = useState(goalColor || PRESET_COLORS[0]);
-  const [itemSubmitting, setItemSubmitting] = useState(false);
+  const [itemRepeat, setItemRepeat] = useState<"none" | "daily" | "weekdays" | "weekly">("none");
+  const [itemDateFrom, setItemDateFrom] = useState(todayStr());
+  const [itemDateTo, setItemDateTo] = useState(todayStr());
+  const [itemTimeSlots, setItemTimeSlots] = useState<string[]>(["morning"]);
   const [itemTaskId, setItemTaskId] = useState<string | null>(null);
+  const [itemSubmitting, setItemSubmitting] = useState(false);
 
   const openItemSheet = useCallback((taskId?: string) => {
     setItemTaskId(taskId || null);
-    const now = new Date();
-    const hh = String(now.getHours()).padStart(2, "0");
-    const mm = String(now.getMinutes()).padStart(2, "0");
-    const startTime = `${hh}:${String(Math.floor(Number(mm) / 5) * 5).padStart(2, "0")}`;
-    const endH = Number(hh);
-    const endM = Math.floor(Number(mm) / 5) * 5 + 30;
-    const eh = endH + Math.floor(endM / 60);
-    const em = endM % 60;
-    const endTime = `${String(eh).padStart(2, "0")}:${String(em).padStart(2, "0")}`;
-    setItemStart(startTime);
-    setItemEnd(endTime);
+    const td = todayStr();
+    setItemDateFrom(td);
+    setItemDateTo(td);
+    setItemStart("09:00");
+    setItemEnd("09:30");
     setItemTitle("");
     setItemNote("");
+    setItemRepeat("none");
+    setItemTimeSlots(["morning"]);
     setShowItemSheet(true);
   }, []);
 
@@ -104,36 +170,86 @@ export default function GoalDetailPage() {
     if (!itemTitle.trim()) { showToast({ type: "warning", message: "标题还没填" }); return; }
     setItemSubmitting(true);
     try {
-      await addManualItem({
-        date: todayStr(),
-        plannedStart: itemStart,
-        plannedEnd: itemEnd,
-        title: itemTitle.trim(),
-        note: itemNote || undefined,
-        color: itemColor,
-        projectId: goal?.projectId || undefined,
-      });
-      showToast({ type: "success", message: "已添加" });
+      const repeatGroupId = crypto.randomUUID();
+      const dates: string[] = [];
+      let cursor = itemDateFrom;
+      while (cursor <= itemDateTo) {
+        dates.push(cursor);
+        cursor = addDays(cursor, 1);
+        if (dates.length > 365) break;
+      }
+
+      for (const date of dates) {
+        for (const slotKey of itemTimeSlots) {
+          const slot = TIME_SLOTS_MULTI.find(s => s.key === slotKey);
+          const startTime = slot?.time || itemStart;
+          await addItem({
+            date,
+            plannedStart: startTime,
+            plannedEnd: itemEnd || endTimeFrom(startTime),
+            actualStart: startTime,
+            actualEnd: itemEnd || endTimeFrom(startTime),
+            isCorrected: false,
+            sourceType: "manual",
+            sourceId: crypto.randomUUID(),
+            title: itemTitle.trim(),
+            color: goalColor,
+            icon: "CheckSquare",
+            note: itemNote || undefined,
+            projectId: goal?.projectId || undefined,
+            goalId,
+            taskId: itemTaskId || undefined,
+            isCompleted: false,
+            repeat: itemRepeat === "none" ? undefined : itemRepeat,
+            repeatGroupId,
+            sortOrder: timeToSort(startTime),
+          });
+        }
+      }
+      showToast({ type: "success", message: `已添加 ${dates.length * itemTimeSlots.length} 条` });
       setShowItemSheet(false);
     } catch {
       showToast({ type: "error", message: "没有添加成功，再试一次？" });
     } finally {
       setItemSubmitting(false);
     }
-  }, [itemTitle, itemStart, itemEnd, itemNote, itemColor, goal]);
+  }, [itemTitle, itemStart, itemEnd, itemNote, itemRepeat, itemDateFrom, itemDateTo, itemTimeSlots, itemTaskId, goalColor, goal, goalId]);
+
+  /* ── 事项 toggle ── */
+  const handleToggleItem = useCallback(async (itemId: string) => {
+    const item = await daylogDB.items.get(itemId);
+    if (item) {
+      await daylogDB.items.update(itemId, { isCompleted: !item.isCompleted });
+    }
+  }, []);
+
+  /* ── 任务操作 ── */
+  const handleToggleTask = useCallback(async (taskId: string) => {
+    await toggleScheduleTask(taskId);
+    const updated = (allScheduleTasks ?? []).map((t) =>
+      t.id === taskId ? { ...t, isCompleted: !t.isCompleted } : t,
+    );
+    const goalTasks = updated.filter((t) => t.goalId === goalId);
+    const done = goalTasks.filter((t) => t.isCompleted).length;
+    const pct = goalTasks.length > 0 ? Math.round((done / goalTasks.length) * 100) : 0;
+    await efficiencyDB.goals.update(goalId, { progress: pct } as any);
+  }, [toggleScheduleTask, allScheduleTasks, goalId]);
+
+  const handleDeleteTask = useCallback(async (taskId: string) => {
+    await removeScheduleTask(taskId);
+    showToast({ type: "success", message: "已删除" });
+  }, [removeScheduleTask]);
 
   /* ── 任务编辑 ── */
   const [editingTask, setEditingTask] = useState<ScheduleTask | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [editNote, setEditNote] = useState("");
-  const [editGoalId, setEditGoalId] = useState<string>("");
   const [editReminderStr, setEditReminderStr] = useState("");
 
   const openEdit = useCallback((task: ScheduleTask) => {
     setEditingTask(task);
     setEditTitle(task.title);
     setEditNote(task.note || "");
-    setEditGoalId(task.goalId || "");
     setEditReminderStr((task.reminderTimes || []).join(", "));
   }, []);
 
@@ -143,22 +259,16 @@ export default function GoalDetailPage() {
     await useEfficiencyStore.getState().updateScheduleTask(editingTask.id, {
       title: editTitle,
       note: editNote,
-      goalId: editGoalId || null,
       reminderTimes: reminders.length > 0 ? reminders : undefined,
     });
     showToast({ type: "success", message: "任务已更新" });
     setEditingTask(null);
-  }, [editingTask, editTitle, editNote, editGoalId, editReminderStr]);
+  }, [editingTask, editTitle, editNote, editReminderStr]);
 
   /* ── 批量导入 ── */
   const [showBulkImport, setShowBulkImport] = useState(false);
   const [bulkText, setBulkText] = useState("");
   const [bulkLoading, setBulkLoading] = useState(false);
-  const [detailTaskId, setDetailTaskId] = useState<string | null>(null);
-  const detailTask = useMemo(
-    () => (detailTaskId ? tasks.find((t) => t.id === detailTaskId) ?? null : null),
-    [detailTaskId, tasks],
-  );
 
   const handleBulkImport = useCallback(async () => {
     if (!bulkText.trim()) return;
@@ -177,22 +287,7 @@ export default function GoalDetailPage() {
     }
   }, [bulkText, goalId]);
 
-  const handleToggleTask = useCallback(async (taskId: string) => {
-    await toggleScheduleTask(taskId);
-    const updated = (allScheduleTasks ?? []).map((t) =>
-      t.id === taskId ? { ...t, isCompleted: !t.isCompleted } : t,
-    );
-    const goalTasks = updated.filter((t) => t.goalId === goalId);
-    const done = goalTasks.filter((t) => t.isCompleted).length;
-    const pct = goalTasks.length > 0 ? Math.round((done / goalTasks.length) * 100) : 0;
-    await efficiencyDB.goals.update(goalId, { progress: pct } as any);
-  }, [toggleScheduleTask, allScheduleTasks, goalId]);
-
-  const handleDeleteTask = useCallback(async (taskId: string) => {
-    await removeScheduleTask(taskId);
-    showToast({ type: "success", message: "已删除" });
-  }, [removeScheduleTask]);
-
+  /* ── 完成目标 ── */
   const handleCompleteGoal = useCallback(async () => {
     if (!goal || !allCompleted) return;
     await updateGoalStatus(goalId, "completed");
@@ -200,8 +295,17 @@ export default function GoalDetailPage() {
     router.push("/efficiency");
   }, [goal, goalId, allCompleted, updateGoalStatus, router]);
 
+  // ── 任务创建 ──
+  const [showTaskSheet, setShowTaskSheet] = useState(false);
+  const handleTaskSubmit = useCallback(async (task: Omit<ScheduleTask, "id" | "createdAt">) => {
+    await addScheduleTask({ ...task, goalId } as any);
+    showToast({ type: "success", message: "任务已添加" });
+    setShowTaskSheet(false);
+  }, [goalId]);
+
   useEffect(() => { loadGoals(); }, [loadGoals]);
 
+  /* ── 渲染：目标不存在 ── */
   if (!goal) {
     return (
       <div className="min-h-screen" style={{ maxWidth: 430, margin: "0 auto", background: "var(--lifeflow-background)" }}>
@@ -238,7 +342,9 @@ export default function GoalDetailPage() {
         <div className="mt-4 flex items-end justify-between">
           <div>
             <p className="text-[13px]" style={{ color: "var(--color-text-secondary)" }}>
-              {taskStats.total > 0 ? `${taskStats.done}/${taskStats.total} 项已完成` : "暂无任务"}
+              {allItems.length > 0
+                ? `${allItems.filter(i => i.isCompleted).length}/${allItems.length} 事项`
+                : "暂无事项"}
             </p>
           </div>
           <span className="text-[28px] font-bold tabular-nums" style={{ color: "var(--color-text-primary)" }}>{goalProgress}%</span>
@@ -254,13 +360,13 @@ export default function GoalDetailPage() {
           />
         </div>
 
-        {taskStats.total > 0 && !allCompleted && (
+        {allItems.length > 0 && !allCompleted && (
           <p className="mt-2 text-[13px]" style={{ color: "var(--color-text-secondary)" }}>
-            还剩 {taskStats.total - taskStats.done} 项任务未完成
+            还剩 {allItems.length - allItems.filter(i => i.isCompleted).length} 项未完成
           </p>
         )}
-        {allCompleted && taskStats.total > 0 && (
-          <p className="mt-2 text-[13px]" style={{ color: GREEN }}>所有任务已完成</p>
+        {allCompleted && allItems.length > 0 && (
+          <p className="mt-2 text-[13px]" style={{ color: GREEN }}>所有事项已完成</p>
         )}
         {goal.note && (
           <p className="mt-2 text-[13px]" style={{ color: "var(--color-text-secondary)" }}>{goal.note}</p>
@@ -294,86 +400,96 @@ export default function GoalDetailPage() {
         </button>
       </div>
 
+      {/* ===== 事项列表（直接事项，无 taskId） ===== */}
+      {directGroups.length > 0 && (
+        <div className="mx-4 mt-5">
+          <h2 className="text-[13px] font-semibold mb-2 px-1" style={{ color: "var(--color-text-disabled)" }}>
+            事项列表
+          </h2>
+          <div className="flex flex-col gap-2">
+            {directGroups.map((group) => (
+              <ItemGroupCard
+                key={group.key}
+                group={group}
+                color={goalColor}
+                onToggle={handleToggleItem}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* ===== 任务列表 ===== */}
       {tasks.length > 0 && (
         <div className="mx-4 mt-5">
           <h2 className="text-[13px] font-semibold mb-2 px-1" style={{ color: "var(--color-text-disabled)" }}>
             任务列表
           </h2>
-          <div className="rounded-[16px] overflow-hidden" style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}>
-            {normalTasks.map((task, i) => (
-              <TaskRow
-                key={task.id}
-                task={task}
-                onToggle={() => handleToggleTask(task.id)}
-                onDelete={() => handleDeleteTask(task.id)}
-                onEdit={() => openEdit(task)}
-                onClick={() => setDetailTaskId(detailTaskId === task.id ? null : task.id)}
-                showDivider={i < normalTasks.length - 1}
-              />
-            ))}
-          </div>
-
-          {/* 任务展开详情 */}
-          <AnimatePresence>
-            {detailTask && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="overflow-hidden"
-              >
-                <div
-                  className="px-4 py-4 mt-2 rounded-[16px]"
-                  style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}
-                >
-                  <div className="flex items-center justify-between mb-3">
-                    <p className="text-[15px] font-semibold" style={{ color: "var(--color-text-primary)" }}>{detailTask.title}</p>
-                    <button onClick={() => setDetailTaskId(null)} className="w-6 h-6 flex items-center justify-center rounded-full" style={{ background: "var(--lifeflow-muted)" }}>
-                      <ChevronDown className="w-4 h-4" style={{ color: "var(--color-text-secondary)" }} />
-                    </button>
-                  </div>
-                  {detailTask.note && (
-                    <p className="text-[13px] mb-3" style={{ color: "var(--color-text-secondary)" }}>{detailTask.note}</p>
-                  )}
-                  <div className="flex items-center gap-2 text-[13px] mb-4" style={{ color: "var(--color-text-disabled)" }}>
-                    {detailTask.startDate && <span>{detailTask.startDate} 起</span>}
-                    {detailTask.progressType === "progress" && detailTask.targetValue !== undefined && (
-                      <span>· 目标 {detailTask.targetValue}{detailTask.targetUnit || ""}</span>
-                    )}
-                  </div>
-                  <button
-                    onClick={() => openItemSheet(detailTask.id)}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-[13px] font-medium active:opacity-70"
-                    style={{ background: goalColor, color: "#fff" }}
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    创建事项
-                  </button>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      )}
-
-      {/* 进度条任务 */}
-      {progressTasks.length > 0 && (
-        <div className="mx-4 mt-5">
-          <h2 className="text-[13px] font-semibold mb-2 px-1" style={{ color: "var(--color-text-disabled)" }}>
-            进度条任务
-          </h2>
           <div className="flex flex-col gap-2">
-            {progressTasks.map((task) => (
-              <ProgressTaskCard key={task.id} task={task} onToggle={() => handleToggleTask(task.id)} color={goalColor} />
-            ))}
+            {tasks.map((task) => {
+              const taskItems = taskItemsMap.get(task.id) || [];
+              const itemGroups = groupItems(taskItems);
+              const isExpanded = expandedTaskId === task.id;
+              const itemDone = taskItems.filter(i => i.isCompleted).length;
+
+              return (
+                <div key={task.id}>
+                  <TaskCard
+                    task={task}
+                    itemCount={taskItems.length}
+                    itemDone={itemDone}
+                    isExpanded={isExpanded}
+                    onToggle={() => handleToggleTask(task.id)}
+                    onDelete={() => handleDeleteTask(task.id)}
+                    onEdit={() => openEdit(task)}
+                    onExpand={() => setExpandedTaskId(isExpanded ? null : task.id)}
+                    onCreateItem={() => openItemSheet(task.id)}
+                    color={goalColor}
+                  />
+
+                  {/* 任务展开：关联事项 */}
+                  <AnimatePresence>
+                    {isExpanded && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="ml-3 mt-1 pl-3 border-l-2"
+                          style={{ borderColor: goalColor }}
+                        >
+                          {itemGroups.length > 0 ? (
+                            <div className="flex flex-col gap-1.5 py-1">
+                              {itemGroups.map((group) => (
+                                <ItemGroupCard
+                                  key={group.key}
+                                  group={group}
+                                  color={goalColor}
+                                  onToggle={handleToggleItem}
+                                  compact
+                                />
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-[13px] py-2 px-2" style={{ color: "var(--color-text-disabled)" }}>
+                              暂无事项
+                            </p>
+                          )}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
 
       {/* 空态 */}
-      {tasks.length === 0 && (
+      {tasks.length === 0 && directGroups.length === 0 && (
         <div className="flex flex-col items-center pt-10 px-8">
           <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4" style={{ background: "var(--lifeflow-brand-50)" }}>
             <TrendingUp className="w-8 h-8" style={{ color: "var(--lifeflow-primary)" }} />
@@ -388,23 +504,21 @@ export default function GoalDetailPage() {
               className="flex-1 h-11 rounded-xl text-white text-[15px] font-semibold flex items-center justify-center gap-1.5"
               style={{ background: goalColor }}
             >
-              <Zap className="w-4 h-4" />
-              添加事项
+              <Zap className="w-4 h-4" />添加事项
             </button>
             <button
               onClick={() => setShowTaskSheet(true)}
               className="flex-1 h-11 rounded-xl text-[15px] font-medium flex items-center justify-center gap-1.5"
               style={{ border: "1px solid var(--lifeflow-border)", color: "var(--color-text-secondary)" }}
             >
-              <Plus className="w-4 h-4" />
-              添加任务
+              <Plus className="w-4 h-4" />添加任务
             </button>
           </div>
         </div>
       )}
 
       {/* ===== 底部"完成目标" ===== */}
-      {tasks.length > 0 && (
+      {(tasks.length > 0 || allItems.length > 0) && (
         <div className="mx-4 mt-4">
           <button
             onClick={handleCompleteGoal}
@@ -422,7 +536,7 @@ export default function GoalDetailPage() {
         </div>
       )}
 
-      {/* ===== 事项 BottomSheet ===== */}
+      {/* ===== 事项创建 BottomSheet（新设计） ===== */}
       <AnimatePresence>
         {showItemSheet && (
           <>
@@ -434,8 +548,8 @@ export default function GoalDetailPage() {
             <motion.div
               initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
               transition={{ type: "spring", damping: 30, stiffness: 300 }}
-              className="fixed left-0 right-0 bottom-0 z-[60] rounded-t-[24px] max-w-[430px] mx-auto px-4 pt-4"
-              style={{ background: "var(--color-surface-card)", paddingBottom: "calc(24px + env(safe-area-inset-bottom))" }}
+              className="fixed left-0 right-0 bottom-0 z-[60] rounded-t-[24px] max-w-[430px] mx-auto px-4 pt-4 overflow-y-auto"
+              style={{ background: "var(--color-surface-card)", paddingBottom: "calc(24px + env(safe-area-inset-bottom))", maxHeight: "90vh" }}
               onClick={(e) => e.stopPropagation()}
             >
               <div className="w-8 h-1 rounded-full mx-auto mb-4" style={{ background: "var(--lifeflow-border)" }} />
@@ -443,6 +557,8 @@ export default function GoalDetailPage() {
                 添加事项 {itemTaskId ? `· ${tasks.find(t => t.id === itemTaskId)?.title || ""}` : ""}
               </h3>
 
+              {/* Title */}
+              <label className="text-[13px] mb-1 block" style={{ color: "var(--color-text-secondary)" }}>标题</label>
               <input
                 value={itemTitle}
                 onChange={(e) => setItemTitle(e.target.value)}
@@ -452,47 +568,95 @@ export default function GoalDetailPage() {
                 autoFocus
               />
 
+              {/* Date Range */}
+              <label className="text-[13px] mb-1 block" style={{ color: "var(--color-text-secondary)" }}>日期范围</label>
               <div className="flex gap-3 mb-3">
-                <div className="flex-1">
-                  <label className="text-[13px] mb-1 block" style={{ color: "var(--color-text-secondary)" }}>开始</label>
-                  <input
-                    type="time" value={itemStart} onChange={(e) => setItemStart(e.target.value)}
-                    className="w-full h-11 rounded-xl px-3 text-[15px] outline-none"
-                    style={{ background: "var(--lifeflow-background)", border: "1px solid var(--lifeflow-border)", color: "var(--color-text-primary)" }}
-                  />
-                </div>
-                <div className="flex-1">
-                  <label className="text-[13px] mb-1 block" style={{ color: "var(--color-text-secondary)" }}>结束</label>
-                  <input
-                    type="time" value={itemEnd} onChange={(e) => setItemEnd(e.target.value)}
-                    className="w-full h-11 rounded-xl px-3 text-[15px] outline-none"
-                    style={{ background: "var(--lifeflow-background)", border: "1px solid var(--lifeflow-border)", color: "var(--color-text-primary)" }}
-                  />
-                </div>
+                <input
+                  type="date" value={itemDateFrom} onChange={(e) => setItemDateFrom(e.target.value)}
+                  className="flex-1 h-11 rounded-xl px-3 text-[15px] outline-none"
+                  style={{ background: "var(--lifeflow-background)", border: "1px solid var(--lifeflow-border)", color: "var(--color-text-primary)" }}
+                />
+                <span className="flex items-center text-[13px]" style={{ color: "var(--color-text-disabled)" }}>至</span>
+                <input
+                  type="date" value={itemDateTo} onChange={(e) => setItemDateTo(e.target.value)}
+                  className="flex-1 h-11 rounded-xl px-3 text-[15px] outline-none"
+                  style={{ background: "var(--lifeflow-background)", border: "1px solid var(--lifeflow-border)", color: "var(--color-text-primary)" }}
+                />
               </div>
 
+              {/* Time Slots */}
+              <label className="text-[13px] mb-1 block" style={{ color: "var(--color-text-secondary)" }}>时段（可多选）</label>
+              <div className="flex flex-wrap gap-2 mb-3">
+                {TIME_SLOTS_MULTI.map((slot) => {
+                  const active = itemTimeSlots.includes(slot.key);
+                  return (
+                    <button
+                      key={slot.key}
+                      onClick={() => {
+                        setItemTimeSlots(prev =>
+                          prev.includes(slot.key)
+                            ? prev.filter(k => k !== slot.key)
+                            : [...prev, slot.key]
+                        );
+                      }}
+                      className="h-9 px-3 rounded-full text-[13px] font-medium transition-all"
+                      style={{
+                        background: active ? goalColor : "var(--lifeflow-background)",
+                        color: active ? "#fff" : "var(--color-text-secondary)",
+                        border: active ? "none" : "1px solid var(--lifeflow-border)",
+                      }}
+                    >
+                      {slot.label} {slot.time}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Time overrides */}
+              <label className="text-[13px] mb-1 block" style={{ color: "var(--color-text-secondary)" }}>开始 / 结束时间</label>
+              <div className="flex gap-3 mb-3">
+                <input
+                  type="time" value={itemStart} onChange={(e) => setItemStart(e.target.value)}
+                  className="flex-1 h-11 rounded-xl px-3 text-[15px] outline-none"
+                  style={{ background: "var(--lifeflow-background)", border: "1px solid var(--lifeflow-border)", color: "var(--color-text-primary)" }}
+                />
+                <input
+                  type="time" value={itemEnd} onChange={(e) => setItemEnd(e.target.value)}
+                  className="flex-1 h-11 rounded-xl px-3 text-[15px] outline-none"
+                  style={{ background: "var(--lifeflow-background)", border: "1px solid var(--lifeflow-border)", color: "var(--color-text-primary)" }}
+                />
+              </div>
+
+              {/* Repeat */}
+              <label className="text-[13px] mb-1 block" style={{ color: "var(--color-text-secondary)" }}>重复</label>
+              <div className="flex gap-2 mb-3">
+                {REPEAT_OPTIONS.map((opt) => {
+                  const active = itemRepeat === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      onClick={() => setItemRepeat(opt.value)}
+                      className="flex-1 h-9 rounded-full text-[13px] font-medium transition-all"
+                      style={{
+                        background: active ? goalColor : "var(--lifeflow-background)",
+                        color: active ? "#fff" : "var(--color-text-secondary)",
+                        border: active ? "none" : "1px solid var(--lifeflow-border)",
+                      }}
+                    >
+                      {opt.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Note */}
+              <label className="text-[13px] mb-1 block" style={{ color: "var(--color-text-secondary)" }}>备注（可选）</label>
               <input
                 value={itemNote} onChange={(e) => setItemNote(e.target.value)}
-                className="w-full h-11 rounded-xl px-3 text-[15px] outline-none mb-3"
+                className="w-full h-11 rounded-xl px-3 text-[15px] outline-none mb-4"
                 style={{ background: "var(--lifeflow-background)", border: "1px solid var(--lifeflow-border)", color: "var(--color-text-primary)" }}
-                placeholder="备注（可选）"
+                placeholder="备注"
               />
-
-              <div className="flex items-center gap-2 mb-4">
-                <span className="text-[13px]" style={{ color: "var(--color-text-secondary)" }}>颜色</span>
-                <div className="flex gap-1.5">
-                  {PRESET_COLORS.map((c) => (
-                    <button key={c} onClick={() => setItemColor(c)}
-                      className="w-7 h-7 rounded-full transition-transform"
-                      style={{
-                        background: c,
-                        transform: itemColor === c ? "scale(1.15)" : "scale(1)",
-                        boxShadow: itemColor === c ? `0 0 0 2px var(--color-surface-card), 0 0 0 4px ${c}` : "none",
-                      }}
-                    />
-                  ))}
-                </div>
-              </div>
 
               <button
                 onClick={handleCreateItem}
@@ -507,7 +671,7 @@ export default function GoalDetailPage() {
         )}
       </AnimatePresence>
 
-      {/* ===== 任务创建 BottomSheet（精简模式） ===== */}
+      {/* ===== 任务创建 BottomSheet ===== */}
       <CreateTaskSheet
         open={showTaskSheet}
         goalId={goalId}
@@ -612,123 +776,191 @@ export default function GoalDetailPage() {
 }
 
 // ============================================================
-// 普通任务行
+// 任务卡片
 // ============================================================
-function TaskRow({ task, onToggle, onDelete, onEdit, showDivider, onClick }: {
+function TaskCard({ task, itemCount, itemDone, isExpanded, onToggle, onDelete, onEdit, onExpand, onCreateItem, color }: {
   task: ScheduleTask;
+  itemCount: number;
+  itemDone: number;
+  isExpanded: boolean;
   onToggle: () => void;
   onDelete: () => void;
   onEdit: () => void;
-  showDivider: boolean;
-  onClick?: () => void;
+  onExpand: () => void;
+  onCreateItem: () => void;
+  color: string;
 }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      onClick={onClick}
-      className="relative flex items-center gap-3 px-4 py-3 min-h-[52px] group cursor-pointer"
-    >
-      {showDivider && (
-        <div className="absolute left-[52px] right-0 top-0" style={{ borderTop: "0.5px solid var(--lifeflow-border)" }} />
-      )}
-      <button
-        type="button" onClick={(e) => { e.stopPropagation(); onToggle(); }}
-        className="w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center transition-colors"
-        style={{
-          border: task.isCompleted ? "none" : `2px solid ${"var(--color-text-disabled)"}`,
-          background: task.isCompleted ? ACCENT : "transparent",
-        }}
-      >
-        {task.isCompleted && <Check className="w-[14px] h-[14px] text-white" strokeWidth={3} />}
-      </button>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5">
-          <p className="text-[17px] truncate" style={{
-            color: task.isCompleted ? "var(--color-text-disabled)" : "var(--color-text-primary)",
-            textDecoration: task.isCompleted ? "line-through" : "none",
-          }}>
-            {task.title}
-          </p>
-          {task.isImportant && !task.isCompleted && (
-            <span className="w-[6px] h-[6px] rounded-full flex-shrink-0" style={{ background: ACCENT }} />
-          )}
-        </div>
-        {task.note && <p className="text-[13px] truncate mt-0.5" style={{ color: "var(--color-text-disabled)" }}>{task.note}</p>}
-      </div>
-      <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-        <button
-          type="button" onClick={(e) => { e.stopPropagation(); onEdit(); }}
-          className="w-7 h-7 rounded-lg flex items-center justify-center"
-          style={{ background: "var(--lifeflow-brand-50)" }}
-        >
-          <Pencil className="w-3.5 h-3.5" style={{ color: ACCENT }} />
-        </button>
-        <button
-          type="button" onClick={(e) => { e.stopPropagation(); if (window.confirm("确定删除任务？")) onDelete(); }}
-          className="w-7 h-7 rounded-lg flex items-center justify-center"
-          style={{ background: "#FF3B3015" }}
-        >
-          <X className="w-3.5 h-3.5" style={{ color: "#FF3B30" }} />
-        </button>
-      </div>
-    </motion.div>
-  );
-}
-
-// ============================================================
-// 进度条任务卡片
-// ============================================================
-function ProgressTaskCard({ task, onToggle, color }: { task: ScheduleTask; onToggle: () => void; color: string }) {
-  const current = task.progressCurrent ?? task.startValue ?? 0;
-  const target = task.targetValue ?? 100;
-  const pct = Math.min(100, Math.max(0, Math.round((current / target) * 100)));
-  const unit = task.targetUnit || "";
+  const progressPct = task.progressType === "progress" && task.targetValue
+    ? Math.min(100, Math.max(0, Math.round((itemDone / task.targetValue) * 100)))
+    : 0;
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-      className="p-4 rounded-[16px]"
+      className="rounded-[20px] overflow-hidden"
       style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}
     >
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-3 px-4 py-3 min-h-[52px]">
+        {/* Check */}
         <button
-          type="button" onClick={onToggle}
-          className="w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center transition-colors"
+          type="button" onClick={(e) => { e.stopPropagation(); onToggle(); }}
+          className="w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center"
           style={{
-            border: task.isCompleted ? "none" : `2px solid ${"var(--color-text-disabled)"}`,
+            border: task.isCompleted ? "none" : "2px solid var(--color-text-disabled)",
             background: task.isCompleted ? ACCENT : "transparent",
           }}
         >
           {task.isCompleted && <Check className="w-[14px] h-[14px] text-white" strokeWidth={3} />}
         </button>
-        <span className="text-[17px] font-medium truncate flex-1" style={{
-          color: task.isCompleted ? "var(--color-text-disabled)" : "var(--color-text-primary)",
-          textDecoration: task.isCompleted ? "line-through" : "none",
-        }}>
-          {task.title}
-        </span>
-        <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: task.isCompleted ? GREEN : pct >= 100 ? GREEN : color }} />
+
+        {/* Content */}
+        <div className="flex-1 min-w-0" onClick={onExpand}>
+          <div className="flex items-center gap-1.5">
+            <p className="text-[17px] truncate" style={{
+              color: task.isCompleted ? "var(--color-text-disabled)" : "var(--color-text-primary)",
+              textDecoration: task.isCompleted ? "line-through" : "none",
+            }}>{task.title}</p>
+            {task.isImportant && !task.isCompleted && (
+              <span className="w-[6px] h-[6px] rounded-full flex-shrink-0" style={{ background: ACCENT }} />
+            )}
+          </div>
+          <div className="flex items-center gap-2 mt-0.5">
+            {task.progressType === "progress" && task.targetValue && (
+              <span className="text-[13px]" style={{ color: "var(--color-text-secondary)" }}>
+                {itemDone}/{task.targetValue}{task.targetUnit || ""} ({progressPct}%)
+              </span>
+            )}
+            {itemCount > 0 && (
+              <span className="text-[13px]" style={{ color: "var(--color-text-disabled)" }}>
+                {itemDone}/{itemCount} 事项
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="flex items-center gap-0.5">
+          <button
+            type="button" onClick={(e) => { e.stopPropagation(); onEdit(); }}
+            className="w-7 h-7 rounded-lg flex items-center justify-center"
+            style={{ background: "var(--lifeflow-brand-50)" }}
+          >
+            <Pencil className="w-3.5 h-3.5" style={{ color: ACCENT }} />
+          </button>
+          <button
+            type="button" onClick={(e) => { e.stopPropagation(); if (window.confirm("确定删除任务？")) onDelete(); }}
+            className="w-7 h-7 rounded-lg flex items-center justify-center"
+            style={{ background: "#FF3B3015" }}
+          >
+            <X className="w-3.5 h-3.5" style={{ color: "#FF3B30" }} />
+          </button>
+          <button
+            type="button" onClick={(e) => { e.stopPropagation(); onExpand(); }}
+            className="w-7 h-7 rounded-lg flex items-center justify-center"
+            style={{ background: "var(--lifeflow-muted)" }}
+          >
+            <ChevronDown className="w-4 h-4 transition-transform"
+              style={{ color: "var(--color-text-secondary)", transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)" }} />
+          </button>
+        </div>
       </div>
 
-      <div className="flex items-center justify-between mt-2">
-        <span className="text-[13px]" style={{ color: "var(--color-text-secondary)" }}>
-          {current} / {target} {unit}
-        </span>
-        <span className="text-[13px] font-semibold" style={{ color }}>{pct}%</span>
-      </div>
-
-      <div className="mt-1.5 h-1.5 rounded-full overflow-hidden" style={{ background: "var(--lifeflow-muted)" }}>
-        <motion.div
-          className="h-full rounded-full"
-          style={{ backgroundColor: task.isCompleted ? GREEN : color }}
-          initial={{ width: 0 }}
-          animate={{ width: `${pct}%` }}
-          transition={{ duration: 0.6, ease: "easeOut" }}
-        />
-      </div>
-
-      {task.note && <p className="mt-1.5 text-[13px] truncate" style={{ color: "var(--color-text-secondary)" }}>{task.note}</p>}
+      {/* Progress bar for progress tasks */}
+      {task.progressType === "progress" && task.targetValue && (
+        <div className="px-4 pb-3">
+          <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "var(--lifeflow-muted)" }}>
+            <motion.div
+              className="h-full rounded-full"
+              style={{ backgroundColor: color }}
+              initial={{ width: 0 }}
+              animate={{ width: `${progressPct}%` }}
+              transition={{ duration: 0.6, ease: "easeOut" }}
+            />
+          </div>
+        </div>
+      )}
     </motion.div>
+  );
+}
+
+// ============================================================
+// 事项分组卡片（同名折叠）
+// ============================================================
+function ItemGroupCard({ group, color, onToggle, compact }: {
+  group: ItemGroup;
+  color: string;
+  onToggle: (id: string) => void;
+  compact?: boolean;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const allDone = group.completedCount === group.totalCount;
+
+  return (
+    <div className="rounded-[20px] overflow-hidden" style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}>
+      {/* Group header */}
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full flex items-center gap-3 px-4 py-3 text-left"
+      >
+        <div className="w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center"
+          style={{
+            border: allDone ? "none" : "2px solid var(--color-text-disabled)",
+            background: allDone ? color : "transparent",
+          }}
+        >
+          {allDone && <Check className="w-[14px] h-[14px] text-white" strokeWidth={3} />}
+        </div>
+        <span className="flex-1 text-[15px] font-medium truncate" style={{
+          color: allDone ? "var(--color-text-disabled)" : "var(--color-text-primary)",
+          textDecoration: allDone ? "line-through" : "none",
+        }}>{group.title}</span>
+        <span className="text-[13px] px-2 py-0.5 rounded-full"
+          style={{ background: "var(--lifeflow-muted)", color: "var(--color-text-secondary)" }}>
+          {group.completedCount}/{group.totalCount}
+        </span>
+        <ChevronDown className="w-4 h-4 transition-transform"
+          style={{ color: "var(--color-text-disabled)", transform: expanded ? "rotate(180deg)" : "rotate(0deg)" }} />
+      </button>
+
+      {/* Expanded items */}
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            <div className="px-4 pb-3">
+              <div style={{ borderTop: "0.5px solid var(--lifeflow-border)" }} className="pt-2">
+                {group.items.map((item, i) => (
+                  <div key={item.id} className="flex items-center gap-3 py-1.5">
+                    <button
+                      onClick={() => onToggle(item.id)}
+                      className="w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center"
+                      style={{
+                        border: item.isCompleted ? "none" : "1.5px solid var(--color-text-disabled)",
+                        background: item.isCompleted ? color : "transparent",
+                      }}
+                    >
+                      {item.isCompleted && <Check className="w-[11px] h-[11px] text-white" strokeWidth={3} />}
+                    </button>
+                    <div className="flex-1 min-w-0 flex items-center gap-2">
+                      <span className="text-[12px] tabular-nums" style={{ color: "var(--color-text-disabled)" }}>
+                        {item.date.slice(5)}
+                      </span>
+                      <span className="text-[12px]" style={{ color: "var(--color-text-disabled)" }}>
+                        {item.plannedStart}-{item.plannedEnd}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }

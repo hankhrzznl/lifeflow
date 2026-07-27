@@ -63,6 +63,19 @@ export interface CheatDay {
   createdAt: number;
 }
 
+export interface Wish {
+  id: string;            // uuid
+  name: string;
+  desc?: string;
+  goalId?: string;       // 完成时关联的目标
+  goalName?: string;     // 快速回溯显示
+  color: string;
+  sortOrder: number;
+  completed: boolean;
+  createdAt: number;
+  completedAt?: number;
+}
+
 // ─── Database ────────────────────────────────────────────────
 
 export class LifeDB extends Dexie {
@@ -73,6 +86,7 @@ export class LifeDB extends Dexie {
   dietLogs!: Table<DietLog, number>;
   wellnessLogs!: Table<WellnessLog, number>;
   cheatDays!: Table<CheatDay, number>;
+  wishes!: Table<Wish, string>;
 
   constructor() {
     super('LifeFlowLife');
@@ -110,6 +124,9 @@ export class LifeDB extends Dexie {
       dietLogs: '++id, date, mealType',
       wellnessLogs: '++id, date, type',
       cheatDays: '++id, date',
+    });
+    this.version(6).stores({
+      wishes: '&id, completed, createdAt',
     });
   }
 }
@@ -302,4 +319,34 @@ export async function getWellnessLogsByDateRange(startDate: string, endDate: str
     .where('date')
     .between(startDate, endDate, true, true)
     .toArray();
+}
+
+// ─── Wishes CRUD ────────────────────────────────────────────
+
+export async function addWish(w: Omit<Wish, 'id' | 'createdAt'>): Promise<string> {
+  const id = crypto.randomUUID();
+  await lifeDB.wishes.add({ ...w, id, createdAt: Date.now() } as Wish);
+  return id;
+}
+
+export async function updateWish(id: string, updates: Partial<Wish>): Promise<void> {
+  await lifeDB.wishes.update(id, updates);
+}
+
+export async function deleteWish(id: string): Promise<void> {
+  await lifeDB.wishes.delete(id);
+}
+
+export async function getWishes(): Promise<Wish[]> {
+  return lifeDB.wishes.orderBy('sortOrder').toArray();
+}
+
+export async function toggleWishCompletion(id: string, goalId?: string, goalName?: string): Promise<void> {
+  const wish = await lifeDB.wishes.get(id);
+  if (!wish) return;
+  if (wish.completed) {
+    await lifeDB.wishes.update(id, { completed: false, completedAt: undefined, goalId: undefined, goalName: undefined });
+  } else {
+    await lifeDB.wishes.update(id, { completed: true, completedAt: Date.now(), ...(goalId ? { goalId, goalName } : {}) });
+  }
 }

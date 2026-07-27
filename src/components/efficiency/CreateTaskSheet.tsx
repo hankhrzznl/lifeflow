@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Calendar, ChevronRight, ChevronDown, Clock, TrendingUp,
-  AlertTriangle, RotateCcw, ChevronLeft,
+  AlertTriangle, ChevronLeft,
 } from "lucide-react";
 import { showToast } from "@/components/ui/Toast";
 import type { ScheduleTask } from "@/lib/db/efficiency.db";
@@ -18,12 +18,6 @@ const BORDER = "#EBEBEB";
 const STRONG = "#C7C7CC";
 const NO_END_DATE = "9999-12-31";
 
-const REPEAT_OPTIONS = [
-  { value: "none" as const, label: "无循环" },
-  { value: "daily" as const, label: "每天" },
-  { value: "weekly" as const, label: "每周" },
-  { value: "custom" as const, label: "自定义" },
-];
 const PROGRESS_RESET_OPTIONS = [
   { value: "none" as const, label: "不重置" },
   { value: "daily" as const, label: "每天" },
@@ -65,7 +59,7 @@ export interface TaskFormData {
   note: string;
   startDate: string;
   endDate: string;
-  repeat: "none" | "daily" | "weekly" | "custom";
+  targetType?: 'none' | 'count' | 'duration';
   isImportant: boolean;
   isProgressTask: boolean;
   progressReset: "none" | "daily" | "weekly" | "monthly";
@@ -82,7 +76,7 @@ export function getDefaultTaskForm(startDate: string): TaskFormData {
   return {
     title: "", note: "",
     startDate, endDate: startDate,
-    repeat: "none", isImportant: false, isProgressTask: false,
+    targetType: 'none', isImportant: false, isProgressTask: false,
     progressReset: "none", targetValue: 100, unit: "", startValue: 0,
     taskDays: "everyday", dailyMin: 0, progressCalc: "sum", hasSubtasks: false,
   };
@@ -93,18 +87,28 @@ export function mapFormToScheduleTask(form: TaskFormData, goalId?: string | null
   const base: Omit<ScheduleTask, "id" | "createdAt"> = {
     goalId: goalId ?? null,
     title: form.title.trim(),
-    type: form.repeat !== "none" ? "recurring" : form.startDate === effectiveEnd ? "single" : "multi_day",
+    type: form.startDate === effectiveEnd ? "single" : "multi_day",
     date: form.startDate === effectiveEnd ? form.startDate : null,
     startDate: form.startDate,
     endDate: effectiveEnd,
-    recurringDays: form.repeat === "daily" ? [0, 1, 2, 3, 4, 5, 6]
-      : form.repeat === "weekly" ? [new Date(form.startDate).getDay()] : undefined,
     isCompleted: false,
     plannedTime: 0,
     actualTime: 0,
     isImportant: form.isImportant,
     note: form.note,
   };
+  // 精简模式：targetType
+  if (form.targetType === 'count' || form.targetType === 'duration') {
+    return {
+      ...base,
+      progressType: "progress",
+      targetValue: form.targetValue,
+      targetUnit: form.unit,
+      progressCalc: "sum",
+      progressCurrent: 0,
+    };
+  }
+  // 完整模式：isProgressTask
   if (form.isProgressTask) {
     return {
       ...base,
@@ -152,7 +156,6 @@ export function CreateTaskSheet({
   const [isSaving, setIsSaving] = useState(false);
   const [showTimeSheet, setShowTimeSheet] = useState(false);
   const [reminderTime, setReminderTime] = useState("");
-  const [showAdvanced, setShowAdvanced] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -160,7 +163,6 @@ export function CreateTaskSheet({
       setForm(getDefaultTaskForm(d));
       setTab("normal");
       setIsSaving(false);
-      setShowAdvanced(false);
     }
   }, [open, selectedDate]);
 
@@ -269,20 +271,7 @@ export function CreateTaskSheet({
             {/* 滚动内容 */}
             <div className="flex-1 overflow-y-auto px-4 pt-4 pb-10 flex flex-col gap-3">
               {lite ? (
-                <LiteTaskFormFields
-                  form={form} patch={patch}
-                  showAdvanced={showAdvanced} onToggleAdvanced={() => setShowAdvanced(!showAdvanced)}
-                  tab={tab} onTabChange={(t) => {
-                    setTab(t);
-                    patch({
-                      isProgressTask: t === "progress",
-                      endDate: t === "progress" ? NO_END_DATE
-                        : form.endDate === NO_END_DATE ? form.startDate : form.endDate,
-                    });
-                  }}
-                  suggestedDailyMin={suggestedDailyMin}
-                  onTimeClick={() => setShowTimeSheet(true)}
-                />
+                <LiteTaskFormFields form={form} patch={patch} />
               ) : (
                 <TaskFormFields form={form} patch={patch} tab={tab} onTabChange={(t) => {
                   setTab(t);
@@ -323,21 +312,20 @@ export function CreateTaskSheet({
 }
 
 // ============================================================
-// 轻量模式表单字段（底部弹窗精简版）
+// 轻量模式表单字段（精简版）
 // ============================================================
 function LiteTaskFormFields({
-  form, patch, showAdvanced, onToggleAdvanced,
-  tab, onTabChange, suggestedDailyMin, onTimeClick,
+  form, patch,
 }: {
   form: TaskFormData;
   patch: (p: Partial<TaskFormData>) => void;
-  showAdvanced: boolean;
-  onToggleAdvanced: () => void;
-  tab: "normal" | "progress";
-  onTabChange: (t: "normal" | "progress") => void;
-  suggestedDailyMin: number;
-  onTimeClick: () => void;
 }) {
+  const targetTypeOptions = [
+    { value: 'none' as const, label: '无目标' },
+    { value: 'count' as const, label: '次数目标' },
+    { value: 'duration' as const, label: '时长目标' },
+  ];
+
   return (
     <>
       {/* 标题输入 */}
@@ -348,43 +336,44 @@ function LiteTaskFormFields({
           style={{ caretColor: ACCENT }} />
       </div>
 
-      {/* 日期选择 */}
-      <div className="bg-white rounded-xl border border-[#EBEBEB] p-4">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <Calendar className="w-5 h-5 text-[#86868B]" />
-            <span className="text-[15px] text-[#1D1D1F]">选择日期</span>
-          </div>
-        </div>
-        <div className="flex gap-3">
-          <DateTile label="开始日期" value={form.startDate} display={formatSlashDate(form.startDate)}
-            onChange={(v) => { const next: Partial<TaskFormData> = { startDate: v }; if (form.endDate !== NO_END_DATE && form.endDate < v) next.endDate = v; patch(next); }} />
-          <DateTile label="结束日期" value={form.endDate === NO_END_DATE ? form.startDate : form.endDate}
-            display={formatSlashDate(form.endDate === NO_END_DATE ? form.startDate : form.endDate)}
-            min={form.startDate} onChange={(v) => patch({ endDate: v })} />
-        </div>
-      </div>
-
-      {/* 重要 */}
+      {/* 重要标记 */}
       <ImportantRow value={form.isImportant} onChange={(v) => patch({ isImportant: v })} />
 
-      {/* 高级设置 展开/收起 */}
-      <button type="button" onClick={onToggleAdvanced}
-        className="flex items-center justify-center gap-1.5 py-2 w-full text-[15px] text-[#5865F2]">
-        <span>{showAdvanced ? "收起高级设置" : "高级设置"}</span>
-        <ChevronDown className="w-[14px] h-[14px] transition-transform" style={{ transform: showAdvanced ? "rotate(180deg)" : "none" }} />
-      </button>
+      {/* 截止日期 */}
+      <div className="bg-white rounded-xl border border-[#EBEBEB] p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <Calendar className="w-5 h-5 text-[#86868B]" />
+          <span className="text-[15px] text-[#1D1D1F]">截止日期</span>
+        </div>
+        <DateTile label="截止日期" value={form.endDate} display={formatSlashDate(form.endDate)}
+          onChange={(v) => patch({ endDate: v })} />
+      </div>
 
-      {/* 高级设置展开内容 */}
-      <AnimatePresence initial={false}>
-        {showAdvanced && (
-          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.3, ease: [0.32, 0.72, 0, 1] }} className="overflow-hidden flex flex-col gap-3">
-            <TaskFormFields form={form} patch={patch} tab={tab} onTabChange={onTabChange}
-              suggestedDailyMin={suggestedDailyMin} onTimeClick={onTimeClick} hideProgressTab />
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* 目标类型选择 */}
+      <OptionRow label="目标类型" value={form.targetType || 'none'}
+        options={targetTypeOptions}
+        onChange={(v) => patch({ targetType: v as TaskFormData['targetType'] })} />
+
+      {/* 目标值 + 单位（仅在目标类型不为 "无目标" 时显示） */}
+      {form.targetType && form.targetType !== 'none' && (
+        <div className="bg-white rounded-xl border border-[#EBEBEB] flex items-center h-14 px-4">
+          <span className="text-[17px] text-[#1D1D1F] shrink-0">目标值</span>
+          <div className="flex-1 flex items-center justify-end gap-2">
+            <NumberBox value={form.targetValue} onChange={(v) => patch({ targetValue: v })} />
+            <input type="text" value={form.unit} onChange={(e) => patch({ unit: e.target.value })}
+              placeholder="单位" className="w-16 border-none outline-none bg-transparent text-[15px] placeholder-[#86868B] text-[#86868B]"
+              style={{ caretColor: ACCENT }} />
+          </div>
+        </div>
+      )}
+
+      {/* 备注 */}
+      <div className="bg-white rounded-xl border border-[#EBEBEB] overflow-hidden">
+        <input type="text" value={form.note} onChange={(e) => patch({ note: e.target.value })}
+          placeholder="备注"
+          className="block w-full h-[54px] px-4 border-none outline-none text-[17px] text-[#1D1D1F] bg-transparent placeholder-[#86868B]"
+          style={{ caretColor: ACCENT }} />
+      </div>
     </>
   );
 }
@@ -466,9 +455,6 @@ function NormalFields({ form, patch, onTimeClick }: { form: TaskFormData; patch:
             min={form.startDate} onChange={(v) => patch({ endDate: v })} />
         </div>
       </div>
-
-      <OptionRow icon={<RotateCcw className="w-5 h-5 text-[#86868B]" />} label="循环" value={form.repeat}
-        options={REPEAT_OPTIONS} onChange={(v) => { if (v === "custom") { showToast({ type: "info", message: "自定义循环开发中" }); return; } patch({ repeat: v as TaskFormData["repeat"] }); }} />
 
       <ConfigRow icon={<Clock className="w-5 h-5 text-[#86868B]" />} label="时间和提醒"
         onClick={onTimeClick} />

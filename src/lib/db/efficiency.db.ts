@@ -207,6 +207,7 @@ export class EfficiencyDB extends Dexie {
         { id: crypto.randomUUID(), name: '养生', color: '#84CC16', icon: 'Flower2', description: '', sortOrder: 7, projectType: 'small', isDefault: true, moreRoute: '/more/wellness', createdAt: Date.now() },
         { id: crypto.randomUUID(), name: '体态拉伸', color: '#06B6D4', icon: 'StretchHorizontal', description: '', sortOrder: 8, projectType: 'small', isDefault: true, moreRoute: '/more/posture', createdAt: Date.now() },
         { id: crypto.randomUUID(), name: '吃药', color: '#DC2626', icon: 'Pill', description: '', sortOrder: 9, projectType: 'small', isDefault: true, moreRoute: '/more/medication', createdAt: Date.now() },
+        { id: crypto.randomUUID(), name: '心愿', color: '#FF2D55', icon: 'Gift', description: '', sortOrder: 10, projectType: 'small', isDefault: true, moreRoute: '/more/wishes', createdAt: Date.now() },
       ];
       for (const sp of defaultSmallProjects) {
         await tx.table('projects').add(sp);
@@ -307,6 +308,7 @@ export async function initializeEfficiencyDB(): Promise<{ success: boolean; erro
         { name: '养生', color: '#84CC16', icon: 'Flower2', sortOrder: 7, moreRoute: '/more/wellness' },
         { name: '体态拉伸', color: '#06B6D4', icon: 'StretchHorizontal', sortOrder: 8, moreRoute: '/more/posture' },
         { name: '吃药', color: '#DC2626', icon: 'Pill', sortOrder: 9, moreRoute: '/more/medication' },
+        { name: '心愿', color: '#FF2D55', icon: 'Gift', sortOrder: 10, moreRoute: '/more/wishes' },
       ];
       for (const p of smallDefaults) {
         await efficiencyDB.projects.add({

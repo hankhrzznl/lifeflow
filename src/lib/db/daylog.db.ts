@@ -38,6 +38,8 @@ export interface Item {
   note?: string;
 
   isCompleted: boolean;
+  repeat?: 'none' | 'daily' | 'weekdays' | 'weekly';  // 事项循环模式
+  repeatGroupId?: string;  // 同名事项折叠分组ID
   sortOrder: number;       // 同时间段内的排序
   createdAt: number;
   updatedAt: number;

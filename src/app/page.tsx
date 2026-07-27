@@ -164,16 +164,31 @@ export default function HomePage() {
   const countdowns = useLiveQuery(() => getCountdowns(), [], [] as Countdown[]);
 
   const upcomingCountdowns = useMemo(() => {
+    const now = new Date();
     const today = todayStr();
+    const thisYear = now.getFullYear();
     return (countdowns ?? [])
-      .filter((c) => c.date >= today)
-      .sort((a, b) => a.date.localeCompare(b.date))
+      .map((c) => {
+        // annual 类型：用今年日期重新计算
+        if (c.type === 'annual') {
+          const [m, d] = c.date.split('-').slice(1);
+          const thisYearDate = `${thisYear}-${m}-${d}`;
+          // 如果今年已经过了，用明年
+          if (thisYearDate < today) {
+            return { ...c, _effectiveDate: `${thisYear + 1}-${m}-${d}` };
+          }
+          return { ...c, _effectiveDate: thisYearDate };
+        }
+        return { ...c, _effectiveDate: c.date };
+      })
+      .filter((c: any) => c._effectiveDate >= today)
+      .sort((a: any, b: any) => a._effectiveDate.localeCompare(b._effectiveDate))
       .slice(0, 3);
   }, [countdowns]);
 
-  const countdownDays = useCallback((date: string) => {
+  const countdownDays = useCallback((c: any) => {
     const now = new Date(todayStr() + "T00:00:00");
-    const target = new Date(date + "T00:00:00");
+    const target = new Date(c._effectiveDate + "T00:00:00");
     return Math.ceil((target.getTime() - now.getTime()) / 86400000);
   }, []);
 
@@ -462,30 +477,30 @@ export default function HomePage() {
       </div>
 
       {/* ===== 倒数日 ===== */}
-      {upcomingCountdowns.length > 0 && (
-        <div className="px-4 mb-4">
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.10, duration: 0.35, ease: "easeOut" }}
+      <div className="px-4 mb-4">
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.10, duration: 0.35, ease: "easeOut" }}
+        >
+          <Link
+            href="/more/countdown"
+            className="block p-4 rounded-[20px] active:opacity-70"
+            style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}
           >
-            <Link
-              href="/more/countdown"
-              className="block p-4 rounded-[20px] active:opacity-70"
-              style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}
-            >
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <Clock9 className="w-4 h-4" style={{ color: "var(--lifeflow-primary)" }} />
-                  <span className="text-[13px] font-semibold" style={{ color: "var(--color-text-primary)" }}>
-                    倒数日
-                  </span>
-                </div>
-                <ChevronRight className="w-4 h-4" style={{ color: "var(--color-text-disabled)" }} />
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <Clock9 className="w-4 h-4" style={{ color: "var(--lifeflow-primary)" }} />
+                <span className="text-[13px] font-semibold" style={{ color: "var(--color-text-primary)" }}>
+                  倒数日
+                </span>
               </div>
+              <ChevronRight className="w-4 h-4" style={{ color: "var(--color-text-disabled)" }} />
+            </div>
+            {upcomingCountdowns.length > 0 ? (
               <div className="flex gap-3">
-                {upcomingCountdowns.map((c) => {
-                  const days = countdownDays(c.date);
+                {upcomingCountdowns.map((c: any) => {
+                  const days = countdownDays(c);
                   return (
                     <div
                       key={c.id}
@@ -506,10 +521,14 @@ export default function HomePage() {
                   );
                 })}
               </div>
-            </Link>
-          </motion.div>
-        </div>
-      )}
+            ) : (
+              <p className="text-[13px] py-2" style={{ color: "var(--color-text-disabled)" }}>
+                暂无倒计时，点击添加
+              </p>
+            )}
+          </Link>
+        </motion.div>
+      </div>
 
       {/* ===== 今日提醒条 ===== */}
       {pendingReminders.length > 0 && (

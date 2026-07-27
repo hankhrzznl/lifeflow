@@ -8,7 +8,7 @@ import {
   GraduationCap, Heart, ClipboardList, Target, Gamepad2, FolderOpen,
   Clock, Wallet, Droplets, Moon, Dumbbell, Pill, StretchHorizontal,
   Utensils, Flower2, ExternalLink,
-  Timer, CalendarRange, StickyNote, Settings,
+  Timer, CalendarRange, StickyNote, Settings, Gift,
 } from "lucide-react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { getAllProjects } from "@/lib/db/efficiency.db";
@@ -138,6 +138,22 @@ export default function ProjectsPage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="text-[14px] font-semibold truncate" style={{ color: "var(--color-text-primary)" }}>设置</div>
+                </div>
+                <ExternalLink className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "var(--color-text-disabled)" }} />
+              </motion.button>
+              {/* 心愿 */}
+              <motion.button
+                initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: defaultSmall.length * 0.03 + 0.15 }}
+                onClick={() => router.push("/more/wishes")}
+                className="p-3.5 rounded-[16px] flex items-center gap-3 text-left active:scale-[0.98] transition-transform"
+                style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}
+              >
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "#FF2D5520" }}>
+                  <Gift className="w-5 h-5" style={{ color: "#FF2D55" }} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[14px] font-semibold truncate" style={{ color: "var(--color-text-primary)" }}>心愿</div>
                 </div>
                 <ExternalLink className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "var(--color-text-disabled)" }} />
               </motion.button>

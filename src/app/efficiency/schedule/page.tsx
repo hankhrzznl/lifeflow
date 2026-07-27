@@ -81,7 +81,6 @@ export default function SchedulePage() {
   // ── 当前时间线 ──
   const [nowTime, setNowTime] = useState("");
   const timelineRef = useRef<HTMLDivElement>(null);
-  const toastShownRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     const update = () => {
@@ -195,25 +194,6 @@ export default function SchedulePage() {
   const axisStart = 6 * 60;
   const axisEnd = 26 * 60;
   const showNowLine = isSelectedToday && nowMinutes >= axisStart && nowMinutes <= axisEnd;
-
-  // ── 超时检测（当天事项过了计划时间未完成） ──
-  useEffect(() => {
-    if (!isSelectedToday || !nowTime || !items) return;
-    const nowM = timeToMinutes(nowTime);
-    for (const item of items) {
-      if (item.isCompleted) continue;
-      if (item.isCorrected) continue;
-      const endM = timeToMinutes(item.plannedEnd);
-      if (nowM > endM + 15 && !toastShownRef.current.has(item.id)) {
-        toastShownRef.current.add(item.id);
-        showToast({
-          type: "warning",
-          message: `「${item.title}」已超时，建议校准实际时间`,
-          action: { label: "校准", onClick: () => openCalibrate(item) },
-        });
-      }
-    }
-  }, [items, nowTime, isSelectedToday]);
 
   // ── 小时块分组 ──
   const hourBlocks = useMemo(() => {

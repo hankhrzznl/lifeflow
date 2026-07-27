@@ -45,7 +45,7 @@ function todayStr(): string {
 function addDays(dateStr: string, days: number): string {
   const d = new Date(dateStr + "T00:00:00");
   d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 function endTimeFrom(start: string): string {
@@ -136,6 +136,34 @@ export default function GoalDetailPage() {
     return allItems.length > 0 && allItems.every(i => i.isCompleted);
   }, [allItems]);
 
+  // ── 一次性清理：删掉因 addDays UTC 时区 bug 产生的重复事项 ──
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const duplicatesByKey = new Map<string, string[]>(); // key = title|date, value = ids
+      for (const item of allItems) {
+        const k = `${item.title}|${item.date}`;
+        const list = duplicatesByKey.get(k) || [];
+        list.push(item.id);
+        duplicatesByKey.set(k, list);
+      }
+      const toDelete: string[] = [];
+      for (const [key, ids] of duplicatesByKey) {
+        if (ids.length > 5) {
+          // 保留第一个，其余全删
+          toDelete.push(...ids.slice(1));
+        }
+      }
+      if (toDelete.length > 0 && !cancelled) {
+        await daylogDB.transaction("rw", daylogDB.items, async () => {
+          for (const id of toDelete) await daylogDB.items.delete(id);
+        });
+        console.log(`[GoalDetail] 已清理 ${toDelete.length} 条重复事项`);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [allItems]);
+
   /* ── 任务展开状态 ── */
   const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
 
@@ -168,15 +196,25 @@ export default function GoalDetailPage() {
 
   const handleCreateItem = useCallback(async () => {
     if (!itemTitle.trim()) { showToast({ type: "warning", message: "标题还没填" }); return; }
+    if (itemTimeSlots.length === 0) { showToast({ type: "warning", message: "至少选一个时段" }); return; }
+
+    // 计算日期差，防止异常范围
+    const fromMs = new Date(itemDateFrom + "T00:00:00").getTime();
+    const toMs = new Date(itemDateTo + "T00:00:00").getTime();
+    const dayCount = Math.floor((toMs - fromMs) / 86400000) + 1;
+    if (dayCount < 0) { showToast({ type: "warning", message: "结束日期不能早于开始日期" }); return; }
+    if (dayCount > 90) { showToast({ type: "warning", message: "日期范围过大，最多90天" }); return; }
+
     setItemSubmitting(true);
     try {
       const repeatGroupId = crypto.randomUUID();
       const dates: string[] = [];
       let cursor = itemDateFrom;
+      const maxDates = dayCount + 1; // 严格上限
       while (cursor <= itemDateTo) {
         dates.push(cursor);
         cursor = addDays(cursor, 1);
-        if (dates.length > 365) break;
+        if (dates.length >= maxDates) break;
       }
 
       for (const date of dates) {

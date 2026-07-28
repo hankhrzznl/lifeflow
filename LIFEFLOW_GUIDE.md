@@ -39,7 +39,8 @@ LifeFlow v1.0，一个讲道理的生活助手。
 - 开启模板组开关时，为当天及未来 7 天重新生成事项
 - 修改日期配置（去掉某个星期几）时，清理当天及未来该星期几的事项
 - 子项的增删改逻辑不变：删除子项时清理未来 7 天对应 Item；新增子项默认 `isActive=true`
-- `generateRoutineItems` 使用内存级防重入锁 + 事务内原子读写防止并发重复，生成前检查组 enabled + daysOfWeek
+- `generateRoutineItems` 使用内存级防重入锁 + 事务内原子读写防止并发重复，生成前检查组 enabled + daysOfWeek + createdAt 边界
+- **创建日期边界**：模板组的 `createdAt` 决定了该模板的事项从哪天开始生成。`dateStr < 组创建日期 YYYY-MM-DD` 的日期不会生成该模板的任何事项
 
 ### 目标-阶段-任务-事项 层级
 

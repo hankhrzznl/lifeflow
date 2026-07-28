@@ -193,6 +193,15 @@ export class DaylogDB extends Dexie {
         });
       }
     });
+    // v5: 全量清空作息事项 + generateRoutineItems 增加 createdAt 边界
+    this.version(5).stores({
+      routineTemplateGroups: '&id, isDefault, sortOrder',
+      routineTemplates: '&id, name, type, templateId',
+    }).upgrade(async (tx) => {
+      // 全量删除所有作息事项
+      await tx.table('items').where('sourceType').equals('routine').delete();
+      // 注：业务代码初始化时 (page load) 会为未来 7 天调用 generateRoutineItems 补全
+    });
   }
 }
 
@@ -429,7 +438,10 @@ export async function generateRoutineItems(dateStr: string): Promise<void> {
         if (!group || !group.enabled) continue;
         // 条件3：模板组日期匹配
         if (!group.daysOfWeek.includes(dayOfWeek)) continue;
-        // 条件4：未重复生成
+        // 条件4：创建日期边界 — dateStr 必须 >= 组创建日期
+        const groupCreatedDate = _timestampToDateStr(group.createdAt);
+        if (dateStr < groupCreatedDate) continue;
+        // 条件5：未重复生成
         if (existingSourceIds.has(r.id)) continue;
 
         await addItem({
@@ -604,4 +616,10 @@ function _addMinutes(time: string, mins: number): string {
   const nh = Math.floor(total / 60) % 24;
   const nm = total % 60;
   return `${String(nh).padStart(2, '0')}:${String(nm).padStart(2, '0')}`;
+}
+
+/** 将 Unix 毫秒时间戳转为 YYYY-MM-DD 字符串 */
+function _timestampToDateStr(ts: number): string {
+  const d = new Date(ts);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }

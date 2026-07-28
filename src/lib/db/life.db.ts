@@ -126,7 +126,10 @@ export class LifeDB extends Dexie {
       cheatDays: '++id, date',
     });
     this.version(6).stores({
-      wishes: '&id, completed, createdAt',
+      wishes: '&id, completed, createdAt, sortOrder',
+    });
+    this.version(7).stores({
+      wishes: '&id, completed, createdAt, sortOrder',
     });
   }
 }

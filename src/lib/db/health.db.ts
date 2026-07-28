@@ -183,6 +183,7 @@ export interface MedicineDefinition {
   name: string;          // "阿莫西林" / "维生素C"
   dosage: string;        // "500mg" / "1片"
   frequency: string;     // "每天3次" / "饭后"
+  deadline?: string;     // YYYY-MM-DD，截止日期
   icon: string;          // "Pill"
   color: string;         // "#DC2626"
   active: boolean;       // 是否正在服用

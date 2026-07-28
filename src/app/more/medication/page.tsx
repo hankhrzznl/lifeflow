@@ -148,11 +148,11 @@ export default function MedicationPage() {
   // ── 新增/编辑弹窗 ──
   const [showForm, setShowForm] = useState(false);
   const [editingMed, setEditingMed] = useState<MedicineDefinition | null>(null);
-  const [form, setForm] = useState({ name: "", dosage: "", color: COLORS[0], selectedSlots: ["morning"] as TimeSlotKey[] });
+  const [form, setForm] = useState({ name: "", dosage: "", color: COLORS[0], selectedSlots: ["morning"] as TimeSlotKey[], deadline: "" });
 
   const openCreate = () => {
     setEditingMed(null);
-    setForm({ name: "", dosage: "", color: COLORS[0], selectedSlots: ["morning"] });
+    setForm({ name: "", dosage: "", color: COLORS[0], selectedSlots: ["morning"], deadline: "" });
     setShowForm(true);
   };
 
@@ -163,6 +163,7 @@ export default function MedicationPage() {
       dosage: m.dosage,
       color: m.color,
       selectedSlots: parseLegacyFrequency(m.frequency),
+      deadline: m.deadline || "",
     });
     setShowForm(true);
   };
@@ -187,6 +188,7 @@ export default function MedicationPage() {
         name: form.name.trim(),
         dosage: form.dosage.trim(),
         frequency: freqValue,
+        deadline: form.deadline || undefined,
         color: form.color,
       });
       showToast({ type: "success", message: "已更新" });
@@ -195,6 +197,7 @@ export default function MedicationPage() {
         name: form.name.trim(),
         dosage: form.dosage.trim(),
         frequency: freqValue,
+        deadline: form.deadline || undefined,
         icon: "Pill",
         color: form.color,
         active: true,
@@ -509,6 +512,20 @@ export default function MedicationPage() {
                       );
                     })}
                   </div>
+                </div>
+
+                {/* 截止日期 */}
+                <div className="mb-4">
+                  <label className="text-[13px] font-medium mb-1.5 block" style={{ color: "var(--color-text-secondary)" }}>
+                    截止日期（可选）
+                  </label>
+                  <input
+                    type="date"
+                    value={form.deadline}
+                    onChange={(e) => setForm(f => ({ ...f, deadline: e.target.value }))}
+                    className="w-full px-4 py-3 rounded-xl text-[15px] outline-none"
+                    style={{ background: "var(--lifeflow-background)", color: "var(--color-text-primary)" }}
+                  />
                 </div>
 
                 {/* 颜色 */}

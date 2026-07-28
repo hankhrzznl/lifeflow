@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { motion } from "framer-motion";
@@ -67,6 +67,7 @@ export default function WaterPage() {
   const [settings, setSettings] = useState<WaterSettings>(DEFAULT_SETTINGS);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const generatingRef = useRef(false); // 防重入守卫
 
   /* ─── Nap time from routines ─── */
   const [napStart, setNapStart] = useState("");
@@ -123,6 +124,8 @@ export default function WaterPage() {
   /* ─── Core: generate water items ─── */
 
   const generateItemsForNext7Days = useCallback(async () => {
+    if (generatingRef.current) return;
+    generatingRef.current = true;
     setGenerating(true);
     try {
       const startH = parseInt(settings.wakeStart.split(":")[0]);
@@ -173,6 +176,7 @@ export default function WaterPage() {
       }
       sendNotification("💧 今天的喝水提醒已就绪", "", "water-reminder");
     } finally {
+      generatingRef.current = false;
       setGenerating(false);
     }
   }, [settings, today]);
@@ -230,7 +234,7 @@ export default function WaterPage() {
     [todayItems],
   );
   const totalCount = todayItems?.length ?? 0;
-  const totalWaterMl = totalCount * 100; // 100ml per item
+  const totalWaterMl = completedCount * 100; // 100ml per completed item
 
   const percent = settings.dailyTarget > 0
     ? Math.min(100, Math.round((totalWaterMl / settings.dailyTarget) * 100))
@@ -284,7 +288,7 @@ export default function WaterPage() {
       <header className="flex items-center h-11 px-4">
         <button
           type="button"
-          onClick={() => router.push("/more")}
+          onClick={() => router.push("/more/projects")}
           className="inline-flex h-8 w-8 items-center justify-center rounded-lg shrink-0"
           style={{
             background: "var(--color-surface-card)",

@@ -8,7 +8,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import {
   FolderKanban, Zap, Check, Bell, Flame,
   Calendar, Droplets, Moon, Dumbbell, Pill,
-  Plus, X, Clock, ChevronRight, Clock9,
+  Plus, X, Clock, ChevronRight, Clock9, Settings,
 } from "lucide-react";
 import { getUpcomingItems, addManualItem, updateItem, getItemsByDate } from "@/lib/db/daylog.db";
 import type { Item } from "@/lib/db/daylog.db";
@@ -336,14 +336,32 @@ export default function HomePage() {
         <p className="text-[13px] font-medium" style={{ color: "var(--color-text-secondary)" }}>
           {greeting()} · {formatDateChinese(now)}
         </p>
-        <Link
-          href="/more/projects"
-          className="h-7 flex items-center gap-1 px-2 rounded-lg active:opacity-60"
-          style={{ background: "var(--color-surface-card)", border: "1px solid var(--lifeflow-border)" }}
-        >
-          <FolderKanban className="w-3.5 h-3.5" style={{ color: "var(--color-text-secondary)" }} />
-          <span className="text-[11px] font-medium" style={{ color: "var(--color-text-secondary)" }}>功能模块</span>
-        </Link>
+        <div className="flex items-center gap-1">
+          <Link
+            href="/reminders"
+            className="h-7 flex items-center gap-1 px-2 rounded-lg active:opacity-60"
+            style={{ background: "var(--color-surface-card)", border: "1px solid var(--lifeflow-border)" }}
+          >
+            <Bell className="w-3.5 h-3.5" style={{ color: "var(--color-text-secondary)" }} />
+            <span className="text-[11px] font-medium" style={{ color: "var(--color-text-secondary)" }}>提醒</span>
+          </Link>
+          <Link
+            href="/settings"
+            className="h-7 flex items-center gap-1 px-2 rounded-lg active:opacity-60"
+            style={{ background: "var(--color-surface-card)", border: "1px solid var(--lifeflow-border)" }}
+          >
+            <Settings className="w-3.5 h-3.5" style={{ color: "var(--color-text-secondary)" }} />
+            <span className="text-[11px] font-medium" style={{ color: "var(--color-text-secondary)" }}>设置</span>
+          </Link>
+          <Link
+            href="/more/projects"
+            className="h-7 flex items-center gap-1 px-2 rounded-lg active:opacity-60"
+            style={{ background: "var(--color-surface-card)", border: "1px solid var(--lifeflow-border)" }}
+          >
+            <FolderKanban className="w-3.5 h-3.5" style={{ color: "var(--color-text-secondary)" }} />
+            <span className="text-[11px] font-medium" style={{ color: "var(--color-text-secondary)" }}>功能模块</span>
+          </Link>
+        </div>
       </motion.div>
 
       {/* ===== 感知卡片区 ===== */}

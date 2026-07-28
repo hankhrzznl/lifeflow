@@ -87,7 +87,7 @@ export class DaylogDB extends Dexie {
       courses: '&id, name',
       routineTemplates: '&id, name',
     });
-    // v2: add type field to routineTemplates + seed default templates
+    // v2: add type field to routineTemplates
     this.version(2).stores({
       routineTemplates: '&id, name, type',
     }).upgrade(async (tx) => {
@@ -98,18 +98,7 @@ export class DaylogDB extends Dexie {
           await tx.table('routineTemplates').update(r.id, { type: 'custom' });
         }
       }
-      // Seed default sleep/wake/nap templates if not exist
-      const defaults: { type: RoutineType; name: string; startTime: string; endTime: string; color: string; icon: string; sortOrder: number }[] = [
-        { type: 'wake',   name: '起床', startTime: '07:00', endTime: '07:30', color: '#FF9500', icon: 'Sunrise',      sortOrder: 0 },
-        { type: 'nap',    name: '午睡', startTime: '13:00', endTime: '13:30', color: '#5856D6', icon: 'CloudSun',     sortOrder: 1 },
-        { type: 'sleep',  name: '入睡', startTime: '22:30', endTime: '23:00', color: '#1E293B', icon: 'Moon',         sortOrder: 2 },
-      ];
-      for (const d of defaults) {
-        const existing = await tx.table('routineTemplates').where('type').equals(d.type).first();
-        if (!existing) {
-          await tx.table('routineTemplates').add({ ...d, id: crypto.randomUUID(), isActive: true, createdAt: Date.now() });
-        }
-      }
+      // NOTE: 不再自动播种默认起床/午睡/入睡模板，用户应自行设置作息
     });
   }
 }

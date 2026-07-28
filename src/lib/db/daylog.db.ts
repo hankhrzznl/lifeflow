@@ -67,6 +67,8 @@ export interface RoutineTemplateGroup {
   isDefault: boolean;
   sortOrder: number;
   createdAt: number;
+  enabled: boolean;       // 模板组开关
+  daysOfWeek: number[];   // 生效星期几，0=周日~6=周六
 }
 
 export interface RoutineTemplate {
@@ -136,6 +138,59 @@ export class DaylogDB extends Dexie {
       ];
       for (const d of defaults) {
         await tx.table('routineTemplates').add({ ...d, id: crypto.randomUUID(), createdAt: now });
+      }
+    });
+    // v4: 模板组增加 enabled/daysOfWeek + 预置工作日/周末模板
+    this.version(4).stores({
+      routineTemplateGroups: '&id, isDefault, sortOrder',
+      routineTemplates: '&id, name, type, templateId',
+    }).upgrade(async (tx) => {
+      // 全量删除历史作息事项
+      await tx.table('items').where('sourceType').equals('routine').delete();
+
+      // 获取旧默认模板组
+      const oldGroup = await tx.table('routineTemplateGroups').get('default');
+      if (!oldGroup) return;
+
+      const now = Date.now();
+
+      // 旧默认模板 → 工作日模板
+      await tx.table('routineTemplateGroups').update('default', {
+        name: '工作日模板',
+        isDefault: false,
+        enabled: true,
+        daysOfWeek: [1, 2, 3, 4, 5], // 周一~周五
+      });
+
+      // 创建周末模板组
+      const weekendId = crypto.randomUUID();
+      await tx.table('routineTemplateGroups').add({
+        id: weekendId,
+        name: '周末模板',
+        isDefault: false,
+        sortOrder: 1,
+        createdAt: now,
+        enabled: true,
+        daysOfWeek: [0, 6], // 周日、周六
+      });
+
+      // 克隆作息子项，时间 +30 分钟
+      const defaultRoutines = await tx.table('routineTemplates')
+        .where('templateId').equals('default')
+        .toArray() as RoutineTemplate[];
+
+      for (const r of defaultRoutines) {
+        const { id, createdAt, ...rest } = r;
+        const newStart = _addMinutes(rest.startTime, 30);
+        const newEnd = _addMinutes(rest.endTime, 30);
+        await tx.table('routineTemplates').add({
+          ...rest,
+          id: crypto.randomUUID(),
+          templateId: weekendId,
+          startTime: newStart,
+          endTime: newEnd,
+          createdAt: now,
+        });
       }
     });
   }
@@ -290,9 +345,13 @@ export async function getRoutineGroups(): Promise<RoutineTemplateGroup[]> {
   return daylogDB.routineTemplateGroups.orderBy('sortOrder').toArray();
 }
 
-export async function addRoutineGroup(name: string): Promise<string> {
+export async function addRoutineGroup(name: string, daysOfWeek?: number[]): Promise<string> {
   const id = crypto.randomUUID();
-  await daylogDB.routineTemplateGroups.add({ id, name, isDefault: false, sortOrder: Date.now(), createdAt: Date.now() });
+  await daylogDB.routineTemplateGroups.add({
+    id, name, isDefault: false, sortOrder: Date.now(), createdAt: Date.now(),
+    enabled: true,
+    daysOfWeek: daysOfWeek ?? [1, 2, 3, 4, 5],  // 新建模板默认周一~周五
+  });
   return id;
 }
 
@@ -348,8 +407,11 @@ export async function generateRoutineItems(dateStr: string): Promise<void> {
   if (_generatingRoutineDates.has(dateStr)) return;
   _generatingRoutineDates.add(dateStr);
   try {
-    const routines = await getRoutines();
+    const [routines, groups] = await Promise.all([getRoutines(), getRoutineGroups()]);
     if (routines.length === 0) return;
+
+    const groupMap = new Map(groups.map(g => [g.id, g]));
+    const dayOfWeek = new Date(dateStr + 'T00:00:00').getDay(); // 0=Sun
 
     // 在事务内读取 + 创建，避免并发快照重复
     await daylogDB.transaction('rw', daylogDB.items, async () => {
@@ -360,8 +422,16 @@ export async function generateRoutineItems(dateStr: string): Promise<void> {
       const existingSourceIds = new Set(existing.map(i => i.sourceId));
 
       for (const r of routines) {
+        // 条件1：子项启用
         if (!r.isActive) continue;
+        // 条件2：模板组启用
+        const group = r.templateId ? groupMap.get(r.templateId) : null;
+        if (!group || !group.enabled) continue;
+        // 条件3：模板组日期匹配
+        if (!group.daysOfWeek.includes(dayOfWeek)) continue;
+        // 条件4：未重复生成
         if (existingSourceIds.has(r.id)) continue;
+
         await addItem({
           date: dateStr,
           sourceType: 'routine',
@@ -461,6 +531,60 @@ export async function removeModuleItems(date: string, sourceType: SourceType, so
     .delete();
 }
 
+// ─── RoutineTemplateGroup CRUD v4 ──────────────────────────
+
+/** 将日期字符串转为星期几（0=周日） */
+export function getDayOfWeek(dateStr: string): number {
+  return new Date(dateStr + 'T00:00:00').getDay();
+}
+
+/** 更新模板组 */
+export async function updateRoutineGroup(id: string, updates: Partial<RoutineTemplateGroup>): Promise<void> {
+  await daylogDB.routineTemplateGroups.update(id, updates);
+}
+
+/** 删除某模板组今天及未来所有已生成的事项 */
+export async function deleteRoutineItemsForGroup(groupId: string): Promise<void> {
+  const routines = await getRoutinesForGroup(groupId);
+  const routineIds = routines.map(r => r.id);
+  if (routineIds.length === 0) return;
+
+  const today = new Date();
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+
+  const toDelete = await daylogDB.items
+    .filter(item =>
+      item.sourceType === 'routine' &&
+      routineIds.includes(item.sourceId) &&
+      item.date >= todayStr
+    )
+    .toArray();
+  const ids = toDelete.map(i => i.id);
+  if (ids.length > 0) await daylogDB.items.bulkDelete(ids);
+}
+
+/** 删除某模板组今天及未来某星期几的所有已生成事项 */
+export async function deleteRoutineItemsForGroupDays(groupId: string, daysOfWeek: number[]): Promise<void> {
+  const routines = await getRoutinesForGroup(groupId);
+  const routineIds = routines.map(r => r.id);
+  if (routineIds.length === 0) return;
+
+  const today = new Date();
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+
+  const daysSet = new Set(daysOfWeek);
+  const toDelete = await daylogDB.items
+    .filter(item => {
+      if (item.sourceType !== 'routine' || !routineIds.includes(item.sourceId)) return false;
+      if (item.date < todayStr) return false;
+      const d = new Date(item.date + 'T00:00:00');
+      return daysSet.has(d.getDay());
+    })
+    .toArray();
+  const ids = toDelete.map(i => i.id);
+  if (ids.length > 0) await daylogDB.items.bulkDelete(ids);
+}
+
 // ─── 工具 ────────────────────────────────────────────────────
 
 export function timeToSort(time: string): number {
@@ -471,4 +595,13 @@ export function timeToSort(time: string): number {
 export function formatTime(hhmm: string): string {
   const [h, m] = hhmm.split(':');
   return `${h}:${m}`;
+}
+
+/** 给时间字符串加上指定分钟数，用于 v4 升级推导周末模板时间 */
+function _addMinutes(time: string, mins: number): string {
+  const [h, m] = time.split(':').map(Number);
+  const total = h * 60 + m + mins;
+  const nh = Math.floor(total / 60) % 24;
+  const nm = total % 60;
+  return `${String(nh).padStart(2, '0')}:${String(nm).padStart(2, '0')}`;
 }

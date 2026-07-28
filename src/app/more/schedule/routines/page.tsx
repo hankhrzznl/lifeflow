@@ -14,10 +14,16 @@ import {
   addRoutineGroup,
   deleteRoutineGroup,
   getRoutinesForGroup,
+  updateRoutineGroup,
+  deleteRoutineItemsForGroup,
+  deleteRoutineItemsForGroupDays,
+  generateRoutineItems,
 } from "@/lib/db/daylog.db";
 import type { RoutineTemplate, RoutineTemplateGroup } from "@/lib/db/daylog.db";
 import { showToast } from "@/components/ui/Toast";
 import { syncRoutineToSchedule } from "@/lib/routineSync";
+
+const WEEKDAY_LABELS = ["日", "一", "二", "三", "四", "五", "六"]; // 0=周日
 
 const COLORS = ["#5856D6", "#007AFF", "#34C759", "#FF9500", "#FF3B30", "#AF52DE", "#5AC8FA", "#FF2D55"];
 
@@ -84,6 +90,87 @@ export default function RoutinesPage() {
     setChildFormStartTime(r.startTime);
     setChildFormEndTime(r.endTime);
     setChildFormColor(r.color);
+  }, []);
+
+  // ─── Helper: format daysOfWeek display ────────────────────
+
+  const formatDaysOfWeek = useCallback((days: number[]): string => {
+    if (days.length === 0) return "未设置日期";
+    if (days.length === 7) return "每天";
+    const sorted = [...days].sort((a, b) => {
+      // 把周日(0)排到最后
+      if (a === 0) return 1;
+      if (b === 0) return -1;
+      return a - b;
+    });
+    return sorted.map(d => WEEKDAY_LABELS[d]).join("、");
+  }, []);
+
+  // ─── Group-level Actions ──────────────────────────────────
+
+  const handleToggleGroup = useCallback(async (group: RoutineTemplateGroup) => {
+    const newEnabled = !group.enabled;
+    await updateRoutineGroup(group.id, { enabled: newEnabled });
+
+    if (!newEnabled) {
+      // 关闭：删除今天及未来的事项 + 同步删除 ScheduleTask
+      await deleteRoutineItemsForGroup(group.id);
+      // 同步删除效率模块的 ScheduleTask
+      const groupRoutines = allRoutines.filter(r => r.templateId === group.id);
+      for (const r of groupRoutines) {
+        await syncRoutineToSchedule({ ...r, isActive: false });
+      }
+      showToast({ type: "success", message: "模板已停用" });
+    } else {
+      // 开启：为未来 7 天生成事项 + 同步 ScheduleTask
+      const today = new Date();
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(today);
+        d.setDate(d.getDate() + i);
+        const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+        await generateRoutineItems(dateStr);
+      }
+      // 同步 ScheduleTask
+      const groupRoutines = allRoutines.filter(r => r.templateId === group.id && r.isActive);
+      for (const r of groupRoutines) {
+        await syncRoutineToSchedule(r);
+      }
+      showToast({ type: "success", message: "模板已启用" });
+    }
+  }, [allRoutines]);
+
+  const handleToggleWeekday = useCallback(async (group: RoutineTemplateGroup, day: number) => {
+    const current = group.daysOfWeek ?? [];
+    const hasDay = current.includes(day);
+    let newDays: number[];
+
+    if (hasDay) {
+      // 去掉该日
+      newDays = current.filter(d => d !== day);
+      // 清理今天及未来该星期几的事项
+      if (newDays.length > 0) {
+        await deleteRoutineItemsForGroupDays(group.id, [day]);
+      }
+    } else {
+      newDays = [...current, day];
+    }
+
+    await updateRoutineGroup(group.id, { daysOfWeek: newDays });
+
+    // 如果是新增的日期，生成当天及未来 7 天的事项
+    if (!hasDay) {
+      const today = new Date();
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(today);
+        d.setDate(d.getDate() + i);
+        if (d.getDay() === day) {
+          const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+          await generateRoutineItems(dateStr);
+        }
+      }
+    }
+
+    showToast({ type: "success", message: hasDay ? "日期已移除" : "日期已添加" });
   }, []);
 
   // ─── Template Group Actions ────────────────────────────────────
@@ -332,11 +419,11 @@ export default function RoutinesPage() {
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.05 }}
-                className="card-standard p-4 cursor-pointer"
-                onClick={() => setExpandedGroupId(group.id)}
+                className="card-standard p-4"
+                style={{ opacity: group.enabled ? 1 : 0.55 }}
               >
                 <div className="flex items-center gap-3">
-                  <div className="flex-1 min-w-0">
+                  <div className="flex-1 min-w-0" onClick={() => setExpandedGroupId(group.id)} style={{ cursor: "pointer" }}>
                     <h3
                       className="text-[16px] font-semibold truncate"
                       style={{ color: "var(--color-text-primary)" }}
@@ -344,10 +431,37 @@ export default function RoutinesPage() {
                       {group.name}
                     </h3>
                     <p className="text-[13px] mt-0.5" style={{ color: "var(--color-text-secondary)" }}>
-                      {getActiveCount(group.id)}/{getTotalCount(group.id)} 项启用
+                      {getActiveCount(group.id)}/{getTotalCount(group.id)} 项启用 · {formatDaysOfWeek(group.daysOfWeek ?? [])}
                     </p>
                   </div>
-                  <ChevronRight className="w-5 h-5" style={{ color: "var(--color-text-secondary)" }} />
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleToggleGroup(group);
+                    }}
+                    className="relative inline-flex h-7 w-12 items-center rounded-full transition-colors flex-shrink-0"
+                    style={{
+                      background: group.enabled
+                        ? "var(--state-success)"
+                        : "var(--lifeflow-border)",
+                    }}
+                  >
+                    <span
+                      className="inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform"
+                      style={{
+                        transform: group.enabled
+                          ? "translateX(26px)"
+                          : "translateX(2px)",
+                      }}
+                    />
+                  </button>
+                  <button
+                    onClick={() => setExpandedGroupId(group.id)}
+                    className="w-8 h-8 flex items-center justify-center flex-shrink-0"
+                  >
+                    <ChevronRight className="w-5 h-5" style={{ color: "var(--color-text-secondary)" }} />
+                  </button>
                 </div>
               </motion.div>
             ))}
@@ -436,7 +550,7 @@ export default function RoutinesPage() {
                   <button
                     onClick={async () => {
                       if (editGroupNameValue.trim()) {
-                        await updateRoutine(expandedGroupId, { name: editGroupNameValue.trim() } as any);
+                        await updateRoutineGroup(expandedGroupId, { name: editGroupNameValue.trim() });
                         showToast({ type: "success", message: "名称已更新" });
                       }
                       setEditingGroupName(null);
@@ -485,6 +599,63 @@ export default function RoutinesPage() {
                   </div>
                 </>
               )}
+            </div>
+
+            {/* Weekday selector + group toggle */}
+            <div
+              className="card-standard p-4 mb-3"
+              style={{ opacity: selectedGroup.enabled ? 1 : 0.55 }}
+            >
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[14px] font-medium" style={{ color: "var(--color-text-primary)" }}>
+                  模板开关
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleToggleGroup(selectedGroup)}
+                  className="relative inline-flex h-7 w-12 items-center rounded-full transition-colors flex-shrink-0"
+                  style={{
+                    background: selectedGroup.enabled
+                      ? "var(--state-success)"
+                      : "var(--lifeflow-border)",
+                  }}
+                >
+                  <span
+                    className="inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform"
+                    style={{
+                      transform: selectedGroup.enabled
+                        ? "translateX(26px)"
+                        : "translateX(2px)",
+                    }}
+                  />
+                </button>
+              </div>
+              <div>
+                <p className="text-[13px] mb-2" style={{ color: "var(--color-text-secondary)" }}>
+                  生效日期
+                </p>
+                <div className="flex gap-2">
+                  {WEEKDAY_LABELS.map((label, idx) => {
+                    const selected = (selectedGroup.daysOfWeek ?? []).includes(idx);
+                    return (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => handleToggleWeekday(selectedGroup, idx)}
+                        className="w-9 h-9 rounded-full text-[14px] font-medium transition-all active:scale-90"
+                        style={{
+                          background: selected
+                            ? "var(--lifeflow-primary)"
+                            : "var(--color-surface-secondary)",
+                          color: selected ? "#FFFFFF" : "var(--color-text-secondary)",
+                        }}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
 
             {/* Child routines list */}

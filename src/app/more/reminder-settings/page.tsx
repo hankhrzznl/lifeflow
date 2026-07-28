@@ -6,7 +6,6 @@ import { ArrowLeft, Bell, Clock } from "lucide-react";
 import Link from "next/link";
 import { showToast } from "@/components/ui/Toast";
 import { getReminderDefaults, setReminderDefaults, type ReminderDefaultsMap } from "@/lib/reminderDefaults";
-import type { SourceType } from "@/lib/db/daylog.db";
 
 const LABELS: Record<string, string> = {
   routine: "作息模板",
@@ -28,15 +27,17 @@ export default function ReminderSettingsPage() {
 
   const handleToggle = useCallback((type: string) => {
     setConfig((prev) => {
-      const current = prev[type] ?? { enabled: false, minutes: 0 };
-      return { ...prev, [type]: { ...current, enabled: !current.enabled } };
+      const t = type as keyof ReminderDefaultsMap;
+      const current = prev[t] ?? { enabled: false, minutes: 0 };
+      return { ...prev, [t]: { ...current, enabled: !current.enabled } };
     });
   }, []);
 
   const handleMinutes = useCallback((type: string, minutes: number) => {
     setConfig((prev) => {
-      const current = prev[type] ?? { enabled: false, minutes: 0 };
-      return { ...prev, [type]: { ...current, minutes } };
+      const t = type as keyof ReminderDefaultsMap;
+      const current = prev[t] ?? { enabled: false, minutes: 0 };
+      return { ...prev, [t]: { ...current, minutes } };
     });
   }, []);
 

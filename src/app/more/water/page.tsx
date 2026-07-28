@@ -6,6 +6,8 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { motion } from "framer-motion";
 import { ChevronLeft, Droplets, Plus, Minus, RefreshCw, Check } from "lucide-react";
 import { daylogDB, ensureModuleItem, updateItem, getRoutines } from "@/lib/db/daylog.db";
+import { syncItemReminder } from "@/lib/reminderDefaults";
+import type { Item } from "@/lib/db/daylog.db";
 import { healthDB, getWaterGoal, updateWaterGoal } from "@/lib/db/health.db";
 import { sendNotification } from "@/lib/notificationService";
 
@@ -138,7 +140,7 @@ export default function WaterPage() {
           const endTime = addMinutes(timeStr, 5);
           const sourceId = generateWaterSourceId(date, timeStr);
 
-          await ensureModuleItem({
+          const itemId = await ensureModuleItem({
             date,
             sourceType: "water",
             sourceId,
@@ -149,6 +151,24 @@ export default function WaterPage() {
             icon: "Droplets",
             isCompleted: false,
           });
+          if (itemId) {
+            await syncItemReminder({
+              id: itemId,
+              sourceType: "water",
+              sourceId,
+              date,
+              title: "喝口水然后动一动不要久坐",
+              plannedStart: timeStr,
+              plannedEnd: endTime,
+              actualStart: timeStr,
+              actualEnd: endTime,
+              isCorrected: false,
+              isCompleted: false,
+              sortOrder: 1,
+              createdAt: Date.now(),
+              updatedAt: Date.now(),
+            } as Item);
+          }
         }
       }
       sendNotification("💧 今天的喝水提醒已就绪", "", "water-reminder");

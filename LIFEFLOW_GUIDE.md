@@ -41,6 +41,7 @@ LifeFlow v1.0，一个讲道理的生活助手。
 - 子项的增删改逻辑不变：删除子项时清理未来 7 天对应 Item；新增子项默认 `isActive=true`
 - `generateRoutineItems` 使用内存级防重入锁 + 事务内原子读写防止并发重复，生成前检查组 enabled + daysOfWeek + createdAt 边界
 - **创建日期边界**：模板组的 `createdAt` 决定了该模板的事项从哪天开始生成。`dateStr < 组创建日期 YYYY-MM-DD` 的日期不会生成该模板的任何事项
+- 模板组列表视图和详情视图均展示创建时间（格式 `YYYY-MM-DD`）
 
 ### 目标-阶段-任务-事项 层级
 
@@ -66,6 +67,8 @@ LifeFlow v1.0，一个讲道理的生活助手。
 - 寿命联动：Item 开启/关闭/删除/完成/修改时间时，自动同步 Reminder 表
 - 默认提醒配置存储于 localStorage（key: `lifeflow_reminder_defaults`），按 sourceType 区分
 - 默认值：routine 提前5min、course 提前15min、water 到点、manual/habit 不提醒、task 提前5min
+- `syncItemReminder` 回退逻辑：当 `item.reminderEnabled` 为 undefined 时，回退到该 sourceType 的默认配置判断（`getDefaultForType`）。这使自动生成的事项（如饮水）无需手动设置 reminderEnabled 也能生效
+- 自动生成的事项（如饮水）在 `ensureModuleItem` 创建 Item 后立即调用 `syncItemReminder`，确保提醒记录自动创建
 - Item详情弹窗(TimelineView)支持开关提醒 + 选择提前分钟(0/5/10/15/30)
 - `/reminders` 页面区分展示 moduleType='item' 的提醒（显示事项颜色+时间）
 - 默认提醒配置入口：`/more/reminder-settings`

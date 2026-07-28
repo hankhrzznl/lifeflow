@@ -67,15 +67,19 @@ export async function syncItemReminder(item: Item): Promise<void> {
     .filter((r) => r.linkedModuleId === item.id)
     .first();
 
-  // 如果未开启提醒 → 删除已有 Reminder
-  if (!item.reminderEnabled) {
+  // 判断是否开启提醒：优先用 item 上的显式设置，回退到默认配置
+  const defaults = getDefaultForType(item.sourceType);
+  const enabled = item.reminderEnabled ?? defaults.enabled;
+
+  // 未开启 → 删除已有 Reminder
+  if (!enabled) {
     if (existing) {
       await db.reminders.delete(existing.id!);
     }
     return;
   }
 
-  const minutes = item.reminderMinutes ?? getDefaultForType(item.sourceType).minutes;
+  const minutes = item.reminderMinutes ?? defaults.minutes;
   const triggerTime = timeToTimestamp(item.date, item.plannedStart) - minutes * 60 * 1000;
 
   const reminderData: Omit<Reminder, "id" | "createdAt"> = {

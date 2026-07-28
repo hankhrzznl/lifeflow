@@ -106,6 +106,12 @@ export default function RoutinesPage() {
     return sorted.map(d => WEEKDAY_LABELS[d]).join("、");
   }, []);
 
+  /** 格式化 Unix 时间戳为 YYYY-MM-DD */
+  const formatCreateDate = useCallback((ts: number): string => {
+    const d = new Date(ts);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  }, []);
+
   // ─── Group-level Actions ──────────────────────────────────
 
   const handleToggleGroup = useCallback(async (group: RoutineTemplateGroup) => {
@@ -431,7 +437,7 @@ export default function RoutinesPage() {
                       {group.name}
                     </h3>
                     <p className="text-[13px] mt-0.5" style={{ color: "var(--color-text-secondary)" }}>
-                      {getActiveCount(group.id)}/{getTotalCount(group.id)} 项启用 · {formatDaysOfWeek(group.daysOfWeek ?? [])}
+                      {getActiveCount(group.id)}/{getTotalCount(group.id)} 项启用 · {formatDaysOfWeek(group.daysOfWeek ?? [])} · 创建于 {formatCreateDate(group.createdAt)}
                     </p>
                   </div>
                   <button
@@ -600,6 +606,11 @@ export default function RoutinesPage() {
                 </>
               )}
             </div>
+
+            {/* Create time */}
+            <p className="text-[12px] mb-3 px-1" style={{ color: "var(--color-text-disabled)" }}>
+              创建于 {formatCreateDate(selectedGroup.createdAt)}
+            </p>
 
             {/* Weekday selector + group toggle */}
             <div

@@ -67,7 +67,8 @@ export default function ReminderSettingsPage() {
 
       <div className="space-y-3">
         {Object.entries(LABELS).map(([type, label]) => {
-          const itemConfig = config[type] ?? { enabled: false, minutes: 0 };
+          const t = type as keyof ReminderDefaultsMap;
+          const itemConfig = config[t] ?? { enabled: false, minutes: 0 };
           return (
             <motion.div
               key={type}

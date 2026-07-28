@@ -852,6 +852,8 @@ function ItemCard({
   };
 
   const isMultiHour = timeToMinutes(item.plannedEnd) - timeToMinutes(item.plannedStart) > 60;
+  const isWater = item.sourceType === "water";
+  const isRoutine = item.sourceType === "routine";
 
   // 历史模式卡片行为
   const handleCardClick = () => {
@@ -898,9 +900,15 @@ function ItemCard({
       animate={{ opacity: 1, y: 0 }}
       className="rounded-[12px] px-3 py-2 flex items-center gap-2 active:scale-[0.97] transition-transform cursor-pointer"
       style={{
-        background: item.isCompleted ? "var(--color-surface-secondary)" : `${item.color}15`,
+        background: item.isCompleted
+          ? "var(--color-surface-secondary)"
+          : isWater
+            ? "#E0F2FE"
+            : isRoutine
+              ? `${item.color}10`
+              : `${item.color}15`,
         opacity: isHistoryUncompleted ? 0.85 : item.isCompleted ? 0.55 : 1,
-        borderLeft: `3px solid ${isHistoryUncompleted ? "#FF3B30" : item.color}`,
+        borderLeft: `3px solid ${isHistoryUncompleted ? "#FF3B30" : isWater ? "#0EA5E9" : item.color}`,
       }}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
@@ -930,6 +938,8 @@ function ItemCard({
               textDecoration: item.isCompleted ? "line-through" : "none",
             }}
           >
+            {isWater && <span className="mr-1">💧</span>}
+            {isRoutine && <span className="mr-1">⏰</span>}
             {item.title}
           </p>
           {isHistoryUncompleted && (

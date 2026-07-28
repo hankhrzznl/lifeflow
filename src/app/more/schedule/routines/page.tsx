@@ -163,11 +163,28 @@ export default function RoutinesPage() {
 
   const handleDeleteChild = useCallback(
     async (id: string) => {
+      const routine = allRoutines.find(r => r.id === id);
       await deleteRoutine(id);
+      // 删除该作息在未来 7 天已生成的日程事项
+      if (routine) {
+        try {
+          const { daylogDB } = await import("@/lib/db/daylog.db");
+          const today = new Date();
+          for (let i = 0; i < 7; i++) {
+            const d = new Date(today);
+            d.setDate(d.getDate() + i);
+            const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+            await daylogDB.items
+              .where("date").equals(dateStr)
+              .filter((item: any) => item.sourceType === "routine" && item.sourceId === id)
+              .delete();
+          }
+        } catch { /* ignore */ }
+      }
       showToast({ type: "success", message: "作息已删除" });
       if (editingChildId === id) resetChildForm();
     },
-    [editingChildId, resetChildForm],
+    [editingChildId, resetChildForm, allRoutines],
   );
 
   const handleToggleChild = useCallback(async (r: RoutineTemplate) => {

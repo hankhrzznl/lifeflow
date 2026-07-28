@@ -75,6 +75,41 @@ function GoalEngineInitializer({ children }: { children: React.ReactNode }) {
         }
       }, 500);
 
+      // 清除之前因并发重复产生的作息事项（同日期同sourceId只保留一条）
+      setTimeout(async () => {
+        if (cancelled) return;
+        try {
+          const { daylogDB } = await import("@/lib/db/daylog.db");
+          const today = new Date();
+          for (let i = 0; i < 7; i++) {
+            const d = new Date(today);
+            d.setDate(d.getDate() + i);
+            const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+            const routineItems = await daylogDB.items
+              .where("date").equals(dateStr)
+              .filter((item: any) => item.sourceType === "routine")
+              .toArray();
+            // 按 sourceId 分组，每组只保留第一条
+            const seen = new Map<string, boolean>();
+            const toDelete: string[] = [];
+            for (const item of routineItems) {
+              const key = `${item.sourceId}|${item.plannedStart}`;
+              if (seen.has(key)) {
+                toDelete.push(item.id);
+              } else {
+                seen.set(key, true);
+              }
+            }
+            if (toDelete.length > 0) {
+              await daylogDB.items.bulkDelete(toDelete);
+              console.log(`[DaylogDB] 已清理 ${dateStr} 的 ${toDelete.length} 条重复作息事项`);
+            }
+          }
+        } catch {
+          // 静默忽略
+        }
+      }, 800);
+
       // 清理旧任务 + goalType 统一
       setTimeout(async () => {
         if (cancelled) return;

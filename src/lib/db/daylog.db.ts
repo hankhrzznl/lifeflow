@@ -340,34 +340,47 @@ export async function generateCourseItems(dateStr: string): Promise<void> {
   }
 }
 
-/** 为指定日期从作息模板生成 Item（跳过已有同源同日Item） */
-export async function generateRoutineItems(dateStr: string): Promise<void> {
-  const routines = await getRoutines();
-  if (routines.length === 0) return;
-  const existing = await daylogDB.items
-    .where('date').equals(dateStr)
-    .filter(item => item.sourceType === 'routine')
-    .toArray();
-  const existingSourceIds = new Set(existing.map(i => i.sourceId));
+/** 为指定日期从作息模板生成 Item（跳过已有同源同日Item）
+ *  使用内存级防重入锁，避免 React Strict Mode double-invoke 产生重复事项 */
+const _generatingRoutineDates = new Set<string>();
 
-  for (const r of routines) {
-    if (!r.isActive) continue;
-    if (existingSourceIds.has(r.id)) continue;
-    await addItem({
-      date: dateStr,
-      sourceType: 'routine',
-      sourceId: r.id,
-      title: r.name,
-      color: r.color,
-      icon: r.icon || 'Moon',
-      plannedStart: r.startTime,
-      plannedEnd: r.endTime,
-      actualStart: r.startTime,
-      actualEnd: r.endTime,
-      isCorrected: false,
-      isCompleted: false,
-      sortOrder: timeToSort(r.startTime),
+export async function generateRoutineItems(dateStr: string): Promise<void> {
+  if (_generatingRoutineDates.has(dateStr)) return;
+  _generatingRoutineDates.add(dateStr);
+  try {
+    const routines = await getRoutines();
+    if (routines.length === 0) return;
+
+    // 在事务内读取 + 创建，避免并发快照重复
+    await daylogDB.transaction('rw', daylogDB.items, async () => {
+      const existing = await daylogDB.items
+        .where('date').equals(dateStr)
+        .filter(item => item.sourceType === 'routine')
+        .toArray();
+      const existingSourceIds = new Set(existing.map(i => i.sourceId));
+
+      for (const r of routines) {
+        if (!r.isActive) continue;
+        if (existingSourceIds.has(r.id)) continue;
+        await addItem({
+          date: dateStr,
+          sourceType: 'routine',
+          sourceId: r.id,
+          title: r.name,
+          color: r.color,
+          icon: r.icon || 'Moon',
+          plannedStart: r.startTime,
+          plannedEnd: r.endTime,
+          actualStart: r.startTime,
+          actualEnd: r.endTime,
+          isCorrected: false,
+          isCompleted: false,
+          sortOrder: timeToSort(r.startTime),
+        });
+      }
     });
+  } finally {
+    _generatingRoutineDates.delete(dateStr);
   }
 }
 

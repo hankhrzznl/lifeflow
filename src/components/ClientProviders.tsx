@@ -75,29 +75,6 @@ function GoalEngineInitializer({ children }: { children: React.ReactNode }) {
         }
       }, 500);
 
-      // 同时清理已生成的默认作息事项（今天和明天）
-      setTimeout(async () => {
-        if (cancelled) return;
-        try {
-          const { daylogDB } = await import("@/lib/db/daylog.db");
-          const today = new Date();
-          const dates: string[] = [];
-          for (let i = 0; i < 7; i++) {
-            const d = new Date(today);
-            d.setDate(d.getDate() + i);
-            dates.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`);
-          }
-          for (const date of dates) {
-            await daylogDB.items
-              .where("date").equals(date)
-              .filter((i: any) => i.sourceType === "routine")
-              .delete();
-          }
-        } catch {
-          // 静默忽略
-        }
-      }, 1500);
-
       // 清理旧任务 + goalType 统一
       setTimeout(async () => {
         if (cancelled) return;

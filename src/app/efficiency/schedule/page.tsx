@@ -777,8 +777,8 @@ function renderSlotItems(args: {
   if (items.length === 0) return null;
 
   const sorted = [...items].sort((a, b) => a.plannedStart.localeCompare(b.plannedStart));
-  const showItems = sorted.slice(0, 2);
-  const hiddenCount = sorted.length - 2;
+  const showItems = sorted;
+  const hiddenCount = 0;
 
   return (
     <div className="flex flex-col gap-1">

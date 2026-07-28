@@ -8,7 +8,7 @@ import {
   GraduationCap, Heart, ClipboardList, Target, Gamepad2, FolderOpen,
   Clock, Wallet, Droplets, Moon, Dumbbell, Pill, StretchHorizontal,
   Utensils, Flower2, ExternalLink,
-  Timer, CalendarRange, StickyNote, Settings, Gift,
+  Timer, CalendarRange, StickyNote, Settings, Gift, Bell,
 } from "lucide-react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { getAllProjects } from "@/lib/db/efficiency.db";
@@ -77,10 +77,26 @@ export default function ProjectsPage() {
                   </motion.button>
                 );
               })}
-              {/* 专注 */}
+              {/* 提醒 */}
               <motion.button
                 initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: defaultSmall.length * 0.03 + 0.03 }}
+                onClick={() => router.push("/reminders")}
+                className="p-3.5 rounded-[16px] flex items-center gap-3 text-left active:scale-[0.98] transition-transform"
+                style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}
+              >
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "#3B82F620" }}>
+                  <Bell className="w-5 h-5" style={{ color: "#3B82F6" }} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[14px] font-semibold truncate" style={{ color: "var(--color-text-primary)" }}>提醒</div>
+                </div>
+                <ExternalLink className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "var(--color-text-disabled)" }} />
+              </motion.button>
+              {/* 专注 */}
+              <motion.button
+                initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: defaultSmall.length * 0.03 + 0.06 }}
                 onClick={() => router.push("/focus")}
                 className="p-3.5 rounded-[16px] flex items-center gap-3 text-left active:scale-[0.98] transition-transform"
                 style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}
@@ -96,7 +112,7 @@ export default function ProjectsPage() {
               {/* 倒数日 */}
               <motion.button
                 initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: defaultSmall.length * 0.03 + 0.06 }}
+                transition={{ delay: defaultSmall.length * 0.03 + 0.09 }}
                 onClick={() => router.push("/more/countdown")}
                 className="p-3.5 rounded-[16px] flex items-center gap-3 text-left active:scale-[0.98] transition-transform"
                 style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}
@@ -112,7 +128,7 @@ export default function ProjectsPage() {
               {/* 备忘录 */}
               <motion.button
                 initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: defaultSmall.length * 0.03 + 0.09 }}
+                transition={{ delay: defaultSmall.length * 0.03 + 0.12 }}
                 onClick={() => router.push("/more/notes")}
                 className="p-3.5 rounded-[16px] flex items-center gap-3 text-left active:scale-[0.98] transition-transform"
                 style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}
@@ -128,7 +144,7 @@ export default function ProjectsPage() {
               {/* 设置 */}
               <motion.button
                 initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: defaultSmall.length * 0.03 + 0.12 }}
+                transition={{ delay: defaultSmall.length * 0.03 + 0.15 }}
                 onClick={() => router.push("/settings")}
                 className="p-3.5 rounded-[16px] flex items-center gap-3 text-left active:scale-[0.98] transition-transform"
                 style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}
@@ -144,7 +160,7 @@ export default function ProjectsPage() {
               {/* 心愿 */}
               <motion.button
                 initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: defaultSmall.length * 0.03 + 0.15 }}
+                transition={{ delay: defaultSmall.length * 0.03 + 0.18 }}
                 onClick={() => router.push("/more/wishes")}
                 className="p-3.5 rounded-[16px] flex items-center gap-3 text-left active:scale-[0.98] transition-transform"
                 style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}

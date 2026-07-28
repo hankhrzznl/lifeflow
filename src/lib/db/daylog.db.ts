@@ -44,6 +44,10 @@ export interface Item {
   sortOrder: number;       // 同时间段内的排序
   createdAt: number;
   updatedAt: number;
+
+  // v6: 提醒功能
+  reminderEnabled?: boolean;  // 是否启用提醒
+  reminderMinutes?: number;   // 提前多少分钟，0=到点提醒
 }
 
 export interface Course {
@@ -201,6 +205,10 @@ export class DaylogDB extends Dexie {
       // 全量删除所有作息事项
       await tx.table('items').where('sourceType').equals('routine').delete();
       // 注：业务代码初始化时 (page load) 会为未来 7 天调用 generateRoutineItems 补全
+    });
+    // v6: Item 增加 reminderEnabled / reminderMinutes
+    this.version(6).stores({
+      items: '&id, date, sourceType, sourceId, taskId, goalId',
     });
   }
 }

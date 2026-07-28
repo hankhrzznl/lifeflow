@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Bell, Clock, Check, X, Clock10, AlertCircle, Calendar, Flame } from "lucide-react";
+import { ArrowLeft, Bell, Clock, Check, X, Clock10, AlertCircle, Calendar, Flame, BellRing } from "lucide-react";
 import Link from "next/link";
 import {
   getPendingReminders,
@@ -12,9 +12,12 @@ import {
 } from "@/lib/db";
 import { showToast } from "@/components/ui/Toast";
 import type { Reminder, Task } from "@/lib/types";
+import type { Item } from "@/lib/db/daylog.db";
+import { daylogDB } from "@/lib/db/daylog.db";
 
 interface ReminderWithTask extends Reminder {
   task?: Task;
+  item?: Item;
 }
 
 export default function RemindersPage() {
@@ -29,6 +32,11 @@ export default function RemindersPage() {
       const pending = await getPendingReminders();
       const withTasks = await Promise.all(
         pending.map(async (r) => {
+          // 如果 moduleType='item'，从 daylogDB 读取 Item 信息
+          if (r.moduleType === "item" && r.linkedModuleId) {
+            const item = await daylogDB.items.get(r.linkedModuleId);
+            if (item) return { ...r, item };
+          }
           const task = await getTask(r.taskId);
           return { ...r, task };
         })
@@ -182,12 +190,26 @@ export default function RemindersPage() {
             >
               <div className="p-4">
                 <div className="flex items-start gap-3">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${getReminderColor(reminder.type)}`}>
-                    {getReminderIcon(reminder.type)}
-                  </div>
+                  {reminder.item ? (
+                    <div
+                      className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                      style={{ background: `${reminder.item.color}20` }}
+                    >
+                      <BellRing className="w-4 h-4" style={{ color: reminder.item.color }} />
+                    </div>
+                  ) : (
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${getReminderColor(reminder.type)}`}>
+                      {getReminderIcon(reminder.type)}
+                    </div>
+                  )}
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{reminder.message}</p>
-                    {reminder.task && (
+                    {reminder.item && (
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        {reminder.item.plannedStart} · {reminder.item.sourceType === 'water' ? '饮水' : reminder.item.sourceType}
+                      </p>
+                    )}
+                    {!reminder.item && reminder.task && (
                       <p className="text-xs text-gray-400 mt-0.5">关联任务：{reminder.task.title}</p>
                     )}
                     <div className="flex items-center gap-2 mt-1.5">

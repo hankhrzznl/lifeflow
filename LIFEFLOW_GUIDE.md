@@ -59,6 +59,17 @@ LifeFlow v1.0，一个讲道理的生活助手。
 - `addDays` 函数必须使用 `getFullYear/getMonth/getDate` 拼接，**禁止 `toISOString()`**（UTC 时区导致东八区日期回退）
 - DB 升级时默认播种数据需谨慎评估是否会自动生成不必要的种子数据
 
+### 事项提醒
+
+- Item 新增可选字段 `reminderEnabled` / `reminderMinutes`（v6），写入 daylogDB
+- 提醒数据存储在 LifeFlowDB.reminders 表，`moduleType='item'` + `linkedModuleId=item.id` 建立关联
+- 寿命联动：Item 开启/关闭/删除/完成/修改时间时，自动同步 Reminder 表
+- 默认提醒配置存储于 localStorage（key: `lifeflow_reminder_defaults`），按 sourceType 区分
+- 默认值：routine 提前5min、course 提前15min、water 到点、manual/habit 不提醒、task 提前5min
+- Item详情弹窗(TimelineView)支持开关提醒 + 选择提前分钟(0/5/10/15/30)
+- `/reminders` 页面区分展示 moduleType='item' 的提醒（显示事项颜色+时间）
+- 默认提醒配置入口：`/more/reminder-settings`
+
 ### 执行流程约定
 
 - 用户发出需求 → 先读取 LIFEFLOW_GUIDE.md → 引导式提问澄清模糊部分 → 整理成正式任务提示词 → **等待用户确认后才执行**

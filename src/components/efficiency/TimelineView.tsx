@@ -4,7 +4,7 @@ import { useState, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronLeft, ChevronRight, CheckCircle, Circle, Target,
-  DollarSign, Droplets, Dumbbell, Moon,
+  DollarSign, Droplets, Dumbbell, Moon, Bell, X, Clock,
 } from "lucide-react";
 import { useLiveQuery } from "dexie-react-hooks";
 import {
@@ -13,6 +13,7 @@ import {
 } from "@/lib/db/daylog.db";
 import { getAllProjects, type Project } from "@/lib/db/efficiency.db";
 import { showToast } from "@/components/ui/Toast";
+import { syncItemReminder, removeItemReminder, completeItemReminders, getDefaultForType } from "@/lib/reminderDefaults";
 
 // ==================== 工具 ====================
 
@@ -114,6 +115,10 @@ function ItemDetailSheet({
   const [waterInput, setWaterInput] = useState("");
   const [workoutInput, setWorkoutInput] = useState(item.workoutNote || "");
   const [showCalibrate, setShowCalibrate] = useState(false);
+  const [showReminderOptions, setShowReminderOptions] = useState(false);
+  const itemDefaultForType = getDefaultForType(item.sourceType);
+  const isReminderEnabled = item.reminderEnabled ?? itemDefaultForType.enabled;
+  const reminderMinutes = item.reminderMinutes ?? itemDefaultForType.minutes;
 
   const handleCost = async () => {
     const val = parseFloat(costInput);
@@ -215,6 +220,59 @@ function ItemDetailSheet({
             <button onClick={handleWorkout} className="text-[15px] text-[#6366F1] font-medium flex-shrink-0">记录</button>
           </div>
 
+          {/* 提醒 */}
+          <div className="border-t border-[#E5E5EA] my-2" />
+          <div className="flex items-center justify-between py-2">
+            <div className="flex items-center gap-2" onClick={() => setShowReminderOptions(!showReminderOptions)}>
+              <Bell className="w-5 h-5 text-[#86868B] flex-shrink-0" />
+              <span className="text-[15px] text-[#1D1D1F]">提醒</span>
+            </div>
+            <button
+              type="button"
+              onClick={async (e) => {
+                e.stopPropagation();
+                const newEnabled = !isReminderEnabled;
+                await onUpdate({ reminderEnabled: newEnabled });
+                await syncItemReminder({ ...item, reminderEnabled: newEnabled });
+              }}
+              className="relative inline-flex h-6 w-10 items-center rounded-full transition-colors flex-shrink-0"
+              style={{
+                background: isReminderEnabled ? "#34C759" : "#E5E5EA",
+              }}
+            >
+              <span
+                className="inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform"
+                style={{
+                  transform: isReminderEnabled ? "translateX(22px)" : "translateX(2px)",
+                }}
+              />
+            </button>
+          </div>
+          {isReminderEnabled && showReminderOptions && (
+            <div className="flex flex-wrap gap-2 pb-2 pl-7">
+              <ReminderMinutesBtn selected={reminderMinutes === 0} minutes={0} label="到点" onClick={async () => {
+                await onUpdate({ reminderMinutes: 0 });
+                await syncItemReminder({ ...item, reminderMinutes: 0, reminderEnabled: true });
+              }} />
+              <ReminderMinutesBtn selected={reminderMinutes === 5} minutes={5} label="提前 5 分钟" onClick={async () => {
+                await onUpdate({ reminderMinutes: 5 });
+                await syncItemReminder({ ...item, reminderMinutes: 5, reminderEnabled: true });
+              }} />
+              <ReminderMinutesBtn selected={reminderMinutes === 10} minutes={10} label="提前 10 分钟" onClick={async () => {
+                await onUpdate({ reminderMinutes: 10 });
+                await syncItemReminder({ ...item, reminderMinutes: 10, reminderEnabled: true });
+              }} />
+              <ReminderMinutesBtn selected={reminderMinutes === 15} minutes={15} label="提前 15 分钟" onClick={async () => {
+                await onUpdate({ reminderMinutes: 15 });
+                await syncItemReminder({ ...item, reminderMinutes: 15, reminderEnabled: true });
+              }} />
+              <ReminderMinutesBtn selected={reminderMinutes === 30} minutes={30} label="提前 30 分钟" onClick={async () => {
+                await onUpdate({ reminderMinutes: 30 });
+                await syncItemReminder({ ...item, reminderMinutes: 30, reminderEnabled: true });
+              }} />
+            </div>
+          )}
+
           {/* 删除 */}
           <SheetBtn
             icon={undefined} label="删除事项" danger
@@ -252,6 +310,27 @@ function SheetBtn({ icon: Icon, label, danger, onClick }: {
   );
 }
 
+function ReminderMinutesBtn({ selected, minutes, label, onClick }: {
+  selected: boolean;
+  minutes: number;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="px-3 py-1.5 rounded-full text-[12px] font-medium transition-all active:scale-90"
+      style={{
+        background: selected ? "#34C759" : "#F2F2F7",
+        color: selected ? "#FFFFFF" : "#3C3C43",
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
 // ==================== 主组件 ====================
 
 export default function TimelineView({ date }: { date: string }) {
@@ -275,13 +354,23 @@ export default function TimelineView({ date }: { date: string }) {
 
   const handleUpdate = useCallback(async (item: Item, updates: Partial<Item>) => {
     await updateItem(item.id, { ...updates, updatedAt: Date.now() });
+    // 同步提醒（注意 ItemDetailSheet 中已单独调 syncItemReminder，此处仅兜底）
+    if ("reminderEnabled" in updates || "reminderMinutes" in updates) {
+      const merged = { ...item, ...updates };
+      await syncItemReminder(merged);
+    }
   }, []);
 
   const handleToggle = useCallback(async (item: Item) => {
-    await updateItem(item.id, { isCompleted: !item.isCompleted, updatedAt: Date.now() });
+    const newState = !item.isCompleted;
+    await updateItem(item.id, { isCompleted: newState, updatedAt: Date.now() });
+    if (newState) {
+      await completeItemReminders(item.id);
+    }
   }, []);
 
   const handleDelete = useCallback(async (item: Item) => {
+    await removeItemReminder(item.id);
     await deleteItem(item.id);
     showToast({ type: "success", message: "已删除" });
   }, []);

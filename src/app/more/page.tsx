@@ -14,6 +14,7 @@ import {
   Utensils,
   Flower2,
   BarChart3,
+  Bell,
 } from "lucide-react";
 
 // ============================================================
@@ -59,6 +60,12 @@ export default function MorePage() {
         { title: "训练", description: "记录训练数据", href: "/more/fitness", icon: Dumbbell },
         { title: "吃药", description: "用药提醒记录", href: "/more/medication", icon: Pill },
         { title: "体态拉伸", description: "拉伸放松指导", href: "/more/posture", icon: StretchHorizontal },
+      ],
+    },
+    {
+      label: "设置",
+      items: [
+        { title: "提醒设置", description: "默认提醒方式配置", href: "/more/reminder-settings", icon: Bell },
       ],
     },
   ];

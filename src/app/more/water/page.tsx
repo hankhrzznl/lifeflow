@@ -5,10 +5,8 @@ import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { motion } from "framer-motion";
 import { ChevronLeft, Droplets, Plus, Minus, RefreshCw, Check } from "lucide-react";
-import { daylogDB, ensureModuleItem, updateItem } from "@/lib/db/daylog.db";
-import { healthDB, getSleepLogByDate, getWaterGoal, updateWaterGoal } from "@/lib/db/health.db";
-import { useHealthStore } from "@/lib/store/healthStore";
-import { runPerceptionCheck } from "@/lib/perception-engine";
+import { daylogDB, ensureModuleItem, updateItem, getRoutines } from "@/lib/db/daylog.db";
+import { healthDB, getWaterGoal, updateWaterGoal } from "@/lib/db/health.db";
 import { sendNotification } from "@/lib/notificationService";
 
 /* ────────── Helpers ────────── */
@@ -49,16 +47,12 @@ function generateWaterSourceId(date: string, timeStr: string): string {
 interface WaterSettings {
   wakeStart: string;
   wakeEnd: string;
-  napStart: string;
-  napEnd: string;
   dailyTarget: number;
 }
 
 const DEFAULT_SETTINGS: WaterSettings = {
   wakeStart: "08:00",
   wakeEnd: "22:00",
-  napStart: "",
-  napEnd: "",
   dailyTarget: 2000,
 };
 
@@ -72,7 +66,12 @@ export default function WaterPage() {
   const [settingsLoaded, setSettingsLoaded] = useState(false);
   const [generating, setGenerating] = useState(false);
 
-  /* ─── Load settings from WaterGoal ─── */
+  /* ─── Nap time from routines ─── */
+  const [napStart, setNapStart] = useState("");
+  const [napEnd, setNapEnd] = useState("");
+  const [hasNap, setHasNap] = useState(false);
+
+  /* ─── Load settings from WaterGoal + nap from routines ─── */
 
   useEffect(() => {
     (async () => {
@@ -81,10 +80,17 @@ export default function WaterPage() {
         setSettings({
           wakeStart: goal.wakeStart || DEFAULT_SETTINGS.wakeStart,
           wakeEnd: goal.wakeEnd || DEFAULT_SETTINGS.wakeEnd,
-          napStart: goal.napStart || DEFAULT_SETTINGS.napStart,
-          napEnd: goal.napEnd || DEFAULT_SETTINGS.napEnd,
           dailyTarget: goal.dailyTarget || DEFAULT_SETTINGS.dailyTarget,
         });
+
+        // Read nap time from routines (type='nap', isActive)
+        const allRoutines = await getRoutines();
+        const napRoutine = allRoutines.find(r => r.type === 'nap' && r.isActive);
+        if (napRoutine) {
+          setNapStart(napRoutine.startTime);
+          setNapEnd(napRoutine.endTime);
+          setHasNap(true);
+        }
       } catch {
         // Use defaults on error
       }
@@ -125,8 +131,8 @@ export default function WaterPage() {
         const date = dateAddDays(today, d);
 
         for (let h = startH; h < stopH; h++) {
-          // Skip nap hours
-          if (isNapHour(h, settings.napStart, settings.napEnd)) continue;
+          // Skip nap hours (from routines)
+          if (hasNap && isNapHour(h, napStart, napEnd)) continue;
 
           const timeStr = `${String(h).padStart(2, "0")}:30`;
           const endTime = addMinutes(timeStr, 5);
@@ -189,8 +195,6 @@ export default function WaterPage() {
           dailyTarget: merged.dailyTarget,
           wakeStart: merged.wakeStart,
           wakeEnd: merged.wakeEnd,
-          napStart: merged.napStart || undefined,
-          napEnd: merged.napEnd || undefined,
         });
       } catch {
         // Silently fail
@@ -404,41 +408,18 @@ export default function WaterPage() {
             style={{ height: "0.5px", background: "var(--lifeflow-border)" }}
           />
 
-          {/* Nap Start */}
+          {/* Nap Time (read-only from routines) */}
           <div className="flex items-center justify-between h-10">
             <span className="text-[15px]" style={{ color: "var(--color-text-primary)" }}>
-              午睡开始（可选）
+              午睡时间
             </span>
-            <input
-              type="time"
-              value={settings.napStart}
-              onChange={(e) => handleSaveSettings({ napStart: e.target.value })}
-              className="h-8 px-3 rounded-lg text-[14px] font-medium outline-none"
-              style={{
-                background: "var(--lifeflow-muted)",
-                color: "var(--color-text-primary)",
-                border: "1px solid var(--lifeflow-border)",
-              }}
-            />
-          </div>
-
-          {/* Nap End */}
-          <div className="flex items-center justify-between h-10 mt-1">
-            <span className="text-[15px]" style={{ color: "var(--color-text-primary)" }}>
-              午睡结束（可选）
+            <span className="text-[14px] font-medium" style={{ color: "var(--color-text-secondary)" }}>
+              {hasNap ? `${napStart} - ${napEnd}` : "未设置"}
             </span>
-            <input
-              type="time"
-              value={settings.napEnd}
-              onChange={(e) => handleSaveSettings({ napEnd: e.target.value })}
-              className="h-8 px-3 rounded-lg text-[14px] font-medium outline-none"
-              style={{
-                background: "var(--lifeflow-muted)",
-                color: "var(--color-text-primary)",
-                border: "1px solid var(--lifeflow-border)",
-              }}
-            />
           </div>
+          <p className="text-[11px] mt-0.5" style={{ color: "var(--color-text-disabled)" }}>
+            午睡时间来自作息模板，如需修改请前往作息设置
+          </p>
 
           <div
             className="my-3"

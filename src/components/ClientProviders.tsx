@@ -97,6 +97,25 @@ function GoalEngineInitializer({ children }: { children: React.ReactNode }) {
           // 静默忽略
         }
       }, 1500);
+
+      // 清理旧任务 + goalType 统一
+      setTimeout(async () => {
+        if (cancelled) return;
+        try {
+          const { efficiencyDB } = await import("@/lib/db/efficiency.db");
+          await efficiencyDB.scheduleTasks.clear();
+          // 统一所有goal的goalType为'task'
+          const goals = await efficiencyDB.goals.toArray();
+          for (const g of goals) {
+            if (g.goalType !== 'task') {
+              await efficiencyDB.goals.update(g.id, { goalType: 'task' } as any);
+            }
+          }
+          console.log("[Cleanup] 已清理旧任务并统一goalType");
+        } catch (e) {
+          // silent
+        }
+      }, 2000);
     });
     return () => { cancelled = true; };
   }, []);

@@ -34,6 +34,16 @@ export interface Project {
   moreRoute?: string;             // 关联的更多模块路由（如 /more/water）
 }
 
+export interface Phase {
+  id: string;
+  goalId: string;
+  name: string;
+  startDate: string;     // YYYY-MM-DD
+  endDate: string;       // YYYY-MM-DD
+  sortOrder: number;
+  createdAt: number;
+}
+
 export interface EfficiencyGoal {
   id?: number;
   name: string;
@@ -106,6 +116,7 @@ export interface ScheduleTask {
   progressCalc?: 'sum' | 'average';
   hasSubTasks?: boolean;
   progressCurrent?: number;
+  phaseId?: string;         // FK → Phase.id
   // 来源追踪（用于撤回时回滚）
   sourceModule?: string;    // 哪个模块产生的：water/sleep/fitness/stretch/medication/diet/wellness等
   sourceLogId?: string;     // 原始记录ID，用于撤回时定位删除
@@ -120,6 +131,7 @@ export class EfficiencyDB extends Dexie {
   habits!: Table<EfficiencyHabit, number>;
   scheduleTasks!: Table<ScheduleTask, string>;
   projects!: Table<Project, string>;
+  phases!: Table<Phase, string>;
 
   constructor() {
     super('LifeFlowEfficiency');
@@ -268,6 +280,11 @@ export class EfficiencyDB extends Dexie {
           await tx.table('projects').update(p.id, { name: renames[p.name] } as any);
         }
       }
+    });
+    // v15: phases table + phaseId on scheduleTasks
+    this.version(15).stores({
+      phases: '&id, goalId, sortOrder',
+      scheduleTasks: '&id, date, goalId, isCompleted, isImportant, phaseId',
     });
   }
 }
@@ -473,4 +490,24 @@ export async function getScheduleTasksByDate(dateStr: string): Promise<ScheduleT
 
 export async function getAllScheduleTasks(): Promise<ScheduleTask[]> {
   return efficiencyDB.scheduleTasks.toArray();
+}
+
+// ─── Phase CRUD ──────────────────────────────────────────────
+
+export async function addPhase(p: Omit<Phase, 'id' | 'createdAt'>): Promise<string> {
+  const id = crypto.randomUUID();
+  await efficiencyDB.phases.add({ ...p, id, createdAt: Date.now() });
+  return id;
+}
+export async function updatePhase(id: string, updates: Partial<Phase>): Promise<void> {
+  await efficiencyDB.phases.update(id, updates);
+}
+export async function deletePhase(id: string): Promise<void> {
+  // Also clear phaseId from tasks belonging to this phase
+  const tasks = await efficiencyDB.scheduleTasks.where('phaseId').equals(id).toArray();
+  for (const t of tasks) await efficiencyDB.scheduleTasks.update(t.id, { phaseId: null as any });
+  await efficiencyDB.phases.delete(id);
+}
+export async function getPhasesForGoal(goalId: string): Promise<Phase[]> {
+  return efficiencyDB.phases.where('goalId').equals(goalId).sortBy('sortOrder');
 }

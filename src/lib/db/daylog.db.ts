@@ -11,6 +11,7 @@ export type SourceType = "task" | "habit" | "course" | "routine" | "manual" | "m
 export interface Item {
   id: string;              // uuid
   taskId?: string;         // FK → ScheduleTask.id（tasks 拆解出的事项）
+  phaseId?: string;        // FK → Phase.id
   goalId?: string;         // 冗余 FK，便于过滤
   projectId?: string;      // FK → Project，从 task 继承
   date: string;            // YYYY-MM-DD
@@ -60,9 +61,18 @@ export interface Course {
 
 export type RoutineType = 'custom' | 'wake' | 'sleep' | 'nap';
 
+export interface RoutineTemplateGroup {
+  id: string;
+  name: string;           // "默认模板" / "工作日"
+  isDefault: boolean;
+  sortOrder: number;
+  createdAt: number;
+}
+
 export interface RoutineTemplate {
   id: string;              // uuid
   type: RoutineType;       // sleep/wake/nap/custom
+  templateId?: string;     // FK → RoutineTemplateGroup.id
   name: string;            // "午睡"
   startTime: string;       // "12:30"
   endTime: string;         // "13:00"
@@ -79,6 +89,7 @@ export class DaylogDB extends Dexie {
   items!: Table<Item, string>;
   courses!: Table<Course, string>;
   routineTemplates!: Table<RoutineTemplate, string>;
+  routineTemplateGroups!: Table<RoutineTemplateGroup, string>;
 
   constructor() {
     super('LifeFlowDaylog');
@@ -99,6 +110,33 @@ export class DaylogDB extends Dexie {
         }
       }
       // NOTE: 不再自动播种默认起床/午睡/入睡模板，用户应自行设置作息
+    });
+    // v3: add routineTemplateGroups + templateId on routineTemplates
+    this.version(3).stores({
+      routineTemplateGroups: '&id, isDefault, sortOrder',
+      routineTemplates: '&id, name, type, templateId',
+    }).upgrade(async (tx) => {
+      const now = Date.now();
+      // Seed default template group
+      await tx.table('routineTemplateGroups').add({
+        id: 'default',
+        name: '默认模板',
+        isDefault: true,
+        sortOrder: 0,
+        createdAt: now,
+      });
+      // Seed 6 default child routines
+      const defaults: Omit<RoutineTemplate, 'id' | 'createdAt'>[] = [
+        { type: 'wake', templateId: 'default', name: '起床', startTime: '07:00', endTime: '07:30', color: '#FF9500', icon: 'Sunrise', isActive: true, sortOrder: 0 },
+        { type: 'custom', templateId: 'default', name: '早饭', startTime: '08:00', endTime: '08:30', color: '#34C759', icon: 'UtensilsCrossed', isActive: true, sortOrder: 1 },
+        { type: 'custom', templateId: 'default', name: '午饭', startTime: '12:00', endTime: '12:30', color: '#007AFF', icon: 'Sandwich', isActive: true, sortOrder: 2 },
+        { type: 'nap', templateId: 'default', name: '午睡', startTime: '13:00', endTime: '13:30', color: '#5856D6', icon: 'CloudSun', isActive: true, sortOrder: 3 },
+        { type: 'custom', templateId: 'default', name: '晚饭', startTime: '18:00', endTime: '18:30', color: '#FF9500', icon: 'ChefHat', isActive: true, sortOrder: 4 },
+        { type: 'sleep', templateId: 'default', name: '入睡', startTime: '22:30', endTime: '23:00', color: '#1E293B', icon: 'Moon', isActive: true, sortOrder: 5 },
+      ];
+      for (const d of defaults) {
+        await tx.table('routineTemplates').add({ ...d, id: crypto.randomUUID(), createdAt: now });
+      }
     });
   }
 }
@@ -244,6 +282,28 @@ export async function updateRoutine(id: string, updates: Partial<RoutineTemplate
 
 export async function deleteRoutine(id: string): Promise<void> {
   await daylogDB.routineTemplates.delete(id);
+}
+
+// ─── RoutineTemplateGroup CRUD ───────────────────────────────
+
+export async function getRoutineGroups(): Promise<RoutineTemplateGroup[]> {
+  return daylogDB.routineTemplateGroups.orderBy('sortOrder').toArray();
+}
+
+export async function addRoutineGroup(name: string): Promise<string> {
+  const id = crypto.randomUUID();
+  await daylogDB.routineTemplateGroups.add({ id, name, isDefault: false, sortOrder: Date.now(), createdAt: Date.now() });
+  return id;
+}
+
+export async function deleteRoutineGroup(id: string): Promise<void> {
+  // Also delete all child routines
+  await daylogDB.routineTemplates.where('templateId').equals(id).delete();
+  await daylogDB.routineTemplateGroups.delete(id);
+}
+
+export async function getRoutinesForGroup(groupId: string): Promise<RoutineTemplate[]> {
+  return daylogDB.routineTemplates.where('templateId').equals(groupId).toArray();
 }
 
 // ─── 自动生成 ────────────────────────────────────────────────

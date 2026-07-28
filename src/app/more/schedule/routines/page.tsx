@@ -1,12 +1,21 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, Plus, Trash2, Clock } from "lucide-react";
+import { ChevronLeft, Plus, Trash2, Clock, ChevronDown, ChevronRight, Pencil, Check, X } from "lucide-react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { getRoutines, addRoutine, updateRoutine, deleteRoutine } from "@/lib/db/daylog.db";
-import type { RoutineTemplate } from "@/lib/db/daylog.db";
+import {
+  getRoutines,
+  addRoutine,
+  updateRoutine,
+  deleteRoutine,
+  getRoutineGroups,
+  addRoutineGroup,
+  deleteRoutineGroup,
+  getRoutinesForGroup,
+} from "@/lib/db/daylog.db";
+import type { RoutineTemplate, RoutineTemplateGroup } from "@/lib/db/daylog.db";
 import { showToast } from "@/components/ui/Toast";
 import { syncRoutineToSchedule } from "@/lib/routineSync";
 
@@ -14,81 +23,174 @@ const COLORS = ["#5856D6", "#007AFF", "#34C759", "#FF9500", "#FF3B30", "#AF52DE"
 
 export default function RoutinesPage() {
   const router = useRouter();
-  const routines = useLiveQuery(() => getRoutines(), [], [] as RoutineTemplate[]);
 
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [adding, setAdding] = useState(false);
-  const [formName, setFormName] = useState("");
-  const [formStartTime, setFormStartTime] = useState("07:00");
-  const [formEndTime, setFormEndTime] = useState("07:30");
-  const [formColor, setFormColor] = useState(COLORS[0]);
+  const groups = useLiveQuery(() => getRoutineGroups(), [], [] as RoutineTemplateGroup[]);
+  const allRoutines = useLiveQuery(() => getRoutines(), [], [] as RoutineTemplate[]);
 
-  const resetForm = useCallback(() => {
-    setFormName("");
-    setFormStartTime("07:00");
-    setFormEndTime("07:30");
-    setFormColor(COLORS[0]);
-    setEditingId(null);
-    setAdding(false);
+  // Template list state
+  const [expandedGroupId, setExpandedGroupId] = useState<string | null>(null);
+  const [editingGroupName, setEditingGroupName] = useState<string | null>(null);
+  const [editGroupNameValue, setEditGroupNameValue] = useState("");
+
+  // Create template dialog
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [newTemplateName, setNewTemplateName] = useState("");
+
+  // Inline child editing
+  const [editingChildId, setEditingChildId] = useState<string | null>(null);
+  const [addingChild, setAddingChild] = useState(false);
+  const [childFormName, setChildFormName] = useState("");
+  const [childFormStartTime, setChildFormStartTime] = useState("07:00");
+  const [childFormEndTime, setChildFormEndTime] = useState("07:30");
+  const [childFormColor, setChildFormColor] = useState(COLORS[0]);
+
+  // Delete group confirm
+  const [deletingGroupId, setDeletingGroupId] = useState<string | null>(null);
+
+  // ─── Helpers ───────────────────────────────────────────────────
+
+  const getActiveCount = useCallback(
+    (groupId: string): number => {
+      return allRoutines.filter((r) => r.templateId === groupId && r.isActive).length;
+    },
+    [allRoutines],
+  );
+
+  const getTotalCount = useCallback(
+    (groupId: string): number => {
+      return allRoutines.filter((r) => r.templateId === groupId).length;
+    },
+    [allRoutines],
+  );
+
+  const getRoutinesForGroupMemo = useCallback(
+    (groupId: string): RoutineTemplate[] => {
+      return allRoutines.filter((r) => r.templateId === groupId).sort((a, b) => a.sortOrder - b.sortOrder);
+    },
+    [allRoutines],
+  );
+
+  const resetChildForm = useCallback(() => {
+    setChildFormName("");
+    setChildFormStartTime("07:00");
+    setChildFormEndTime("07:30");
+    setChildFormColor(COLORS[0]);
+    setEditingChildId(null);
+    setAddingChild(false);
   }, []);
 
-  const populateForm = useCallback((r: RoutineTemplate) => {
-    setFormName(r.name);
-    setFormStartTime(r.startTime);
-    setFormEndTime(r.endTime);
-    setFormColor(r.color);
+  const populateChildForm = useCallback((r: RoutineTemplate) => {
+    setChildFormName(r.name);
+    setChildFormStartTime(r.startTime);
+    setChildFormEndTime(r.endTime);
+    setChildFormColor(r.color);
   }, []);
 
-  const handleSave = useCallback(async () => {
-    if (!formName.trim()) { showToast({ type: "warning", message: "请输入作息名称" }); return; }
-    const existing = editingId ? routines.find(r => r.id === editingId) : null;
-    const data = {
-      type: (existing?.type || 'custom') as RoutineTemplate['type'],
-      name: formName.trim(), startTime: formStartTime, endTime: formEndTime, color: formColor, icon: existing?.icon || "Moon", isActive: existing?.isActive ?? true, sortOrder: existing?.sortOrder ?? 0,
-    };
-    let saved: RoutineTemplate;
-    if (editingId) {
-      await updateRoutine(editingId, data);
+  // ─── Template Group Actions ────────────────────────────────────
+
+  const handleCreateGroup = useCallback(async () => {
+    if (!newTemplateName.trim()) {
+      showToast({ type: "warning", message: "请输入模板名称" });
+      return;
+    }
+    const id = await addRoutineGroup(newTemplateName.trim());
+    showToast({ type: "success", message: "模板已创建" });
+    setNewTemplateName("");
+    setShowCreateDialog(false);
+    setExpandedGroupId(id);
+  }, [newTemplateName]);
+
+  const handleDeleteGroup = useCallback(async (groupId: string) => {
+    await deleteRoutineGroup(groupId);
+    showToast({ type: "success", message: "模板已删除" });
+    setDeletingGroupId(null);
+    setExpandedGroupId(null);
+  }, []);
+
+  // ─── Child Routine Actions ─────────────────────────────────────
+
+  const handleSaveChild = useCallback(async () => {
+    if (!childFormName.trim()) {
+      showToast({ type: "warning", message: "请输入作息名称" });
+      return;
+    }
+    const groupId = expandedGroupId!;
+    if (editingChildId) {
+      const existing = allRoutines.find((r) => r.id === editingChildId);
+      const updated = {
+        ...existing!,
+        name: childFormName.trim(),
+        startTime: childFormStartTime,
+        endTime: childFormEndTime,
+        color: childFormColor,
+        type: existing?.type || ("custom" as RoutineTemplate["type"]),
+      };
+      await updateRoutine(editingChildId, {
+        name: childFormName.trim(),
+        startTime: childFormStartTime,
+        endTime: childFormEndTime,
+        color: childFormColor,
+      });
       showToast({ type: "success", message: "作息已更新" });
-      saved = { ...existing!, ...data, id: editingId };
+      syncRoutineToSchedule(updated);
     } else {
+      const data = {
+        type: "custom" as RoutineTemplate["type"],
+        templateId: groupId,
+        name: childFormName.trim(),
+        startTime: childFormStartTime,
+        endTime: childFormEndTime,
+        color: childFormColor,
+        icon: "Moon",
+        isActive: true,
+        sortOrder: allRoutines.filter((r) => r.templateId === groupId).length,
+      };
       const id = await addRoutine(data);
       showToast({ type: "success", message: "作息已添加" });
-      saved = { ...data, id, createdAt: Date.now() };
+      syncRoutineToSchedule({ ...data, id, createdAt: Date.now() });
     }
-    resetForm();
-    // Sync sleep/wake/nap to schedule
-    syncRoutineToSchedule(saved);
-  }, [formName, formStartTime, formEndTime, formColor, editingId, resetForm, routines]);
+    resetChildForm();
+  }, [
+    childFormName,
+    childFormStartTime,
+    childFormEndTime,
+    childFormColor,
+    editingChildId,
+    expandedGroupId,
+    allRoutines,
+    resetChildForm,
+  ]);
 
-  const handleEdit = useCallback((r: RoutineTemplate) => {
-    setEditingId(r.id);
-    populateForm(r);
-    setAdding(false);
-  }, [populateForm]);
+  const handleDeleteChild = useCallback(
+    async (id: string) => {
+      await deleteRoutine(id);
+      showToast({ type: "success", message: "作息已删除" });
+      if (editingChildId === id) resetChildForm();
+    },
+    [editingChildId, resetChildForm],
+  );
 
-  const handleDelete = useCallback(async (id: string) => {
-    await deleteRoutine(id);
-    showToast({ type: "success", message: "作息已删除" });
-    if (editingId === id) resetForm();
-  }, [editingId, resetForm]);
-
-  const handleToggle = useCallback(async (r: RoutineTemplate) => {
+  const handleToggleChild = useCallback(async (r: RoutineTemplate) => {
     const updated = { ...r, isActive: !r.isActive };
     await updateRoutine(r.id, { isActive: !r.isActive });
     showToast({ type: "success", message: r.isActive ? "已停用" : "已启用" });
-    // Sync to schedule if this is a sleep/wake/nap type
     syncRoutineToSchedule(updated);
   }, []);
 
-  // Auto-sync all active sleep/wake/nap templates on first load
-  useEffect(() => {
-    for (const r of routines) {
-      if (r.type !== 'custom') syncRoutineToSchedule(r);
-    }
-  }, [routines]);
+  const handleEditChild = useCallback(
+    (r: RoutineTemplate) => {
+      setEditingChildId(r.id);
+      populateChildForm(r);
+      setAddingChild(false);
+    },
+    [populateChildForm],
+  );
 
-  const showForm = adding || editingId !== null;
+  // ─── Compute ────────────────────────────────────────────────────
+
+  const selectedGroup = groups.find((g) => g.id === expandedGroupId);
+  const childRoutines = expandedGroupId ? getRoutinesForGroupMemo(expandedGroupId) : [];
+  const showChildForm = addingChild || editingChildId !== null;
 
   return (
     <div className="pb-[100px]">
@@ -96,7 +198,13 @@ export default function RoutinesPage() {
       <div className="flex items-center justify-between px-4 pt-[var(--safe-area-top)] pb-2">
         <button
           type="button"
-          onClick={() => router.push("/more")}
+          onClick={() => {
+            if (expandedGroupId) {
+              setExpandedGroupId(null);
+            } else {
+              router.push("/more");
+            }
+          }}
           className="inline-flex h-10 w-10 items-center justify-center rounded-full"
           style={{
             background: "var(--color-surface-card)",
@@ -108,149 +216,622 @@ export default function RoutinesPage() {
         <h1 className="text-title-nav" style={{ color: "var(--color-text-primary)" }}>
           作息
         </h1>
-        <button
-          type="button"
-          onClick={() => setAdding(true)}
-          className="inline-flex h-10 w-10 items-center justify-center"
-        >
-          <Plus className="w-6 h-6" style={{ color: "var(--lifeflow-primary)" }} />
-        </button>
+        {!expandedGroupId ? (
+          <button
+            type="button"
+            onClick={() => setShowCreateDialog(true)}
+            className="inline-flex h-10 w-10 items-center justify-center"
+          >
+            <Plus className="w-6 h-6" style={{ color: "var(--lifeflow-primary)" }} />
+          </button>
+        ) : (
+          <div className="w-10" />
+        )}
       </div>
 
       <div className="px-4 pt-5">
-        {/* Add / Edit form */}
-        <AnimatePresence mode="wait">
-          {showForm ? (
+        {/* ============================================================ */}
+        {/* Create Template Dialog */}
+        {/* ============================================================ */}
+        <AnimatePresence>
+          {showCreateDialog && (
             <motion.div
-              key="form"
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              className="card-standard p-4 mb-4 overflow-hidden"
+              className="fixed inset-0 z-50 flex items-end justify-center"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
             >
-              <input
-                type="text" value={formName} onChange={(e) => setFormName(e.target.value)}
-                placeholder="作息名称（如：午睡、晨练）" autoFocus
-                className="w-full text-[16px] outline-none bg-transparent mb-3"
-                style={{ color: "var(--color-text-primary)" }}
+              <div
+                className="absolute inset-0 bg-black/40"
+                onClick={() => {
+                  setShowCreateDialog(false);
+                  setNewTemplateName("");
+                }}
               />
-              <div className="mb-3">
-                <p className="text-[13px] mb-2" style={{ color: "var(--color-text-secondary)" }}>时间段</p>
-                <div className="flex items-center gap-2">
-                  <input type="time" value={formStartTime} onChange={(e) => setFormStartTime(e.target.value)}
-                    className="flex-1 h-10 rounded-lg px-3 text-[15px] outline-none border"
-                    style={{ borderColor: "var(--lifeflow-border)", background: "var(--color-surface-secondary)" }} />
-                  <span className="text-[13px]" style={{ color: "var(--color-text-secondary)" }}>至</span>
-                  <input type="time" value={formEndTime} onChange={(e) => setFormEndTime(e.target.value)}
-                    className="flex-1 h-10 rounded-lg px-3 text-[15px] outline-none border"
-                    style={{ borderColor: "var(--lifeflow-border)", background: "var(--color-surface-secondary)" }} />
+              <motion.div
+                className="relative w-full rounded-t-[24px] p-6 pb-8"
+                style={{
+                  background: "var(--color-surface-card)",
+                }}
+                initial={{ y: "100%" }}
+                animate={{ y: 0 }}
+                exit={{ y: "100%" }}
+                transition={{ type: "spring", damping: 30, stiffness: 300 }}
+              >
+                <h3
+                  className="text-[17px] font-semibold mb-5"
+                  style={{ color: "var(--color-text-primary)" }}
+                >
+                  新建模板
+                </h3>
+                <input
+                  type="text"
+                  value={newTemplateName}
+                  onChange={(e) => setNewTemplateName(e.target.value)}
+                  placeholder="模板名称（如：工作日、周末）"
+                  autoFocus
+                  className="w-full h-11 rounded-xl px-4 text-[16px] outline-none border mb-4"
+                  style={{
+                    borderColor: "var(--lifeflow-border)",
+                    background: "var(--color-surface-secondary)",
+                    color: "var(--color-text-primary)",
+                  }}
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      setShowCreateDialog(false);
+                      setNewTemplateName("");
+                    }}
+                    className="flex-1 h-11 rounded-xl text-[15px]"
+                    style={{
+                      background: "var(--color-surface-secondary)",
+                      color: "var(--color-text-secondary)",
+                    }}
+                  >
+                    取消
+                  </button>
+                  <button
+                    onClick={handleCreateGroup}
+                    className="flex-1 h-11 rounded-xl text-[15px] font-semibold text-white"
+                    style={{ background: "var(--lifeflow-primary)" }}
+                  >
+                    创建
+                  </button>
                 </div>
-              </div>
-              <div className="mb-3">
-                <p className="text-[13px] mb-2" style={{ color: "var(--color-text-secondary)" }}>颜色</p>
-                <div className="flex gap-2.5 flex-wrap">
-                  {COLORS.map((c) => (
-                    <button key={c} type="button" onClick={() => setFormColor(c)}
-                      className="w-7 h-7 rounded-full transition-all"
-                      style={{ background: c, boxShadow: formColor === c ? `0 0 0 3px ${c}40` : "none", transform: formColor === c ? "scale(1.15)" : "scale(1)" }} />
-                  ))}
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <button onClick={resetForm}
-                  className="flex-1 h-10 rounded-lg text-[15px]"
-                  style={{ background: "var(--color-surface-secondary)", color: "var(--color-text-secondary)" }}>取消</button>
-                <button onClick={handleSave}
-                  className="flex-1 h-10 rounded-lg text-[15px] font-semibold text-white"
-                  style={{ background: "var(--lifeflow-primary)" }}>{editingId ? "更新" : "添加"}</button>
-              </div>
+              </motion.div>
             </motion.div>
-          ) : (
-            <button
-              onClick={() => setAdding(true)}
-              className="w-full h-11 flex items-center justify-center gap-2 rounded-[20px] mb-4 text-[15px] font-medium"
-              style={{ background: "var(--lifeflow-brand-50)", color: "var(--lifeflow-primary)", border: "1px dashed var(--lifeflow-brand-200)" }}
-            >
-              <Plus className="w-4 h-4" />添加作息
-            </button>
           )}
         </AnimatePresence>
 
-        {/* Routine list */}
-        <div className="flex flex-col gap-3">
-          {(routines ?? []).map((r, i) => (
-            <motion.div
-              key={r.id}
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.04 }}
-              className="card-standard p-4"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-1 h-10 rounded-full flex-shrink-0" style={{ background: r.color }} />
-                <div className="flex-1 min-w-0" onClick={() => handleEdit(r)} style={{ cursor: "pointer" }}>
-                  <h3 className="text-[16px] font-semibold truncate" style={{ color: "var(--color-text-primary)" }}>{r.name}</h3>
-                  <div className="flex items-center gap-1 mt-0.5">
-                    <Clock className="w-3.5 h-3.5" style={{ color: "var(--color-text-secondary)" }} />
-                    <span className="text-[13px]" style={{ color: "var(--color-text-secondary)" }}>{r.startTime} - {r.endTime}</span>
+        {/* ============================================================ */}
+        {/* Template List View (no group expanded) */}
+        {/* ============================================================ */}
+        {!expandedGroupId && (
+          <div className="flex flex-col gap-3">
+            {groups.map((group, i) => (
+              <motion.div
+                key={group.id}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.05 }}
+                className="card-standard p-4 cursor-pointer"
+                onClick={() => setExpandedGroupId(group.id)}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 min-w-0">
+                    <h3
+                      className="text-[16px] font-semibold truncate"
+                      style={{ color: "var(--color-text-primary)" }}
+                    >
+                      {group.name}
+                    </h3>
+                    <p className="text-[13px] mt-0.5" style={{ color: "var(--color-text-secondary)" }}>
+                      {getActiveCount(group.id)}/{getTotalCount(group.id)} 项启用
+                    </p>
                   </div>
+                  <ChevronRight className="w-5 h-5" style={{ color: "var(--color-text-secondary)" }} />
                 </div>
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); handleToggle(r); }}
-                  className="relative inline-flex h-7 w-12 items-center rounded-full transition-colors flex-shrink-0"
-                  style={{ background: r.isActive ? "var(--state-success)" : "var(--lifeflow-border)" }}
-                >
-                  <span
-                    className="inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform"
-                    style={{ transform: r.isActive ? "translateX(26px)" : "translateX(2px)" }}
-                  />
-                </button>
-                <button
-                  onClick={(e) => { e.stopPropagation(); handleDelete(r.id); }}
-                  className="w-7 h-7 flex items-center justify-center flex-shrink-0"
-                >
-                  <Trash2 className="w-4 h-4" style={{ color: "var(--color-text-disabled)" }} />
-                </button>
-              </div>
-            </motion.div>
-          ))}
-        </div>
+              </motion.div>
+            ))}
 
-        {/* Empty state */}
-        {(routines ?? []).length === 0 && !showForm && (
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex flex-1 flex-col items-center justify-center px-4"
-          >
-            <div
-              className="w-full max-w-sm flex flex-col items-center px-8 py-12"
-              style={{
-                backgroundColor: "var(--color-surface-card)",
-                borderRadius: 20,
-                boxShadow: "var(--shadow-card)",
-              }}
-            >
-              <div className="w-16 h-16 rounded-[16px] flex items-center justify-center mb-5" style={{ backgroundColor: "var(--lifeflow-brand-50)" }}>
-                <Clock className="w-8 h-8" style={{ color: "var(--lifeflow-primary)" }} />
-              </div>
-              <p className="text-[15px] mb-5" style={{ color: "var(--color-text-secondary)" }}>
-                还没有作息模板。设置一个，每天自动生成事项。
-              </p>
+            {/* Empty state */}
+            {groups.length === 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex flex-1 flex-col items-center justify-center px-4"
+              >
+                <div
+                  className="w-full max-w-sm flex flex-col items-center px-8 py-12"
+                  style={{
+                    backgroundColor: "var(--color-surface-card)",
+                    borderRadius: 20,
+                    boxShadow: "var(--shadow-card)",
+                  }}
+                >
+                  <div
+                    className="w-16 h-16 rounded-[16px] flex items-center justify-center mb-5"
+                    style={{ backgroundColor: "var(--lifeflow-brand-50)" }}
+                  >
+                    <Clock className="w-8 h-8" style={{ color: "var(--lifeflow-primary)" }} />
+                  </div>
+                  <p
+                    className="text-[15px] mb-5"
+                    style={{ color: "var(--color-text-secondary)" }}
+                  >
+                    还没有作息模板。新建一个，每天自动生成作息事项。
+                  </p>
+                  <button
+                    onClick={() => setShowCreateDialog(true)}
+                    className="inline-flex items-center justify-center rounded-full px-6 py-2.5 text-[14px] font-medium"
+                    style={{
+                      backgroundColor: "var(--lifeflow-primary)",
+                      color: "var(--lifeflow-primary-foreground)",
+                    }}
+                  >
+                    创建模板
+                  </button>
+                </div>
+              </motion.div>
+            )}
+
+            {/* "新建模板" button at bottom */}
+            {groups.length > 0 && (
               <button
-                onClick={() => setAdding(true)}
-                className="inline-flex items-center justify-center rounded-full px-6 py-2.5 text-[14px] font-medium"
+                type="button"
+                onClick={() => setShowCreateDialog(true)}
+                className="w-full h-11 flex items-center justify-center gap-2 rounded-[20px] text-[15px] font-medium mt-1"
                 style={{
-                  backgroundColor: "var(--lifeflow-primary)",
-                  color: "var(--lifeflow-primary-foreground)",
+                  background: "var(--lifeflow-brand-50)",
+                  color: "var(--lifeflow-primary)",
+                  border: "1px dashed var(--lifeflow-brand-200)",
                 }}
               >
-                创建作息
+                <Plus className="w-4 h-4" />
+                新建模板
               </button>
-            </div>
-          </motion.div>
+            )}
+          </div>
         )}
+
+        {/* ============================================================ */}
+        {/* Template Detail View (group expanded) */}
+        {/* ============================================================ */}
+        {expandedGroupId && selectedGroup && (
+          <>
+            {/* Detail header */}
+            <div className="flex items-center justify-between mb-4">
+              {editingGroupName === expandedGroupId ? (
+                <div className="flex items-center gap-2 flex-1">
+                  <input
+                    type="text"
+                    value={editGroupNameValue}
+                    onChange={(e) => setEditGroupNameValue(e.target.value)}
+                    className="flex-1 h-9 rounded-lg px-3 text-[16px] font-semibold outline-none border"
+                    style={{
+                      borderColor: "var(--lifeflow-border)",
+                      background: "var(--color-surface-secondary)",
+                      color: "var(--color-text-primary)",
+                    }}
+                    autoFocus
+                  />
+                  <button
+                    onClick={async () => {
+                      if (editGroupNameValue.trim()) {
+                        await updateRoutine(expandedGroupId, { name: editGroupNameValue.trim() } as any);
+                        showToast({ type: "success", message: "名称已更新" });
+                      }
+                      setEditingGroupName(null);
+                    }}
+                    className="w-8 h-8 flex items-center justify-center rounded-full"
+                    style={{ background: "var(--lifeflow-primary)" }}
+                  >
+                    <Check className="w-4 h-4 text-white" />
+                  </button>
+                  <button
+                    onClick={() => setEditingGroupName(null)}
+                    className="w-8 h-8 flex items-center justify-center rounded-full"
+                    style={{ background: "var(--color-surface-secondary)" }}
+                  >
+                    <X className="w-4 h-4" style={{ color: "var(--color-text-secondary)" }} />
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <h2
+                    className="text-[18px] font-semibold flex-1"
+                    style={{ color: "var(--color-text-primary)" }}
+                  >
+                    {selectedGroup.name}
+                  </h2>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingGroupName(expandedGroupId);
+                        setEditGroupNameValue(selectedGroup.name);
+                      }}
+                      className="w-9 h-9 flex items-center justify-center rounded-full"
+                      style={{ background: "var(--color-surface-card)" }}
+                    >
+                      <Pencil className="w-4 h-4" style={{ color: "var(--lifeflow-primary)" }} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDeletingGroupId(expandedGroupId)}
+                      className="w-9 h-9 flex items-center justify-center rounded-full"
+                      style={{ background: "var(--color-surface-card)" }}
+                    >
+                      <Trash2 className="w-4 h-4" style={{ color: "#FF3B30" }} />
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Child routines list */}
+            <div className="flex flex-col gap-2">
+              <AnimatePresence>
+                {childRoutines.map((r, i) =>
+                  editingChildId === r.id && showChildForm ? (
+                    <motion.div
+                      key={`edit-${r.id}`}
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="card-standard p-4 overflow-hidden"
+                    >
+                      <input
+                        type="text"
+                        value={childFormName}
+                        onChange={(e) => setChildFormName(e.target.value)}
+                        placeholder="作息名称"
+                        autoFocus
+                        className="w-full text-[16px] outline-none bg-transparent mb-3"
+                        style={{ color: "var(--color-text-primary)" }}
+                      />
+                      <div className="mb-3">
+                        <p className="text-[13px] mb-2" style={{ color: "var(--color-text-secondary)" }}>
+                          时间段
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="time"
+                            value={childFormStartTime}
+                            onChange={(e) => setChildFormStartTime(e.target.value)}
+                            className="flex-1 h-10 rounded-lg px-3 text-[15px] outline-none border"
+                            style={{
+                              borderColor: "var(--lifeflow-border)",
+                              background: "var(--color-surface-secondary)",
+                            }}
+                          />
+                          <span className="text-[13px]" style={{ color: "var(--color-text-secondary)" }}>
+                            至
+                          </span>
+                          <input
+                            type="time"
+                            value={childFormEndTime}
+                            onChange={(e) => setChildFormEndTime(e.target.value)}
+                            className="flex-1 h-10 rounded-lg px-3 text-[15px] outline-none border"
+                            style={{
+                              borderColor: "var(--lifeflow-border)",
+                              background: "var(--color-surface-secondary)",
+                            }}
+                          />
+                        </div>
+                      </div>
+                      <div className="mb-3">
+                        <p className="text-[13px] mb-2" style={{ color: "var(--color-text-secondary)" }}>
+                          颜色
+                        </p>
+                        <div className="flex gap-2.5 flex-wrap">
+                          {COLORS.map((c) => (
+                            <button
+                              key={c}
+                              type="button"
+                              onClick={() => setChildFormColor(c)}
+                              className="w-7 h-7 rounded-full transition-all"
+                              style={{
+                                background: c,
+                                boxShadow:
+                                  childFormColor === c ? `0 0 0 3px ${c}40` : "none",
+                                transform:
+                                  childFormColor === c ? "scale(1.15)" : "scale(1)",
+                              }}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={resetChildForm}
+                          className="flex-1 h-10 rounded-lg text-[15px]"
+                          style={{
+                            background: "var(--color-surface-secondary)",
+                            color: "var(--color-text-secondary)",
+                          }}
+                        >
+                          取消
+                        </button>
+                        <button
+                          onClick={handleSaveChild}
+                          className="flex-1 h-10 rounded-lg text-[15px] font-semibold text-white"
+                          style={{ background: "var(--lifeflow-primary)" }}
+                        >
+                          保存
+                        </button>
+                      </div>
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      key={r.id}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.03 }}
+                      className="card-standard p-3"
+                      onClick={() => handleEditChild(r)}
+                      style={{ cursor: "pointer" }}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="w-1 h-10 rounded-full flex-shrink-0"
+                          style={{ background: r.color }}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <h3
+                            className="text-[15px] font-semibold truncate"
+                            style={{ color: "var(--color-text-primary)" }}
+                          >
+                            {r.name}
+                          </h3>
+                          <div className="flex items-center gap-1 mt-0.5">
+                            <Clock
+                              className="w-3.5 h-3.5"
+                              style={{ color: "var(--color-text-secondary)" }}
+                            />
+                            <span
+                              className="text-[13px]"
+                              style={{ color: "var(--color-text-secondary)" }}
+                            >
+                              {r.startTime} - {r.endTime}
+                            </span>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleToggleChild(r);
+                          }}
+                          className="relative inline-flex h-7 w-12 items-center rounded-full transition-colors flex-shrink-0"
+                          style={{
+                            background: r.isActive
+                              ? "var(--state-success)"
+                              : "var(--lifeflow-border)",
+                          }}
+                        >
+                          <span
+                            className="inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform"
+                            style={{
+                              transform: r.isActive
+                                ? "translateX(26px)"
+                                : "translateX(2px)",
+                            }}
+                          />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteChild(r.id);
+                          }}
+                          className="w-7 h-7 flex items-center justify-center flex-shrink-0"
+                        >
+                          <Trash2
+                            className="w-4 h-4"
+                            style={{ color: "var(--color-text-disabled)" }}
+                          />
+                        </button>
+                      </div>
+                    </motion.div>
+                  ),
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* Add child form */}
+            <AnimatePresence mode="wait">
+              {addingChild && !editingChildId ? (
+                <motion.div
+                  key="add-form"
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="card-standard p-4 mt-3 overflow-hidden"
+                >
+                  <input
+                    type="text"
+                    value={childFormName}
+                    onChange={(e) => setChildFormName(e.target.value)}
+                    placeholder="作息名称（如：晨练、冥想）"
+                    autoFocus
+                    className="w-full text-[16px] outline-none bg-transparent mb-3"
+                    style={{ color: "var(--color-text-primary)" }}
+                  />
+                  <div className="mb-3">
+                    <p className="text-[13px] mb-2" style={{ color: "var(--color-text-secondary)" }}>
+                      时间段
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="time"
+                        value={childFormStartTime}
+                        onChange={(e) => setChildFormStartTime(e.target.value)}
+                        className="flex-1 h-10 rounded-lg px-3 text-[15px] outline-none border"
+                        style={{
+                          borderColor: "var(--lifeflow-border)",
+                          background: "var(--color-surface-secondary)",
+                        }}
+                      />
+                      <span className="text-[13px]" style={{ color: "var(--color-text-secondary)" }}>
+                        至
+                      </span>
+                      <input
+                        type="time"
+                        value={childFormEndTime}
+                        onChange={(e) => setChildFormEndTime(e.target.value)}
+                        className="flex-1 h-10 rounded-lg px-3 text-[15px] outline-none border"
+                        style={{
+                          borderColor: "var(--lifeflow-border)",
+                          background: "var(--color-surface-secondary)",
+                        }}
+                      />
+                    </div>
+                  </div>
+                  <div className="mb-3">
+                    <p className="text-[13px] mb-2" style={{ color: "var(--color-text-secondary)" }}>
+                      颜色
+                    </p>
+                    <div className="flex gap-2.5 flex-wrap">
+                      {COLORS.map((c) => (
+                        <button
+                          key={c}
+                          type="button"
+                          onClick={() => setChildFormColor(c)}
+                          className="w-7 h-7 rounded-full transition-all"
+                          style={{
+                            background: c,
+                            boxShadow:
+                              childFormColor === c ? `0 0 0 3px ${c}40` : "none",
+                            transform:
+                              childFormColor === c ? "scale(1.15)" : "scale(1)",
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={resetChildForm}
+                      className="flex-1 h-10 rounded-lg text-[15px]"
+                      style={{
+                        background: "var(--color-surface-secondary)",
+                        color: "var(--color-text-secondary)",
+                      }}
+                    >
+                      取消
+                    </button>
+                    <button
+                      onClick={handleSaveChild}
+                      className="flex-1 h-10 rounded-lg text-[15px] font-semibold text-white"
+                      style={{ background: "var(--lifeflow-primary)" }}
+                    >
+                      添加
+                    </button>
+                  </div>
+                </motion.div>
+              ) : editingChildId ? null : (
+                <button
+                  onClick={() => {
+                    setAddingChild(true);
+                    resetChildForm();
+                  }}
+                  className="w-full h-11 flex items-center justify-center gap-2 rounded-[20px] mt-3 text-[15px] font-medium"
+                  style={{
+                    background: "var(--lifeflow-brand-50)",
+                    color: "var(--lifeflow-primary)",
+                    border: "1px dashed var(--lifeflow-brand-200)",
+                  }}
+                >
+                  <Plus className="w-4 h-4" />
+                  添加子项
+                </button>
+              )}
+            </AnimatePresence>
+
+            {/* Empty child state */}
+            {childRoutines.length === 0 && !showChildForm && !addingChild && (
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex flex-col items-center justify-center py-12"
+              >
+                <p
+                  className="text-[15px] mb-5"
+                  style={{ color: "var(--color-text-secondary)" }}
+                >
+                  该模板还没有作息项
+                </p>
+                <button
+                  onClick={() => {
+                    setAddingChild(true);
+                    resetChildForm();
+                  }}
+                  className="inline-flex items-center justify-center rounded-full px-6 py-2.5 text-[14px] font-medium"
+                  style={{
+                    backgroundColor: "var(--lifeflow-primary)",
+                    color: "var(--lifeflow-primary-foreground)",
+                  }}
+                >
+                  添加子项
+                </button>
+              </motion.div>
+            )}
+          </>
+        )}
+
+        {/* Delete group confirm dialog */}
+        <AnimatePresence>
+          {deletingGroupId && (
+            <motion.div
+              className="fixed inset-0 z-50 flex items-center justify-center p-6"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              <div
+                className="absolute inset-0 bg-black/40"
+                onClick={() => setDeletingGroupId(null)}
+              />
+              <motion.div
+                className="relative w-full max-w-sm rounded-[20px] p-6"
+                style={{ background: "var(--color-surface-card)" }}
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+              >
+                <h3
+                  className="text-[17px] font-semibold mb-2"
+                  style={{ color: "var(--color-text-primary)" }}
+                >
+                  删除模板
+                </h3>
+                <p className="text-[14px] mb-5" style={{ color: "var(--color-text-secondary)" }}>
+                  该模板下的所有作息项也会一并删除，确定要继续吗？
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setDeletingGroupId(null)}
+                    className="flex-1 h-11 rounded-xl text-[15px]"
+                    style={{
+                      background: "var(--color-surface-secondary)",
+                      color: "var(--color-text-secondary)",
+                    }}
+                  >
+                    取消
+                  </button>
+                  <button
+                    onClick={() => handleDeleteGroup(deletingGroupId)}
+                    className="flex-1 h-11 rounded-xl text-[15px] font-semibold text-white"
+                    style={{ background: "#FF3B30" }}
+                  >
+                    删除
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );

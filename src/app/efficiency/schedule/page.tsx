@@ -197,7 +197,7 @@ export default function SchedulePage() {
 
   // ── 小时块分组 ──
   const hourBlocks = useMemo(() => {
-    if (!items) return HOURS.map(h => ({ hour: h, slotItems: [] as Item[], carryOver: false }));
+    if (!items) return HOURS.map(h => ({ hour: h, slotItems: [] as Item[], carryOver: false, hasWater: false }));
 
     return HOURS.map(hour => {
       const slotItems = items.filter(item => {
@@ -212,7 +212,8 @@ export default function SchedulePage() {
         const hm = timeToMinutes(hour);
         return sm < hm && em > hm;
       });
-      return { hour, slotItems, carryOver };
+      const hasWater = slotItems.some(i => i.sourceType === "water");
+      return { hour, slotItems, carryOver, hasWater };
     });
   }, [items]);
 
@@ -495,6 +496,15 @@ export default function SchedulePage() {
                   {block.hour}
                 </div>
 
+                {/* 饮水指示 */}
+                <Link
+                  href="/more/water"
+                  className="w-6 shrink-0 flex items-start justify-center pt-0.5"
+                  style={{ opacity: block.hasWater ? 1 : 0.22 }}
+                >
+                  <Droplets className="w-4 h-4" style={{ color: block.hasWater ? "#0EA5E9" : "var(--color-text-disabled)" }} />
+                </Link>
+
                 {/* 内容区 */}
                 <div className="flex-1 ml-3 pb-1 relative">
                   {block.carryOver && (
@@ -514,9 +524,9 @@ export default function SchedulePage() {
                     </div>
                   )}
 
-                  {/* 事项卡片 */}
+                  {/* 事项卡片（饮水事项已移至左侧水滴列，不在此处显示） */}
                   {renderSlotItems({
-                    items: block.slotItems,
+                    items: block.slotItems.filter(i => i.sourceType !== "water"),
                     hourLabel: block.hour,
                     isPastDate,
                     onToggle: handleToggle,

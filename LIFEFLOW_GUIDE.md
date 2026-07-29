@@ -223,3 +223,26 @@ LifeFlow v1.0，一个讲道理的生活助手。
   - 心愿 → `getWishes()`
 - 无数据时显示 `--`，行动引导显示 `「去记录」`
 
+### 长期主义复盘时间轴（v2.2+）
+
+- 复盘时间轴位于长期主义页面 Header 下方、8 张模块卡片上方，以独立的卡片区域呈现（与模块卡片视觉区分）
+- 顶部标题行 + 4 粒度切换器（日/周/月/年），`ReviewPeriod` 类型定义在 `reviewer.ts`
+- 主体内容：
+  - 概览文案行（`buildOverview` 生成的自然语言摘要）
+  - 各模块摘要行（每行显示模块名 + 最多 3 个关键统计如 `日行动完成: 5/10 完成率: 50%`）
+  - 底部「历史复盘」折叠区域（展示前 3-4 个周期的历史数据）
+- 数据来源：`reviewerBrain.generateReview(period, offset)` + `reviewerBrain.getHistoricalReviews(period, count)`
+- 切换粒度时重新加载数据，有 loading 态和空数据态兜底
+
+### ReviewerBrain 引擎（v2.2+）
+
+- `ReviewPeriod` 类型：`"daily" | "weekly" | "monthly" | "yearly"`
+- `generateReview(period, offset?)` — 生成指定周期复盘，`offset=0` 为当前周期
+- `getHistoricalReviews(period, count)` — 获取过去 N 个周期的复盘数据
+- 所有模块（goals/finance/water/sleep/fitness/diet/wellness/posture/schedule/medication）均查询真实数据，无"即将推出"空壳：
+  - `reviewGoals` — 使用 `goalV2DB`（GoalV2 五层拆解），查询活跃目标数 + 日行动完成率 + 关键结果平均进度
+  - `reviewDiet` — 使用 `lifeDB.dietLogs`，查询记录天数 + 总餐数
+  - `reviewWellness` — 使用 `lifeDB.wellnessLogs`，查询功法/提肛次数
+  - `reviewPosture` — 使用 `healthDB.stretchLogs`，查询拉伸天数 + 组数
+- `getDateRange(period, offset)` — 日期范围计算工具，按周期类型正确推算起止日期
+

@@ -1,11 +1,12 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { Moon, Download, Trash2, Info, MessageSquare, ChevronRight } from "lucide-react";
+import { useRef, useState, useEffect, useCallback } from "react";
+import { Moon, Download, Trash2, Info, MessageSquare, ChevronRight, Droplets } from "lucide-react";
 import { useTheme } from "@/components/theme/ThemeProvider";
 import Dialog from "@/components/ui/Dialog";
 import { showToast } from "@/components/ui/Toast";
 import { dataExportService } from "@/lib/engine/DataExportService";
+import { getWaterGoal, updateWaterGoal } from "@/lib/db/health.db";
 
 // ─── iOS Toggle Switch ────────────────────────────────────────
 function ToggleSwitch({
@@ -35,11 +36,31 @@ export default function SettingsPage() {
   const isDark = theme === "dark";
   const [showClearDialog, setShowClearDialog] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [waterReminderEnabled, setWaterReminderEnabled] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // 加载饮水提醒状态
+  useEffect(() => {
+    getWaterGoal().then(g => {
+      setWaterReminderEnabled((g.reminderInterval ?? 0) > 0);
+    }).catch(() => {});
+  }, []);
 
   const toggleDark = () => {
     setTheme(isDark ? "light" : "dark");
   };
+
+  const toggleWaterReminder = useCallback(async () => {
+    const newState = !waterReminderEnabled;
+    setWaterReminderEnabled(newState);
+    try {
+      await updateWaterGoal({ reminderInterval: newState ? 60 : 0 });
+      showToast({ type: "success", message: newState ? "饮水提醒已开启" : "饮水提醒已关闭" });
+    } catch {
+      setWaterReminderEnabled(!newState);
+      showToast({ type: "error", message: "设置失败，请重试" });
+    }
+  }, [waterReminderEnabled]);
 
   const handleExport = async () => {
     try {
@@ -85,6 +106,20 @@ export default function SettingsPage() {
               <span className="text-[17px] truncate" style={{ color: "var(--color-text-primary)" }}>深色模式</span>
             </div>
             <ToggleSwitch checked={isDark} onChange={toggleDark} label="深色模式" />
+          </div>
+        </div>
+      </div>
+
+      {/* 饮水提醒 */}
+      <div className="px-4 pt-4 pb-2">
+        <p className="text-[13px] font-medium px-5 pt-4 pb-2" style={{ color: "var(--color-text-secondary)" }}>习惯</p>
+        <div className="rounded-[20px] overflow-hidden" style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}>
+          <div className="flex items-center justify-between w-full px-5 py-3.5">
+            <div className="flex items-center gap-3 min-w-0">
+              <Droplets className="w-5 h-5 shrink-0" style={{ color: "var(--lifeflow-primary)" }} />
+              <span className="text-[17px] truncate" style={{ color: "var(--color-text-primary)" }}>饮水提醒</span>
+            </div>
+            <ToggleSwitch checked={waterReminderEnabled} onChange={toggleWaterReminder} label="饮水提醒" />
           </div>
         </div>
       </div>

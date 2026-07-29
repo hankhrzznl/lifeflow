@@ -4,10 +4,13 @@ import { useEffect, useState, useMemo, useCallback, Fragment } from "react";
 import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { motion } from "framer-motion";
-import { ChevronLeft, Droplets, Check, ChevronRight } from "lucide-react";
-import { daylogDB } from "@/lib/db/daylog.db";
+import { ChevronLeft, Droplets, Check, ChevronRight, Settings } from "lucide-react";
+import { daylogDB, ensureModuleItem } from "@/lib/db/daylog.db";
 import type { Item } from "@/lib/db/daylog.db";
 import { healthDB, getWaterGoal, updateWaterGoal } from "@/lib/db/health.db";
+import { syncItemReminder } from "@/lib/reminderDefaults";
+import { requestPermission } from "@/lib/notificationService";
+import { showToast } from "@/components/ui/Toast";
 
 /* ────────── Helpers ────────── */
 
@@ -144,6 +147,98 @@ export default function WaterPage() {
     },
     [settings],
   );
+
+  /* ─── 重新生成饮水提醒 ─── */
+
+  const [generating, setGenerating] = useState(false);
+
+  const handleGenerateReminders = useCallback(async () => {
+    setGenerating(true);
+    try {
+      await requestPermission();
+
+      const today = todayStr();
+      const startH = parseInt(settings.wakeStart.split(":")[0]);
+      const endH = parseInt(settings.wakeEnd.split(":")[0]);
+      const stopH = endH - 2;
+      const slots: { label: string }[] = [];
+      for (let h = startH; h < stopH; h++) {
+        slots.push({ label: `${String(h).padStart(2, "0")}:30` });
+      }
+
+      // 清理旧数据（未来 7 天）
+      for (let d = 0; d < 7; d++) {
+        const date = dateAddDays(today, d);
+        const oldItems = await daylogDB.items
+          .where("date").equals(date)
+          .filter((item) => item.sourceType === "water")
+          .toArray();
+        const { db } = await import("@/lib/db");
+        for (const item of oldItems) {
+          const reminder = await db.reminders
+            .where("moduleType").equals("item")
+            .filter((r) => r.linkedModuleId === item.id)
+            .first();
+          if (reminder) await db.reminders.delete(reminder.id!);
+        }
+        await daylogDB.items
+          .where("date").equals(date)
+          .filter((item) => item.sourceType === "water")
+          .delete();
+      }
+
+      // 生成新数据
+      for (let d = 0; d < 7; d++) {
+        const date = dateAddDays(today, d);
+        for (const slot of slots) {
+          const timeStr = slot.label;
+          const endTime = (() => {
+            const [h, m] = timeStr.split(":").map(Number);
+            const total = h * 60 + m + 5;
+            const nh = Math.floor(total / 60) % 24;
+            const nm = total % 60;
+            return `${String(nh).padStart(2, "0")}:${String(nm).padStart(2, "0")}`;
+          })();
+          const sourceId = `water_${date}_${timeStr}`;
+          const itemId = await ensureModuleItem({
+            date,
+            sourceType: "water",
+            sourceId,
+            title: "喝口水然后动一动不要久坐",
+            plannedStart: timeStr,
+            plannedEnd: endTime,
+            color: "#0EA5E9",
+            icon: "Droplets",
+            isCompleted: false,
+          });
+          if (itemId) {
+            await syncItemReminder({
+              id: itemId,
+              sourceType: "water",
+              sourceId,
+              date,
+              title: "喝口水然后动一动不要久坐",
+              plannedStart: timeStr,
+              plannedEnd: endTime,
+              actualStart: timeStr,
+              actualEnd: endTime,
+              isCorrected: false,
+              isCompleted: false,
+              sortOrder: 1,
+              createdAt: Date.now(),
+              updatedAt: Date.now(),
+            } as Item);
+          }
+        }
+      }
+
+      showToast({ type: "success", message: `饮水提醒已生成，每日 ${slots.length} 次` });
+    } catch {
+      showToast({ type: "error", message: "生成失败，请重试" });
+    } finally {
+      setGenerating(false);
+    }
+  }, [settings]);
 
   /* ─── Derived stats ─── */
 
@@ -345,6 +440,15 @@ export default function WaterPage() {
           <p className="text-[11px] mt-2" style={{ color: "var(--color-text-disabled)" }}>
             饮水的时段和提醒次数请在首页「饮水提醒」中确认调整
           </p>
+          <button
+            type="button"
+            onClick={handleGenerateReminders}
+            disabled={generating}
+            className="w-full mt-3 h-10 rounded-[10px] text-[14px] font-semibold text-white disabled:opacity-50"
+            style={{ background: "var(--lifeflow-primary)" }}
+          >
+            {generating ? "生成中..." : "生成饮水提醒"}
+          </button>
         </motion.div>
       </div>
 

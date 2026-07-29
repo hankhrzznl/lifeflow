@@ -93,6 +93,7 @@ LifeFlow v1.0，一个讲道理的生活助手。
 
 - `addDays` 函数必须使用 `getFullYear/getMonth/getDate` 拼接，**禁止 `toISOString()`**（UTC 时区导致东八区日期回退）
 - DB 升级时默认播种数据需谨慎评估是否会自动生成不必要的种子数据
+- **Dexie 版本升级必须保留旧版本定义**：新增字段时通过新增 `this.version(N).stores(...)` 实现，**绝对不能**直接修改已有版本的 stores 定义或替换版本号。否则已有用户浏览器中的旧版 DB 会初始化失败导致页面崩溃。
 
 ### 事项提醒
 
@@ -116,9 +117,74 @@ LifeFlow v1.0，一个讲道理的生活助手。
 
 - Bottom Sheet / 弹出面板：操作按钮（确认/取消等）必须固定在底部，**放在滚动容器之外**，使用 `flex flex-col` + 独立的 `shrink-0` 按钮区域，确保始终可见
 - 多步向导页面：底部导航栏**禁止使用 `fixed` 定位**，应采用 `flex flex-col h-screen` + 内容区 `flex-1 overflow-y-auto` + 底部 `shrink-0` 的自然流布局，避免 z-index 层叠问题导致按钮被遮挡
+  - **注意**：外层容器必须使用 `h-screen`（锁定视口高度）而非 `min-h-screen`（最小高度），否则内容撑高后底部按钮仍会被推出视口
 - 所有 `fixed` 定位的底部操作栏必须改为 flex 自然流布局，除非有特殊原因
 
 ### 数据查询口径约定
 
 - 首页「饮水提醒」按钮展示的杯数使用独立的 `todayWaterItems` liveQuery（`daylogDB.items.where("date").equals(today).filter(i => i.sourceType === "water")`），与饮水页面数据口径一致
 - 首页「今日待办」统计的是所有类型事项（含饮水），不应等同于饮水杯数
+
+### 策略阶段系统（GoalV2 v2.1+）
+
+**数据模型增强：**
+- `StrategyV2` 新增字段：`startDate/endDate`（策略活跃日期范围）、`cycleType`（`'daily' | 'weekly'`）、`cycleConfig`（JSON 序列化的周期配置）
+- DB 版本 2：`goalV2Strategies` 索引不变，新增字段为可选非索引字段
+
+**周期配置格式：**
+- `cycleType: 'daily'` → `cycleConfig` = `[{ "title": "...", "time": "08:00", "duration": 30 }, ...]`（**数组**，支持多个时段）
+  - 兼容旧版单对象格式：读取时自动检测是否为数组，非数组则包装为单元素数组
+  - 时段通过 `sortOrder` 区分，去重使用 `strategyId + title` 组合键
+- `cycleType: 'weekly'` → `cycleConfig` = `{ "0": { "title": "...", "time": "08:00", "duration": 30, "enabled": true }, "1": {...}, ... }`（key 为 `getDay()` 值，0=周日~6=周六）
+
+**引擎函数：**
+- `getActiveStrategies(goalId, dateStr?)` — 获取指定日期活跃的策略（按 startDate/endDate 过滤）
+- `getDailyActionsForDate(strategy, dateStr)` — 返回某日该策略的所有日行动 `DailyCycleItem[]`
+- `ensureDailyActionsForDate(goalId, dateStr)` — 为目标指定日期自动生成缺失的日行动（按 strategyId+title 去重）
+
+**创建向导行为：**
+- Step 3 每条策略可独立配置日期范围 + 每日固定/按周循环
+  - 每日固定模式支持**添加/删除多个时段行**，一个策略可以有多个不同时间段的行动
+- Step 5 按周期配置生成当天日行动预览（每个时段生成独立的一条日行动）
+- handleSubmit 自动生成跨多周周任务 + 未来 7 天日行动
+
+**详情页行为：**
+- 策略卡片展示日期范围、周期类型标签、活跃/待开始/已结束状态
+- 活跃策略的日行动由 `ensureDailyActionsForDate` 在访问时自动生成
+
+**使用规范：**
+- 如果某件事需要每天在同一策略下拆分多个时间段执行（如「早读磨耳朵」「晚间主学」「睡前复盘」），不应拆成多条独立策略，而应使用同一个策略的多个时段配置
+
+### AI 提示词 & 一键导入（v2.2+）
+
+- `src/lib/goal-v2-import-parser.ts` 提供 `GOAL_V2_AI_PROMPT` 常量（完整的五层拆解法提示词）+ `parseImportedGoal()` 解析器 + `validateImportedGoal()` 验证器
+- 提示词包含五层拆解法介绍、输出 JSON 格式模板、字段说明和重要规则
+- 目标列表页（`/efficiency-v2`）顶部右侧有「复制提示词」和「导入」按钮
+  - 「复制提示词」将提示词复制到剪贴板，用户可粘贴发给任意 AI
+  - 「导入」打开粘贴框，接收 AI 返回的 JSON，解析后跳转到创建向导并自动填充所有步骤
+- 创建向导（`/efficiency-v2/new`）支持从 URL 参数 `?import=` 读取编码后的导入数据
+- 导入的 JSON 格式：`{ title, vision?, color?, keyResults: [{description, targetValue, unit, deadline?}], strategies: [{name, description?, startDate?, endDate?, cycleType, dailyActions: [{title, time, duration}], weeklyTasks: [{title, deliverable}], weeklyPattern? }] }`
+
+### 饮水提醒开关（v2.2+）
+
+- 饮水提醒的开关移动到设置页面（`/settings`），使用 `WaterGoal.reminderInterval` 控制
+  - `reminderInterval > 0` 表示开启，`reminderInterval === 0` 表示关闭
+  - 默认值 0（关闭）
+- 首页饮水提醒卡片根据开关状态显示不同内容：
+  - 开启且有数据：显示「已开启 · X/Y 杯」→ 点击打开 `WaterReminderSheet`
+  - 开启无数据：显示「点击开启喝水提醒」→ 点击打开 `WaterReminderSheet`
+  - 关闭：显示「开启或关闭饮水提醒请前往设置」→ 点击跳转 `/settings`
+- 饮水页面（`/more/water`）设置卡片底部新增「生成饮水提醒」按钮，点击后：
+  - 清理未来 7 天的旧饮水数据
+  - 根据当前 `wakeStart/wakeEnd` 重新生成时段（每个整点过 30 分钟，入睡前 2 小时截止）
+
+### 目标删除（v2.2+）
+
+- 目标列表页每张卡片右上角有删除按钮（悬停显示），确认后级联删除目标及相关所有数据
+- 目标详情页顶部已有删除按钮（`Trash2` 图标）
+
+### UI 布局（v2.2+）
+
+- `efficiency-v2` 页面的「新建目标」FAB 固定位置为 `bottom-[180px] z-40`，避免与 AI 助手全局 FAB（`bottom-24` ≈ 96px）重叠
+- AI 助手全局 FAB 位置保持 `bottom-24 right-5 z-40`
+

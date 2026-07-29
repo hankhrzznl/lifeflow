@@ -1,16 +1,19 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Plus, Target } from "lucide-react";
+import { Plus, Target, Copy, Download, Trash2 } from "lucide-react";
 import { useLiveQuery } from "dexie-react-hooks";
 import {
   type GoalV2,
   getAllGoalsV2,
   getKeyResultsV2,
   goalV2DB,
+  deleteGoalV2,
 } from "@/lib/db/goal-v2.db";
+import { GOAL_V2_AI_PROMPT, parseImportedGoal, validateImportedGoal } from "@/lib/goal-v2-import-parser";
+import { showToast } from "@/components/ui/Toast";
 
 // ─── 状态徽章 ──────────────────────────────────────────────
 function StatusBadge({ status }: { status: GoalV2["status"] }) {
@@ -67,6 +70,12 @@ export default function EfficiencyV2Page() {
     [],
   );
 
+  // 导入对话框状态
+  const [showImportDialog, setShowImportDialog] = useState(false);
+  const [importText, setImportText] = useState("");
+  const [importing, setImporting] = useState(false);
+  const [importError, setImportError] = useState("");
+
   // 按 goalId 统计关键结果数量
   const krCountMap = useMemo(() => {
     const map = new Map<string, number>();
@@ -77,6 +86,44 @@ export default function EfficiencyV2Page() {
   }, [allKeyResults]);
 
   const goalList = goals ?? [];
+
+  // ── 复制提示词 ──
+  const handleCopyPrompt = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(GOAL_V2_AI_PROMPT);
+      showToast({ type: "success", message: "提示词已复制，发送给 AI 获取导入计划" });
+    } catch {
+      showToast({ type: "error", message: "复制失败，请手动复制" });
+    }
+  }, []);
+
+  // ── 导入解析 ──
+  const handleImport = useCallback(async () => {
+    setImportError("");
+    setImporting(true);
+    try {
+      const data = parseImportedGoal(importText);
+      const validation = validateImportedGoal(data);
+      if (!validation.valid) {
+        setImportError(validation.errors.join("\n"));
+        setImporting(false);
+        return;
+      }
+      // 跳转到创建页面，并带上导入数据（用 query param 编码）
+      const encoded = encodeURIComponent(JSON.stringify(data));
+      router.push(`/efficiency-v2/new?import=${encoded}`);
+    } catch (e: any) {
+      setImportError(`解析失败：${e.message || '格式错误，请检查 AI 返回的 JSON'}`);
+      setImporting(false);
+    }
+  }, [importText, router]);
+
+  // ── 删除目标 ──
+  const handleDeleteGoal = useCallback(async (goalId: string, title: string) => {
+    if (!window.confirm(`确定删除目标「${title}」？所有相关数据将被永久删除。`)) return;
+    await deleteGoalV2(goalId);
+    showToast({ type: "success", message: `已删除「${title}」` });
+  }, []);
 
   // ─── 空状态 ──────────────────────────────────────────
   if (goalList.length === 0) {
@@ -149,6 +196,26 @@ export default function EfficiencyV2Page() {
         >
           目标 V2
         </h1>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleCopyPrompt}
+            className="flex items-center gap-1 px-3 h-8 rounded-lg text-[12px] font-medium"
+            style={{ background: "var(--lifeflow-brand-50)", color: "var(--lifeflow-primary)" }}
+          >
+            <Copy className="w-3.5 h-3.5" />
+            复制提示词
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowImportDialog(true)}
+            className="flex items-center gap-1 px-3 h-8 rounded-lg text-[12px] font-medium"
+            style={{ background: "var(--lifeflow-primary)", color: "#fff" }}
+          >
+            <Download className="w-3.5 h-3.5" />
+            导入
+          </button>
+        </div>
       </div>
 
       {/* ===== Goal Grid ===== */}
@@ -166,7 +233,7 @@ export default function EfficiencyV2Page() {
                 duration: 0.35,
                 ease: "easeOut",
               }}
-              className="rounded-[20px] overflow-hidden flex flex-col cursor-pointer active:scale-[0.97] transition-transform"
+              className="rounded-[20px] overflow-hidden flex flex-col cursor-pointer active:scale-[0.97] transition-transform relative group"
               style={{
                 backgroundColor: "var(--color-surface-card)",
                 border: "1px solid var(--lifeflow-border)",
@@ -179,6 +246,20 @@ export default function EfficiencyV2Page() {
                 className="h-[4px] shrink-0"
                 style={{ backgroundColor: goal.color || "var(--lifeflow-primary)" }}
               />
+
+              {/* 删除按钮 */}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDeleteGoal(goal.id, goal.title);
+                }}
+                className="absolute top-2 right-2 w-7 h-7 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                style={{ background: "rgba(0,0,0,0.5)" }}
+                aria-label="删除目标"
+              >
+                <Trash2 className="w-3.5 h-3.5 text-white" />
+              </button>
 
               {/* 卡片内容 */}
               <div className="flex flex-col gap-2.5 p-3.5 flex-1">
@@ -231,7 +312,7 @@ export default function EfficiencyV2Page() {
       <button
         type="button"
         onClick={() => router.push("/efficiency-v2/new")}
-        className="fixed right-4 bottom-[100px] z-40 flex items-center justify-center"
+        className="fixed right-4 bottom-[180px] z-40 flex items-center justify-center"
         style={{
           width: 56,
           height: 56,
@@ -242,6 +323,63 @@ export default function EfficiencyV2Page() {
       >
         <Plus className="w-6 h-6 text-white" strokeWidth={2} />
       </button>
+
+      {/* ===== 导入对话框 ===== */}
+      {showImportDialog && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-6"
+          style={{ background: "rgba(0,0,0,0.5)" }}
+          onClick={() => setShowImportDialog(false)}
+        >
+          <div
+            className="w-full rounded-[20px] p-5 flex flex-col"
+            style={{ maxWidth: 400, background: "var(--color-surface-card)", maxHeight: "80vh" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-[17px] font-semibold mb-1" style={{ color: "var(--color-text-primary)" }}>
+              导入 AI 计划
+            </h3>
+            <p className="text-[12px] mb-3" style={{ color: "var(--color-text-secondary)" }}>
+              粘贴 AI 返回的 JSON 内容，一键创建目标
+            </p>
+            <textarea
+              value={importText}
+              onChange={(e) => { setImportText(e.target.value); setImportError(""); }}
+              placeholder="请粘贴 AI 返回的 JSON 内容..."
+              className="w-full rounded-[10px] p-3 text-[13px] outline-none resize-none"
+              style={{
+                color: "var(--color-text-primary)",
+                background: "var(--lifeflow-muted)",
+                border: importError ? "1px solid #FF3B30" : "1px solid var(--lifeflow-border)",
+                minHeight: 200,
+                fontFamily: "monospace",
+              }}
+            />
+            {importError && (
+              <p className="text-[12px] mt-1.5" style={{ color: "#FF3B30" }}>{importError}</p>
+            )}
+            <div className="flex gap-2 mt-3">
+              <button
+                type="button"
+                onClick={() => setShowImportDialog(false)}
+                className="flex-1 h-10 rounded-[10px] text-[14px] font-medium"
+                style={{ background: "var(--lifeflow-muted)", color: "var(--color-text-secondary)" }}
+              >
+                取消
+              </button>
+              <button
+                type="button"
+                onClick={handleImport}
+                disabled={!importText.trim() || importing}
+                className="flex-1 h-10 rounded-[10px] text-[14px] font-semibold text-white disabled:opacity-40"
+                style={{ background: "var(--lifeflow-primary)" }}
+              >
+                {importing ? "解析中..." : "导入并创建"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

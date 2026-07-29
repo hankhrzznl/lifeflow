@@ -1,13 +1,14 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useCallback, useMemo, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { Check, ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
 import { addGoalV2, addKeyResultV2, addStrategyV2, addWeeklyTaskV2, addDailyActionV2, getWeeklyTasksByGoalV2 } from "@/lib/db/goal-v2.db";
 import type { StrategyCycleType, WeeklyCycleConfig, DailyCycleConfig, DailyCycleItem } from "@/lib/db/goal-v2.db";
 import { STRATEGY_TEMPLATES, recalculateGoalProgress, getWeekStart, todayStr, ensureDailyActionsForDate, getDailyActionsForDate } from "@/lib/goal-v2-engine";
 import type { StrategyTemplate } from "@/lib/goal-v2-engine";
+import type { ImportedGoal } from "@/lib/goal-v2-import-parser";
 
 // ============================================================
 // 常量与类型
@@ -167,6 +168,7 @@ function StepIndicator({ current }: { current: number }) {
 
 export default function NewGoalV2Page() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
 
@@ -189,6 +191,108 @@ export default function NewGoalV2Page() {
 
   // Step 5 — 每日行动
   const [dailyActions, setDailyActions] = useState<DailyActionFormItem[]>([]);
+
+  // ============================================================
+  // 从 URL 参数读取导入数据
+  // ============================================================
+  useEffect(() => {
+    const importData = searchParams.get('import');
+    if (!importData) return;
+    try {
+      const data: ImportedGoal = JSON.parse(decodeURIComponent(importData));
+      if (!data || !data.title) return;
+
+      // 填充 Step 1
+      setTitle(data.title);
+      setVision(data.vision || '');
+      if (data.color) setColor(data.color);
+
+      // 填充 Step 2 — 关键结果
+      if (data.keyResults.length > 0) {
+        setKeyResults(data.keyResults.map(kr => ({
+          tempId: genId(),
+          description: kr.description,
+          targetValue: kr.targetValue,
+          unit: kr.unit || '次',
+          deadline: kr.deadline || defaultDeadline(),
+        })));
+      }
+
+      // 填充 Step 3 — 策略
+      if (data.strategies.length > 0) {
+        setSelectedTemplate('custom');
+        const today = todayStr();
+        const items: StrategyFormItem[] = data.strategies.map(s => {
+          if (s.cycleType === 'daily') {
+            const daItems = s.dailyActions.length > 0
+              ? s.dailyActions.map(a => ({ title: a.title, time: a.time, duration: a.duration }))
+              : [{ title: s.name, time: '08:00', duration: 30 }];
+            return {
+              tempId: genId(),
+              name: s.name,
+              description: s.description || '',
+              startDate: s.startDate || today,
+              endDate: s.endDate || defaultStrategyEnd(),
+              cycleType: 'daily' as StrategyCycleType,
+              dailyActions: daItems,
+              weeklyPattern: defaultWeeklyPattern(),
+            };
+          }
+          // weekly
+          const wp = defaultWeeklyPattern();
+          if (s.weeklyPattern) {
+            for (const [dow, day] of Object.entries(s.weeklyPattern)) {
+              wp[Number(dow)] = day;
+            }
+          }
+          return {
+            tempId: genId(),
+            name: s.name,
+            description: s.description || '',
+            startDate: s.startDate || today,
+            endDate: s.endDate || defaultStrategyEnd(),
+            cycleType: 'weekly' as StrategyCycleType,
+            dailyActions: s.dailyActions.length > 0
+              ? s.dailyActions.map(a => ({ title: a.title, time: a.time, duration: a.duration }))
+              : [defaultDailyAction()],
+            weeklyPattern: wp,
+          };
+        });
+        setStrategies(items);
+
+        // 填充 Step 4 — 周任务
+        const tasks: WeeklyTaskFormItem[] = [];
+        for (const s of data.strategies) {
+          const strategyItem = items.find(item => item.name === s.name);
+          if (!strategyItem) continue;
+          for (const wt of (s.weeklyTasks || [])) {
+            tasks.push({
+              tempId: genId(),
+              strategyId: strategyItem.tempId,
+              title: wt.title,
+              deliverable: wt.deliverable || '',
+              isCompleted: false,
+            });
+          }
+        }
+        // 确保每个策略至少有一条周任务
+        for (const item of items) {
+          if (!tasks.some(t => t.strategyId === item.tempId)) {
+            tasks.push({
+              tempId: genId(),
+              strategyId: item.tempId,
+              title: `${item.name} - 本周任务`,
+              deliverable: '',
+              isCompleted: false,
+            });
+          }
+        }
+        setWeeklyTasks(tasks);
+      }
+    } catch {
+      // 解析失败，静默忽略
+    }
+  }, [searchParams]);
 
   // ============================================================
   // 模板策略名称映射

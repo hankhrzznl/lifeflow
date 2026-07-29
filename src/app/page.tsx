@@ -271,6 +271,7 @@ export default function HomePage() {
   const [showWaterSheet, setShowWaterSheet] = useState(false);
   const [waterSettings, setWaterSettings] = useState({ wakeStart: "07:00", wakeEnd: "22:00", dailyTarget: 2000 });
   const [waterActive, setWaterActive] = useState(false);
+  const [waterReminderEnabled, setWaterReminderEnabled] = useState(true);
 
   // 独立的饮水数据查询（与饮水页面口径一致）
   const todayWaterItems = useLiveQuery(
@@ -288,6 +289,7 @@ export default function HomePage() {
         wakeEnd: g.wakeEnd || "22:00",
         dailyTarget: g.dailyTarget || 2000,
       });
+      setWaterReminderEnabled((g.reminderInterval ?? 0) > 0);
     }).catch(() => {});
     daylogDB.items.where("date").equals(today).filter(i => i.sourceType === "water").count().then(c => {
       setWaterActive(c > 0);
@@ -454,10 +456,16 @@ export default function HomePage() {
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, ease: "easeOut" }}
-          onClick={() => setShowWaterSheet(true)}
+          onClick={() => {
+            if (waterReminderEnabled) {
+              setShowWaterSheet(true);
+            } else {
+              router.push("/settings");
+            }
+          }}
           className="w-full rounded-[16px] p-3.5 flex items-center gap-3 active:opacity-70"
           style={{
-            background: waterActive
+            background: waterActive && waterReminderEnabled
               ? "var(--lifeflow-brand-50)"
               : "var(--color-surface-card)",
             boxShadow: "var(--shadow-card)",
@@ -466,21 +474,23 @@ export default function HomePage() {
           <div
             className="w-10 h-10 rounded-xl flex items-center justify-center"
             style={{
-              background: waterActive
+              background: waterActive && waterReminderEnabled
                 ? "var(--lifeflow-primary)"
                 : "var(--lifeflow-muted)",
             }}
           >
-            <Droplets className="w-5 h-5" style={{ color: waterActive ? "#FFF" : "var(--lifeflow-primary)" }} />
+            <Droplets className="w-5 h-5" style={{ color: (waterActive && waterReminderEnabled) ? "#FFF" : "var(--lifeflow-primary)" }} />
           </div>
           <div className="flex-1 text-left">
             <p className="text-[15px] font-semibold" style={{ color: "var(--color-text-primary)" }}>
               饮水提醒
             </p>
             <p className="text-[12px] mt-0.5" style={{ color: "var(--color-text-secondary)" }}>
-              {waterActive
-                ? `已开启 · ${waterCompleted}/${waterTotal} 杯`
-                : "点击开启喝水提醒"}
+              {waterReminderEnabled
+                ? (waterActive
+                  ? `已开启 · ${waterCompleted}/${waterTotal} 杯`
+                  : "点击开启喝水提醒")
+                : "开启或关闭饮水提醒请前往设置"}
             </p>
           </div>
         </motion.button>

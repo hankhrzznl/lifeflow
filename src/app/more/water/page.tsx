@@ -232,6 +232,9 @@ export default function WaterPage() {
         }
       }
 
+      // 同步开关状态
+      await updateWaterGoal({ reminderInterval: 60 }).catch(() => {});
+
       showToast({ type: "success", message: `饮水提醒已生成，每日 ${slots.length} 次` });
     } catch {
       showToast({ type: "error", message: "生成失败，请重试" });

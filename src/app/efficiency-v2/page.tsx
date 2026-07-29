@@ -247,15 +247,15 @@ export default function EfficiencyV2Page() {
                 style={{ backgroundColor: goal.color || "var(--lifeflow-primary)" }}
               />
 
-              {/* 删除按钮 */}
+              {/* 删除按钮 — 始终可见 */}
               <button
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
                   handleDeleteGoal(goal.id, goal.title);
                 }}
-                className="absolute top-2 right-2 w-7 h-7 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                style={{ background: "rgba(0,0,0,0.5)" }}
+                className="absolute top-2 right-2 w-7 h-7 rounded-full flex items-center justify-center z-10 active:scale-90 transition-transform"
+                style={{ background: "rgba(0,0,0,0.3)" }}
                 aria-label="删除目标"
               >
                 <Trash2 className="w-3.5 h-3.5 text-white" />

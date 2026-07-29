@@ -9,6 +9,7 @@ import type { Item } from "@/lib/db/daylog.db";
 import { db } from "@/lib/db";
 import { requestPermission } from "@/lib/notificationService";
 import { showToast } from "@/components/ui/Toast";
+import { updateWaterGoal } from "@/lib/db/health.db";
 
 /* ────────── Types ────────── */
 
@@ -181,6 +182,9 @@ export default function WaterReminderSheet({
           }
         }
       }
+
+      // 同步开关状态
+      await updateWaterGoal({ reminderInterval: 60 }).catch(() => {});
 
       showToast({ type: "success", message: `已开启饮水提醒，今日 ${enabledCount} 次` });
       onStatusChange?.(true);

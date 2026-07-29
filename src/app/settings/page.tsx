@@ -1,12 +1,13 @@
 "use client";
 
 import { useRef, useState, useEffect, useCallback } from "react";
-import { Moon, Download, Trash2, Info, MessageSquare, ChevronRight, Droplets } from "lucide-react";
+import { Moon, Download, Trash2, Info, MessageSquare, ChevronRight, Droplets, Target } from "lucide-react";
 import { useTheme } from "@/components/theme/ThemeProvider";
 import Dialog from "@/components/ui/Dialog";
 import { showToast } from "@/components/ui/Toast";
 import { dataExportService } from "@/lib/engine/DataExportService";
 import { getWaterGoal, updateWaterGoal } from "@/lib/db/health.db";
+import { goalV2DB } from "@/lib/db/goal-v2.db";
 
 // ─── iOS Toggle Switch ────────────────────────────────────────
 function ToggleSwitch({
@@ -35,6 +36,8 @@ export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
   const isDark = theme === "dark";
   const [showClearDialog, setShowClearDialog] = useState(false);
+  const [showResetGoalsDialog, setShowResetGoalsDialog] = useState(false);
+  const [resettingGoals, setResettingGoals] = useState(false);
   const [importing, setImporting] = useState(false);
   const [waterReminderEnabled, setWaterReminderEnabled] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -61,6 +64,23 @@ export default function SettingsPage() {
       showToast({ type: "error", message: "设置失败，请重试" });
     }
   }, [waterReminderEnabled]);
+
+  const handleResetGoals = useCallback(async () => {
+    setResettingGoals(true);
+    try {
+      await goalV2DB.goalV2Goals.clear();
+      await goalV2DB.goalV2KeyResults.clear();
+      await goalV2DB.goalV2Strategies.clear();
+      await goalV2DB.goalV2WeeklyTasks.clear();
+      await goalV2DB.goalV2DailyActions.clear();
+      setShowResetGoalsDialog(false);
+      showToast({ type: "success", message: "所有目标数据已重置" });
+    } catch {
+      showToast({ type: "error", message: "重置失败，请重试" });
+    } finally {
+      setResettingGoals(false);
+    }
+  }, []);
 
   const handleExport = async () => {
     try {
@@ -143,6 +163,14 @@ export default function SettingsPage() {
             </div>
             <ChevronRight className="w-5 h-5 shrink-0" style={{ color: "var(--color-text-disabled)" }} />
           </button>
+          <div className="h-px" style={{ background: "var(--lifeflow-border)", marginLeft: "52px" }} />
+          <button type="button" onClick={() => setShowResetGoalsDialog(true)} className="flex items-center justify-between w-full px-5 py-3.5 active:opacity-50">
+            <div className="flex items-center gap-3 min-w-0">
+              <Target className="w-5 h-5 shrink-0" style={{ color: "var(--color-text-primary)" }} />
+              <span className="text-[17px] truncate" style={{ color: "var(--color-text-primary)" }}>重置目标数据</span>
+            </div>
+            <ChevronRight className="w-5 h-5 shrink-0" style={{ color: "var(--color-text-disabled)" }} />
+          </button>
         </div>
       </div>
 
@@ -198,6 +226,18 @@ export default function SettingsPage() {
             showToast({ type: "error", message: "清除失败" });
           }
         }}
+      />
+
+      {/* 重置目标数据确认弹窗 */}
+      <Dialog
+        open={showResetGoalsDialog}
+        onClose={() => setShowResetGoalsDialog(false)}
+        type="confirm"
+        variant="danger"
+        title="重置所有目标数据"
+        description="将删除所有目标及其关联的策略、周任务、日行动数据，此操作无法恢复。"
+        confirmLabel={resettingGoals ? "重置中..." : "确认重置"}
+        onConfirm={handleResetGoals}
       />
     </div>
   );

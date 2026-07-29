@@ -177,11 +177,13 @@ LifeFlow v1.0，一个讲道理的生活助手。
 - 饮水页面（`/more/water`）设置卡片底部新增「生成饮水提醒」按钮，点击后：
   - 清理未来 7 天的旧饮水数据
   - 根据当前 `wakeStart/wakeEnd` 重新生成时段（每个整点过 30 分钟，入睡前 2 小时截止）
+- `WaterReminderSheet.handleConfirm` 和饮水页面「生成饮水提醒」按钮执行成功后均会同步写入 `reminderInterval: 60`，确保开关状态与实际数据一致
 
-### 目标删除（v2.2+）
+### 目标删除 / 重置（v2.2+）
 
-- 目标列表页每张卡片右上角有删除按钮（悬停显示），确认后级联删除目标及相关所有数据
+- 目标列表页每张卡片右上角有删除按钮（始终可见，移除 hover 触发），确认后级联删除目标及相关所有数据
 - 目标详情页顶部已有删除按钮（`Trash2` 图标）
+- 设置页（`/settings`）「数据」区域新增「重置目标数据」按钮，确认后清空全部 5 张 GoalV2 表（goals/keyResults/strategies/weeklyTasks/dailyActions）
 
 ### UI 布局（v2.2+）
 

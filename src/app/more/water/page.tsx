@@ -518,7 +518,7 @@ export default function WaterPage() {
               </p>
             </div>
           ) : (
-            <div className="flex flex-col max-h-[400px] overflow-y-auto">
+            <div className="flex flex-col max-h-[600px] overflow-y-auto">
               {historyByDay.map((day) => {
                 const isExpanded = expandedDate === day.date;
                 return (
@@ -560,7 +560,6 @@ export default function WaterPage() {
                         animate={{ height: "auto", opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
                         transition={{ duration: 0.2, ease: "easeInOut" }}
-                        className="overflow-hidden"
                       >
                         <div className="flex flex-col gap-1 pb-2 pl-3">
                           {day.items.length === 0 ? (

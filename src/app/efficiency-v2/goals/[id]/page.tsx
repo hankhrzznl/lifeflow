@@ -537,6 +537,41 @@ export default function GoalDetailV2Page() {
                           {strategy.description}
                         </p>
                       )}
+                      {/* 阶段信息 */}
+                      <div className="flex items-center gap-2 ml-4 mt-1">
+                        {strategy.startDate && strategy.endDate && (
+                          <span className="text-[11px]" style={{ color: "var(--color-text-disabled)" }}>
+                            {strategy.startDate.slice(5)} ~ {strategy.endDate.slice(5)}
+                          </span>
+                        )}
+                        <span className="text-[11px] px-1.5 py-0.5 rounded-full" style={{
+                          backgroundColor: `${strategy.cycleType === 'weekly' ? '#6366F1' : '#10B981'}15`,
+                          color: strategy.cycleType === 'weekly' ? '#6366F1' : '#10B981',
+                        }}>
+                          {strategy.cycleType === 'weekly' ? '周循环' : '每日固定'}
+                        </span>
+                        {strategy.startDate && strategy.startDate <= today && (!strategy.endDate || strategy.endDate >= today) && (
+                          <span className="text-[11px] px-1.5 py-0.5 rounded-full" style={{
+                            backgroundColor: 'rgba(52,199,89,0.12)', color: '#34C759'
+                          }}>
+                            活跃中
+                          </span>
+                        )}
+                        {strategy.endDate && strategy.endDate < today && (
+                          <span className="text-[11px] px-1.5 py-0.5 rounded-full" style={{
+                            backgroundColor: 'rgba(142,142,147,0.15)', color: '#8E8E93'
+                          }}>
+                            已结束
+                          </span>
+                        )}
+                        {strategy.startDate && strategy.startDate > today && (
+                          <span className="text-[11px] px-1.5 py-0.5 rounded-full" style={{
+                            backgroundColor: 'rgba(255,149,0,0.12)', color: '#FF9500'
+                          }}>
+                            待开始
+                          </span>
+                        )}
+                      </div>
                     </button>
                     <button
                       type="button"

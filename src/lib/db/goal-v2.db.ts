@@ -31,12 +31,39 @@ export interface KeyResultV2 {
 
 // ── 第三层：策略（Strategy） ──
 
+/** 每日循环配置 */
+export interface DailyCycleConfig {
+  title: string;
+  time: string;
+  duration: number;
+}
+
+/** 每周循环配置 — dayOfWeek 0=周日 1=周一 ... 6=周六 */
+export interface WeeklyDayConfig {
+  title: string;
+  time: string;
+  duration: number;
+  enabled: boolean;
+}
+export type WeeklyCycleConfig = Record<number, WeeklyDayConfig>;
+
+/** 策略周期类型 */
+export type StrategyCycleType = 'daily' | 'weekly';
+
 export interface StrategyV2 {
   id: string;
   goalId: string;
   name: string;           // "饮食控制"
   description: string;    // "通过控制热量摄入..."
   sortOrder: number;
+  /** 策略开始日期（YYYY-MM-DD），不填则创建时立即生效 */
+  startDate?: string;
+  /** 策略结束日期（YYYY-MM-DD），不填则无期限 */
+  endDate?: string;
+  /** 周期类型：daily=每日固定行动, weekly=按周循环 */
+  cycleType: StrategyCycleType;
+  /** 周期配置 JSON */
+  cycleConfig?: string;
 }
 
 // ── 第四层：周任务（WeeklyTask） ──
@@ -81,7 +108,7 @@ class GoalV2DB extends Dexie {
 
   constructor() {
     super('LifeFlowGoalV2');
-    this.version(1).stores({
+    this.version(2).stores({
       goalV2Goals: 'id, status, createdAt',
       goalV2KeyResults: 'id, goalId, sortOrder',
       goalV2Strategies: 'id, goalId, sortOrder',

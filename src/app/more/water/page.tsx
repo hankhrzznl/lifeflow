@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo, useCallback, Fragment } from "react";
 import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { motion } from "framer-motion";
@@ -115,6 +115,9 @@ export default function WaterPage() {
         totalMl: items.filter(i => i.isCompleted).length * 100,
       }));
   }, [historyItems]);
+
+  /* ─── 展开的历史日期 ─── */
+  const [expandedDate, setExpandedDate] = useState<string | null>(null);
 
   /* ─── Toggle item completion ─── */
 
@@ -408,34 +411,96 @@ export default function WaterPage() {
               </p>
             </div>
           ) : (
-            <div className="flex flex-col gap-1 max-h-[400px] overflow-y-auto">
-              {historyByDay.map((day) => (
-                <div
-                  key={day.date}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
-                  style={{ background: day.date === today ? "var(--lifeflow-brand-50)" : "transparent" }}
-                >
-                  <span className="text-[13px] font-medium min-w-[72px]" style={{ color: "var(--color-text-primary)" }}>
-                    {formatDate(day.date)}
-                  </span>
-                  <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: "var(--lifeflow-muted)" }}>
+            <div className="flex flex-col max-h-[400px] overflow-y-auto">
+              {historyByDay.map((day) => {
+                const isExpanded = expandedDate === day.date;
+                return (
+                  <Fragment key={day.date}>
+                    {/* 汇总行 */}
                     <div
-                      className="h-full rounded-full transition-all"
-                      style={{
-                        width: `${Math.min(100, (day.completed / (day.total || 1)) * 100)}%`,
-                        background: day.completed >= day.total ? "var(--lifeflow-primary)" : "var(--lifeflow-primary)",
-                        opacity: day.completed === 0 ? 0.3 : 0.7,
-                      }}
-                    />
-                  </div>
-                  <span className="text-[12px] font-medium min-w-[70px] text-right" style={{ color: "var(--color-text-secondary)" }}>
-                    {day.completed}/{day.total} · {day.totalMl}ml
-                  </span>
-                  {day.date === today && (
-                    <ChevronRight className="w-3.5 h-3.5" style={{ color: "var(--color-text-disabled)" }} />
-                  )}
-                </div>
-              ))}
+                      className="flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer active:opacity-70"
+                      style={{ background: day.date === today ? "var(--lifeflow-brand-50)" : "transparent" }}
+                      onClick={() => setExpandedDate(isExpanded ? null : day.date)}
+                    >
+                      <span className="text-[13px] font-medium min-w-[72px]" style={{ color: "var(--color-text-primary)" }}>
+                        {formatDate(day.date)}
+                      </span>
+                      <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: "var(--lifeflow-muted)" }}>
+                        <div
+                          className="h-full rounded-full transition-all"
+                          style={{
+                            width: `${Math.min(100, (day.completed / (day.total || 1)) * 100)}%`,
+                            background: "var(--lifeflow-primary)",
+                            opacity: day.completed === 0 ? 0.3 : 0.7,
+                          }}
+                        />
+                      </div>
+                      <span className="text-[12px] font-medium min-w-[70px] text-right" style={{ color: "var(--color-text-secondary)" }}>
+                        {day.completed}/{day.total} · {day.totalMl}ml
+                      </span>
+                      <motion.div
+                        animate={{ rotate: isExpanded ? 90 : 0 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <ChevronRight className="w-3.5 h-3.5" style={{ color: "var(--color-text-disabled)" }} />
+                      </motion.div>
+                    </div>
+
+                    {/* 展开详情 */}
+                    {isExpanded && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2, ease: "easeInOut" }}
+                        className="overflow-hidden"
+                      >
+                        <div className="flex flex-col gap-1 pb-2 pl-3">
+                          {day.items.length === 0 ? (
+                            <p className="text-[12px] py-2" style={{ color: "var(--color-text-disabled)" }}>
+                              该日暂无饮水记录
+                            </p>
+                          ) : (
+                            day.items.map((item) => (
+                              <div
+                                key={item.id}
+                                className="flex items-center gap-2.5 py-2 px-3 rounded-xl"
+                                style={{ background: "var(--lifeflow-muted)" }}
+                              >
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggle(item.id!, item.isCompleted)}
+                                  className="w-[18px] h-[18px] rounded-full border-2 flex items-center justify-center shrink-0 active:scale-90 transition-transform"
+                                  style={{
+                                    borderColor: item.isCompleted ? "var(--lifeflow-primary)" : "var(--lifeflow-border)",
+                                    background: item.isCompleted ? "var(--lifeflow-primary)" : "transparent",
+                                  }}
+                                >
+                                  {item.isCompleted && (
+                                    <Check className="w-3 h-3 text-white" strokeWidth={3} />
+                                  )}
+                                </button>
+                                <span
+                                  className="text-[13px] flex-1"
+                                  style={{
+                                    color: item.isCompleted ? "var(--color-text-disabled)" : "var(--color-text-primary)",
+                                    textDecoration: item.isCompleted ? "line-through" : "none",
+                                  }}
+                                >
+                                  {item.title || "喝口水然后动一动不要久坐"}
+                                </span>
+                                <span className="text-[12px]" style={{ color: "var(--color-text-secondary)" }}>
+                                  {item.plannedStart}
+                                </span>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </motion.div>
+                    )}
+                  </Fragment>
+                );
+              })}
             </div>
           )}
         </motion.div>

@@ -1016,7 +1016,7 @@ export default function NewGoalV2Page() {
       </div>
 
       {/* ===== 步骤内容 ===== */}
-      <div className="max-w-[430px] mx-auto w-full flex-1 overflow-y-auto pb-24">
+      <div className="max-w-[430px] mx-auto w-full flex-1 overflow-y-auto">
         {step === 1 && renderStep1()}
         {step === 2 && renderStep2()}
         {step === 3 && renderStep3()}
@@ -1026,13 +1026,13 @@ export default function NewGoalV2Page() {
 
       {/* ===== 底部导航 ===== */}
       <div
-        className="fixed bottom-0 left-0 right-0"
+        className="max-w-[430px] mx-auto w-full shrink-0"
         style={{
           backgroundColor: "var(--color-surface-card)",
           borderTop: "1px solid var(--lifeflow-border)",
         }}
       >
-        <div className="max-w-[430px] mx-auto px-4 py-3 flex gap-3">
+        <div className="px-4 py-3 flex gap-3">
           {step > 1 && (
             <button
               type="button"

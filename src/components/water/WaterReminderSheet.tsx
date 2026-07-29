@@ -212,7 +212,7 @@ export default function WaterReminderSheet({
 
           {/* Sheet */}
           <motion.div
-            className="relative w-full rounded-t-[24px] overflow-hidden"
+            className="relative w-full rounded-t-[24px] flex flex-col"
             style={{
               background: "var(--color-surface-card)",
               maxHeight: "80vh",
@@ -223,13 +223,14 @@ export default function WaterReminderSheet({
             transition={{ type: "spring", damping: 30, stiffness: 300 }}
           >
             {/* Handle */}
-            <div className="flex justify-center pt-2 pb-1">
+            <div className="flex justify-center pt-2 pb-1 shrink-0">
               <div className="w-9 h-1 rounded-full" style={{ background: "var(--lifeflow-border)" }} />
             </div>
 
-            <div className="px-6 pb-8 overflow-y-auto max-h-[75vh]">
+            {/* Scrollable content area */}
+            <div className="flex-1 overflow-y-auto px-6 pb-3">
               {/* Header */}
-              <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center justify-between mb-4">
                 <h3 className="text-[17px] font-semibold" style={{ color: "var(--color-text-primary)" }}>
                   今日饮水提醒
                 </h3>
@@ -261,34 +262,11 @@ export default function WaterReminderSheet({
                   </div>
 
                   {/* Info rows */}
-                  <div className="rounded-xl p-4 mb-4" style={{ background: "var(--lifeflow-muted)" }}>
+                  <div className="rounded-xl p-4" style={{ background: "var(--lifeflow-muted)" }}>
                     <InfoRow label="每日目标" value={`${dailyTarget}ml`} />
                     <InfoRow label="提醒次数" value={`${enabledCount} 次`} />
                     <InfoRow label="总水量" value={`${totalWaterMl}ml`} />
                     <InfoRow label="每次饮水量" value="100ml" />
-                  </div>
-
-                  {/* Action buttons */}
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setStep("edit")}
-                      disabled={submitting}
-                      className="flex-1 h-11 rounded-xl text-[15px] font-medium disabled:opacity-50"
-                      style={{
-                        background: "var(--color-surface-secondary)",
-                        color: "var(--color-text-secondary)",
-                      }}
-                    >
-                      调整时段
-                    </button>
-                    <button
-                      onClick={handleConfirm}
-                      disabled={submitting}
-                      className="flex-1 h-11 rounded-xl text-[15px] font-semibold text-white disabled:opacity-50"
-                      style={{ background: "var(--lifeflow-primary)" }}
-                    >
-                      {submitting ? "生成中..." : "确认开启"}
-                    </button>
                   </div>
                 </div>
               )}
@@ -310,7 +288,7 @@ export default function WaterReminderSheet({
                     </button>
                   </div>
 
-                  <div className="flex flex-col gap-1.5 mb-4 max-h-[40vh] overflow-y-auto">
+                  <div className="flex flex-col gap-1.5">
                     {slots
                       .sort((a, b) => a.hour - b.hour)
                       .map((slot) => (
@@ -360,28 +338,56 @@ export default function WaterReminderSheet({
                         </div>
                       ))}
                   </div>
+                </div>
+              )}
+            </div>
 
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setStep("summary")}
-                      disabled={submitting}
-                      className="flex-1 h-11 rounded-xl text-[15px] font-medium disabled:opacity-50"
-                      style={{
-                        background: "var(--color-surface-secondary)",
-                        color: "var(--color-text-secondary)",
-                      }}
-                    >
-                      返回
-                    </button>
-                    <button
-                      onClick={handleConfirm}
-                      disabled={submitting}
-                      className="flex-1 h-11 rounded-xl text-[15px] font-semibold text-white disabled:opacity-50"
-                      style={{ background: "var(--lifeflow-primary)" }}
-                    >
-                      {submitting ? "生成中..." : "确认开启"}
-                    </button>
-                  </div>
+            {/* Fixed bottom button area */}
+            <div className="px-6 pb-6 pt-3 shrink-0" style={{ borderTop: "1px solid var(--lifeflow-border)" }}>
+              {step === "summary" && (
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setStep("edit")}
+                    disabled={submitting}
+                    className="flex-1 h-11 rounded-xl text-[15px] font-medium disabled:opacity-50"
+                    style={{
+                      background: "var(--color-surface-secondary)",
+                      color: "var(--color-text-secondary)",
+                    }}
+                  >
+                    调整时段
+                  </button>
+                  <button
+                    onClick={handleConfirm}
+                    disabled={submitting}
+                    className="flex-1 h-11 rounded-xl text-[15px] font-semibold text-white disabled:opacity-50"
+                    style={{ background: "var(--lifeflow-primary)" }}
+                  >
+                    {submitting ? "生成中..." : "确认开启"}
+                  </button>
+                </div>
+              )}
+              {step === "edit" && (
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setStep("summary")}
+                    disabled={submitting}
+                    className="flex-1 h-11 rounded-xl text-[15px] font-medium disabled:opacity-50"
+                    style={{
+                      background: "var(--color-surface-secondary)",
+                      color: "var(--color-text-secondary)",
+                    }}
+                  >
+                    返回
+                  </button>
+                  <button
+                    onClick={handleConfirm}
+                    disabled={submitting}
+                    className="flex-1 h-11 rounded-xl text-[15px] font-semibold text-white disabled:opacity-50"
+                    style={{ background: "var(--lifeflow-primary)" }}
+                  >
+                    {submitting ? "生成中..." : "确认开启"}
+                  </button>
                 </div>
               )}
             </div>

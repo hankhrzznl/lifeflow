@@ -111,3 +111,14 @@ LifeFlow v1.0，一个讲道理的生活助手。
 
 - 用户发出需求 → 先读取 LIFEFLOW_GUIDE.md → 引导式提问澄清模糊部分 → 整理成正式任务提示词 → **等待用户确认后才执行**
 - 禁止跳过确认环节直接动手
+
+### UI 布局原则（v1.1+）
+
+- Bottom Sheet / 弹出面板：操作按钮（确认/取消等）必须固定在底部，**放在滚动容器之外**，使用 `flex flex-col` + 独立的 `shrink-0` 按钮区域，确保始终可见
+- 多步向导页面：底部导航栏**禁止使用 `fixed` 定位**，应采用 `flex flex-col h-screen` + 内容区 `flex-1 overflow-y-auto` + 底部 `shrink-0` 的自然流布局，避免 z-index 层叠问题导致按钮被遮挡
+- 所有 `fixed` 定位的底部操作栏必须改为 flex 自然流布局，除非有特殊原因
+
+### 数据查询口径约定
+
+- 首页「饮水提醒」按钮展示的杯数使用独立的 `todayWaterItems` liveQuery（`daylogDB.items.where("date").equals(today).filter(i => i.sourceType === "water")`），与饮水页面数据口径一致
+- 首页「今日待办」统计的是所有类型事项（含饮水），不应等同于饮水杯数

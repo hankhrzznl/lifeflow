@@ -271,6 +271,16 @@ export default function HomePage() {
   const [showWaterSheet, setShowWaterSheet] = useState(false);
   const [waterSettings, setWaterSettings] = useState({ wakeStart: "07:00", wakeEnd: "22:00", dailyTarget: 2000 });
   const [waterActive, setWaterActive] = useState(false);
+
+  // 独立的饮水数据查询（与饮水页面口径一致）
+  const todayWaterItems = useLiveQuery(
+    () => daylogDB.items.where("date").equals(today).filter(i => i.sourceType === "water").toArray(),
+    [today],
+    [],
+  );
+  const waterCompleted = useMemo(() => todayWaterItems.filter(i => i.isCompleted).length, [todayWaterItems]);
+  const waterTotal = todayWaterItems.length;
+
   useEffect(() => {
     getWaterGoal().then(g => {
       setWaterSettings({
@@ -279,7 +289,6 @@ export default function HomePage() {
         dailyTarget: g.dailyTarget || 2000,
       });
     }).catch(() => {});
-    // Check if water items exist for today
     daylogDB.items.where("date").equals(today).filter(i => i.sourceType === "water").count().then(c => {
       setWaterActive(c > 0);
     }).catch(() => {});
@@ -470,7 +479,7 @@ export default function HomePage() {
             </p>
             <p className="text-[12px] mt-0.5" style={{ color: "var(--color-text-secondary)" }}>
               {waterActive
-                ? "已开启 · 今日可手动勾选完成"
+                ? `已开启 · ${waterCompleted}/${waterTotal} 杯`
                 : "点击开启喝水提醒"}
             </p>
           </div>

@@ -124,6 +124,14 @@ LifeFlow v1.0，一个讲道理的生活助手。
 
 - 首页「饮水提醒」按钮展示的杯数使用独立的 `todayWaterItems` liveQuery（`daylogDB.items.where("date").equals(today).filter(i => i.sourceType === "water")`），与饮水页面数据口径一致
 - 首页「今日待办」统计的是所有类型事项（含饮水），不应等同于饮水杯数
+- 首页「今日待办」勾选事项必须加 try/catch 兜底，写入失败时 `showToast` 提示用户
+- 首页「今日待办」勾选需做乐观更新（乐观更新 Set），确保即时视觉反馈
+- 饮水页面历史记录列表展开后，同一天的 items 必须按 `plannedStart` 升序排列
+
+### 目标 V2 空状态（v2.2+）
+
+- 当 `goalList.length === 0` 时，空状态卡片内除了「新建目标」按钮，还需包含「复制提示词」和「导入计划」两个按钮
+- 「导入对话框」抽为独立组件 `ImportDialog`，空状态和有状态共用同一组件实例
 
 ### 策略阶段系统（GoalV2 v2.1+）
 

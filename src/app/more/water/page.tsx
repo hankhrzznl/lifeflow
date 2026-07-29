@@ -112,7 +112,7 @@ export default function WaterPage() {
       .sort(([a], [b]) => b.localeCompare(a))
       .map(([date, items]) => ({
         date,
-        items,
+        items: items.sort((a, b) => a.plannedStart.localeCompare(b.plannedStart)),
         completed: items.filter(i => i.isCompleted).length,
         total: items.length,
         totalMl: items.filter(i => i.isCompleted).length * 100,

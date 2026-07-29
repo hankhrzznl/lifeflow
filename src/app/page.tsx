@@ -239,9 +239,23 @@ export default function HomePage() {
     });
   }, [displayUpcoming]);
 
-  // ── 勾选切换 ──
+  // ── 勾选切换（乐观更新 + 错误回退） ──
+  const [optimisticCompleted, setOptimisticCompleted] = useState<Set<string>>(new Set());
   const handleToggle = useCallback(async (item: Item) => {
-    await updateItem(item.id, { isCompleted: !item.isCompleted });
+    if (!item.id) {
+      showToast({ type: "error", message: "操作失败：无效的事项 ID" });
+      return;
+    }
+    const newState = !item.isCompleted;
+    // 乐观更新：立即标记为已操作
+    setOptimisticCompleted(prev => { const next = new Set(prev); next.add(item.id!); return next; });
+    try {
+      await updateItem(item.id, { isCompleted: newState });
+    } catch {
+      // 写入失败，清除乐观标记
+      setOptimisticCompleted(prev => { const next = new Set(prev); next.delete(item.id!); return next; });
+      showToast({ type: "error", message: "操作失败，请重试" });
+    }
   }, []);
 
   // ── 创建弹窗 ──
@@ -782,7 +796,7 @@ export default function HomePage() {
             </motion.div>
           )}
           {sortedItems.map((item, i) => {
-            const isDone = item.isCompleted;
+            const isDone = item.isCompleted || optimisticCompleted.has(item.id!);
             return (
               <motion.div
                 key={item.id}

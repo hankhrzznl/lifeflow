@@ -163,19 +163,51 @@ export default function EfficiencyV2Page() {
           >
             还没有目标，开始创建你的第一个目标吧
           </p>
-          <button
-            type="button"
-            onClick={() => router.push("/efficiency-v2/new")}
-            className="inline-flex items-center justify-center h-11 px-7 rounded-full text-[16px] font-semibold"
-            style={{
-              backgroundColor: "var(--lifeflow-primary)",
-              color: "var(--color-text-inverse)",
-              boxShadow: "var(--shadow-tab-center)",
-            }}
-          >
-            新建目标
-          </button>
+          <div className="flex flex-col gap-2.5 w-full">
+            <button
+              type="button"
+              onClick={() => router.push("/efficiency-v2/new")}
+              className="inline-flex items-center justify-center h-11 px-7 rounded-full text-[16px] font-semibold"
+              style={{
+                backgroundColor: "var(--lifeflow-primary)",
+                color: "var(--color-text-inverse)",
+                boxShadow: "var(--shadow-tab-center)",
+              }}
+            >
+              新建目标
+            </button>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={handleCopyPrompt}
+                className="flex-1 h-10 rounded-lg text-[13px] font-medium"
+                style={{ background: "var(--lifeflow-brand-50)", color: "var(--lifeflow-primary)" }}
+              >
+                复制提示词
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowImportDialog(true)}
+                className="flex-1 h-10 rounded-lg text-[13px] font-semibold text-white"
+                style={{ background: "var(--lifeflow-primary)" }}
+              >
+                导入计划
+              </button>
+            </div>
+          </div>
         </motion.div>
+
+        {/* 空状态也需要导入对话框 */}
+        <ImportDialog
+          open={showImportDialog}
+          importText={importText}
+          setImportText={setImportText}
+          importError={importError}
+          setImportError={setImportError}
+          importing={importing}
+          onClose={() => setShowImportDialog(false)}
+          onImport={handleImport}
+        />
       </div>
     );
   }
@@ -325,61 +357,87 @@ export default function EfficiencyV2Page() {
       </button>
 
       {/* ===== 导入对话框 ===== */}
-      {showImportDialog && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-6"
-          style={{ background: "rgba(0,0,0,0.5)" }}
-          onClick={() => setShowImportDialog(false)}
-        >
-          <div
-            className="w-full rounded-[20px] p-5 flex flex-col"
-            style={{ maxWidth: 400, background: "var(--color-surface-card)", maxHeight: "80vh" }}
-            onClick={(e) => e.stopPropagation()}
+      <ImportDialog
+        open={showImportDialog}
+        importText={importText}
+        setImportText={setImportText}
+        importError={importError}
+        setImportError={setImportError}
+        importing={importing}
+        onClose={() => setShowImportDialog(false)}
+        onImport={handleImport}
+      />
+    </div>
+  );
+}
+
+// ─── 导入对话框组件 ──────────────────────────────────────────
+function ImportDialog({
+  open, importText, setImportText, importError, setImportError, importing, onClose, onImport,
+}: {
+  open: boolean;
+  importText: string;
+  setImportText: (v: string) => void;
+  importError: string;
+  setImportError: (v: string) => void;
+  importing: boolean;
+  onClose: () => void;
+  onImport: () => void;
+}) {
+  if (!open) return null;
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-6"
+      style={{ background: "rgba(0,0,0,0.5)" }}
+      onClick={onClose}
+    >
+      <div
+        className="w-full rounded-[20px] p-5 flex flex-col"
+        style={{ maxWidth: 400, background: "var(--color-surface-card)", maxHeight: "80vh" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 className="text-[17px] font-semibold mb-1" style={{ color: "var(--color-text-primary)" }}>
+          导入 AI 计划
+        </h3>
+        <p className="text-[12px] mb-3" style={{ color: "var(--color-text-secondary)" }}>
+          粘贴 AI 返回的 JSON 内容，一键创建目标
+        </p>
+        <textarea
+          value={importText}
+          onChange={(e) => { setImportText(e.target.value); setImportError(""); }}
+          placeholder="请粘贴 AI 返回的 JSON 内容..."
+          className="w-full rounded-[10px] p-3 text-[13px] outline-none resize-none"
+          style={{
+            color: "var(--color-text-primary)",
+            background: "var(--lifeflow-muted)",
+            border: importError ? "1px solid #FF3B30" : "1px solid var(--lifeflow-border)",
+            minHeight: 200,
+            fontFamily: "monospace",
+          }}
+        />
+        {importError && (
+          <p className="text-[12px] mt-1.5" style={{ color: "#FF3B30" }}>{importError}</p>
+        )}
+        <div className="flex gap-2 mt-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 h-10 rounded-[10px] text-[14px] font-medium"
+            style={{ background: "var(--lifeflow-muted)", color: "var(--color-text-secondary)" }}
           >
-            <h3 className="text-[17px] font-semibold mb-1" style={{ color: "var(--color-text-primary)" }}>
-              导入 AI 计划
-            </h3>
-            <p className="text-[12px] mb-3" style={{ color: "var(--color-text-secondary)" }}>
-              粘贴 AI 返回的 JSON 内容，一键创建目标
-            </p>
-            <textarea
-              value={importText}
-              onChange={(e) => { setImportText(e.target.value); setImportError(""); }}
-              placeholder="请粘贴 AI 返回的 JSON 内容..."
-              className="w-full rounded-[10px] p-3 text-[13px] outline-none resize-none"
-              style={{
-                color: "var(--color-text-primary)",
-                background: "var(--lifeflow-muted)",
-                border: importError ? "1px solid #FF3B30" : "1px solid var(--lifeflow-border)",
-                minHeight: 200,
-                fontFamily: "monospace",
-              }}
-            />
-            {importError && (
-              <p className="text-[12px] mt-1.5" style={{ color: "#FF3B30" }}>{importError}</p>
-            )}
-            <div className="flex gap-2 mt-3">
-              <button
-                type="button"
-                onClick={() => setShowImportDialog(false)}
-                className="flex-1 h-10 rounded-[10px] text-[14px] font-medium"
-                style={{ background: "var(--lifeflow-muted)", color: "var(--color-text-secondary)" }}
-              >
-                取消
-              </button>
-              <button
-                type="button"
-                onClick={handleImport}
-                disabled={!importText.trim() || importing}
-                className="flex-1 h-10 rounded-[10px] text-[14px] font-semibold text-white disabled:opacity-40"
-                style={{ background: "var(--lifeflow-primary)" }}
-              >
-                {importing ? "解析中..." : "导入并创建"}
-              </button>
-            </div>
-          </div>
+            取消
+          </button>
+          <button
+            type="button"
+            onClick={onImport}
+            disabled={!importText.trim() || importing}
+            className="flex-1 h-10 rounded-[10px] text-[14px] font-semibold text-white disabled:opacity-40"
+            style={{ background: "var(--lifeflow-primary)" }}
+          >
+            {importing ? "解析中..." : "导入并创建"}
+          </button>
         </div>
-      )}
+      </div>
     </div>
   );
 }

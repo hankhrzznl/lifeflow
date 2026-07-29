@@ -299,7 +299,8 @@ export function getDailyActionsForDate(strategy: StrategyV2, dateStr: string): D
 export async function ensureDailyActionsForDate(goalId: string, dateStr: string): Promise<number> {
   const strategies = await getActiveStrategies(goalId, dateStr);
   const existing = await goalV2DB.goalV2DailyActions
-    .where({ goalId, date: dateStr })
+    .where('goalId').equals(goalId)
+    .filter(a => a.date === dateStr)
     .toArray();
   // 用 strategyId + title 作为去重 key
   const existingKeys = new Set(existing.map(a => `${a.strategyId}::${a.title}`));

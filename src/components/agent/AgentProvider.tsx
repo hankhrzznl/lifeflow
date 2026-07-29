@@ -871,16 +871,41 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
     addAssistantMessage("正在生成本周复盘...");
     try {
       const review = await reviewerBrain.generateReview("weekly");
-      const msg = review.overviewText + "\n\n" + review.summaries
-        .filter(s => Object.keys(s.stats).length > 0)
-        .map(s => {
-          const lines = Object.entries(s.stats).map(([k, v]) => `  ${k}: ${v}`);
-          return `**${s.label}**\n${lines.join("\n")}`;
-        })
-        .join("\n\n");
+      const parts: string[] = [];
+
+      // 大标题
+      if (review.headline) parts.push(`**${review.headline}**`);
+
+      // 概览
+      if (review.overviewText) parts.push(review.overviewText);
+
+      // 模块洞察（前 6 个）
+      if (review.insights.length > 0) {
+        parts.push("");
+        for (const ins of review.insights.slice(0, 6)) {
+          const arrow = ins.trend === "up" ? "↑" : ins.trend === "down" ? "↓" : "→";
+          parts.push(`**${ins.moduleLabel}** ${arrow}`);
+          parts.push(ins.detail);
+          // 次发现
+          for (const f of ins.findings.slice(1)) {
+            parts.push(`  · ${f.title}：${f.description}`);
+          }
+        }
+      }
+
+      // 行动建议
+      if (review.suggestions.length > 0) {
+        parts.push("");
+        parts.push("**行动建议**");
+        for (const s of review.suggestions) {
+          parts.push(`  · ${s}`);
+        }
+      }
+
+      const msg = parts.join("\n");
       addAssistantMessage(msg, [{
         id: `review-nav-${Date.now()}`,
-        title: "查看可视化复盘",
+        title: "查看完整复盘",
         proposedStartTime: Date.now(),
         proposedEndTime: Date.now() + 1,
         tags: ["review"],

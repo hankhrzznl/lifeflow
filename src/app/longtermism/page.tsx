@@ -20,7 +20,7 @@ import {
   getDietLogsByDate, getWellnessLogsByDate, getWishes,
 } from "@/lib/db/life.db";
 import { reviewerBrain } from "@/lib/brains/reviewer";
-import type { ReviewResult, ReviewPeriod, ReviewModuleSummary } from "@/lib/brains/reviewer";
+import type { ReviewResult, ReviewPeriod } from "@/lib/brains/reviewer";
 
 // ─── 工具函数 ────────────────────────────────────────────────
 
@@ -89,26 +89,6 @@ const MODULES: ModuleCard[] = [
   { key: "wishes", label: "心愿", path: "/more/wishes", icon: <Star className="w-5 h-5" />, color: "#F59E0B", bgColor: "#FFFBEB" },
 ];
 
-// ─── 复盘摘要条 ──────────────────────────────────────────────
-
-function ReviewSummaryRow({ summary }: { summary: ReviewModuleSummary }) {
-  const entries = Object.entries(summary.stats).slice(0, 3); // 最多 3 个关键统计
-  if (entries.length === 0) return null;
-
-  return (
-    <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-[13px]">
-      <span className="font-semibold shrink-0" style={{ color: "var(--color-text-primary)" }}>
-        {summary.label}
-      </span>
-      {entries.map(([key, val]) => (
-        <span key={key} style={{ color: "var(--color-text-secondary)" }}>
-          {key} <span className="font-medium" style={{ color: "var(--color-text-primary)" }}>{val}</span>
-        </span>
-      ))}
-    </div>
-  );
-}
-
 // ─── 主页面 ──────────────────────────────────────────────────
 
 export default function LongTermismPage() {
@@ -141,10 +121,7 @@ export default function LongTermismPage() {
     }).catch(() => setReviewLoading(false));
   }, [reviewPeriod]);
 
-  const summariesWithData = useMemo(
-    () => currentReview?.summaries.filter(s => Object.keys(s.stats).length > 0) || [],
-    [currentReview]
-  );
+  const hasReviewData = currentReview?.hasData ?? false;
 
   // ─── 模块数据查询 ──────────────────────────────────────────
 
@@ -292,8 +269,6 @@ export default function LongTermismPage() {
     ];
   }, [waterItems, waterGoal, sleepLog, monthTransactions, workoutSessions, dietLogs, wellnessLogs, stretchLogs, wishes, today, yesterday]);
 
-  const hasReviewData = summariesWithData.length > 0;
-
   return (
     <div
       className="min-h-screen"
@@ -314,7 +289,7 @@ export default function LongTermismPage() {
         </p>
       </div>
 
-      {/* ─── 复盘时间轴区域 ─────────────────────────────────── */}
+      {/* ─── 复盘区域（数据叙事风） ──────────────────────────── */}
       <div className="px-4 mb-5">
         <div
           className="rounded-[16px] overflow-hidden"
@@ -348,20 +323,12 @@ export default function LongTermismPage() {
             </div>
           </div>
 
-          {/* 概览文案 */}
-          {!reviewLoading && hasReviewData && (
-            <div className="px-4 pb-1.5">
-              <p className="text-[13px] leading-relaxed" style={{ color: "var(--color-text-secondary)" }}>
-                {currentReview?.overviewText}
-              </p>
-            </div>
-          )}
-
           {/* 加载态 */}
           {reviewLoading && (
-            <div className="px-4 py-4 space-y-2">
-              <div className="h-3 rounded animate-pulse" style={{ background: "var(--lifeflow-muted)", width: "70%" }} />
-              <div className="h-3 rounded animate-pulse" style={{ background: "var(--lifeflow-muted)", width: "50%" }} />
+            <div className="px-4 py-4 space-y-3">
+              <div className="h-6 rounded-lg animate-pulse" style={{ background: "var(--lifeflow-muted)", width: "60%" }} />
+              <div className="h-16 rounded-xl animate-pulse" style={{ background: "var(--lifeflow-muted)" }} />
+              <div className="h-16 rounded-xl animate-pulse" style={{ background: "var(--lifeflow-muted)" }} />
             </div>
           )}
 
@@ -374,12 +341,89 @@ export default function LongTermismPage() {
             </div>
           )}
 
-          {/* 各模块摘要行 */}
-          {!reviewLoading && hasReviewData && (
-            <div className="px-4 pb-3 space-y-2.5">
-              {summariesWithData.map(s => (
-                <ReviewSummaryRow key={s.module} summary={s} />
-              ))}
+          {/* 有数据 → 数据叙事 */}
+          {!reviewLoading && hasReviewData && currentReview && (
+            <div className="px-4 pb-4">
+              {/* Hero 区 */}
+              <div className="pb-3 mb-3" style={{ borderBottom: "1px solid var(--lifeflow-border)" }}>
+                <h2 className="text-[20px] font-bold leading-tight" style={{ color: "var(--color-text-primary)" }}>
+                  {currentReview.headline}
+                </h2>
+                <p className="text-[13px] mt-1.5 leading-relaxed" style={{ color: "var(--color-text-secondary)" }}>
+                  {currentReview.overviewText}
+                </p>
+              </div>
+
+              {/* 模块级洞察卡片 */}
+              <div className="space-y-3">
+                {currentReview.insights.slice(0, 6).map((insight) => (
+                  <div
+                    key={insight.module}
+                    className="rounded-[14px] p-3.5"
+                    style={{ background: "var(--lifeflow-muted)" }}
+                  >
+                    <div className="flex items-start gap-3">
+                      {/* 模块色条 */}
+                      <div
+                        className="w-[3px] rounded-full shrink-0 mt-0.5"
+                        style={{ background: insight.color, minHeight: 36 }}
+                      />
+
+                      <div className="flex-1 min-w-0">
+                        {/* 标题行 */}
+                        <div className="flex items-center justify-between mb-0.5">
+                          <span className="text-[11px] font-semibold uppercase tracking-[0.03em]" style={{ color: insight.color }}>
+                            {insight.moduleLabel}
+                          </span>
+                          <span
+                            className="text-[13px] font-bold"
+                            style={{
+                              color: insight.trend === "up" ? "#34C759" : insight.trend === "down" ? "#FF3B30" : "#8E8E93",
+                            }}
+                          >
+                            {insight.trend === "up" ? "↑" : insight.trend === "down" ? "↓" : "→"}
+                          </span>
+                        </div>
+
+                        {/* 主发现 */}
+                        <p className="text-[14px] font-semibold leading-snug" style={{ color: "var(--color-text-primary)" }}>
+                          {insight.headline.replace(/ [↑↓→]$/, "")}
+                        </p>
+
+                        {/* 所有次发现 */}
+                        {insight.findings.slice(1).map((finding) => (
+                          <p
+                            key={finding.id}
+                            className="text-[12px] mt-1 leading-relaxed"
+                            style={{ color: "var(--color-text-secondary)" }}
+                          >
+                            {finding.title}：{finding.description.replace(/^.{0,4}/, "")}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* 行动建议 */}
+              {currentReview.suggestions.length > 0 && (
+                <div className="mt-4 pt-3" style={{ borderTop: "1px solid var(--lifeflow-border)" }}>
+                  <p className="text-[11px] font-medium mb-2" style={{ color: "var(--color-text-secondary)" }}>
+                    行动建议
+                  </p>
+                  <div className="space-y-1.5">
+                    {currentReview.suggestions.map((s, i) => (
+                      <div key={i} className="flex items-start gap-2">
+                        <span className="text-[11px] mt-0.5 text-[#34C759] shrink-0">●</span>
+                        <span className="text-[12px] leading-relaxed" style={{ color: "var(--color-text-secondary)" }}>
+                          {s}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -397,21 +441,19 @@ export default function LongTermismPage() {
               </button>
               {showHistory && (
                 <div className="px-4 pb-3 space-y-2">
-                  {historicalReviews.map((hr, idx) => {
-                    const prefix = reviewPeriod === "daily" ? "前日" :
-                      reviewPeriod === "weekly" ? "上周" :
-                      reviewPeriod === "monthly" ? "上月" : "去年";
-                    return (
-                      <div key={idx} className="p-2.5 rounded-xl" style={{ background: "var(--lifeflow-muted)" }}>
-                        <p className="text-[12px] font-semibold mb-1" style={{ color: "var(--color-text-primary)" }}>
-                          {hr.dateRange.start} ~ {hr.dateRange.end}
-                        </p>
-                        <p className="text-[11px] leading-relaxed" style={{ color: "var(--color-text-secondary)" }}>
-                          {hr.overviewText}
-                        </p>
-                      </div>
-                    );
-                  })}
+                  {historicalReviews.map((hr, idx) => (
+                    <div key={idx} className="p-3 rounded-xl" style={{ background: "var(--lifeflow-muted)" }}>
+                      <p className="text-[11px] font-semibold mb-1" style={{ color: "var(--color-text-disabled)" }}>
+                        {hr.dateRange.start} ~ {hr.dateRange.end}
+                      </p>
+                      <p className="text-[13px] font-semibold leading-snug" style={{ color: "var(--color-text-primary)" }}>
+                        {hr.headline}
+                      </p>
+                      <p className="text-[11px] mt-1 leading-relaxed" style={{ color: "var(--color-text-secondary)" }}>
+                        {hr.overviewText}
+                      </p>
+                    </div>
+                  ))}
                 </div>
               )}
             </>

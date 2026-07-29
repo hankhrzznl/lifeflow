@@ -194,24 +194,17 @@ LifeFlow v1.0，一个讲道理的生活助手。
   - 根据当前 `wakeStart/wakeEnd` 重新生成时段（每个整点过 30 分钟，入睡前 2 小时截止）
 - `WaterReminderSheet.handleConfirm` 和饮水页面「生成饮水提醒」按钮执行成功后均会同步写入 `reminderInterval: 60`，确保开关状态与实际数据一致
 
-### 生活节奏仪表盘（v2.2+）
+### 首页复盘洞察（v2.3+）— 替代旧仪表盘
 
-- 首页感知卡片区已被「生活节奏仪表盘」（`LifeDashboard` 组件）取代
-- **引擎**（`src/lib/dashboard-summary.ts`）：
-  - 本地智能摘要引擎，不调 AI API
-  - 查询 7 个模块（饮水/睡眠/训练/记账/饮食/养生/体态）当前周期数据
-  - 与上一周期对比计算偏离度，选偏离最大的模块作为叙事锚点
-  - 生成一句 15-30 字的中文摘要（`headline`）
-  - 支持 4 种粒度：`daily / weekly / monthly / yearly`
-- **组件**（`src/components/dashboard/LifeDashboard.tsx`）：
-  - 标题行右侧有粒度切换按钮（日/周/月/年）
-  - 下方展示摘要文案
-  - 每个模块渲染一条迷你健康条（进度条 + 当前值）
-  - 进度条颜色规则：有数据时 `rate≥80` 绿色、`rate≥50` 橙色、`<50` 红色；无数据灰色
-  - 支持加载态（骨架屏）和无数据态占位提示
-  - 点击任意健康条跳转对应模块页
-- **数据源**：各模块使用独立 DB 查询函数，口径与长期主义页面一致
-- 旧 `perception-engine.ts` 保留不动（不删除，保持 imports 可用）
+- 首页「节奏」仪表盘已被「复盘洞察」（`HomeReview` 组件）取代
+- **引擎**：统一使用 `UnifiedReviewer`（`src/lib/brains/reviewer.ts`），`dashboard-summary.ts` 已删除
+- **组件**（`src/components/dashboard/HomeReview.tsx`）：
+  - 卡片洞察流风格（Apple Health 趋势页风格）
+  - 支持 2 种粒度：`daily / weekly`
+  - 每张洞察卡片：左侧模块色条 + 模块标签 + 趋势箭头 + headline + detail 描述
+  - 底部「行动建议」区域 + 「查看完整复盘」跳转 `/longtermism`
+  - 无数据态和加载态（骨架屏）兜底
+  - 点击卡片跳转对应模块详情页
 
 ### 目标删除 / 重置（v2.2+）
 
@@ -242,28 +235,42 @@ LifeFlow v1.0，一个讲道理的生活助手。
   - 心愿 → `getWishes()`
 - 无数据时显示 `--`，行动引导显示 `「去记录」`
 
-### 长期主义复盘时间轴（v2.2+）
+### 长期主义复盘时间轴（v2.3+）— 数据叙事风
 
-- 复盘时间轴位于长期主义页面 Header 下方、8 张模块卡片上方，以独立的卡片区域呈现（与模块卡片视觉区分）
+- 复盘区域位于长期主义页面 Header 下方、8 张模块卡片上方，以独立卡片呈现
 - 顶部标题行 + 4 粒度切换器（日/周/月/年），`ReviewPeriod` 类型定义在 `reviewer.ts`
-- 主体内容：
-  - 概览文案行（`buildOverview` 生成的自然语言摘要）
-  - 各模块摘要行（每行显示模块名 + 最多 3 个关键统计如 `日行动完成: 5/10 完成率: 50%`）
-  - 底部「历史复盘」折叠区域（展示前 3-4 个周期的历史数据）
-- 数据来源：`reviewerBrain.generateReview(period, offset)` + `reviewerBrain.getHistoricalReviews(period, count)`
-- 切换粒度时重新加载数据，有 loading 态和空数据态兜底
+- 主体内容（数据叙事风格）：
+  - Hero 区：大号 headline + 概览文案（`overviewText`）
+  - 模块洞察卡片（最多 6 个模块）：模块色条 + 标签 + 趋势箭头 + headline + 所有次发现（findings.slice(1)）
+  - 「行动建议」区域（底部，分隔线上方）
+- 底部「历史复盘」折叠区域（展示前 4 个周期的 headline + overviewText）
+- 数据来源：`UnifiedReviewer.generateReview(period, offset)` + `.getHistoricalReviews(period, 4)`
+- 切换粒度时重新加载，有 loading 态和空数据态兜底
 
-### ReviewerBrain 引擎（v2.2+）
+### UnifiedReviewer 复盘引擎（v2.3+）— 替代旧 ReviewerBrain
 
 - `ReviewPeriod` 类型：`"daily" | "weekly" | "monthly" | "yearly"`
-- `generateReview(period, offset?)` — 生成指定周期复盘，`offset=0` 为当前周期
-- `getHistoricalReviews(period, count)` — 获取过去 N 个周期的复盘数据
-- 所有模块（goals/finance/water/sleep/fitness/diet/wellness/posture/schedule/medication）均查询真实数据，无"即将推出"空壳：
-  - `reviewGoals` — 使用 `goalV2DB`（GoalV2 五层拆解），查询活跃目标数 + 日行动完成率 + 关键结果平均进度
-  - `reviewDiet` — 使用 `lifeDB.dietLogs`，查询记录天数 + 总餐数
-  - `reviewWellness` — 使用 `lifeDB.wellnessLogs`，查询功法/提肛次数
-  - `reviewPosture` — 使用 `healthDB.stretchLogs`，查询拉伸天数 + 组数
-- `getDateRange(period, offset)` — 日期范围计算工具，按周期类型正确推算起止日期
+- `UnifiedReviewer.generateReview(period, offset?)` — 生成指定周期复盘，`offset=0` 为当前周期
+- `UnifiedReviewer.getHistoricalReviews(period, count)` — 获取过去 N 个周期的复盘数据
+- 输出结构包含 `ReviewResult`：
+  - `headline` — Hero 大标题
+  - `overviewText` — 概览文案（向后兼容旧格式）
+  - `summaries` — 旧格式模块摘要（向后兼容）
+  - `insights: ModuleInsight[]` — 按优先级排序的模块级洞察（供首页和长期主义使用）
+  - `allFindings: ReviewFinding[]` — 完整发现列表（排序后）
+  - `suggestions: string[]` — 行动建议（最多 4 条）
+  - `hasData` — 是否有数据
+- `ReviewFinding` 类型：含 `id / module / moduleLabel / type / title / description / metric / trend / priority / action`
+- 新引擎能力（对比旧 ReviewerBrain）：
+  1. **多周期趋势分析**：当前 vs 上一周期各模块数据对比
+  2. **日内/周内模式分析**：饮水黑洞时段、入睡波动标准差、周末vs工作日社交时差、训练间隔、消费高峰日、漏餐模式、效率低谷日
+  3. **跨模块关联**：饮水达标 vs 入睡时间关联
+  4. **行动建议**：基于 low-priority findings 自动生成具体可执行的建议
+  5. **优先级排序**：按 `priority` 评分排序 findings，首页只展示 Top 4
+  6. **文案变体**：使用 `pick()` 函数随机选择不同表述，避免千篇一律
+- 所有模块（goals/finance/water/sleep/fitness/diet/wellness/posture/schedule/medication）均查询真实数据
+- `dashboard-summary.ts` 已删除，旧 `LifeDashboard.tsx` 已删除，统一由 `HomeReview.tsx` 替代
+- 旧 `ReviewerBrain` 保留为内部 `_OldReviewer` 类，仅用于 `_buildSummaries` 向后兼容
 
 ### 首页布局精简（v2.2+）
 

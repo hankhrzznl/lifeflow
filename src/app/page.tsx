@@ -16,7 +16,7 @@ import { getPendingReminders } from "@/lib/db";
 import type { Reminder } from "@/lib/types";
 
 import { showToast } from "@/components/ui/Toast";
-import LifeDashboard from "@/components/dashboard/LifeDashboard";
+import HomeReview from "@/components/dashboard/HomeReview";
 import { getAllProjects } from "@/lib/db/efficiency.db";
 import type { Project } from "@/lib/db/efficiency.db";
 import { getCountdowns } from "@/lib/db/life.db";
@@ -351,8 +351,8 @@ export default function HomePage() {
         </div>
       </motion.div>
 
-      {/* ===== 生活节奏仪表盘 ===== */}
-      <LifeDashboard />
+      {/* ===== 复盘洞察 ===== */}
+      <HomeReview />
 
       {/* ===== 饮水提醒按钮 ===== */}
       <div className="px-4 mb-3">

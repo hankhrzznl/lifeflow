@@ -191,6 +191,9 @@ export default function LongTermismPage() {
     // 饮水
     const waterTotal = waterItems.length;
     const waterTarget = waterGoal ? Math.ceil(waterGoal.dailyTarget / 100) : 0;
+    const waterCompletedCount = waterItems.filter(i => i.isCompleted).length;
+    const completedWaterMl = waterCompletedCount * 100;
+    const dailyTargetMl = waterGoal?.dailyTarget || 0;
     const now = new Date();
     const currentHour = now.getHours();
     const existingHours = new Set(waterItems.map(i => {
@@ -245,7 +248,7 @@ export default function LongTermismPage() {
     return [
       {
         key: "water", icon: <Droplets className="w-5 h-5" />, color: "#3B82F6", bgColor: "#EFF6FF",
-        primary: waterTarget > 0 ? `${waterTotal} / ${waterTarget} 杯` : "--",
+        primary: dailyTargetMl > 0 ? `${completedWaterMl} / ${dailyTargetMl} ml` : "--",
         guidance: waterTotal >= waterTarget && waterTarget > 0 ? "今日目标已完成"
           : waterTotal > 0 ? (nextCupTime ? `下一杯 ${nextCupTime}` : "还差几杯") : "去记录",
       },

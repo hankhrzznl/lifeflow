@@ -6,15 +6,15 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLiveQuery } from "dexie-react-hooks";
 import {
-  FolderKanban, Zap, Check, Bell, Flame,
-  Calendar, Droplets, Moon, Dumbbell, Pill,
-  Plus, X, Clock, ChevronRight, Clock9, Settings,
+  FolderKanban, Zap, Check, Bell,
+  Droplets, Moon, Dumbbell, Pill,
+  Plus, X, Clock, ChevronDown, ChevronRight, Clock9, Settings,
 } from "lucide-react";
 import { getUpcomingItems, addManualItem, updateItem, getItemsByDate, daylogDB } from "@/lib/db/daylog.db";
 import type { Item } from "@/lib/db/daylog.db";
 import { getPendingReminders } from "@/lib/db";
 import type { Reminder } from "@/lib/types";
-import { useAgent } from "@/components/agent/AgentProvider";
+
 import { showToast } from "@/components/ui/Toast";
 import LifeDashboard from "@/components/dashboard/LifeDashboard";
 import { getAllProjects } from "@/lib/db/efficiency.db";
@@ -66,23 +66,7 @@ function greeting(): string {
   return "晚上好";
 }
 
-// ============================================================
-// AI 快捷指令
-// ============================================================
 
-const QUICK_PROMPTS = [
-  { label: "今日提醒", icon: Bell, route: null as string | null },
-  { label: "安排日程", icon: Calendar, route: null as string | null },
-  { label: "本周复盘", icon: Flame, route: "/efficiency/review?period=weekly" as string | null },
-];
-
-// 提醒图标映射
-const REMINDER_ICONS: Record<string, React.ComponentType<any>> = {
-  water: Droplets,
-  sleep: Moon,
-  fitness: Dumbbell,
-  medication: Pill,
-};
 
 // ─── 预设颜色 ───
 const PRESET_COLORS = ["#6366F1", "#FF9500", "#34C759", "#FF3B30", "#007AFF", "#5856D6", "#FF2D55", "#00C7BE"];
@@ -95,7 +79,7 @@ export default function HomePage() {
   const router = useRouter();
   const today = todayStr();
   const now = new Date();
-  const { sendAndNavigate } = useAgent();
+
 
   // ── 当前时间（每分钟更新） ──
   const [nowTime, setNowTime] = useState(nowTimeStr);
@@ -531,29 +515,75 @@ export default function HomePage() {
               </div>
             </>
           )}
-        </motion.div>
-      </div>
 
-      {/* ===== AI 快捷指令 ===== */}
-      <div className="px-4 mb-4">
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.08, duration: 0.35, ease: "easeOut" }}
-        >
-          <div className="flex gap-2">
-            {QUICK_PROMPTS.map((p) => (
-              <button
-                key={p.label}
-                onClick={() => { p.route ? router.push(p.route) : sendAndNavigate(p.label); }}
-                className="flex-1 py-2.5 px-2 rounded-full text-[12px] font-medium flex items-center justify-center gap-1.5 active:opacity-70 transition-opacity"
-                style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)", color: "var(--color-text-primary)" }}
-              >
-                <p.icon className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "var(--lifeflow-primary)" }} />
-                {p.label}
-              </button>
-            ))}
-          </div>
+          {/* ── 分割线 + 下拉展开今日待办 ── */}
+          <div className="h-px my-4" style={{ background: "var(--lifeflow-border)" }} />
+          <button
+            onClick={() => setTaskListExpanded(!taskListExpanded)}
+            className="w-full flex items-center justify-center gap-1 py-2.5 text-[12px] font-medium active:opacity-70 transition-opacity"
+            style={{ color: "var(--color-text-secondary)" }}
+          >
+            <span>{taskListExpanded ? '收起今日待办' : '展开今日待办 (' + completedCount + '/' + todayTotal + ')'}</span>
+            <ChevronDown className={'w-4 h-4 transition-transform ' + (taskListExpanded ? 'rotate-180' : '')} />
+          </button>
+
+          {taskListExpanded && (
+            <div className="mt-4 flex flex-col gap-3">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[15px] font-semibold" style={{ color: "var(--color-text-primary)" }}>
+                  今日待办
+                </span>
+                <Link href="/efficiency/schedule" className="text-[12px] font-medium" style={{ color: "var(--lifeflow-primary)" }}>
+                  完整时间轴
+                </Link>
+              </div>
+              {sortedItems.length === 0 ? (
+                <p className="text-[13px] py-3 text-center" style={{ color: "var(--color-text-secondary)" }}>
+                  今天还没有安排事项
+                </p>
+              ) : (
+                sortedItems.map((item, i) => {
+                  const isDone = item.isCompleted || optimisticCompleted.has(item.id!);
+                  return (
+                    <div
+                      key={item.id}
+                      className="flex items-center gap-3 py-1"
+                      style={{ opacity: isDone ? 0.6 : 1 }}
+                    >
+                      <button
+                        onClick={() => handleToggle(item)}
+                        className="w-[20px] h-[20px] rounded-full border-2 flex items-center justify-center flex-shrink-0 active:scale-90 transition-transform"
+                        style={{
+                          borderColor: isDone ? "var(--color-text-disabled)" : item.color,
+                          backgroundColor: isDone ? item.color : "transparent",
+                        }}
+                      >
+                        {isDone && <Check className="w-[12px] h-[12px] text-white" strokeWidth={2.5} />}
+                      </button>
+                      <div className="flex-1 min-w-0">
+                        <p
+                          className="text-[13px] font-medium truncate"
+                          style={{
+                            color: isDone ? "var(--color-text-disabled)" : "var(--color-text-primary)",
+                            textDecoration: isDone ? "line-through" : "none",
+                          }}
+                        >
+                          {item.title}
+                        </p>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <Clock className="w-3 h-3" style={{ color: "var(--color-text-disabled)" }} />
+                          <span className="text-[11px]" style={{ color: "var(--color-text-secondary)" }}>
+                            {item.plannedStart}
+                            {itemDuration(item) > 0 && ' - ' + item.plannedEnd}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          )}
         </motion.div>
       </div>
 
@@ -609,147 +639,6 @@ export default function HomePage() {
             )}
           </Link>
         </motion.div>
-      </div>
-
-      {/* ===== 今日提醒条 ===== */}
-      {pendingReminders.length > 0 && (
-        <div className="px-4 mb-4">
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.11, duration: 0.35, ease: "easeOut" }}
-          >
-            <Link
-              href="/reminders"
-              className="flex items-center gap-2 px-4 py-3 rounded-[20px] active:opacity-70"
-              style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}
-            >
-              <Bell className="w-4 h-4 flex-shrink-0" style={{ color: "var(--lifeflow-primary)" }} />
-              <div className="flex-1 min-w-0 flex items-center gap-2 overflow-hidden">
-                {pendingReminders.map((r, i) => {
-                  const Icon = REMINDER_ICONS[r.moduleType || ""];
-                  return (
-                    <span key={i} className="flex items-center gap-1 text-[12px] whitespace-nowrap" style={{ color: "var(--color-text-secondary)" }}>
-                      {Icon && <Icon className="w-3 h-3" />}
-                      {r.message || r.type}
-                      {i < pendingReminders.length - 1 && (
-                        <span style={{ color: "var(--color-text-disabled)" }}>·</span>
-                      )}
-                    </span>
-                  );
-                })}
-              </div>
-              <span className="text-[12px] font-medium whitespace-nowrap" style={{ color: "var(--lifeflow-primary)" }}>
-                {pendingReminders.length} 条
-              </span>
-            </Link>
-          </motion.div>
-        </div>
-      )}
-
-      {/* ===== 今日事项（当前时间往后） ===== */}
-      <div className="px-4 mb-6">
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.14, duration: 0.35, ease: "easeOut" }}
-          className="flex items-center justify-between mb-3"
-        >
-          <div className="flex items-center gap-2">
-            <h2 className="text-[18px] font-semibold" style={{ color: "var(--color-text-primary)", letterSpacing: "-0.018em" }}>
-              今日待办
-            </h2>
-            <span className="text-[12px] font-semibold px-2 py-0.5 rounded-full" style={{ backgroundColor: "var(--lifeflow-brand-50)", color: "var(--lifeflow-primary)" }}>
-              {completedCount}/{todayTotal}
-            </span>
-          </div>
-          <Link href="/efficiency/schedule" className="text-[13px] font-medium" style={{ color: "var(--lifeflow-primary)" }}>
-            完整时间轴
-          </Link>
-        </motion.div>
-
-        {!taskListExpanded ? (
-          <button
-            onClick={() => setTaskListExpanded(true)}
-            className="rounded-[16px] p-3.5 flex items-center justify-between active:opacity-70"
-            style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}
-          >
-            <span className="text-[14px] font-medium" style={{ color: "var(--color-text-primary)" }}>
-              查看全部 {todayTotal} 个事项
-            </span>
-            <ChevronRight className="w-4 h-4" style={{ color: "var(--color-text-disabled)" }} />
-          </button>
-        ) : (
-        <div className="flex flex-col gap-3">
-          {sortedItems.length === 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.18, duration: 0.35 }}
-              className="rounded-[20px] p-4 text-center"
-              style={{ backgroundColor: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}
-            >
-              <p className="text-[15px]" style={{ color: "var(--color-text-secondary)" }}>
-                今天还没有安排事项。点击 + 号新建一个。
-              </p>
-              <button
-                onClick={() => { resetForm(); setShowCreate(true); }}
-                className="mt-3 text-[13px] font-medium"
-                style={{ color: "var(--lifeflow-primary)" }}
-              >
-                新建事项
-              </button>
-            </motion.div>
-          )}
-          {sortedItems.map((item, i) => {
-            const isDone = item.isCompleted || optimisticCompleted.has(item.id!);
-            return (
-              <motion.div
-                key={item.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.18 + i * 0.04, duration: 0.3, ease: "easeOut" }}
-                className="rounded-[20px] p-4 flex items-center gap-3"
-                style={{
-                  backgroundColor: "var(--color-surface-card)",
-                  boxShadow: "var(--shadow-card)",
-                  opacity: isDone ? 0.6 : 1,
-                  borderLeft: `3px solid ${item.color}`,
-                }}
-              >
-                <button
-                  onClick={() => handleToggle(item)}
-                  className="w-[22px] h-[22px] rounded-full border-2 flex items-center justify-center flex-shrink-0 active:scale-90 transition-transform"
-                  style={{
-                    borderColor: isDone ? "var(--color-text-disabled)" : item.color,
-                    backgroundColor: isDone ? item.color : "transparent",
-                  }}
-                >
-                  {isDone && <Check className="w-[14px] h-[14px] text-white" strokeWidth={2} />}
-                </button>
-                <div className="flex-1 min-w-0">
-                  <p
-                    className="text-[15px] font-medium truncate"
-                    style={{
-                      color: isDone ? "var(--color-text-disabled)" : "var(--color-text-primary)",
-                      textDecoration: isDone ? "line-through" : "none",
-                    }}
-                  >
-                    {item.title}
-                  </p>
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    <Clock className="w-3 h-3" style={{ color: "var(--color-text-disabled)" }} />
-                    <span className="text-[12px]" style={{ color: "var(--color-text-secondary)" }}>
-                      {item.plannedStart}
-                      {itemDuration(item) > 0 && ` - ${item.plannedEnd}`}
-                    </span>
-                  </div>
-                </div>
-              </motion.div>
-            );
-          })}
-        </div>
-        )}
       </div>
 
       {/* ===== 浮动创建按钮 ===== */}

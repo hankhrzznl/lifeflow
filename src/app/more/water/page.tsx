@@ -360,12 +360,6 @@ export default function WaterPage() {
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
               <Droplets className="h-9 w-9" style={{ color: "var(--lifeflow-primary)" }} />
-              <span
-                className="text-[28px] font-bold mt-1 tracking-[-0.022em]"
-                style={{ color: "var(--color-text-primary)" }}
-              >
-                {completedCount}/{totalCount}
-              </span>
               <span className="text-[13px] font-medium" style={{ color: "var(--color-text-secondary)" }}>
                 {totalWaterMl} / {settings.dailyTarget} ml
               </span>
@@ -452,41 +446,6 @@ export default function WaterPage() {
           >
             {generating ? "生成中..." : "生成饮水提醒"}
           </button>
-        </motion.div>
-      </div>
-
-      {/* ─── Today's Stats Card ─── */}
-      <div className="px-4 pt-4">
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1, duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
-          className="p-4"
-          style={{
-            background: "var(--color-surface-card)",
-            borderRadius: "20px",
-            boxShadow: "var(--shadow-card)",
-          }}
-        >
-          <h2 className="text-[17px] font-semibold mb-3" style={{ color: "var(--color-text-primary)" }}>
-            今日统计
-          </h2>
-          <div className="grid grid-cols-3 gap-3">
-            <div className="text-center p-3 rounded-xl" style={{ background: "var(--lifeflow-muted)" }}>
-              <div className="text-[22px] font-bold" style={{ color: "var(--lifeflow-primary)" }}>{completedCount}</div>
-              <div className="text-[12px] font-medium mt-0.5" style={{ color: "var(--color-text-secondary)" }}>已完成</div>
-            </div>
-            <div className="text-center p-3 rounded-xl" style={{ background: "var(--lifeflow-muted)" }}>
-              <div className="text-[22px] font-bold" style={{ color: "var(--color-text-primary)" }}>{totalCount}</div>
-              <div className="text-[12px] font-medium mt-0.5" style={{ color: "var(--color-text-secondary)" }}>总杯数</div>
-            </div>
-            <div className="text-center p-3 rounded-xl" style={{ background: "var(--lifeflow-muted)" }}>
-              <div className="text-[22px] font-bold" style={{ color: totalWaterMl >= settings.dailyTarget ? "var(--lifeflow-primary)" : "var(--color-text-primary)" }}>
-                {totalWaterMl}ml
-              </div>
-              <div className="text-[12px] font-medium mt-0.5" style={{ color: "var(--color-text-secondary)" }}>已饮水</div>
-            </div>
-          </div>
         </motion.div>
       </div>
 

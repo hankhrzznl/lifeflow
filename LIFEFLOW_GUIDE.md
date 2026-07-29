@@ -265,3 +265,21 @@ LifeFlow v1.0，一个讲道理的生活助手。
   - `reviewPosture` — 使用 `healthDB.stretchLogs`，查询拉伸天数 + 组数
 - `getDateRange(period, offset)` — 日期范围计算工具，按周期类型正确推算起止日期
 
+### 首页布局精简（v2.2+）
+
+- 「下一个事项」卡片与「今日待办」合并为同一卡片。卡片底部有下拉按钮（ChevronDown），点击展开今日待办事项列表
+  - 默认折叠。展开后直接显示事项列表（简化为一层，无中间折叠）
+  - 展开后顶部显示「今日待办」标题 + 完成计数徽章 + 「完整时间轴」链接
+- 首页不再展示「今日提醒条」（pendingReminders UI），提醒后台调度 + `/reminders` 页面不受影响
+- 首页不再展示 AI 快捷指令三按钮（今日提醒/安排日程/本周复盘），AI 助手通过全局悬浮球访问
+- 删除上述 UI 时仅限渲染层，不触碰功能代码
+
+### 饮水数据展示统一口径（v2.2+）
+
+- 饮水页面 SVG 环形进度内只显示毫升：`{totalWaterMl} / {dailyTarget} ml`，不再显示杯数 `{completedCount}/{totalCount}`
+- 饮水页面「今日统计」卡片已移除
+- 长期主义页面饮水卡片统一为毫升口径：`{completedWaterMl} / {dailyTarget} ml`
+  - `waterCompletedCount = waterItems.filter(i => i.isCompleted).length`
+  - `completedWaterMl = waterCompletedCount * 100`
+  - `dailyTargetMl = waterGoal.dailyTarget`
+

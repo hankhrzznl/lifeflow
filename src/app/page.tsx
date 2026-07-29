@@ -10,7 +10,7 @@ import {
   Calendar, Droplets, Moon, Dumbbell, Pill,
   Plus, X, Clock, ChevronRight, Clock9, Settings,
 } from "lucide-react";
-import { getUpcomingItems, addManualItem, updateItem, getItemsByDate } from "@/lib/db/daylog.db";
+import { getUpcomingItems, addManualItem, updateItem, getItemsByDate, daylogDB } from "@/lib/db/daylog.db";
 import type { Item } from "@/lib/db/daylog.db";
 import { getPendingReminders } from "@/lib/db";
 import type { Reminder } from "@/lib/types";
@@ -21,6 +21,8 @@ import { getAllProjects } from "@/lib/db/efficiency.db";
 import type { Project } from "@/lib/db/efficiency.db";
 import { getCountdowns } from "@/lib/db/life.db";
 import type { Countdown } from "@/lib/db/life.db";
+import { getWaterGoal } from "@/lib/db/health.db";
+import WaterReminderSheet from "@/components/water/WaterReminderSheet";
 
 // ============================================================
 // 工具函数
@@ -265,6 +267,24 @@ export default function HomePage() {
   const [perceptionCards, setPerceptionCards] = useState<PerceptionCard[]>([]);
   const [taskListExpanded, setTaskListExpanded] = useState(false);
 
+  // ── 饮水提醒 ──
+  const [showWaterSheet, setShowWaterSheet] = useState(false);
+  const [waterSettings, setWaterSettings] = useState({ wakeStart: "07:00", wakeEnd: "22:00", dailyTarget: 2000 });
+  const [waterActive, setWaterActive] = useState(false);
+  useEffect(() => {
+    getWaterGoal().then(g => {
+      setWaterSettings({
+        wakeStart: g.wakeStart || "07:00",
+        wakeEnd: g.wakeEnd || "22:00",
+        dailyTarget: g.dailyTarget || 2000,
+      });
+    }).catch(() => {});
+    // Check if water items exist for today
+    daylogDB.items.where("date").equals(today).filter(i => i.sourceType === "water").count().then(c => {
+      setWaterActive(c > 0);
+    }).catch(() => {});
+  }, [today]);
+
   const handleCreate = useCallback(async () => {
     if (submitting) return;
     const title = createForm.title.trim();
@@ -419,6 +439,44 @@ export default function HomePage() {
         </div>
       )}
 
+      {/* ===== 饮水提醒按钮 ===== */}
+      <div className="px-4 mb-3">
+        <motion.button
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, ease: "easeOut" }}
+          onClick={() => setShowWaterSheet(true)}
+          className="w-full rounded-[16px] p-3.5 flex items-center gap-3 active:opacity-70"
+          style={{
+            background: waterActive
+              ? "var(--lifeflow-brand-50)"
+              : "var(--color-surface-card)",
+            boxShadow: "var(--shadow-card)",
+          }}
+        >
+          <div
+            className="w-10 h-10 rounded-xl flex items-center justify-center"
+            style={{
+              background: waterActive
+                ? "var(--lifeflow-primary)"
+                : "var(--lifeflow-muted)",
+            }}
+          >
+            <Droplets className="w-5 h-5" style={{ color: waterActive ? "#FFF" : "var(--lifeflow-primary)" }} />
+          </div>
+          <div className="flex-1 text-left">
+            <p className="text-[15px] font-semibold" style={{ color: "var(--color-text-primary)" }}>
+              饮水提醒
+            </p>
+            <p className="text-[12px] mt-0.5" style={{ color: "var(--color-text-secondary)" }}>
+              {waterActive
+                ? "已开启 · 今日可手动勾选完成"
+                : "点击开启喝水提醒"}
+            </p>
+          </div>
+        </motion.button>
+      </div>
+
       {/* ===== 矫正聚合提醒卡 ===== */}
       {uncorrectedItems.length > 0 && (
         <div className="px-4 mb-4">
@@ -525,7 +583,7 @@ export default function HomePage() {
                   新建事项
                 </button>
                 <Link
-                  href="/efficiency"
+                  href="/efficiency-v2"
                   className="py-2.5 px-4 rounded-full text-[14px] font-medium active:opacity-70"
                   style={{ background: "var(--lifeflow-muted)", color: "var(--color-text-secondary)" }}
                 >
@@ -905,6 +963,16 @@ export default function HomePage() {
           </>
         )}
       </AnimatePresence>
+
+      {/* ===== 饮水提醒面板 ===== */}
+      <WaterReminderSheet
+        open={showWaterSheet}
+        onClose={() => setShowWaterSheet(false)}
+        wakeStart={waterSettings.wakeStart}
+        wakeEnd={waterSettings.wakeEnd}
+        dailyTarget={waterSettings.dailyTarget}
+        onStatusChange={(active) => setWaterActive(active)}
+      />
     </div>
   );
 }

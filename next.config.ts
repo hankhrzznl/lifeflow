@@ -5,11 +5,12 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       { source: "/today", destination: "/efficiency/schedule", permanent: true },
-      { source: "/planner", destination: "/efficiency", permanent: true },
-      { source: "/goals", destination: "/efficiency", permanent: true },
-      { source: "/goals/:path*", destination: "/efficiency", permanent: true },
+      { source: "/planner", destination: "/efficiency-v2", permanent: true },
+      { source: "/goals", destination: "/efficiency-v2", permanent: true },
+      { source: "/goals/:path*", destination: "/efficiency-v2", permanent: true },
       { source: "/review", destination: "/efficiency/review", permanent: true },
-      { source: "/stats", destination: "/efficiency", permanent: true },
+      { source: "/stats", destination: "/efficiency-v2", permanent: true },
+      { source: "/efficiency", destination: "/efficiency-v2", permanent: true },
     ];
   },
 

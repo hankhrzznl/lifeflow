@@ -43,17 +43,51 @@ LifeFlow v1.0，一个讲道理的生活助手。
 - **创建日期边界**：模板组的 `createdAt` 决定了该模板的事项从哪天开始生成。`dateStr < 组创建日期 YYYY-MM-DD` 的日期不会生成该模板的任何事项
 - 模板组列表视图和详情视图均展示创建时间（格式 `YYYY-MM-DD`）
 
-### 目标-阶段-任务-事项 层级
+### 目标-阶段-任务-事项 层级 [已废弃]
+
+> v2.0 起被「目标五层拆解」系统替代，旧 efficiency.db 中的数据不被迁移，仅保留代码避免编译报错。
 
 - 目标 > 阶段（Phase，含日期范围）> 任务（ScheduleTask）> 事项（Item）
 - 阶段可并行，任务只能归属一个阶段，事项可归属阶段或任务
 - 目标进度 = 该目标下所有事项的完成数/总数
 
+### 目标五层拆解（GoalV2）
+
+**数据模型** — 5 张表存储在 `goalV2DB`（LifeFlowGoalV2 Dexie 实例）：
+
+| 层 | 表 | 说明 |
+|----|-----|------|
+| L1 愿景 | goalV2Goals | title + vision（愿景画面）+ color + status + progress（引擎计算） |
+| L2 关键结果 | goalV2KeyResults | description + targetValue/currentValue + unit + deadline |
+| L3 策略 | goalV2Strategies | name + description（能力线描述） |
+| L4 周任务 | goalV2WeeklyTasks | title + weekStart(ISO周日) + deliverable(交付物) |
+| L5 日行动 | goalV2DailyActions | title + date + time + duration + isCompleted + itemId(FK) |
+
+**进度引擎**（`goal-v2-engine.ts`）：
+- Goal progress = 所有 KeyResult 的 `currentValue/targetValue` 平均值
+- 无 KeyResult 时回退到 Strategy → DailyAction 的完成率聚合
+- DailyAction 完成/取消完成自动同步写入/删除 Item 表（`syncDailyActionToItem`）
+
+**预置策略模板**：
+- 四种目标类型（`fitness/skill/finance/career`）各有 3 条预置策略 + 对应周任务/日行动示例
+- 用户创建目标时可选模板快速填充
+
+**创建向导**（`/efficiency-v2/new`）：
+5 步不可跳过：愿景 → 关键结果 → 策略模块 → 周任务预览 → 日行动预览
+
+**入口**：`/efficiency-v2` → 目标列表 → 详情页（`/efficiency-v2/goals/[id]`）
+
 ### 饮水模块
 
-- 每小时半自动生成 5 分钟"喝口水然后动一动不要久坐"事项
-- 清醒时段默认 8:00~22:00，睡前 2h 不生成
-- 午睡时间从作息模板读取（type='nap'），无午睡模板则午睡排除失效
+- 饮水事项改为**用户主动确认后才生成**，不再页面加载时自动生成
+- 首页感知卡片区域下方新增「饮水提醒」按钮
+- 点击按钮弹出 Bottom Sheet 确认面板：
+  - 摘要视图：显示提醒次数、时段、总水量、每日目标
+  - 编辑视图：用户可增/删/开关每个具体时段（按小时）
+- 确认后清理所有旧数据并生成未来 7 天的 Items + Reminders
+- 饮水页面（`/more/water`）移除"今日事项"卡片，新增"饮水历史记录"（近 30 天按天汇总）
+- 饮水完成勾选在首页"今日待办"中手动操作
+- 提醒走浏览器原生 Notification（手机通知栏），不在首页感知卡片/提醒条中展示
 
 ### PWA / DB 相关
 

@@ -1,0 +1,247 @@
+"use client";
+
+import { useMemo } from "react";
+import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
+import { Plus, Target } from "lucide-react";
+import { useLiveQuery } from "dexie-react-hooks";
+import {
+  type GoalV2,
+  getAllGoalsV2,
+  getKeyResultsV2,
+  goalV2DB,
+} from "@/lib/db/goal-v2.db";
+
+// ─── 状态徽章 ──────────────────────────────────────────────
+function StatusBadge({ status }: { status: GoalV2["status"] }) {
+  const label: Record<GoalV2["status"], string> = {
+    active: "进行中",
+    completed: "已完成",
+    paused: "已暂停",
+  };
+  const colors: Record<GoalV2["status"], { bg: string; fg: string }> = {
+    active: { bg: "rgba(52, 199, 89, 0.12)", fg: "#34C759" },
+    completed: { bg: "rgba(142, 142, 147, 0.15)", fg: "#8E8E93" },
+    paused: { bg: "rgba(255, 149, 0, 0.12)", fg: "#FF9500" },
+  };
+  const c = colors[status];
+
+  return (
+    <span
+      className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium"
+      style={{ backgroundColor: c.bg, color: c.fg }}
+    >
+      {label[status]}
+    </span>
+  );
+}
+
+// ─── 进度条 ──────────────────────────────────────────────
+function ProgressBar({ value }: { value: number }) {
+  const clamped = Math.min(100, Math.max(0, value));
+
+  return (
+    <div
+      className="w-full h-[6px] rounded-full overflow-hidden"
+      style={{ backgroundColor: "var(--lifeflow-background)" }}
+    >
+      <motion.div
+        className="h-full rounded-full"
+        initial={{ width: 0 }}
+        animate={{ width: `${clamped}%` }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
+        style={{ backgroundColor: "var(--lifeflow-primary)" }}
+      />
+    </div>
+  );
+}
+
+// ─── 主组件 ──────────────────────────────────────────────
+export default function EfficiencyV2Page() {
+  const router = useRouter();
+
+  const goals = useLiveQuery(() => getAllGoalsV2(), [], [] as GoalV2[]);
+  const allKeyResults = useLiveQuery(
+    () => goalV2DB.goalV2KeyResults.toArray(),
+    [],
+    [],
+  );
+
+  // 按 goalId 统计关键结果数量
+  const krCountMap = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const kr of allKeyResults ?? []) {
+      map.set(kr.goalId, (map.get(kr.goalId) ?? 0) + 1);
+    }
+    return map;
+  }, [allKeyResults]);
+
+  const goalList = goals ?? [];
+
+  // ─── 空状态 ──────────────────────────────────────────
+  if (goalList.length === 0) {
+    return (
+      <div
+        className="mx-auto relative flex flex-col items-center justify-center min-h-screen"
+        style={{ maxWidth: 430, padding: "0 24px" }}
+      >
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: "easeOut" }}
+          className="flex flex-col items-center text-center gap-6 w-full"
+          style={{
+            backgroundColor: "var(--color-surface-card)",
+            borderRadius: "var(--lifeflow-radius-medium)",
+            boxShadow: "var(--shadow-card)",
+            padding: "48px 24px",
+          }}
+        >
+          <div
+            className="w-20 h-20 rounded-full flex items-center justify-center"
+            style={{ backgroundColor: "var(--color-surface-secondary)" }}
+          >
+            <Target
+              className="w-10 h-10"
+              style={{ color: "var(--color-text-disabled)" }}
+              strokeWidth={2}
+            />
+          </div>
+          <p
+            className="text-[17px] font-medium"
+            style={{
+              color: "var(--color-text-secondary)",
+              letterSpacing: "-0.022em",
+            }}
+          >
+            还没有目标，开始创建你的第一个目标吧
+          </p>
+          <button
+            type="button"
+            onClick={() => router.push("/efficiency-v2/new")}
+            className="inline-flex items-center justify-center h-11 px-7 rounded-full text-[16px] font-semibold"
+            style={{
+              backgroundColor: "var(--lifeflow-primary)",
+              color: "var(--color-text-inverse)",
+              boxShadow: "var(--shadow-tab-center)",
+            }}
+          >
+            新建目标
+          </button>
+        </motion.div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="mx-auto relative"
+      style={{ maxWidth: 430, minHeight: "100vh", paddingBottom: 100 }}
+    >
+      {/* ===== Header ===== */}
+      <div
+        className="px-5 pt-[var(--safe-area-top)] pb-4 flex items-center justify-between"
+        style={{ paddingTop: "max(var(--safe-area-top), 16px)" }}
+      >
+        <h1
+          className="text-title-large font-bold"
+          style={{ color: "var(--color-text-primary)" }}
+        >
+          目标 V2
+        </h1>
+      </div>
+
+      {/* ===== Goal Grid ===== */}
+      <div className="px-4 grid grid-cols-2 gap-3">
+        {goalList.map((goal, i) => {
+          const krCount = krCountMap.get(goal.id) ?? 0;
+
+          return (
+            <motion.div
+              key={goal.id}
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{
+                delay: i * 0.06,
+                duration: 0.35,
+                ease: "easeOut",
+              }}
+              className="rounded-[20px] overflow-hidden flex flex-col cursor-pointer active:scale-[0.97] transition-transform"
+              style={{
+                backgroundColor: "var(--color-surface-card)",
+                border: "1px solid var(--lifeflow-border)",
+                boxShadow: "var(--shadow-card)",
+              }}
+              onClick={() => router.push(`/efficiency-v2/goals/${goal.id}`)}
+            >
+              {/* 彩色顶条 */}
+              <div
+                className="h-[4px] shrink-0"
+                style={{ backgroundColor: goal.color || "var(--lifeflow-primary)" }}
+              />
+
+              {/* 卡片内容 */}
+              <div className="flex flex-col gap-2.5 p-3.5 flex-1">
+                {/* 标题 */}
+                <h3
+                  className="text-[15px] font-semibold leading-tight line-clamp-2"
+                  style={{ color: "var(--color-text-primary)" }}
+                >
+                  {goal.title}
+                </h3>
+
+                {/* 愿景（截断） */}
+                {goal.vision && (
+                  <p
+                    className="text-[12px] leading-relaxed line-clamp-2"
+                    style={{ color: "var(--color-text-secondary)" }}
+                  >
+                    {goal.vision}
+                  </p>
+                )}
+
+                {/* 进度条 */}
+                <div className="mt-auto flex flex-col gap-1.5">
+                  <ProgressBar value={goal.progress} />
+                  <span
+                    className="text-[11px] font-medium"
+                    style={{ color: "var(--color-text-disabled)" }}
+                  >
+                    {goal.progress}%
+                  </span>
+                </div>
+
+                {/* 底部 row：状态徽章 + KR 数 */}
+                <div className="flex items-center justify-between mt-1">
+                  <StatusBadge status={goal.status} />
+                  <span
+                    className="text-[11px]"
+                    style={{ color: "var(--color-text-disabled)" }}
+                  >
+                    {krCount} 个关键结果
+                  </span>
+                </div>
+              </div>
+            </motion.div>
+          );
+        })}
+      </div>
+
+      {/* ===== FAB 新建目标 ===== */}
+      <button
+        type="button"
+        onClick={() => router.push("/efficiency-v2/new")}
+        className="fixed right-4 bottom-[100px] z-40 flex items-center justify-center"
+        style={{
+          width: 56,
+          height: 56,
+          borderRadius: "50%",
+          backgroundColor: "var(--lifeflow-primary)",
+          boxShadow: "0 2px 8px rgba(37, 99, 235, 0.3)",
+        }}
+      >
+        <Plus className="w-6 h-6 text-white" strokeWidth={2} />
+      </button>
+    </div>
+  );
+}

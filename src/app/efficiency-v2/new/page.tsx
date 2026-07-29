@@ -193,13 +193,14 @@ export default function NewGoalV2Page() {
   const [dailyActions, setDailyActions] = useState<DailyActionFormItem[]>([]);
 
   // ============================================================
-  // 从 URL 参数读取导入数据
+  // 从 sessionStorage 读取导入数据（page.tsx 的 handleImport 写入）
   // ============================================================
   useEffect(() => {
-    const importData = searchParams.get('import');
-    if (!importData) return;
+    const importRaw = sessionStorage.getItem('import_goal');
+    if (!importRaw) return;
+    sessionStorage.removeItem('import_goal');
     try {
-      const data: ImportedGoal = JSON.parse(decodeURIComponent(importData));
+      const data: ImportedGoal = JSON.parse(importRaw);
       if (!data || !data.title) return;
 
       // 填充 Step 1
@@ -330,8 +331,8 @@ export default function NewGoalV2Page() {
         setDailyActions(importActions);
         setStep(5);
       }
-    } catch {
-      // 解析失败，静默忽略
+    } catch (e) {
+      console.error('导入数据解析失败:', e);
     }
   }, [searchParams]);
 

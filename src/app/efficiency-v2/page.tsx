@@ -109,9 +109,9 @@ export default function EfficiencyV2Page() {
         setImporting(false);
         return;
       }
-      // 跳转到创建页面，并带上导入数据（用 query param 编码）
-      const encoded = encodeURIComponent(JSON.stringify(data));
-      router.push(`/efficiency-v2/new?import=${encoded}`);
+      // 跳转到创建页面，通过 sessionStorage 传递数据（避免 URL 长度限制截断）
+      sessionStorage.setItem('import_goal', JSON.stringify(data));
+      router.push('/efficiency-v2/new?import=1');
     } catch (e: any) {
       setImportError(`解析失败：${e.message || '格式错误，请检查 AI 返回的 JSON'}`);
       setImporting(false);

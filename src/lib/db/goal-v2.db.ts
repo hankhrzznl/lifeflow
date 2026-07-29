@@ -108,6 +108,15 @@ class GoalV2DB extends Dexie {
 
   constructor() {
     super('LifeFlowGoalV2');
+    // 保留 v1 定义以保证已有用户平滑升级
+    this.version(1).stores({
+      goalV2Goals: 'id, status, createdAt',
+      goalV2KeyResults: 'id, goalId, sortOrder',
+      goalV2Strategies: 'id, goalId, sortOrder',
+      goalV2WeeklyTasks: 'id, strategyId, goalId, weekStart',
+      goalV2DailyActions: 'id, weeklyTaskId, strategyId, goalId, date, isCompleted',
+    });
+    // v2: 给 StrategyV2 新增 startDate/endDate/cycleType/cycleConfig（非索引字段）
     this.version(2).stores({
       goalV2Goals: 'id, status, createdAt',
       goalV2KeyResults: 'id, goalId, sortOrder',

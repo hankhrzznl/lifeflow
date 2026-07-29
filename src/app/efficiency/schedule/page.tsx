@@ -15,6 +15,8 @@ import { getSleepGoal } from "@/lib/db/health.db";
 import { addWaterLog } from "@/lib/db/health.db";
 import type { Item } from "@/lib/db/daylog.db";
 import { showToast } from "@/components/ui/Toast";
+import { detectTimeConflicts } from "@/lib/conflict-detector";
+import type { ConflictItem } from "@/lib/conflict-detector";
 
 // ============================================================
 // 常量
@@ -194,6 +196,24 @@ export default function SchedulePage() {
   const axisStart = 6 * 60;
   const axisEnd = 26 * 60;
   const showNowLine = isSelectedToday && nowMinutes >= axisStart && nowMinutes <= axisEnd;
+
+  // ── 时间冲突检测 ──
+  const conflictItemIds = useMemo(() => {
+    const conflictItems: ConflictItem[] = (items || []).map(i => ({
+      id: i.id,
+      date: selectedDate!,
+      plannedStart: i.plannedStart,
+      plannedEnd: i.plannedEnd,
+      title: i.title,
+    }));
+    const conflicts = detectTimeConflicts(conflictItems);
+    const ids = new Set<string>();
+    for (const c of conflicts) {
+      ids.add(c.a.id);
+      ids.add(c.b.id);
+    }
+    return ids;
+  }, [items, selectedDate]);
 
   // ── 小时块分组 ──
   const hourBlocks = useMemo(() => {
@@ -538,6 +558,7 @@ export default function SchedulePage() {
                     onWater: handleQuickWater,
                     onFocus: handleQuickFocus,
                     onAccounting: handleQuickAccounting,
+                    conflictItemIds,
                   })}
                 </div>
               </div>
@@ -781,9 +802,10 @@ function renderSlotItems(args: {
   onWater: (item: Item) => void;
   onFocus: (item: Item) => void;
   onAccounting: (item: Item) => void;
+  conflictItemIds: Set<string>;
 }) {
   const { items, hourLabel, isPastDate, onToggle, onDelete, onCalibrate, onNote,
-    expandedItemId, setExpandedItemId, onWater, onFocus, onAccounting } = args;
+    expandedItemId, setExpandedItemId, onWater, onFocus, onAccounting, conflictItemIds } = args;
   if (items.length === 0) return null;
 
   const sorted = [...items].sort((a, b) => a.plannedStart.localeCompare(b.plannedStart));
@@ -807,6 +829,7 @@ function renderSlotItems(args: {
           onWater={() => onWater(item)}
           onFocus={() => onFocus(item)}
           onAccounting={() => onAccounting(item)}
+          hasConflict={conflictItemIds.has(item.id)}
         />
       ))}
       {hiddenCount > 0 && (
@@ -837,6 +860,7 @@ function ItemCard({
   onWater,
   onFocus,
   onAccounting,
+  hasConflict,
 }: {
   item: Item;
   hourLabel: string;
@@ -850,6 +874,7 @@ function ItemCard({
   onWater: () => void;
   onFocus: () => void;
   onAccounting: () => void;
+  hasConflict?: boolean;
 }) {
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -919,6 +944,7 @@ function ItemCard({
               : `${item.color}15`,
         opacity: isHistoryUncompleted ? 0.85 : item.isCompleted ? 0.55 : 1,
         borderLeft: `3px solid ${isHistoryUncompleted ? "#FF3B30" : isWater ? "#0EA5E9" : item.color}`,
+        boxShadow: hasConflict ? '0 0 0 1.5px #FF3B30' : undefined,
       }}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}

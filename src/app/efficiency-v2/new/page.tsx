@@ -9,6 +9,8 @@ import type { StrategyCycleType, WeeklyCycleConfig, DailyCycleConfig, DailyCycle
 import { STRATEGY_TEMPLATES, recalculateGoalProgress, getWeekStart, todayStr, ensureDailyActionsForDate, getDailyActionsForDate } from "@/lib/goal-v2-engine";
 import type { StrategyTemplate } from "@/lib/goal-v2-engine";
 import type { ImportedGoal } from "@/lib/goal-v2-import-parser";
+import { detectTimeConflicts } from "@/lib/conflict-detector";
+import type { ConflictItem } from "@/lib/conflict-detector";
 
 // ============================================================
 // 常量与类型
@@ -578,6 +580,34 @@ export default function NewGoalV2Page() {
     if (submitting) return;
     setSubmitting(true);
     try {
+      // 0. 冲突检测：检查每日行动之间是否有时间重叠
+      const hasTime = dailyActions.filter(a => a.time && a.duration > 0 && a.cycleType === 'daily');
+      if (hasTime.length > 0) {
+        const conflictItems: ConflictItem[] = hasTime.map(a => {
+          const [h, m] = a.time.split(':').map(Number);
+          const totalMin = h * 60 + m + a.duration;
+          const endH = Math.floor(totalMin / 60) % 24;
+          const endM = totalMin % 60;
+          return {
+            id: a.tempId,
+            date: a.startDate,
+            plannedStart: a.time,
+            plannedEnd: `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`,
+            title: a.title,
+          };
+        });
+        const conflicts = detectTimeConflicts(conflictItems);
+        if (conflicts.length > 0) {
+          const msg = conflicts.map(c =>
+            `「${c.a.title || '未知'}」(${c.overlapStart}-${c.overlapEnd}) 与「${c.b.title || '未知'}」时间重叠`
+          ).join('\n');
+          if (!window.confirm(`检测到以下时间冲突，是否仍然创建？\n\n${msg}`)) {
+            setSubmitting(false);
+            return;
+          }
+        }
+      }
+
       // 1. 创建 Goal
       const goalId = await addGoalV2({
         title: title.trim(),

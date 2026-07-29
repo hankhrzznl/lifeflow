@@ -80,7 +80,7 @@ export const GOAL_V2_AI_PROMPT = `# 目标五层拆解法 — AI 创建指引
       "endDate": "YYYY-MM-DD",
       "cycleType": "daily 或 weekly",
       "dailyActions": [
-        { "title": "行动内容描述", "time": "HH:MM", "duration": 时长分钟数 }
+        { "title": "行动内容描述", "time": "HH:MM（必填）", "duration": 时长分钟数（必填） }
       ],
       "weeklyTasks": [
         { "title": "本周任务标题", "deliverable": "本周交付成果描述" }
@@ -100,9 +100,17 @@ export const GOAL_V2_AI_PROMPT = `# 目标五层拆解法 — AI 创建指引
   - **name**: 策略名称
   - **startDate/endDate**: 该策略的起止日期（用于分阶段执行）
   - **cycleType**: "daily" 表示每天固定执行，"weekly" 表示按周循环
-  - **dailyActions**: 当 cycleType 为 "daily" 时，列出每天要执行的具体行动。支持多个时段（如早读、主学、复盘各一条）
+  - **dailyActions**: 当 cycleType 为 "daily" 时必填，列出每天要执行的具体行动。支持多个时段（如早读、主学、复盘各一条）。每条 dailyAction 的 **time（必填）** 为 HH:MM 格式，**duration（必填）** 为分钟数
   - **weeklyTasks**: 该策略下每周要完成的任务（至少1条），作为周任务模板
-  - **weeklyPattern**: 当 cycleType 为 "weekly" 时使用，按星期几配置不同任务
+  - **weeklyPattern（weekly 必填）**: 当 cycleType 为 "weekly" 时**必须提供**此字段。键名为英文星期名（monday/tuesday/wednesday/thursday/friday/saturday/sunday），示例：
+    "weeklyPattern": {
+      "monday": { "title": "背诵1篇真题范文，拆解结构并抄写亮点句型" },
+      "tuesday": { "title": "模仿范文结构，掐时间写1篇同类型作文" },
+      "wednesday": { "title": "完成1套翻译真题，对比答案修改，积累3个固定表达" },
+      "thursday": { "title": "回译练习：将周三的参考译文回译成英文，再与原文对比" },
+      "friday": { "title": "整理本周写译好词好句到本子上，口头复述一遍" },
+      "saturday": { "title": "限时模考1套完整的写作+翻译，找老师或AI批改" }
+    }
 
 ## 重要规则
 

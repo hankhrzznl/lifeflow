@@ -169,6 +169,29 @@ LifeFlow v1.0，一个讲道理的生活助手。
 **使用规范：**
 - 如果某件事需要每天在同一策略下拆分多个时间段执行（如「早读磨耳朵」「晚间主学」「睡前复盘」），不应拆成多条独立策略，而应使用同一个策略的多个时段配置
 
+### AI 提示词强制约束（v2.3+）
+
+- `GOAL_V2_AI_PROMPT` 中 `dailyActions` 的 `time` 和 `duration` 已标记为 **必填**（`"HH:MM（必填）"`、`"时长分钟数（必填）"`），AI 输出必须包含这两个字段
+- 字段说明中明确标注 `dailyActions` 支持多个时段（如早读、主学、复盘各一条）
+- `weeklyPattern` 在 `cycleType: "weekly"` 时**必须提供**，键名使用英文星期名（`monday`/`tuesday`/…），且必须包含完整的 7 天示例
+- `parseImportedGoal()` 解析器中新增 `weeklyPattern` 归一化逻辑：支持数字索引（0-6）和英文星期名两种格式，统一转为数字索引存储
+
+### 时间冲突检测（v2.3+）
+
+**纯函数引擎**（`src/lib/conflict-detector.ts`）：
+- `detectTimeConflicts(items: ConflictItem[])` — 按 date 分组后检测同一天内所有 Items 的时间重叠，返回冲突列表（含重叠起止时间）
+- `checkNewConflict(newItem, existing)` — 检查单个新时段是否与已有列表冲突
+- 重叠判定规则：`aStart < bEnd && aEnd > bStart`（端点相等不视为重叠）
+- 无任何 React/Next.js 依赖，纯函数可跨模块复用
+
+**集成点**：
+- **创建向导**（`/efficiency-v2/new`）：`handleSubmit` 中检测所有 `dailyActions` 的时间重叠，发现冲突时弹出 `window.confirm` 让用户选择「仍然创建」或取消
+- **日程页**（`/efficiency/schedule`）：使用 `useMemo` 实时计算当前日期的冲突 ID 集合，`ItemCard` 对有冲突的事项显示红色边框阴影（`0 0 0 1.5px #FF3B30`）
+
+**注意事项**：
+- 当前仅做同一天内的简单时间重叠检测，不考虑缓冲区、精力管理等高级因素
+- 冲突检测仅在创建目标时触发，修改策略后尚未自动重新检测
+
 ### AI 提示词 & 一键导入（v2.2+）
 
 - `src/lib/goal-v2-import-parser.ts` 提供 `GOAL_V2_AI_PROMPT` 常量（完整的五层拆解法提示词）+ `parseImportedGoal()` 解析器 + `validateImportedGoal()` 验证器

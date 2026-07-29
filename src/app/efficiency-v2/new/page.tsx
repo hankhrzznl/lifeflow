@@ -242,10 +242,19 @@ export default function NewGoalV2Page() {
             };
           }
           // weekly
-          const wp = defaultWeeklyPattern();
+          const wp: Record<number, { title: string; time: string; duration: number; enabled: boolean }> = {};
+          for (let i = 0; i < 7; i++) {
+            wp[i] = { title: "", time: "08:00", duration: 30, enabled: false };
+          }
           if (s.weeklyPattern) {
             for (const [dow, day] of Object.entries(s.weeklyPattern)) {
-              wp[Number(dow)] = day;
+              const d = day as any;
+              wp[Number(dow)] = {
+                title: d.title || "",
+                time: d.time || "08:00",
+                duration: d.duration ?? 30,
+                enabled: true,
+              };
             }
           }
           return {

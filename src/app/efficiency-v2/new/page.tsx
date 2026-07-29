@@ -964,7 +964,7 @@ export default function NewGoalV2Page() {
   // ============================================================
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ backgroundColor: "var(--lifeflow-background)" }}>
+    <div className="h-screen flex flex-col" style={{ backgroundColor: "var(--lifeflow-background)" }}>
       {/* ===== 头部 ===== */}
       <div
         style={{

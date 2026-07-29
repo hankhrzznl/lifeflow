@@ -4,7 +4,7 @@
 import { goalV2DB } from "@/lib/db/goal-v2.db";
 import type {
   GoalV2, KeyResultV2, StrategyV2, WeeklyTaskV2, DailyActionV2,
-  WeeklyCycleConfig, DailyCycleConfig, StrategyCycleType,
+  WeeklyCycleConfig, DailyCycleConfig, DailyCycleItem, StrategyCycleType,
 } from "@/lib/db/goal-v2.db";
 import { daylogDB, addItem, ensureModuleItem } from "@/lib/db/daylog.db";
 
@@ -261,54 +261,53 @@ export async function getActiveStrategies(goalId: string, dateStr?: string): Pro
 }
 
 /**
- * 根据策略的周期配置，计算某一天的日行动内容
- * 返回 null 表示该天该策略没有日行动
+ * 根据策略的周期配置，计算某一天的所有日行动内容
+ * 返回空数组表示该天该策略没有日行动
  */
-export function getDailyActionForDate(strategy: StrategyV2, dateStr: string): {
-  title: string;
-  time: string;
-  duration: number;
-} | null {
-  if (!strategy.cycleConfig) return null;
+export function getDailyActionsForDate(strategy: StrategyV2, dateStr: string): DailyCycleItem[] {
+  if (!strategy.cycleConfig) return [];
 
   try {
     if (strategy.cycleType === 'daily') {
       const config: DailyCycleConfig = JSON.parse(strategy.cycleConfig);
-      return { title: config.title, time: config.time, duration: config.duration };
+      // 兼容旧版单对象格式（去掉后可以简化）
+      if (!Array.isArray(config)) {
+        return [config as DailyCycleItem];
+      }
+      return config;
     }
 
     if (strategy.cycleType === 'weekly') {
       const config: WeeklyCycleConfig = JSON.parse(strategy.cycleConfig);
       const dow = new Date(dateStr + 'T00:00:00').getDay();
       const dayConfig = config[dow];
-      if (!dayConfig || !dayConfig.enabled) return null;
-      return { title: dayConfig.title, time: dayConfig.time, duration: dayConfig.duration };
+      if (!dayConfig || !dayConfig.enabled) return [];
+      return [{ title: dayConfig.title, time: dayConfig.time, duration: dayConfig.duration }];
     }
   } catch {
-    // JSON 解析失败，返回 null
-    return null;
+    return [];
   }
 
-  return null;
+  return [];
 }
 
 /**
  * 为目标生成当日日行动
  * 查找所有活跃策略，根据周期配置生成日行动
- * 已存在的日行动不会被重复生成
+ * 已存在的日行动不会被重复生成（按 strategyId + title 去重）
  */
 export async function ensureDailyActionsForDate(goalId: string, dateStr: string): Promise<number> {
   const strategies = await getActiveStrategies(goalId, dateStr);
   const existing = await goalV2DB.goalV2DailyActions
     .where({ goalId, date: dateStr })
     .toArray();
-  const existingStrategyIds = new Set(existing.map(a => a.strategyId));
+  // 用 strategyId + title 作为去重 key
+  const existingKeys = new Set(existing.map(a => `${a.strategyId}::${a.title}`));
 
   let count = 0;
   for (const strategy of strategies) {
-    if (existingStrategyIds.has(strategy.id)) continue;
-    const action = getDailyActionForDate(strategy, dateStr);
-    if (!action) continue;
+    const actions = getDailyActionsForDate(strategy, dateStr);
+    if (actions.length === 0) continue;
 
     // 找该策略的第一个周任务来关联（如果没有周任务，留空）
     const tasks = await goalV2DB.goalV2WeeklyTasks
@@ -316,19 +315,24 @@ export async function ensureDailyActionsForDate(goalId: string, dateStr: string)
       .toArray();
     const weeklyTaskId = tasks.length > 0 ? tasks[0].id : '';
 
-    await goalV2DB.goalV2DailyActions.add({
-      id: crypto.randomUUID(),
-      weeklyTaskId,
-      strategyId: strategy.id,
-      goalId,
-      date: dateStr,
-      title: action.title,
-      time: action.time,
-      duration: action.duration,
-      isCompleted: false,
-      sortOrder: strategies.indexOf(strategy),
-    });
-    count++;
+    for (const action of actions) {
+      const key = `${strategy.id}::${action.title}`;
+      if (existingKeys.has(key)) continue;
+
+      await goalV2DB.goalV2DailyActions.add({
+        id: crypto.randomUUID(),
+        weeklyTaskId,
+        strategyId: strategy.id,
+        goalId,
+        date: dateStr,
+        title: action.title,
+        time: action.time,
+        duration: action.duration,
+        isCompleted: false,
+        sortOrder: strategies.indexOf(strategy),
+      });
+      count++;
+    }
   }
 
   return count;

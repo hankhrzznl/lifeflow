@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Check, ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
 import { addGoalV2, addKeyResultV2, addStrategyV2, addWeeklyTaskV2, addDailyActionV2, getWeeklyTasksByGoalV2 } from "@/lib/db/goal-v2.db";
-import type { StrategyCycleType, WeeklyCycleConfig, DailyCycleConfig } from "@/lib/db/goal-v2.db";
-import { STRATEGY_TEMPLATES, recalculateGoalProgress, getWeekStart, todayStr, ensureDailyActionsForDate, getDailyActionForDate } from "@/lib/goal-v2-engine";
+import type { StrategyCycleType, WeeklyCycleConfig, DailyCycleConfig, DailyCycleItem } from "@/lib/db/goal-v2.db";
+import { STRATEGY_TEMPLATES, recalculateGoalProgress, getWeekStart, todayStr, ensureDailyActionsForDate, getDailyActionsForDate } from "@/lib/goal-v2-engine";
 import type { StrategyTemplate } from "@/lib/goal-v2-engine";
 
 // ============================================================
@@ -49,9 +49,8 @@ interface StrategyFormItem {
   startDate: string;
   endDate: string;
   cycleType: StrategyCycleType;
-  dailyTitle: string;
-  dailyTime: string;
-  dailyDuration: number;
+  /** 每日行动的多个时段 */
+  dailyActions: DailyCycleItem[];
   weeklyPattern: Record<number, { title: string; time: string; duration: number; enabled: boolean }>;
 }
 
@@ -99,6 +98,11 @@ function defaultWeeklyPattern(): Record<number, { title: string; time: string; d
     days[i] = { title: "", time: "08:00", duration: 30, enabled: true };
   }
   return days;
+}
+
+/** 默认的一条每日行动时段 */
+function defaultDailyAction(): DailyCycleItem {
+  return { title: "", time: "08:00", duration: 30 };
 }
 
 // ============================================================
@@ -208,7 +212,8 @@ export default function NewGoalV2Page() {
       setStrategies([{
         tempId: genId(), name: "", description: "",
         startDate: today, endDate: end,
-        cycleType: "daily", dailyTitle: "", dailyTime: "08:00", dailyDuration: 30,
+        cycleType: "daily",
+        dailyActions: [defaultDailyAction()],
         weeklyPattern: defaultWeeklyPattern(),
       }]);
       return;
@@ -221,9 +226,7 @@ export default function NewGoalV2Page() {
       templateKey: key as TemplateKey,
       startDate: today, endDate: end,
       cycleType: "daily" as StrategyCycleType,
-      dailyTitle: t.dailyActionTitle,
-      dailyTime: t.dailyActionTime,
-      dailyDuration: t.dailyActionDuration,
+      dailyActions: [{ title: t.dailyActionTitle, time: t.dailyActionTime, duration: t.dailyActionDuration }],
       weeklyPattern: defaultWeeklyPattern(),
     }));
     setStrategies(items);
@@ -236,7 +239,8 @@ export default function NewGoalV2Page() {
     setStrategies((prev) => [...prev, {
       tempId: genId(), name: "", description: "",
       startDate: todayStr(), endDate: defaultStrategyEnd(),
-      cycleType: "daily", dailyTitle: "", dailyTime: "08:00", dailyDuration: 30,
+      cycleType: "daily",
+      dailyActions: [defaultDailyAction()],
       weeklyPattern: defaultWeeklyPattern(),
     }]);
   }, []);
@@ -310,56 +314,51 @@ export default function NewGoalV2Page() {
     const today = todayStr();
     const strategyMap = new Map(strategies.map((s) => [s.tempId, s]));
     const todayDOW = new Date().getDay();
-    const actions: DailyActionFormItem[] = weeklyTasks.map((wt) => {
+    const actions: DailyActionFormItem[] = [];
+
+    for (const wt of weeklyTasks) {
       const strategy = strategyMap.get(wt.strategyId);
-      let title = "";
-      let time = "08:00";
-      let duration = 30;
+      if (!strategy) continue;
 
-      if (strategy) {
-        if (strategy.cycleType === 'daily') {
-          // 使用每日固定配置
-          title = strategy.dailyTitle;
-          time = strategy.dailyTime;
-          duration = strategy.dailyDuration;
-        } else if (strategy.cycleType === 'weekly') {
-          // 使用周循环中的今天配置
-          const dayConfig = strategy.weeklyPattern[todayDOW];
-          if (dayConfig && dayConfig.enabled) {
-            title = dayConfig.title;
-            time = dayConfig.time;
-            duration = dayConfig.duration;
-          }
+      let items: { title: string; time: string; duration: number }[] = [];
+
+      if (strategy.cycleType === 'daily') {
+        // 使用每日固定配置（支持多个时段）
+        items = strategy.dailyActions.filter(a => a.title.trim());
+      } else if (strategy.cycleType === 'weekly') {
+        // 使用周循环中的今天配置
+        const dayConfig = strategy.weeklyPattern[todayDOW];
+        if (dayConfig && dayConfig.enabled && dayConfig.title.trim()) {
+          items = [{ title: dayConfig.title, time: dayConfig.time, duration: dayConfig.duration }];
         }
       }
 
-      if (!title) {
-        // 回退：从模板匹配
-        if (selectedTemplate && selectedTemplate !== "custom" && strategy) {
-          const tpls = STRATEGY_TEMPLATES[selectedTemplate];
-          const match = tpls.find((t) => t.name === strategy.name);
-          if (match) {
-            title = match.dailyActionTitle;
-            time = match.dailyActionTime;
-            duration = match.dailyActionDuration;
-          }
+      // 如果没配置，回退到模板
+      if (items.length === 0 && selectedTemplate && selectedTemplate !== "custom") {
+        const tpls = STRATEGY_TEMPLATES[selectedTemplate];
+        const match = tpls.find((t) => t.name === strategy.name);
+        if (match) {
+          items = [{ title: match.dailyActionTitle, time: match.dailyActionTime, duration: match.dailyActionDuration }];
         }
       }
 
-      if (!title) {
-        title = `${wt.title} - 执行`;
+      if (items.length === 0) {
+        items = [{ title: `${wt.title} - 执行`, time: "08:00", duration: 30 }];
       }
 
-      return {
-        tempId: genId(),
-        weeklyTaskId: wt.tempId,
-        strategyId: wt.strategyId,
-        title,
-        time,
-        duration,
-        date: today,
-      };
-    });
+      for (const item of items) {
+        actions.push({
+          tempId: genId(),
+          weeklyTaskId: wt.tempId,
+          strategyId: wt.strategyId,
+          title: item.title,
+          time: item.time,
+          duration: item.duration,
+          date: today,
+        });
+      }
+    }
+
     setDailyActions(actions);
     setStep(5);
   }, [weeklyTasks, strategies, selectedTemplate]);
@@ -436,7 +435,7 @@ export default function NewGoalV2Page() {
         // 构建 cycleConfig JSON
         let cycleConfig: string | undefined;
         if (s.cycleType === 'daily') {
-          const config: DailyCycleConfig = { title: s.dailyTitle, time: s.dailyTime, duration: s.dailyDuration };
+          const config: DailyCycleConfig = s.dailyActions.filter(a => a.title.trim());
           cycleConfig = JSON.stringify(config);
         } else if (s.cycleType === 'weekly') {
           const config: WeeklyCycleConfig = {};
@@ -893,41 +892,96 @@ export default function NewGoalV2Page() {
                 </button>
               </div>
 
-              {/* ── 每日固定配置 ── */}
+              {/* ── 每日固定配置（支持多个时段） ── */}
               {s.cycleType === "daily" && (
-                <div className="flex gap-2 mt-2">
-                  <div className="flex-1">
-                    <label className="text-[11px] block mb-1" style={{ color: "var(--color-text-disabled)" }}>行动标题</label>
-                    <input
-                      type="text"
-                      value={s.dailyTitle}
-                      onChange={(e) => updateStrategy(s.tempId, "dailyTitle", e.target.value)}
-                      placeholder="如：背单词40分钟"
-                      className="w-full h-8 rounded-[6px] px-2 text-[12px] outline-none"
-                      style={{ color: "var(--color-text-primary)", backgroundColor: "var(--lifeflow-muted)", border: "1px solid var(--lifeflow-border)" }}
-                    />
-                  </div>
-                  <div className="w-[70px]">
-                    <label className="text-[11px] block mb-1" style={{ color: "var(--color-text-disabled)" }}>时间</label>
-                    <input
-                      type="time"
-                      value={s.dailyTime}
-                      onChange={(e) => updateStrategy(s.tempId, "dailyTime", e.target.value)}
-                      className="w-full h-8 rounded-[6px] px-1 text-[12px] outline-none"
-                      style={{ color: "var(--color-text-primary)", backgroundColor: "var(--lifeflow-muted)", border: "1px solid var(--lifeflow-border)" }}
-                    />
-                  </div>
-                  <div className="w-[50px]">
-                    <label className="text-[11px] block mb-1" style={{ color: "var(--color-text-disabled)" }}>分钟</label>
-                    <input
-                      type="number"
-                      value={s.dailyDuration}
-                      onChange={(e) => updateStrategy(s.tempId, "dailyDuration", e.target.value)}
-                      className="w-full h-8 rounded-[6px] px-1 text-[12px] outline-none text-center"
-                      min={1}
-                      style={{ color: "var(--color-text-primary)", backgroundColor: "var(--lifeflow-muted)", border: "1px solid var(--lifeflow-border)" }}
-                    />
-                  </div>
+                <div className="mt-2 space-y-1.5">
+                  <p className="text-[11px]" style={{ color: "var(--color-text-disabled)" }}>每日行动（可添加多个时段）：</p>
+                  {s.dailyActions.map((act, actIdx) => (
+                    <div key={actIdx} className="flex items-center gap-1.5">
+                      <input
+                        type="text"
+                        value={act.title}
+                        onChange={(e) => {
+                          setStrategies((prev) =>
+                            prev.map((x) => {
+                              if (x.tempId !== s.tempId) return x;
+                              const da = [...x.dailyActions];
+                              da[actIdx] = { ...da[actIdx], title: e.target.value };
+                              return { ...x, dailyActions: da };
+                            })
+                          );
+                        }}
+                        placeholder="行动内容"
+                        className="flex-[3] h-7 rounded-[4px] px-1.5 text-[11px] outline-none"
+                        style={{ color: "var(--color-text-primary)", backgroundColor: "var(--lifeflow-muted)", border: "1px solid var(--lifeflow-border)" }}
+                      />
+                      <input
+                        type="time"
+                        value={act.time}
+                        onChange={(e) => {
+                          setStrategies((prev) =>
+                            prev.map((x) => {
+                              if (x.tempId !== s.tempId) return x;
+                              const da = [...x.dailyActions];
+                              da[actIdx] = { ...da[actIdx], time: e.target.value };
+                              return { ...x, dailyActions: da };
+                            })
+                          );
+                        }}
+                        className="w-[60px] h-7 rounded-[4px] px-1 text-[11px] outline-none"
+                        style={{ color: "var(--color-text-primary)", backgroundColor: "var(--lifeflow-muted)", border: "1px solid var(--lifeflow-border)" }}
+                      />
+                      <input
+                        type="number"
+                        value={act.duration}
+                        onChange={(e) => {
+                          setStrategies((prev) =>
+                            prev.map((x) => {
+                              if (x.tempId !== s.tempId) return x;
+                              const da = [...x.dailyActions];
+                              da[actIdx] = { ...da[actIdx], duration: parseInt(e.target.value) || 30 };
+                              return { ...x, dailyActions: da };
+                            })
+                          );
+                        }}
+                        className="w-[32px] h-7 rounded-[4px] px-1 text-[11px] outline-none text-center"
+                        min={1}
+                        style={{ color: "var(--color-text-primary)", backgroundColor: "var(--lifeflow-muted)", border: "1px solid var(--lifeflow-border)" }}
+                      />
+                      {s.dailyActions.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setStrategies((prev) =>
+                              prev.map((x) => {
+                                if (x.tempId !== s.tempId) return x;
+                                return { ...x, dailyActions: x.dailyActions.filter((_, i) => i !== actIdx) };
+                              })
+                            );
+                          }}
+                          className="w-5 h-5 rounded flex items-center justify-center shrink-0"
+                          style={{ color: "#FF3B30", background: "rgba(255,59,48,0.1)" }}
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStrategies((prev) =>
+                        prev.map((x) => {
+                          if (x.tempId !== s.tempId) return x;
+                          return { ...x, dailyActions: [...x.dailyActions, defaultDailyAction()] };
+                        })
+                      );
+                    }}
+                    className="flex items-center justify-center gap-1 py-1 rounded-[4px] text-[11px] font-medium w-full"
+                    style={{ color: "var(--lifeflow-primary)", border: "1px dashed var(--lifeflow-border)", background: "var(--color-surface-card)" }}
+                  >
+                    <Plus className="w-3 h-3" /> 添加时段
+                  </button>
                 </div>
               )}
 

@@ -31,12 +31,15 @@ export interface KeyResultV2 {
 
 // ── 第三层：策略（Strategy） ──
 
-/** 每日循环配置 */
-export interface DailyCycleConfig {
+/** 每日循环配置条目 — 一个时段 */
+export interface DailyCycleItem {
   title: string;
   time: string;
   duration: number;
 }
+
+/** 每日循环配置 — 支持多个时段 */
+export type DailyCycleConfig = DailyCycleItem[];
 
 /** 每周循环配置 — dayOfWeek 0=周日 1=周一 ... 6=周六 */
 export interface WeeklyDayConfig {

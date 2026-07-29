@@ -16,7 +16,7 @@ import { getPendingReminders } from "@/lib/db";
 import type { Reminder } from "@/lib/types";
 import { useAgent } from "@/components/agent/AgentProvider";
 import { showToast } from "@/components/ui/Toast";
-import { runPerceptionCheck, type PerceptionCard } from "@/lib/perception-engine";
+import LifeDashboard from "@/components/dashboard/LifeDashboard";
 import { getAllProjects } from "@/lib/db/efficiency.db";
 import type { Project } from "@/lib/db/efficiency.db";
 import { getCountdowns } from "@/lib/db/life.db";
@@ -105,19 +105,7 @@ export default function HomePage() {
     return () => clearInterval(id);
   }, []);
 
-  // ── 感知卡片加载 ──
-  useEffect(() => {
-    const cached = sessionStorage.getItem("perception_cards");
-    if (cached) {
-      try {
-        setPerceptionCards(JSON.parse(cached));
-      } catch {}
-    }
-    runPerceptionCheck().then(cards => {
-      setPerceptionCards(cards);
-      sessionStorage.setItem("perception_cards", JSON.stringify(cards));
-    }).catch(() => {});
-  }, []);
+  // ── 感知卡片已由 LifeDashboard 替代 ──
 
   // ── 数据源：当前时间往后的 6 个事项 ──
   const upcomingItems = useLiveQuery(
@@ -278,7 +266,6 @@ export default function HomePage() {
   };
 
   const [submitting, setSubmitting] = useState(false);
-  const [perceptionCards, setPerceptionCards] = useState<PerceptionCard[]>([]);
   const [taskListExpanded, setTaskListExpanded] = useState(false);
 
   // ── 饮水提醒 ──
@@ -329,9 +316,6 @@ export default function HomePage() {
       });
 
       showToast({ type: "success", message: "已添加" });
-      runPerceptionCheck().then(cards => {
-        sessionStorage.setItem("perception_cards", JSON.stringify(cards));
-      }).catch(() => {});
       setShowCreate(false);
       resetForm();
     } catch {
@@ -340,32 +324,6 @@ export default function HomePage() {
       setSubmitting(false);
     }
   }, [createForm, today, submitting]);
-
-  // ────────── 感知卡片辅助 ──────────
-
-  const typeEmoji: Record<string, string> = {
-    insight: "💡",
-    care: "🤍",
-    celebration: "🎉",
-    guidance: "👋",
-  };
-
-  const dismissCard = (id: string) => {
-    const dismissed = JSON.parse(localStorage.getItem("perception_dismissed") || "{}");
-    dismissed[id] = Date.now();
-    localStorage.setItem("perception_dismissed", JSON.stringify(dismissed));
-    setPerceptionCards(prev => prev.filter(c => c.id !== id));
-  };
-
-  // 过滤24h内已关闭的卡片
-  const visibleCards = useMemo(() => {
-    const dismissed = JSON.parse(localStorage.getItem("perception_dismissed") || "{}");
-    const now = Date.now();
-    return perceptionCards.filter(c => {
-      const t = dismissed[c.id];
-      return !t || (now - t) > 24 * 60 * 60 * 1000;
-    }).slice(0, 3);
-  }, [perceptionCards]);
 
   // ────────── Render ──────────
 
@@ -409,60 +367,8 @@ export default function HomePage() {
         </div>
       </motion.div>
 
-      {/* ===== 感知卡片区 ===== */}
-      {visibleCards.length > 0 && (
-        <div className="px-4 mb-4">
-          <div className="flex flex-col gap-2">
-            {visibleCards.map((card, i) => (
-              <motion.div
-                key={card.id}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.03 + i * 0.04, duration: 0.3 }}
-                className="rounded-[16px] p-4 relative"
-                style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}
-              >
-                <button
-                  onClick={() => dismissCard(card.id)}
-                  className="absolute top-2.5 right-3 w-6 h-6 flex items-center justify-center rounded-full active:opacity-60"
-                  style={{ background: "var(--lifeflow-muted)" }}
-                  aria-label="关闭"
-                >
-                  <X className="w-3 h-3" style={{ color: "var(--color-text-disabled)" }} />
-                </button>
-                <div className="flex items-start gap-2.5 pr-6">
-                  <span className="text-[18px] leading-tight mt-0.5">{typeEmoji[card.type] || "💡"}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[15px] font-semibold mb-1" style={{ color: "var(--color-text-primary)" }}>{card.headline}</p>
-                    <p className="text-[13px] leading-relaxed" style={{ color: "var(--color-text-secondary)" }}>{card.body}</p>
-                    {card.action && (
-                      <Link
-                        href={card.action.path}
-                        className="inline-block mt-2 text-[13px] font-medium active:opacity-70"
-                        style={{ color: "var(--lifeflow-primary)" }}
-                      >
-                        {card.action.label}
-                      </Link>
-                    )}
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {visibleCards.length === 0 && perceptionCards.length > 0 && (
-        <div className="px-4 mb-4">
-          <motion.div
-            initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-            className="rounded-[16px] p-4 text-center"
-            style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}
-          >
-            <p className="text-[14px]" style={{ color: "var(--color-text-secondary)" }}>一切如常，享受今天 ☀️</p>
-          </motion.div>
-        </div>
-      )}
+      {/* ===== 生活节奏仪表盘 ===== */}
+      <LifeDashboard />
 
       {/* ===== 饮水提醒按钮 ===== */}
       <div className="px-4 mb-3">
@@ -762,7 +668,7 @@ export default function HomePage() {
           </Link>
         </motion.div>
 
-        {visibleCards.length > 0 && !taskListExpanded ? (
+        {!taskListExpanded ? (
           <button
             onClick={() => setTaskListExpanded(true)}
             className="rounded-[16px] p-3.5 flex items-center justify-between active:opacity-70"

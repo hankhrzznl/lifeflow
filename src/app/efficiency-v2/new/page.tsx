@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Check, ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
@@ -168,6 +168,7 @@ function StepIndicator({ current }: { current: number }) {
 
 export default function NewGoalV2Page() {
   const router = useRouter();
+  const importProcessed = useRef(false);
   const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
 
@@ -195,8 +196,10 @@ export default function NewGoalV2Page() {
   // 从 sessionStorage 读取导入数据（page.tsx 的 handleImport 写入）
   // ============================================================
   useEffect(() => {
+    if (importProcessed.current) return;
     const importRaw = sessionStorage.getItem('import_goal');
     if (!importRaw) return;
+    importProcessed.current = true;
     sessionStorage.removeItem('import_goal');
     try {
       const data: ImportedGoal = JSON.parse(importRaw);

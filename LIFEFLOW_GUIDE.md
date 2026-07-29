@@ -179,6 +179,8 @@ LifeFlow v1.0，一个讲道理的生活助手。
 - 创建向导（`/efficiency-v2/new`）支持从 URL 参数 `?import=` 读取编码后的导入数据
 - 导入数据填充后，自动生成每日行动预览并跳转到 Step 5（预览页），用户确认后点击「完成创建」
 - 导入的 JSON 格式：`{ title, vision?, color?, keyResults: [{description, targetValue, unit, deadline?}], strategies: [{name, description?, startDate?, endDate?, cycleType, dailyActions: [{title, time, duration}], weeklyTasks: [{title, deliverable}], weeklyPattern? }] }`
+  - `weeklyPattern` 键名支持两种格式：数字索引（0=周日, 1=周一, …）或英文星期名（`monday`, `tuesday`, …），导入时会自动归一化  
+  - Step 5（每日行动预览）只生成 `startDate <= 今天` 的策略的行动，未开始的策略不会出现在当日预览中
 - **导入数据传递方式**：使用 `sessionStorage`（key: `'import_goal'`）而非 URL query param，避免大型 JSON 被 URL 长度限制截断
   - 源页面写入后 `router.push('/efficiency-v2/new?import=1')`
   - 目标页面 useEffect 读取后立即 `sessionStorage.removeItem('import_goal')` 清理

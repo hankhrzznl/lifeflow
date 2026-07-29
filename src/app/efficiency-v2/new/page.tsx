@@ -255,9 +255,7 @@ export default function NewGoalV2Page() {
             startDate: s.startDate || today,
             endDate: s.endDate || defaultStrategyEnd(),
             cycleType: 'weekly' as StrategyCycleType,
-            dailyActions: s.dailyActions.length > 0
-              ? s.dailyActions.map(a => ({ title: a.title, time: a.time, duration: a.duration }))
-              : [defaultDailyAction()],
+            dailyActions: [],
             weeklyPattern: wp,
           };
         });
@@ -303,6 +301,9 @@ export default function NewGoalV2Page() {
           if (!strategy) continue;
 
           let actionItems: { title: string; time: string; duration: number }[] = [];
+
+          // 只生成 startDate <= 今天的策略的行动
+          if (strategy.startDate > importToday) continue;
 
           if (strategy.cycleType === 'daily') {
             actionItems = strategy.dailyActions.filter(a => a.title.trim());

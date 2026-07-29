@@ -199,6 +199,21 @@ export function parseImportedGoal(text: string): ImportedGoal {
       weeklyTasks.push({ title: `${s.name} - 本周任务`, deliverable: '' });
     }
 
+    // 归一化 weeklyPattern：把 "monday"/"sunday"/0/1 等统一为数字索引 0-6
+    let weeklyPattern: Record<string, { title: string; time?: string; duration?: number }> | undefined;
+    const DAY_NAME_MAP: Record<string, number> = {
+      sunday: 0, monday: 1, tuesday: 2, wednesday: 3, thursday: 4, friday: 5, saturday: 6,
+    };
+    if (s.weeklyPattern) {
+      weeklyPattern = {};
+      for (const [key, val] of Object.entries(s.weeklyPattern as Record<string, any>)) {
+        const idx = DAY_NAME_MAP[key.toLowerCase()] ?? Number(key);
+        if (!isNaN(idx) && idx >= 0 && idx <= 6) {
+          weeklyPattern[String(idx)] = val;
+        }
+      }
+    }
+
     return {
       name: s.name,
       description: s.description || '',
@@ -207,7 +222,7 @@ export function parseImportedGoal(text: string): ImportedGoal {
       cycleType: s.cycleType === 'weekly' ? 'weekly' : 'daily',
       dailyActions,
       weeklyTasks,
-      weeklyPattern: s.weeklyPattern,
+      weeklyPattern,
     };
   });
 

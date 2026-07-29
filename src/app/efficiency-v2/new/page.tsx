@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useMemo, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Check, ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
 import { addGoalV2, addKeyResultV2, addStrategyV2, addWeeklyTaskV2, addDailyActionV2, getWeeklyTasksByGoalV2 } from "@/lib/db/goal-v2.db";
@@ -168,7 +168,6 @@ function StepIndicator({ current }: { current: number }) {
 
 export default function NewGoalV2Page() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
 
@@ -334,7 +333,7 @@ export default function NewGoalV2Page() {
     } catch (e) {
       console.error('导入数据解析失败:', e);
     }
-  }, [searchParams]);
+  }, []);
 
   // ============================================================
   // 模板策略名称映射

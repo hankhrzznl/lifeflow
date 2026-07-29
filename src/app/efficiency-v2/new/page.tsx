@@ -288,6 +288,47 @@ export default function NewGoalV2Page() {
           }
         }
         setWeeklyTasks(tasks);
+
+        // 自动生成 Step 5 — 每日行动预览并跳转到预览页
+        const importToday = todayStr();
+        const strategyMap = new Map(items.map((s) => [s.tempId, s]));
+        const importTodayDOW = new Date().getDay();
+        const importActions: DailyActionFormItem[] = [];
+
+        for (const wt of tasks) {
+          const strategy = strategyMap.get(wt.strategyId);
+          if (!strategy) continue;
+
+          let actionItems: { title: string; time: string; duration: number }[] = [];
+
+          if (strategy.cycleType === 'daily') {
+            actionItems = strategy.dailyActions.filter(a => a.title.trim());
+          } else if (strategy.cycleType === 'weekly') {
+            const dayConfig = strategy.weeklyPattern[importTodayDOW];
+            if (dayConfig && dayConfig.enabled && dayConfig.title.trim()) {
+              actionItems = [{ title: dayConfig.title, time: dayConfig.time, duration: dayConfig.duration }];
+            }
+          }
+
+          if (actionItems.length === 0) {
+            actionItems = [{ title: `${wt.title} - 执行`, time: "08:00", duration: 30 }];
+          }
+
+          for (const item of actionItems) {
+            importActions.push({
+              tempId: genId(),
+              weeklyTaskId: wt.tempId,
+              strategyId: wt.strategyId,
+              title: item.title,
+              time: item.time,
+              duration: item.duration,
+              date: importToday,
+            });
+          }
+        }
+
+        setDailyActions(importActions);
+        setStep(5);
       }
     } catch {
       // 解析失败，静默忽略

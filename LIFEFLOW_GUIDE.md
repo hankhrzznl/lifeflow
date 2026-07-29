@@ -89,6 +89,11 @@ LifeFlow v1.0，一个讲道理的生活助手。
 - 饮水完成勾选在首页"今日待办"中手动操作
 - 提醒走浏览器原生 Notification（手机通知栏），不在首页感知卡片/提醒条中展示
 
+### 饮水历史展开详情
+
+- 展开详情的 `motion.div` **禁止使用 `overflow-hidden`**，framar-motion 内部会自行处理动画期间的裁剪，设置 `overflow-hidden` 会导致浏览器无法正确计算滚动高度，使部分事项记录被裁剪不可见
+- 外层滚动容器的 `max-h` 需足够容纳展开后的内容（建议 600px 以上），当前默认 600px
+
 ### PWA / DB 相关
 
 - `addDays` 函数必须使用 `getFullYear/getMonth/getDate` 拼接，**禁止 `toISOString()`**（UTC 时区导致东八区日期回退）
@@ -171,6 +176,7 @@ LifeFlow v1.0，一个讲道理的生活助手。
   - 「复制提示词」将提示词复制到剪贴板，用户可粘贴发给任意 AI
   - 「导入」打开粘贴框，接收 AI 返回的 JSON，解析后跳转到创建向导并自动填充所有步骤
 - 创建向导（`/efficiency-v2/new`）支持从 URL 参数 `?import=` 读取编码后的导入数据
+- 导入数据填充后，自动生成每日行动预览并跳转到 Step 5（预览页），用户确认后点击「完成创建」
 - 导入的 JSON 格式：`{ title, vision?, color?, keyResults: [{description, targetValue, unit, deadline?}], strategies: [{name, description?, startDate?, endDate?, cycleType, dailyActions: [{title, time, duration}], weeklyTasks: [{title, deliverable}], weeklyPattern? }] }`
 
 ### 饮水提醒开关（v2.2+）

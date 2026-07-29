@@ -120,7 +120,7 @@ LifeFlow v1.0，一个讲道理的生活助手。
 
 ### UI 布局原则（v1.1+）
 
-- 底部导航栏为 **3-tab**（首页/目标/日程），AI 助手通过全局悬浮球访问，导航栏不再保留助手入口
+- 底部导航栏为 **4-tab**（首页/目标/日程/长期主义），AI 助手通过全局悬浮球访问，导航栏不再保留助手入口
 - Bottom Sheet / 弹出面板：操作按钮（确认/取消等）必须固定在底部，**放在滚动容器之外**，使用 `flex flex-col` + 独立的 `shrink-0` 按钮区域，确保始终可见
 - 多步向导页面：底部导航栏**禁止使用 `fixed` 定位**，应采用 `flex flex-col h-screen` + 内容区 `flex-1 overflow-y-auto` + 底部 `shrink-0` 的自然流布局，避免 z-index 层叠问题导致按钮被遮挡
   - **注意**：外层容器必须使用 `h-screen`（锁定视口高度）而非 `min-h-screen`（最小高度），否则内容撑高后底部按钮仍会被推出视口
@@ -204,4 +204,22 @@ LifeFlow v1.0，一个讲道理的生活助手。
 
 - `efficiency-v2` 页面的「新建目标」FAB 固定位置为 `bottom-[180px] z-40`，避免与 AI 助手全局 FAB（`bottom-24` ≈ 96px）重叠
 - AI 助手全局 FAB 位置保持 `bottom-24 right-5 z-40`
+
+### 长期主义页面（v2.2+）
+
+- 入口：底部导航栏第 4 个 tab（Leaf 图标），路由 `/longtermism`
+- 8 张模块卡片（单列列表布局），每张卡片结构：
+  - 左侧：主题色图标（44px 圆角容器）
+  - 右侧：模块标签（小号）→ 核心数据（17px 加粗）→ 行动引导（12px 灰色）
+- 卡片点击跳转对应模块页（`/more/water`、`/more/sleep` 等）
+- 数据查询：
+  - 饮水 → `daylogDB.items`（`sourceType === "water"`）+ `getWaterGoal()`
+  - 睡眠 → `getSleepLogByDate(yesterday)`
+  - 记账 → `getTransactionsByMonth(year, month)`
+  - 训练 → `getWorkoutSessions(7)`
+  - 饮食 → `getDietLogsByDate(today)`
+  - 养生 → `getWellnessLogsByDate(today)`
+  - 体态拉伸 → `healthDB.stretchLogs.where("date").between(weekStart, weekEnd)`
+  - 心愿 → `getWishes()`
+- 无数据时显示 `--`，行动引导显示 `「去记录」`
 

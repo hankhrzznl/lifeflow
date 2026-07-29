@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Target, Calendar } from "lucide-react";
+import { Home, Target, Calendar, Leaf } from "lucide-react";
 
-// 全站统一 3-tab 底部导航：首页/目标/日程
+// 全站统一 4-tab 底部导航：首页/目标/日程/长期主义
 // — 更多入口在首页右上角
 // — 事项已整合进日程页（右上角入口）
 // — AI 助手通过全局悬浮球访问（所有页面可见）
@@ -19,6 +19,7 @@ const tabs = [
   { label: "首页", path: "/", icon: Home },
   { label: "目标", path: "/efficiency", icon: Target },
   { label: "日程", path: "/efficiency/schedule", icon: Calendar },
+  { label: "长期主义", path: "/longtermism", icon: Leaf },
 ] as const;
 
 export default function BottomTabBar() {
@@ -30,6 +31,7 @@ export default function BottomTabBar() {
     if (path === "/") return pathname === "/";
     if (path === "/efficiency") return pathname === "/efficiency" || (pathname.startsWith("/efficiency/") && pathname !== "/efficiency/schedule" && !pathname.startsWith("/efficiency/schedule/"));
     if (path === "/efficiency/schedule") return pathname === "/efficiency/schedule" || pathname.startsWith("/efficiency/schedule/");
+    if (path === "/longtermism") return pathname.startsWith("/longtermism");
     return pathname === path || pathname.startsWith(path + "/");
   };
 

@@ -6,7 +6,7 @@ import Link from "next/link";
 import {
   Droplets, Moon, Wallet, Dumbbell, Utensils,
   Heart, StretchHorizontal, Star, BarChart3,
-  ChevronDown, ChevronUp, TrendingUp,
+  ChevronDown, ChevronUp, TrendingUp, Brain,
 } from "lucide-react";
 import { daylogDB } from "@/lib/db/daylog.db";
 import {
@@ -21,6 +21,7 @@ import {
 } from "@/lib/db/life.db";
 import { reviewerBrain } from "@/lib/brains/reviewer";
 import type { ReviewResult, ReviewPeriod } from "@/lib/brains/reviewer";
+import { ebbinghausDB } from "@/lib/db/ebbinghaus.db";
 
 // ─── 工具函数 ────────────────────────────────────────────────
 
@@ -87,6 +88,7 @@ const MODULES: ModuleCard[] = [
   { key: "wellness", label: "养生", path: "/more/wellness", icon: <Heart className="w-5 h-5" />, color: "#EF4444", bgColor: "#FEF2F2" },
   { key: "posture", label: "体态拉伸", path: "/more/posture", icon: <StretchHorizontal className="w-5 h-5" />, color: "#8B5CF6", bgColor: "#F5F3FF" },
   { key: "wishes", label: "心愿", path: "/more/wishes", icon: <Star className="w-5 h-5" />, color: "#F59E0B", bgColor: "#FFFBEB" },
+  { key: "ebbinghaus", label: "记忆", path: "/more/ebbinghaus", icon: <Brain className="w-5 h-5" />, color: "#8B5CF6", bgColor: "#F5F3FF" },
 ];
 
 // ─── 主页面 ──────────────────────────────────────────────────
@@ -161,6 +163,28 @@ export default function LongTermismPage() {
 
   // 8. 心愿
   const wishes = useLiveQuery(() => getWishes(), [], []);
+
+  // 9. 记忆
+  const ebbinghausDueCards = useLiveQuery(
+    async () => {
+      const decks = await ebbinghausDB.decks.toArray();
+      if (decks.length === 0) return 0;
+      const today = todayStr();
+      let total = 0;
+      for (const deck of decks) {
+        total += await ebbinghausDB.cards
+          .where('deckId').equals(deck.id)
+          .filter(c => !c.mastered && c.nextReviewDate <= today)
+          .count();
+      }
+      return total;
+    },
+    [], 0,
+  );
+  const ebbinghausDeckCount = useLiveQuery(
+    () => ebbinghausDB.decks.count(),
+    [], 0,
+  );
 
   // ─── 卡片衍生数据 ──────────────────────────────────────────
 
@@ -266,8 +290,13 @@ export default function LongTermismPage() {
         primary: pendingWishes > 0 ? `${pendingWishes} 个待实现` : "全部完成",
         guidance: completedWishes > 0 ? `已完成 ${completedWishes} 个` : "添加新心愿",
       },
+      {
+        key: "ebbinghaus", icon: <Brain className="w-5 h-5" />, color: "#8B5CF6", bgColor: "#F5F3FF",
+        primary: ebbinghausDueCards > 0 ? `${ebbinghausDueCards} 张待复习` : ebbinghausDeckCount > 0 ? "今日无待复习" : "--",
+        guidance: ebbinghausDeckCount > 0 ? `${ebbinghausDeckCount} 个卡组` : "创建卡组",
+      },
     ];
-  }, [waterItems, waterGoal, sleepLog, monthTransactions, workoutSessions, dietLogs, wellnessLogs, stretchLogs, wishes, today, yesterday]);
+  }, [waterItems, waterGoal, sleepLog, monthTransactions, workoutSessions, dietLogs, wellnessLogs, stretchLogs, wishes, ebbinghausDueCards, ebbinghausDeckCount, today, yesterday]);
 
   return (
     <div

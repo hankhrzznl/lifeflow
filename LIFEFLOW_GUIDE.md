@@ -300,6 +300,32 @@ LifeFlow v1.0，一个讲道理的生活助手。
 - `dashboard-summary.ts` 已删除，旧 `LifeDashboard.tsx` 已删除，统一由 `HomeReview.tsx` 替代
 - 旧 `ReviewerBrain` 保留为内部 `_OldReviewer` 类，仅用于 `_buildSummaries` 向后兼容
 
+### 艾宾浩斯记忆复习模块（v2.3+）
+
+**数据模型** — 新增 `LifeFlowEbbinghaus` 数据库（`src/lib/db/ebbinghaus.db.ts`），3 张表：
+
+| 表 | 关键字段 | 说明 |
+|----|---------|------|
+| `decks` | id, name, curveConfig(JSON), createdAt | 卡组，curveConfig 自定义复习曲线 |
+| `cards` | id, deckId, front, back, currentRound, nextReviewDate, mastered | 闪卡，每张卡片独立追踪轮次 |
+| `reviewLogs` | id, cardId, round, result, reviewedAt | 复习记录流水 |
+
+**标准曲线**：0/1/2/4/7/15 天共 6 轮，per-deck 可自定义（增减轮次、修改间隔天数）
+
+**复习规则**：
+- `currentRound = 0` 为首次学习，当天需要复习
+- 记住了 → `currentRound += 1`，`nextReviewDate = 今天 + curveConfig.rounds[nextRound].interval`
+- 没记住 → `currentRound = 0`，重置到第 1 轮
+- 完成全部轮次 → `mastered = true`，不再出现在复习列表
+- 曲线修改仅对新复习生效，已排期的卡片不受影响
+
+**页面结构**：
+- 卡组列表 `/more/ebbinghaus`：展示所有卡组及今日待复习数，支持新建/删除
+- 卡组详情 `/more/ebbinghaus/[deckId]`：两个 Tab — 「今日复习」（翻卡+记住/没记住+进度条）和「所有卡片」（列表+单条/批量添加+删除）
+- 批量添加格式：每行 `正面内容 | 背面内容`，支持 `|` 或制表符分隔
+
+**入口**：仅通过长期主义页面（`/longtermism`）的「记忆」模块卡片进入，底部导航栏和首页不新增入口
+
 ### 首页布局精简（v2.2+）
 
 - 「下一个事项」卡片与「今日待办」合并为同一卡片。卡片底部有下拉按钮（ChevronDown），点击展开今日待办事项列表

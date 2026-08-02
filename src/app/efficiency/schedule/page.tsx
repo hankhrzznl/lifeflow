@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Check, Plus, ChevronLeft, ChevronRight, CalendarDays, Clock,
+  Check, Plus, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, CalendarDays, Clock,
   ListTodo, X, Target, AlertCircle, Pencil, Moon,
   Ellipsis, Wallet, Droplets, Timer, StickyNote,
 } from "lucide-react";
@@ -217,7 +217,7 @@ export default function SchedulePage() {
 
   // ── 小时块分组 ──
   const hourBlocks = useMemo(() => {
-    if (!items) return HOURS.map(h => ({ hour: h, slotItems: [] as Item[], carryOver: false, hasWater: false }));
+    if (!items) return HOURS.map(h => ({ hour: h, slotItems: [] as Item[], carryOver: false }));
 
     return HOURS.map(hour => {
       const slotItems = items.filter(item => {
@@ -232,10 +232,20 @@ export default function SchedulePage() {
         const hm = timeToMinutes(hour);
         return sm < hm && em > hm;
       });
-      const hasWater = slotItems.some(i => i.sourceType === "water");
-      return { hour, slotItems, carryOver, hasWater };
+      return { hour, slotItems, carryOver };
     });
   }, [items]);
+
+  // ── 小时块展开状态（可同时展开多个） ──
+  const [expandedHours, setExpandedHours] = useState<Set<string>>(() => new Set());
+  const toggleHourExpand = useCallback((hour: string) => {
+    setExpandedHours(prev => {
+      const next = new Set(prev);
+      if (next.has(hour)) next.delete(hour);
+      else next.add(hour);
+      return next;
+    });
+  }, []);
 
   // ── 勾选切换（仅当天/未来） ──
   const handleToggle = useCallback(async (item: Item) => {
@@ -516,15 +526,6 @@ export default function SchedulePage() {
                   {block.hour}
                 </div>
 
-                {/* 饮水指示 */}
-                <Link
-                  href="/more/water"
-                  className="w-6 shrink-0 flex items-start justify-center pt-0.5"
-                  style={{ opacity: block.hasWater ? 1 : 0.22 }}
-                >
-                  <Droplets className="w-4 h-4" style={{ color: block.hasWater ? "#0EA5E9" : "var(--color-text-disabled)" }} />
-                </Link>
-
                 {/* 内容区 */}
                 <div className="flex-1 ml-3 pb-1 relative">
                   {block.carryOver && (
@@ -544,11 +545,13 @@ export default function SchedulePage() {
                     </div>
                   )}
 
-                  {/* 事项卡片（饮水事项已移至左侧水滴列，不在此处显示） */}
+                  {/* 事项卡片（含饮水，折叠只显示第一个，展开显示全部） */}
                   {renderSlotItems({
-                    items: block.slotItems.filter(i => i.sourceType !== "water"),
+                    items: block.slotItems,
                     hourLabel: block.hour,
                     isPastDate,
+                    expanded: expandedHours.has(block.hour),
+                    onToggleExpand: () => toggleHourExpand(block.hour),
                     onToggle: handleToggle,
                     onDelete: setDeleteTarget,
                     onCalibrate: openCalibrate,
@@ -793,6 +796,8 @@ function renderSlotItems(args: {
   items: Item[];
   hourLabel: string;
   isPastDate: boolean;
+  expanded: boolean;
+  onToggleExpand: () => void;
   onToggle: (item: Item) => void;
   onDelete: (id: string) => void;
   onCalibrate: (item: Item) => void;
@@ -804,40 +809,60 @@ function renderSlotItems(args: {
   onAccounting: (item: Item) => void;
   conflictItemIds: Set<string>;
 }) {
-  const { items, hourLabel, isPastDate, onToggle, onDelete, onCalibrate, onNote,
+  const { items, hourLabel, isPastDate, expanded, onToggleExpand, onToggle, onDelete, onCalibrate, onNote,
     expandedItemId, setExpandedItemId, onWater, onFocus, onAccounting, conflictItemIds } = args;
   if (items.length === 0) return null;
 
   const sorted = [...items].sort((a, b) => a.plannedStart.localeCompare(b.plannedStart));
-  const showItems = sorted;
-  const hiddenCount = 0;
+  const hiddenCount = sorted.length - 1;
 
   return (
     <div className="flex flex-col gap-1">
-      {showItems.map(item => (
-        <ItemCard
-          key={item.id}
-          item={item}
-          hourLabel={hourLabel}
-          isPastDate={isPastDate}
-          onToggle={() => onToggle(item)}
-          onLongPress={() => { if (!isPastDate) onDelete(item.id); }}
-          onCalibrate={() => onCalibrate(item)}
-          onNote={() => onNote(item)}
-          expanded={expandedItemId === item.id}
-          onExpandToggle={() => setExpandedItemId(expandedItemId === item.id ? null : item.id)}
-          onWater={() => onWater(item)}
-          onFocus={() => onFocus(item)}
-          onAccounting={() => onAccounting(item)}
-          hasConflict={conflictItemIds.has(item.id)}
-        />
-      ))}
-      {hiddenCount > 0 && (
+      {sorted.map((item, idx) => {
+        // 折叠状态只显示第一个事项
+        if (!expanded && idx > 0) return null;
+        return (
+          <ItemCard
+            key={item.id}
+            item={item}
+            hourLabel={hourLabel}
+            isPastDate={isPastDate}
+            onToggle={() => onToggle(item)}
+            onLongPress={() => { if (!isPastDate) onDelete(item.id); }}
+            onCalibrate={() => onCalibrate(item)}
+            onNote={() => onNote(item)}
+            expanded={expandedItemId === item.id}
+            onExpandToggle={() => setExpandedItemId(expandedItemId === item.id ? null : item.id)}
+            onWater={() => onWater(item)}
+            onFocus={() => onFocus(item)}
+            onAccounting={() => onAccounting(item)}
+            hasConflict={conflictItemIds.has(item.id)}
+          />
+        );
+      })}
+
+      {/* 折叠：展开入口（该时间段有多个事项时） */}
+      {!expanded && hiddenCount > 0 && (
         <button
-          className="text-[11px] font-medium px-2 py-1 rounded-lg self-start"
+          onClick={onToggleExpand}
+          className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg self-start text-[11px] font-medium active:opacity-70"
+          style={{ color: "var(--lifeflow-primary)", background: "var(--lifeflow-brand-50)" }}
+        >
+          <span className="font-semibold">+{hiddenCount} 项</span>
+          <span className="opacity-80">详情</span>
+          <ChevronDown className="w-3.5 h-3.5" />
+        </button>
+      )}
+
+      {/* 展开：收起按钮 */}
+      {expanded && hiddenCount > 0 && (
+        <button
+          onClick={onToggleExpand}
+          className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg self-start text-[11px] font-medium active:opacity-70"
           style={{ color: "var(--color-text-disabled)", background: "var(--color-surface-secondary)" }}
         >
-          +{hiddenCount} 项
+          <ChevronUp className="w-3.5 h-3.5" />
+          收起
         </button>
       )}
     </div>

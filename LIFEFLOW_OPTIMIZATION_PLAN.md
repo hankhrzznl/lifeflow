@@ -439,7 +439,7 @@ LifeFlow 当前 19+1 功能平铺于 4-tab 下，长期主义页堆叠 13 卡、
 - [x] more 折叠正常（MODULE_GROUPS 按 E1-E4+维修+系统分组，折叠区可展开）
 - [x] 图标/字号/CTA 视觉一致（grep 无新字体/无 img/无硬编码色值散落，lucide 统一）
 - [x] 数据未丢失（重构前后各库 count 对比一致：死表 0 行、活表保留）
-- [ ] git commit + push（T18-9 提交时勾选）
+- [x] git commit + push（commit fb6d3b6）
 
 ### 6.4 T18 任务表（执行中）
 

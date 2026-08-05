@@ -4,7 +4,6 @@ import { useRef, useState, useEffect, useCallback } from "react";
 import { Moon, Download, Trash2, Info, MessageSquare, ChevronRight, Droplets, Target, Database } from "lucide-react";
 import { useTheme } from "@/components/theme/ThemeProvider";
 import Dialog from "@/components/ui/Dialog";
-import V1GoalMigrationDialog from "@/components/ui/V1GoalMigrationDialog";
 import { showToast } from "@/components/ui/Toast";
 import { dataExportService } from "@/lib/engine/DataExportService";
 import { getWaterGoal, updateWaterGoal } from "@/lib/db/health.db";
@@ -38,7 +37,6 @@ export default function SettingsPage() {
   const isDark = theme === "dark";
   const [showClearDialog, setShowClearDialog] = useState(false);
   const [showResetGoalsDialog, setShowResetGoalsDialog] = useState(false);
-  const [showMigrationDialog, setShowMigrationDialog] = useState(false);
   const [resettingGoals, setResettingGoals] = useState(false);
   const [importing, setImporting] = useState(false);
   const [waterReminderEnabled, setWaterReminderEnabled] = useState(false);
@@ -158,14 +156,6 @@ export default function SettingsPage() {
             <ChevronRight className="w-5 h-5 shrink-0" style={{ color: "var(--color-text-disabled)" }} />
           </button>
           <div className="h-px" style={{ background: "var(--lifeflow-border)", marginLeft: "52px" }} />
-          <button type="button" onClick={() => setShowMigrationDialog(true)} className="flex items-center justify-between w-full px-5 py-3.5 active:opacity-50">
-            <div className="flex items-center gap-3 min-w-0">
-              <Database className="w-5 h-5 shrink-0" style={{ color: "var(--color-text-primary)" }} />
-              <span className="text-[17px] truncate" style={{ color: "var(--color-text-primary)" }}>迁移 v1 目标数据</span>
-            </div>
-            <ChevronRight className="w-5 h-5 shrink-0" style={{ color: "var(--color-text-disabled)" }} />
-          </button>
-          <div className="h-px" style={{ background: "var(--lifeflow-border)", marginLeft: "52px" }} />
           <button type="button" onClick={() => setShowClearDialog(true)} className="flex items-center justify-between w-full px-5 py-3.5 active:opacity-50">
             <div className="flex items-center gap-3 min-w-0">
               <Trash2 className="w-5 h-5 shrink-0" style={{ color: "var(--color-text-primary)" }} />
@@ -264,8 +254,7 @@ export default function SettingsPage() {
         onConfirm={handleResetGoals}
       />
 
-      {/* v1 目标数据迁移弹窗 */}
-      <V1GoalMigrationDialog open={showMigrationDialog} onClose={() => setShowMigrationDialog(false)} />
+      {/* v1 目标数据迁移弹窗已下线（T16：v1 目标系统整体退役，4 表数据直接删除） */}
     </div>
   );
 }

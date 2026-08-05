@@ -20,8 +20,6 @@ import type { Reminder } from "@/lib/types";
 import { showToast } from "@/components/ui/Toast";
 import HomeReview from "@/components/dashboard/HomeReview";
 import OnboardingCard from "@/components/ui/OnboardingCard";
-import { getAllProjects } from "@/lib/db/efficiency.db";
-import type { Project } from "@/lib/db/efficiency.db";
 import { getCountdowns } from "@/lib/db/life.db";
 import type { Countdown } from "@/lib/db/life.db";
 import { getWaterGoal, healthDB } from "@/lib/db/health.db";
@@ -153,17 +151,6 @@ export default function HomePage() {
     getPendingReminders().then((r) => setPendingReminders(r.slice(0, 3))).catch(() => {});
   }, []);
 
-  // ── 项目列表（用于颜色继承） ──
-  const projects = useLiveQuery(() => getAllProjects(), [], [] as Project[]);
-
-  const projectColorMap = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const p of projects ?? []) {
-      map.set(p.id, p.color);
-    }
-    return map;
-  }, [projects]);
-
   // ── 倒数日 ──
   const countdowns = useLiveQuery(() => getCountdowns(), [], [] as Countdown[]);
 
@@ -246,7 +233,6 @@ export default function HomePage() {
     plannedEnd: "",
     note: "",
     color: PRESET_COLORS[0],
-    projectId: "",
   });
 
   const resetForm = () => {
@@ -254,7 +240,7 @@ export default function HomePage() {
     const start = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
     const later = new Date(now.getTime() + 30 * 60000);
     const end = `${String(later.getHours()).padStart(2, "0")}:${String(later.getMinutes()).padStart(2, "0")}`;
-    setCreateForm({ title: "", plannedStart: start, plannedEnd: end, note: "", color: PRESET_COLORS[0], projectId: "" });
+    setCreateForm({ title: "", plannedStart: start, plannedEnd: end, note: "", color: PRESET_COLORS[0] });
   };
 
   const [submitting, setSubmitting] = useState(false);
@@ -298,8 +284,7 @@ export default function HomePage() {
         plannedEnd: createForm.plannedEnd,
         title,
         note: createForm.note || undefined,
-        color: createForm.projectId ? (projectColorMap.get(createForm.projectId) || PRESET_COLORS[0]) : createForm.color,
-        projectId: createForm.projectId || undefined,
+        color: createForm.color,
       });
 
       showToast({ type: "success", message: "已添加" });
@@ -729,28 +714,6 @@ export default function HomePage() {
                       style={{ backgroundColor: "var(--lifeflow-background)", color: "var(--color-text-primary)" }}
                     />
                   </div>
-                </div>
-
-                {/* 所属项目 */}
-                <div className="mb-4">
-                  <label className="text-[13px] font-medium mb-1.5 block" style={{ color: "var(--color-text-secondary)" }}>
-                    所属项目（可选）
-                  </label>
-                  <select
-                    value={createForm.projectId}
-                    onChange={(e) => {
-                      const pid = e.target.value;
-                      const pColor = pid ? projectColorMap.get(pid) : undefined;
-                      setCreateForm((f) => ({ ...f, projectId: pid, color: pColor || f.color }));
-                    }}
-                    className="w-full px-4 py-3 rounded-xl text-[15px] outline-none appearance-none"
-                    style={{ backgroundColor: "var(--lifeflow-background)", color: "var(--color-text-primary)" }}
-                  >
-                    <option value="">无项目</option>
-                    {(projects ?? []).filter(p => p.projectType === "big").map((p) => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
-                    ))}
-                  </select>
                 </div>
 
                 {/* 备注 */}

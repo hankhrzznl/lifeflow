@@ -188,7 +188,7 @@ export default function WaterPage() {
       <header className="flex items-center h-11 px-4">
         <button
           type="button"
-          onClick={() => router.push("/more/projects")}
+          onClick={() => router.push("/more")}
           className="inline-flex h-8 w-8 items-center justify-center rounded-lg shrink-0"
           style={{
             background: "var(--color-surface-card)",

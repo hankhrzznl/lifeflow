@@ -425,9 +425,9 @@ LifeFlow v1.0，一个讲道理的生活助手。
 - **历史补同步**：`syncAllDailyActionsForGoal`（幂等）在目标详情页挂载时执行；`syncAllDailyActionsByDate` 在目标创建流程（new/page.tsx）中调用
 - **⚠️ React Hooks 顺序坑（勿再踩）**：详情页「目标不存在」404 的提前 `return` 必须置于**所有 hooks（useState/useEffect/useCallback/useMemo）之后**，否则目标数据未加载时 hooks 提前退出、加载后 hook 数量变化，触发 `Rendered more hooks than during the previous render` 崩溃；hooks 区对可能为 undefined 的数据一律用可选链（`goal?.color`）；若本地首次进详情页仍偶发该报错且重进即好，为 dev 模式 Fast Refresh 竞态，干净重启 dev server 即可
 
-### v1 → v2 目标数据迁移工具（v2.6+，T9）
+### v1 → v2 目标数据迁移工具（v2.6+，T9）【已下线，v2.7+ T16】
 
-- **入口**：设置页「数据 → 迁移 v1 目标数据」（`src/lib/migrations/v1-goal-migration.ts` + `src/components/ui/V1GoalMigrationDialog.tsx`）
+- **⚠️ 已退役（T16）**：v1 目标系统整体下线，6 目标 + 21 项目数据已确认直接删除，迁移工具 `v1-goal-migration.ts`、`V1GoalMigrationDialog.tsx` 及设置页入口均已移除。本节仅保留作历史记录，不再适用。
 - **原则**：v1 数据永不删除（迁移只复制）；全程可重入（注册表 `lifeflow_migration_v1v2_goals` 记录 v1Id→v2Id，已迁移自动跳过）；可回滚（仅删除本次迁移创建的 v2 目标，v1 完好）；首次迁移自动生成 v1 完整快照备份，可下载 JSON
 - **字段映射**：title→title、note→vision、deadline→vision「截止」行、color/status/progress/createdAt 直传；`archived`→`paused`
 - **习惯打卡迁移**：以 `daysLog` 有无打卡为准判断（⚠️ 应用启动清理会把 goalType 统一改写为 'task'，不得再用 goalType 判断习惯数据）；打卡记录按周日起始周分组 → Strategy「习惯打卡」+ WeeklyTask + DailyAction(isCompleted=true)
@@ -450,4 +450,15 @@ LifeFlow v1.0，一个讲道理的生活助手。
 - **⚠️ 勿再引入链式重定向**：目标必须直达新版页面（如 `/plugins/focus-timer` 直连 `/more/focus`，而非 `/focus`→`/today`→日程页），避免旧路由接力导致落页错误
 - **内部链接一致性**：专注页唯一正式地址为 `/more/focus`（旧 `/focus` 亦 308 至该页）；全站入口（OverviewHeader、TaskDetail、AgentProvider、more/projects）已统一指向 `/more/focus`
 - **agent 隐藏页判断**：`AgentProvider` 的 `isHiddenPage` 已同步为 `/more/focus`
+
+### v1 目标系统退役（v2.7+，T16）— 单一化收尾
+
+- **背景**：v1 目标系统（`/efficiency` 系列页面 + `LifeFlowEfficiency` 库）与 GoalV2 双轨并存 → 用户决策「v1 数据 6 目标 + 21 项目直接删除」，整体下线
+- **路由下线**：`/efficiency`、`/efficiency/create`、`/efficiency/goals/*`、`/efficiency/review*` 由 `src/proxy.ts` 308 重定向到 `/efficiency-v2`；**`/efficiency/schedule` 是活跃日程模块，proxy 兜底必须排除该前缀**（勿再改回全量 `/efficiency/:path*` 重定向）
+- **数据库处置（v19→v20）**：`projects`/`phases` 表物理删除（`表名: null`，21 项目数据删除）；`goals`/`scheduleTasks` 表**保留**（训练计划生成器按 title 匹配 goals、作息同步/日历/日程读 scheduleTasks），upgrade 回调清空 v1 历史数据（goals 6 条，删后由 `initializeTrainingPlans` 自动重建「强健体魄」体系 Goal）
+- **AI 助手动作已迁移**（`AgentProvider.tsx`）：习惯打卡→`life.db Habit`（/more/habits 同源，undo 按 `habitName` 精确定位）；创建/查询/更新/批量删除目标→GoalV2 API；AI 目标拆解任务→daylog items（`sourceType='goal'`，sourceId=goalId）；navigate_review→`/more/review`（复盘模块现位于此处，非 /efficiency/review）
+- **已删除**：/efficiency 6 页面 + Review 4 组件、`efficiencyStore.ts`、`v1-goal-migration.ts`、`V1GoalMigrationDialog.tsx`、`components/efficiency/` 孤儿组件；设置页「迁移 v1 目标数据」入口同步移除
+- **ClientProviders**：移除 v1 旧任务清理 + goalType 统一逻辑（T13 遗留，v1 数据已清空无需再跑）
+- **eslint**：`eslint.config.mjs` 增加 `dist/**` 忽略（早期 Vite 产物含超大 JS 导致 formatter 崩溃）
+- **⚠️ 勿再引入**：任何新代码不得写入 `efficiencyDB.goals` 的 v1 语义数据（该表仅训练体系生成器专用）；不得再创建 `projects`/`phases` 表引用（类型已删）
 

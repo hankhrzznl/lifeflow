@@ -12,7 +12,6 @@ import { Home, Target, Calendar, Leaf } from "lucide-react";
 
 const FULLSCREEN_PREFIXES = [
   "/more/accounting/ledgers",
-  "/efficiency/create",
 ];
 
 const tabs = [

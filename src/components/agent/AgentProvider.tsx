@@ -58,6 +58,12 @@ function generateId(): string {
   return `msg-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
+function addMinutes(hhmm: string, mins: number): string {
+  const [h, m] = hhmm.split(":").map(Number);
+  const total = h * 60 + m + mins;
+  return `${String(Math.floor(total / 60) % 24).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+}
+
 const WELCOME_MESSAGE = `你好！我是 LifeFlow 全局助手。
 
 我可以帮你操作所有模块，直接说话就行：
@@ -83,7 +89,7 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const processingRef = useRef(false);
   const doneTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastActionRef = useRef<{ action: string; sourceLogId?: string; sourceModule?: string; scheduleTaskId?: string } | null>(null);
+  const lastActionRef = useRef<{ action: string; sourceLogId?: string; sourceModule?: string; habitName?: string } | null>(null);
 
   // Keep ref in sync so persistSession can read latest messages from async handlers
   useEffect(() => { messagesRef.current = messages; }, [messages]);
@@ -295,15 +301,7 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
         } as any);
       }
       addAssistantMessage(`已记录饮水 ${ml}ml`);
-      const { addScheduleTask } = await import("@/lib/db/efficiency.db");
-      const newTaskId = await addScheduleTask({
-        title: `喝水 ${ml}ml`,
-        type: 'single', date: today, goalId: null,
-        quadrant: 'q2', isCompleted: true, plannedTime: 0, actualTime: 1,
-        isImportant: false, note: '', category: 'habit' as any,
-        sourceModule: 'water', sourceLogId: today,
-      });
-      lastActionRef.current = { action: 'record_water', sourceLogId: today, sourceModule: 'water', scheduleTaskId: newTaskId };
+      lastActionRef.current = { action: 'record_water', sourceLogId: today, sourceModule: 'water' };
     } catch (err) {
       addAssistantMessage(`记录饮水失败`, undefined, true);
     }
@@ -335,15 +333,7 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
         createdAt: Date.now(),
       } as any);
       addAssistantMessage(`已记录入睡时间：${sleepDate} ${sleepTime}`);
-      const { addScheduleTask } = await import("@/lib/db/efficiency.db");
-      const newTaskId = await addScheduleTask({
-        title: `睡觉 ${sleepTime}`,
-        type: 'single', date: sleepDate, goalId: null,
-        quadrant: 'q2', isCompleted: true, plannedTime: 0, actualTime: 1,
-        isImportant: false, note: '', category: 'habit' as any,
-        sourceModule: 'sleep', sourceLogId: sleepDate,
-      });
-      lastActionRef.current = { action: 'record_sleep', sourceLogId: sleepDate, sourceModule: 'sleep', scheduleTaskId: newTaskId };
+      lastActionRef.current = { action: 'record_sleep', sourceLogId: sleepDate, sourceModule: 'sleep' };
     } catch {
       addAssistantMessage("记录睡眠失败", undefined, true);
     }
@@ -390,15 +380,7 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
       } as any);
       const detailStr = [sets && `${sets}组`, reps && `${reps}次`, weight && `${weight}kg`].filter(Boolean).join("×");
       addAssistantMessage(`已记录训练：${exerciseName} ${detailStr}`);
-      const { addScheduleTask } = await import("@/lib/db/efficiency.db");
-      const newTaskId = await addScheduleTask({
-        title: `${exerciseName} ${sets}组${reps}次`,
-        type: 'single', date: today, goalId: null,
-        quadrant: 'q2', isCompleted: true, plannedTime: 0, actualTime: 1,
-        isImportant: false, note: '', category: 'habit' as any,
-        sourceModule: 'fitness', sourceLogId: today,
-      });
-      lastActionRef.current = { action: 'record_workout', sourceLogId: today, sourceModule: 'fitness', scheduleTaskId: newTaskId };
+      lastActionRef.current = { action: 'record_workout', sourceLogId: today, sourceModule: 'fitness' };
     } catch {
       addAssistantMessage("记录训练失败", undefined, true);
     }
@@ -423,15 +405,7 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
       } as any);
       const detail = [`${sets || 1}组`, `${reps || 15}次`, postureIssue ? `改善${postureIssue}` : ""].filter(Boolean).join(" · ");
       addAssistantMessage(`已记录拉伸：${exerciseName} ${detail}`);
-      const { addScheduleTask } = await import("@/lib/db/efficiency.db");
-      const newTaskId = await addScheduleTask({
-        title: `拉伸 ${exerciseName}`,
-        type: 'single', date: today, goalId: null,
-        quadrant: 'q2', isCompleted: true, plannedTime: 0, actualTime: 1,
-        isImportant: false, note: '', category: 'habit' as any,
-        sourceModule: 'stretch', sourceLogId: today,
-      });
-      lastActionRef.current = { action: 'record_stretch', sourceLogId: today, sourceModule: 'stretch', scheduleTaskId: newTaskId };
+      lastActionRef.current = { action: 'record_stretch', sourceLogId: today, sourceModule: 'stretch' };
     } catch {
       addAssistantMessage("记录拉伸失败", undefined, true);
     }
@@ -443,17 +417,7 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
     const time = (intent.params as any).time || new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
     const today = new Date().toISOString().slice(0, 10);
     addAssistantMessage(`已记录用药：${name} @ ${time}`);
-    try {
-      const { addScheduleTask } = await import("@/lib/db/efficiency.db");
-      const newTaskId = await addScheduleTask({
-        title: `吃药 ${medicationName || ''}`,
-        type: 'single', date: today, goalId: null,
-        quadrant: 'q2', isCompleted: true, plannedTime: 0, actualTime: 1,
-        isImportant: false, note: '', category: 'habit' as any,
-        sourceModule: 'medication', sourceLogId: today,
-      });
-      lastActionRef.current = { action: 'record_medication', sourceLogId: today, sourceModule: 'medication', scheduleTaskId: newTaskId };
-    } catch { /* schedule task optional */ }
+    lastActionRef.current = { action: 'record_medication', sourceLogId: today, sourceModule: 'medication' };
   }, [addAssistantMessage]);
 
   const handleRecordHabit = useCallback(async (intent: ParsedIntent) => {
@@ -464,37 +428,24 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     try {
-      const { efficiencyDB } = await import("@/lib/db/efficiency.db");
+      // T16：习惯打卡迁移到 life.db Habit（与 /more/habits 模块同源，v1 habit goals 已下线）
+      const { lifeDB } = await import("@/lib/db/life.db");
       const today = new Date().toISOString().slice(0, 10);
-      
-      // Find existing habit-type goal by title
-      let goal = await efficiencyDB.goals.where({ goalType: "habit" as any }).and((g: any) => g.title === name).first();
-      
-      if (goal) {
-        const daysLog = goal.daysLog || {};
-        daysLog[today] = true;
-        const streak = Object.keys(daysLog).length;
-        await efficiencyDB.goals.update(goal.id, { daysLog, streak } as any);
+
+      const habits = await lifeDB.habits.toArray();
+      const existing = habits.find((h: any) => h.name === name);
+      if (existing) {
+        const days = { ...(existing.days || {}), [today]: true };
+        await lifeDB.habits.put({ ...existing, days, streak: Object.keys(days).length });
       } else {
-        const goalId = crypto.randomUUID();
-        await efficiencyDB.goals.add({
-          id: goalId, title: name, deadline: new Date().toISOString().slice(0, 10),
-          progress: 0, status: "active", goalType: "habit", targetCount: 30,
-          note: "", color: "#10B981", quadrant: "q2",
-          streak: 1, daysLog: { [today]: true }, createdAt: Date.now(),
+        await lifeDB.habits.add({
+          id: crypto.randomUUID(),
+          name, icon: "Sparkles", color: "#10B981",
+          days: { [today]: true }, streak: 1, createdAt: Date.now(),
         } as any);
-        goal = { id: goalId } as any;
       }
       addAssistantMessage(`已打卡：${name}`);
-      const { addScheduleTask } = await import("@/lib/db/efficiency.db");
-      const newTaskId = await addScheduleTask({
-        title: `打卡 ${name}`,
-        type: 'single', date: today, goalId: goal!.id,
-        quadrant: 'q2', isCompleted: true, plannedTime: 0, actualTime: 1,
-        isImportant: false, note: '', category: 'habit' as any,
-        sourceModule: 'habit', sourceLogId: today,
-      });
-      lastActionRef.current = { action: 'record_habit', sourceLogId: today, sourceModule: 'habit', scheduleTaskId: newTaskId };
+      lastActionRef.current = { action: 'record_habit', sourceLogId: today, sourceModule: 'habit', habitName: name };
     } catch {
       addAssistantMessage("打卡失败", undefined, true);
     }
@@ -502,16 +453,16 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
 
   const handleQueryHabit = useCallback(async () => {
     try {
-      const { efficiencyDB } = await import("@/lib/db/efficiency.db");
-      const habitGoals = await efficiencyDB.goals.where("goalType").equals("habit" as any).toArray();
+      const { getHabits } = await import("@/lib/db/life.db");
+      const habitGoals = await getHabits();
       if (habitGoals.length === 0) {
         addAssistantMessage("还没有习惯记录。说「冥想打卡」来记录吧！");
         return;
       }
       const today = new Date().toISOString().slice(0, 10);
       const lines = habitGoals.map((h: any) => {
-        const done = h.daysLog?.[today];
-        return `• ${h.title} — ${done ? "✅ 今日已打卡" : `连续 ${h.streak || 0} 天`}`;
+        const done = h.days?.[today];
+        return `• ${h.name} — ${done ? "✅ 今日已打卡" : `连续 ${h.streak || 0} 天`}`;
       });
       addAssistantMessage(`习惯记录：\n${lines.join("\n")}`);
     } catch {
@@ -568,28 +519,27 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
 
   const handleQueryProject = useCallback(async () => {
     try {
-      const { efficiencyDB } = await import("@/lib/db/efficiency.db");
-      const projects = await efficiencyDB.projects.toArray();
-      if (projects.length === 0) { addAssistantMessage("还没有项目。"); return; }
-      const lines = projects.map((p: any) => `• ${p.name}`);
-      addAssistantMessage(`项目列表：\n${lines.join("\n")}`);
+      // T16：v1 projects 下线 → 查询 GoalV2 活跃目标
+      const { goalV2DB } = await import("@/lib/db/goal-v2.db");
+      const projects = await goalV2DB.goalV2Goals.where("status").equals("active").toArray();
+      if (projects.length === 0) { addAssistantMessage("当前没有进行中的目标。"); return; }
+      const lines = projects.map((p: any) => `• ${p.title}`);
+      addAssistantMessage(`进行中的目标：\n${lines.join("\n")}`);
     } catch {
-      addAssistantMessage("查询项目失败", undefined, true);
+      addAssistantMessage("查询目标失败", undefined, true);
     }
   }, [addAssistantMessage]);
 
   const handleCreateProject = useCallback(async (intent: ParsedIntent) => {
     const name = (intent.params as any).projectName || intent.rawText.replace(/创建项目|新建项目|添加项目/g, "").trim();
-    if (!name) { addAssistantMessage("请告诉我项目名称。"); return; }
+    if (!name) { addAssistantMessage("请告诉我目标名称。"); return; }
     try {
-      const { efficiencyDB } = await import("@/lib/db/efficiency.db");
-      await efficiencyDB.projects.add({
-        id: crypto.randomUUID(), name, color: "#6366F1", icon: "FolderKanban",
-        description: "", sortOrder: Date.now(), createdAt: Date.now(),
-      } as any);
-      addAssistantMessage(`已创建项目：「${name}」`);
+      // T16：v1 projects 下线 → 创建 GoalV2 目标
+      const { addGoalV2 } = await import("@/lib/db/goal-v2.db");
+      await addGoalV2({ title: name, vision: "", color: "#6366F1", status: "active" });
+      addAssistantMessage(`已创建目标：「${name}」`);
     } catch {
-      addAssistantMessage("创建项目失败", undefined, true);
+      addAssistantMessage("创建目标失败", undefined, true);
     }
   }, [addAssistantMessage]);
 
@@ -624,10 +574,10 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
     // ── Batch delete goals confirmation ──
     if (ctx.intent === "batch_delete_goal" && ctx.stage === "confirm") {
       if (/确认|好的|行|可以|是的|嗯|对/.test(text)) {
-        const { efficiencyDB } = await import("@/lib/db/efficiency.db");
+        const { deleteGoalV2 } = await import("@/lib/db/goal-v2.db");
         const ids: string[] = params.ids || [];
         for (const id of ids) {
-          await efficiencyDB.goals.delete(id);
+          await deleteGoalV2(id);
         }
         lastActionRef.current = { action: 'batch_delete_goal', sourceLogId: ids.join(','), sourceModule: 'goal' };
         addAssistantMessage(`已删除 ${ids.length} 个目标。`);
@@ -690,31 +640,47 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
     if (stage === "confirm_breakdown") {
       // User confirmed or declined breakdown
       const shouldBreakdown = text.includes("好") || text.includes("可以") || text.includes("需要") || text.includes("拆");
-      const { goalTitle, goalType, deadline: dl, period, frequencyCount } = params;
+      const { goalTitle, period, frequencyCount } = params;
 
       try {
-        const { efficiencyDB } = await import("@/lib/db/efficiency.db");
-        const goalId = await efficiencyDB.goals.add({
-          id: crypto.randomUUID(),
+        // T16：v1 efficiencyDB.goals 下线 → 目标创建落 GoalV2
+        const { addGoalV2 } = await import("@/lib/db/goal-v2.db");
+        const { addItem } = await import("@/lib/db/daylog.db");
+        const goalId = await addGoalV2({
           title: goalTitle || "新目标",
-          deadline: dl || new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
-          progress: 0,
-          status: "active" as any,
-          createdAt: Date.now(),
-        } as any);
+          vision: "",
+          color: "#6366F1",
+          status: "active",
+        });
 
         let tasksCreated = 0;
         if (shouldBreakdown) {
           const strategy = plannerBrain.analyze(goalTitle || "新目标");
           const tasks = plannerBrain.generateTasks(strategy, goalId, new Date().toISOString().slice(0, 10));
+          // T16：v1 scheduleTasks 下线 → 拆解任务落 daylog items（sourceType='goal'），日程页自动展示
           for (const task of tasks) {
-            await efficiencyDB.scheduleTasks.add({
-              ...task,
-              id: crypto.randomUUID(),
-              createdAt: Date.now(),
-            } as any);
+            const taskDate = (task as any).date || (task as any).startDate;
+            if (!taskDate) continue;
+            const plannedStart = "09:00";
+            const plannedEnd = addMinutes("09:00", (task as any).plannedTime || 60);
+            await addItem({
+              date: taskDate,
+              sourceType: "goal",
+              sourceId: goalId,
+              title: task.title,
+              color: "#6366F1",
+              icon: "Target",
+              plannedStart,
+              plannedEnd,
+              actualStart: plannedStart,
+              actualEnd: plannedEnd,
+              isCorrected: false,
+              isCompleted: false,
+              note: (task as any).note || "",
+              sortOrder: 0,
+            });
+            tasksCreated++;
           }
-          tasksCreated = tasks.length;
         }
 
         const freqStr = period === "daily" ? "每天" : period === "weekly" ? `每周${frequencyCount || 1}次` : "";
@@ -740,13 +706,14 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
 
   const handleQueryGoal = useCallback(async () => {
     try {
-      const { efficiencyDB } = await import("@/lib/db/efficiency.db");
-      const goals = await efficiencyDB.goals.where("status").equals("active").toArray();
+      // T16：v1 efficiencyDB.goals 下线 → 查询落 GoalV2
+      const { getAllGoalsV2 } = await import("@/lib/db/goal-v2.db");
+      const goals = (await getAllGoalsV2()).filter((g) => g.status === "active");
       if (goals.length === 0) {
         addAssistantMessage("当前没有进行中的目标。说「帮我创建一个目标」来开始吧！");
         return;
       }
-      const lines = goals.map((g: any) => {
+      const lines = goals.map((g) => {
         const progressBar = "█".repeat(Math.round(g.progress / 10)) + "░".repeat(10 - Math.round(g.progress / 10));
         return `• ${g.title} — ${progressBar} ${g.progress}%`;
       });
@@ -759,10 +726,10 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
   const handleUpdateGoal = useCallback(async (intent: ParsedIntent) => {
     const rawText = intent.rawText;
     try {
-      const { efficiencyDB } = await import("@/lib/db/efficiency.db");
-      const goals = await efficiencyDB.goals.where("status").equals("active").toArray();
-      const pausedGoals = await efficiencyDB.goals.where("status").equals("paused").toArray();
-      const allNonCompleted = [...goals, ...pausedGoals];
+      // T16：v1 efficiencyDB.goals 下线 → 更新/删除落 GoalV2
+      const { getAllGoalsV2, updateGoalV2, deleteGoalV2 } = await import("@/lib/db/goal-v2.db");
+      const allGoals = await getAllGoalsV2();
+      const allNonCompleted = allGoals.filter((g) => g.status === "active" || g.status === "paused");
       
       if (allNonCompleted.length === 0) {
         addAssistantMessage("当前没有进行中或暂停的目标。");
@@ -774,19 +741,19 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
 
       // ── 批量删除 ──
       if (isDelete && isBatch) {
-        const titles = allNonCompleted.map((g: any) => g.title).join("」、「");
+        const titles = allNonCompleted.map((g) => g.title).join("」、「");
         const allMsgs = messagesRef.current;
         await persistSession([...allMsgs, {
           id: generateId(), role: "assistant",
           content: `将删除以下 ${allNonCompleted.length} 个目标：\n「${titles}」\n\n确认删除请回复「确认」或「好的」`,
           timestamp: Date.now(),
-        } as any], "active", { intent: "batch_delete_goal", stage: "confirm", params: { ids: allNonCompleted.map((g: any) => g.id), titles: allNonCompleted.map((g: any) => g.title) }});
+        } as any], "active", { intent: "batch_delete_goal", stage: "confirm", params: { ids: allNonCompleted.map((g) => g.id), titles: allNonCompleted.map((g) => g.title) }});
         addAssistantMessage(`将删除以下 ${allNonCompleted.length} 个目标：\n「${titles}」\n\n确认删除请回复「确认」或「好的」`);
         return;
       }
 
       // Find matching goal by title keyword
-      let matchedGoal: any = null;
+      let matchedGoal: (typeof allNonCompleted)[number] | null = null;
       for (const g of allNonCompleted) {
         if (rawText.includes(g.title) || g.title.includes(rawText.replace(/更新目标|修改目标|调整目标|删除目标|删掉目标|移除目标/g, "").trim())) {
           matchedGoal = g;
@@ -797,24 +764,24 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
       if (!matchedGoal) {
         if (isDelete) {
           // If no specific match, but delete intent, show available goals
-          const titles = allNonCompleted.map((g: any) => g.title).join("、");
+          const titles = allNonCompleted.map((g) => g.title).join("、");
           addAssistantMessage(`请告诉我具体是哪个目标？当前可删除的：${titles}\n\n或说「删除所有目标」批量删除。`);
         } else {
-          const titles = allNonCompleted.map((g: any) => g.title).join("、");
+          const titles = allNonCompleted.map((g) => g.title).join("、");
           addAssistantMessage(`请告诉我具体是哪个目标？当前进行中的：${titles}`);
         }
         return;
       }
 
       if (rawText.includes("完成") || rawText.includes("做完")) {
-        await efficiencyDB.goals.update(matchedGoal.id, { status: "completed", completedAt: Date.now() } as any);
+        await updateGoalV2(matchedGoal.id, { status: "completed" });
         addAssistantMessage(`已将目标「${matchedGoal.title}」标记为已完成！🎉`);
       } else if (isDelete) {
-        await efficiencyDB.goals.delete(matchedGoal.id);
+        await deleteGoalV2(matchedGoal.id);
         lastActionRef.current = { action: 'delete_goal', sourceLogId: matchedGoal.id, sourceModule: 'goal' };
         addAssistantMessage(`已删除目标「${matchedGoal.title}」。`);
       } else if (rawText.includes("暂停")) {
-        await efficiencyDB.goals.update(matchedGoal.id, { status: "paused" } as any);
+        await updateGoalV2(matchedGoal.id, { status: "paused" });
         addAssistantMessage(`已将目标「${matchedGoal.title}」暂停。`);
       } else {
         addAssistantMessage(`你想对「${matchedGoal.title}」做什么修改？（完成/删除/暂停/修改标题等）`);
@@ -919,18 +886,7 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
   const handleStartFocus = useCallback(async (intent: ParsedIntent) => {
     const minutes = (intent.params as any).focusMinutes || 25;
     addAssistantMessage(`准备开始 ${minutes} 分钟专注。正在进入专注模式...`);
-    try {
-      const { addScheduleTask } = await import("@/lib/db/efficiency.db");
-      const today = new Date().toISOString().slice(0, 10);
-      const newTaskId = await addScheduleTask({
-        title: `专注 ${minutes}分钟`,
-        type: 'single', date: today, goalId: null,
-        quadrant: 'q2', isCompleted: true, plannedTime: 0, actualTime: 1,
-        isImportant: false, note: '', category: 'habit' as any,
-        sourceModule: 'focus', sourceLogId: today,
-      });
-      lastActionRef.current = { action: 'start_focus', sourceLogId: today, sourceModule: 'focus', scheduleTaskId: newTaskId };
-    } catch { /* schedule task optional */ }
+    lastActionRef.current = { action: 'start_focus', sourceLogId: new Date().toISOString().slice(0, 10), sourceModule: 'focus' };
     setTimeout(() => router.push("/more/focus"), 500);
   }, [addAssistantMessage, router]);
 
@@ -947,16 +903,7 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
         createdAt: Date.now(),
       } as any);
       addAssistantMessage(`已记录备忘录：${content.slice(0, 50)}${content.length > 50 ? "..." : ""}`);
-      const { addScheduleTask } = await import("@/lib/db/efficiency.db");
-      const today = new Date().toISOString().slice(0, 10);
-      const newTaskId = await addScheduleTask({
-        title: `备忘录 ${noteTitle}`,
-        type: 'single', date: today, goalId: null,
-        quadrant: 'q2', isCompleted: true, plannedTime: 0, actualTime: 1,
-        isImportant: false, note: '', category: 'habit' as any,
-        sourceModule: 'notes', sourceLogId: today,
-      });
-      lastActionRef.current = { action: 'create_note', sourceLogId: today, sourceModule: 'notes', scheduleTaskId: newTaskId };
+      lastActionRef.current = { action: 'create_note', sourceLogId: new Date().toISOString().slice(0, 10), sourceModule: 'notes' };
     } catch {
       addAssistantMessage("记录备忘录失败", undefined, true);
     }
@@ -970,15 +917,7 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
       const today = new Date().toISOString().slice(0, 10);
       await lifeDB.dietLogs.add({ name, mealType: mealType || 'snack', date: today, createdAt: Date.now() } as any);
       addAssistantMessage(`已记录饮食：${name}`);
-      const { addScheduleTask } = await import("@/lib/db/efficiency.db");
-      const newTaskId = await addScheduleTask({
-        title: `${mealType === 'breakfast' ? '早餐' : mealType === 'lunch' ? '午餐' : mealType === 'dinner' ? '晚餐' : '饮食'}：${name}`,
-        type: 'single', date: today, goalId: null,
-        quadrant: 'q2', isCompleted: true, plannedTime: 0, actualTime: 1,
-        isImportant: false, note: mealType || '', category: 'habit' as any,
-        sourceModule: 'diet', sourceLogId: today,
-      });
-      lastActionRef.current = { action: 'record_diet', sourceLogId: today, sourceModule: 'diet', scheduleTaskId: newTaskId };
+      lastActionRef.current = { action: 'record_diet', sourceLogId: today, sourceModule: 'diet' };
     } catch { addAssistantMessage("记录饮食失败", undefined, true); }
   }, [addAssistantMessage]);
 
@@ -990,15 +929,7 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
       const today = new Date().toISOString().slice(0, 10);
       await lifeDB.wellnessLogs.add({ name, type: type || 'gongfa', date: today, createdAt: Date.now() } as any);
       addAssistantMessage(`已记录养生：${name}`);
-      const { addScheduleTask } = await import("@/lib/db/efficiency.db");
-      const newTaskId = await addScheduleTask({
-        title: `${type === 'tigang' ? '提肛' : '功法'}：${name}`,
-        type: 'single', date: today, goalId: null,
-        quadrant: 'q2', isCompleted: true, plannedTime: 0, actualTime: 1,
-        isImportant: false, note: type || '', category: 'habit' as any,
-        sourceModule: 'wellness', sourceLogId: today,
-      });
-      lastActionRef.current = { action: 'record_wellness', sourceLogId: today, sourceModule: 'wellness', scheduleTaskId: newTaskId };
+      lastActionRef.current = { action: 'record_wellness', sourceLogId: today, sourceModule: 'wellness' };
     } catch { addAssistantMessage("记录养生失败", undefined, true); }
   }, [addAssistantMessage]);
 
@@ -1006,10 +937,6 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
     const action = lastActionRef.current;
     if (!action) { addAssistantMessage("没有可撤回的操作"); return; }
     try {
-      if (action.scheduleTaskId) {
-        const { deleteScheduleTask } = await import("@/lib/db/efficiency.db");
-        try { await deleteScheduleTask(action.scheduleTaskId); } catch {}
-      }
       if (action.sourceModule === 'water' && action.sourceLogId) {
         const { healthDB } = await import("@/lib/db/health.db");
         await healthDB.waterLogs.where("date").equals(action.sourceLogId).delete();
@@ -1031,16 +958,17 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
       } else if (action.sourceModule === 'medication' && action.sourceLogId) {
         // Medication has no separate DB table; schedule task already deleted above
       } else if (action.sourceModule === 'habit' && action.sourceLogId) {
-        // Habit is now stored as a Goal in efficiencyDB
-        const { efficiencyDB } = await import("@/lib/db/efficiency.db");
-        const habitGoals = await efficiencyDB.goals.where("goalType").equals("habit" as any).toArray();
-        for (const g of habitGoals) {
-          if ((g as any).daysLog?.[action.sourceLogId]) {
-            const daysLog = { ...(g as any).daysLog };
-            delete daysLog[action.sourceLogId];
-            const streak = Object.keys(daysLog).length;
-            await efficiencyDB.goals.update(g.id, { daysLog, streak } as any);
-          }
+        // T16：习惯打卡迁移到 life.db Habit（v1 habit goals 已下线）
+        const { lifeDB } = await import("@/lib/db/life.db");
+        const habits = await lifeDB.habits.toArray();
+        const logId = action.sourceLogId!;
+        const targets = action.habitName
+          ? habits.filter((h: any) => h.name === action.habitName)
+          : habits.filter((h: any) => h.days?.[logId]);
+        for (const h of targets) {
+          const days = { ...(h.days || {}) };
+          delete days[logId];
+          await lifeDB.habits.put({ ...h, days, streak: Object.keys(days).length } as any);
         }
       } else if (action.sourceModule === 'notes' && action.sourceLogId) {
         const { lifeDB } = await import("@/lib/db/life.db");
@@ -1075,7 +1003,7 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
       case "record_stretch": await handleRecordStretch(intent); break;
       case "create_reminder": await handleCreateReminder(intent); break;
       case "query_review": await handleQueryReview(); break;
-      case "navigate_review": setTimeout(() => router.push("/efficiency/review"), 300); break;
+      case "navigate_review": setTimeout(() => router.push("/more/review"), 300); break;
       case "record_medication": await handleRecordMedication(intent); break;
       case "record_habit": await handleRecordHabit(intent); break;
       case "query_habit": await handleQueryHabit(); break;
@@ -1234,7 +1162,7 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
     async (suggestion: SuggestionCardData) => {
       // Handle review navigation
       if (suggestion.tags.includes("review")) {
-        router.push("/efficiency/review");
+        router.push("/more/review");
         return;
       }
       // Legacy: accept schedule suggestion
@@ -1269,7 +1197,7 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
   const handleModifySuggestion = useCallback(
     async (suggestion: SuggestionCardData, newTitle: string) => {
       if (suggestion.tags.includes("review")) {
-        router.push("/efficiency/review");
+        router.push("/more/review");
         return;
       }
       setStateCtx((prev) => transitionState(prev, "executing"));

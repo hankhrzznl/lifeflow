@@ -4,7 +4,7 @@ import Dexie, { type Table } from 'dexie';
 
 export interface Goal {
   id: string;           // uuid, primary key
-  projectId?: string;      // FK → Project，null=无隶属项目
+  projectId?: string;      // 历史冗余字段（v1 项目已下线，仅保留类型兼容）
   title: string;
   deadline: string;     // ISO date YYYY-MM-DD
   progress: number;     // 0-100
@@ -20,34 +20,10 @@ export interface Goal {
   createdAt: number;
 }
 
-export interface Project {
-  id: string;              // uuid
-  name: string;
-  color: string;           // "#7C3AED"
-  icon: string;            // lucide icon name
-  description: string;
-  sortOrder: number;
-  createdAt: number;
-  projectType: 'big' | 'small';   // 大项目=分类标签, 小项目=功能模块
-  isDefault?: boolean;            // 默认小项目不可删改
-  parentProjectId?: string;       // 小项目所属大项目ID（可选）
-  moreRoute?: string;             // 关联的更多模块路由（如 /more/water）
-}
-
-export interface Phase {
-  id: string;
-  goalId: string;
-  name: string;
-  startDate: string;     // YYYY-MM-DD
-  endDate: string;       // YYYY-MM-DD
-  sortOrder: number;
-  createdAt: number;
-}
-
 export interface ScheduleTask {
   id: string;               // uuid
   goalId: string | null;    // 关联目标ID
-  projectId?: string;       // FK → Project（冗余，方便按项目查询）
+  projectId?: string;       // 历史冗余字段（v1 项目已下线，仅保留类型兼容）
   title: string;
   type: 'single' | 'multi_day' | 'recurring';
   category?: 'task' | 'habit' | 'chore';  // task=目标任务 habit=习惯 chore=日常琐事
@@ -72,7 +48,7 @@ export interface ScheduleTask {
   progressCalc?: 'sum' | 'average';
   hasSubTasks?: boolean;
   progressCurrent?: number;
-  phaseId?: string;         // FK → Phase.id
+  phaseId?: string;         // 历史冗余字段（v1 phases 已下线，仅保留类型兼容）
   // 来源追踪（用于撤回时回滚）
   sourceModule?: string;    // 哪个模块产生的：water/sleep/fitness/stretch/medication/diet/wellness等
   sourceLogId?: string;     // 原始记录ID，用于撤回时定位删除
@@ -84,8 +60,6 @@ export interface ScheduleTask {
 export class EfficiencyDB extends Dexie {
   goals!: Table<Goal, string>;
   scheduleTasks!: Table<ScheduleTask, string>;
-  projects!: Table<Project, string>;
-  phases!: Table<Phase, string>;
 
   constructor() {
     super('LifeFlowEfficiency');
@@ -227,7 +201,7 @@ export class EfficiencyDB extends Dexie {
     this.version(14).stores({
       projects: '&id, name, projectType, parentProjectId',
     }).upgrade(async (tx) => {
-      const all = await tx.table('projects').toArray() as Project[];
+      const all = await tx.table('projects').toArray() as any[];
       const renames: Record<string, string> = { '长期主义': '习惯养成', '个人成长': '技能提升' };
       for (const p of all) {
         if (renames[p.name]) {
@@ -252,6 +226,18 @@ export class EfficiencyDB extends Dexie {
       tasks: null,
       habits: null,
     });
+    // v20 (T16): v1 目标系统退役 → 物理删除 projects/phases 表（用户确认 21 项目直接删除，
+    // phases 记录数核实为 0）；goals/scheduleTasks 保留（训练计划生成器/作息同步/日历活跃依赖），
+    // 但清空 v1 历史数据（goals 6 条，删除后由 training-plan-generator 自动重建「强健体魄」体系 Goal）。
+    this.version(20).stores({
+      goals: '&id, title, status, deadline, quadrant, goalType, streak',
+      scheduleTasks: '&id, date, goalId, isCompleted, isImportant, phaseId',
+      projects: null,
+      phases: null,
+    }).upgrade(async tx => {
+      await tx.table('goals').clear();
+      await tx.table('scheduleTasks').clear();
+    });
   }
 }
 
@@ -259,46 +245,8 @@ export const efficiencyDB = new EfficiencyDB();
 
 export async function initializeEfficiencyDB(): Promise<{ success: boolean; error?: string }> {
   try {
+    // T16：v1 projects 表已物理删除，无需播种默认项目
     await efficiencyDB.open();
-    // Seed 默认项目（仅在 projects 表为空时）
-    const projectCount = await efficiencyDB.projects.count();
-    if (projectCount === 0) {
-      const bigDefaults = [
-        { name: "学习", color: "#2563EB", icon: "GraduationCap", description: "", sortOrder: 0, projectType: 'big' as const },
-        { name: "健康", color: "#10B981", icon: "Heart", description: "", sortOrder: 1, projectType: 'big' as const },
-        { name: "琐事", color: "#F59E0B", icon: "ClipboardList", description: "", sortOrder: 2, projectType: 'big' as const },
-        { name: "工作", color: "#0EA5E9", icon: "Briefcase", description: "", sortOrder: 2.5, projectType: 'big' as const },
-        { name: "习惯养成", color: "#8B5CF6", icon: "Target", description: "", sortOrder: 3, projectType: 'big' as const },
-        { name: "社交", color: "#F43F5E", icon: "Users", description: "", sortOrder: 3.5, projectType: 'big' as const },
-        { name: "娱乐", color: "#EC4899", icon: "Gamepad2", description: "", sortOrder: 4, projectType: 'big' as const },
-        { name: "财务", color: "#14B8A6", icon: "Banknote", description: "", sortOrder: 4.5, projectType: 'big' as const },
-        { name: "个人成长", color: "#A855F7", icon: "Sparkles", description: "", sortOrder: 5, projectType: 'big' as const },
-        { name: "无项目", color: "#94A3B8", icon: "FolderOpen", description: "", sortOrder: 5.5, projectType: 'big' as const },
-      ];
-      for (const p of bigDefaults) {
-        await efficiencyDB.projects.add({ ...p, id: crypto.randomUUID(), createdAt: Date.now() });
-      }
-
-      // 种子 small 功能模块（PWA 兜底：这些原本只在 v10 upgrade 回调中播种）
-      const smallDefaults = [
-        { name: '课程表', color: '#7C3AED', icon: 'GraduationCap', sortOrder: 0, moreRoute: '/more/schedule/courses' },
-        { name: '作息', color: '#6366F1', icon: 'Clock', sortOrder: 1, moreRoute: '/more/schedule/routines' },
-        { name: '记账', color: '#14B8A6', icon: 'Wallet', sortOrder: 2, moreRoute: '/more/accounting' },
-        { name: '饮水', color: '#0EA5E9', icon: 'Droplets', sortOrder: 3, moreRoute: '/more/water' },
-        { name: '睡眠', color: '#1E293B', icon: 'Moon', sortOrder: 4, moreRoute: '/more/sleep' },
-        { name: '训练', color: '#EF4444', icon: 'Dumbbell', sortOrder: 5, moreRoute: '/more/fitness' },
-        { name: '饮食', color: '#F97316', icon: 'Utensils', sortOrder: 6, moreRoute: '/more/diet' },
-        { name: '养生', color: '#84CC16', icon: 'Flower2', sortOrder: 7, moreRoute: '/more/wellness' },
-        { name: '体态拉伸', color: '#06B6D4', icon: 'StretchHorizontal', sortOrder: 8, moreRoute: '/more/posture' },
-        { name: '吃药', color: '#DC2626', icon: 'Pill', sortOrder: 9, moreRoute: '/more/medication' },
-        { name: '心愿', color: '#FF2D55', icon: 'Gift', sortOrder: 10, moreRoute: '/more/wishes' },
-      ];
-      for (const p of smallDefaults) {
-        await efficiencyDB.projects.add({
-          ...p, id: crypto.randomUUID(), description: '', projectType: 'small' as const, isDefault: true, createdAt: Date.now(),
-        });
-      }
-    }
     return { success: true };
   } catch (err) {
     return { success: false, error: (err as Error).message };
@@ -327,34 +275,6 @@ export async function getGoal(id: string): Promise<Goal | undefined> {
 
 export async function getAllGoalsV2(): Promise<Goal[]> {
   return efficiencyDB.goals.toArray();
-}
-
-// ─── Projects CRUD ───────────────────────────────────────────
-
-export async function addProject(
-  p: Omit<Project, "id" | "createdAt" | "projectType"> & { projectType?: 'big' | 'small' }
-): Promise<string> {
-  const id = crypto.randomUUID();
-  await efficiencyDB.projects.add({
-    ...p,
-    id,
-    projectType: p.projectType || 'small',
-    createdAt: Date.now(),
-  } as Project);
-  return id;
-}
-
-export async function updateProject(id: string, updates: Partial<Project>): Promise<void> {
-  await efficiencyDB.projects.update(id, updates);
-}
-
-export async function deleteProject(id: string): Promise<void> {
-  await efficiencyDB.projects.delete(id);
-}
-
-export async function getAllProjects(): Promise<Project[]> {
-  const all = await efficiencyDB.projects.toArray();
-  return all.sort((a, b) => a.sortOrder - b.sortOrder);
 }
 
 // ─── Schedule Tasks CRUD ─────────────────────────────────────
@@ -388,24 +308,4 @@ export async function getScheduleTasksByDate(dateStr: string): Promise<ScheduleT
 
 export async function getAllScheduleTasks(): Promise<ScheduleTask[]> {
   return efficiencyDB.scheduleTasks.toArray();
-}
-
-// ─── Phase CRUD ──────────────────────────────────────────────
-
-export async function addPhase(p: Omit<Phase, 'id' | 'createdAt'>): Promise<string> {
-  const id = crypto.randomUUID();
-  await efficiencyDB.phases.add({ ...p, id, createdAt: Date.now() });
-  return id;
-}
-export async function updatePhase(id: string, updates: Partial<Phase>): Promise<void> {
-  await efficiencyDB.phases.update(id, updates);
-}
-export async function deletePhase(id: string): Promise<void> {
-  // Also clear phaseId from tasks belonging to this phase
-  const tasks = await efficiencyDB.scheduleTasks.where('phaseId').equals(id).toArray();
-  for (const t of tasks) await efficiencyDB.scheduleTasks.update(t.id, { phaseId: null as any });
-  await efficiencyDB.phases.delete(id);
-}
-export async function getPhasesForGoal(goalId: string): Promise<Phase[]> {
-  return efficiencyDB.phases.where('goalId').equals(goalId).sortBy('sortOrder');
 }

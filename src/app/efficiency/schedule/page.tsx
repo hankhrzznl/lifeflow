@@ -6,8 +6,7 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Check, Plus, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, CalendarDays, Clock,
-  ListTodo, X, Target, AlertCircle, Pencil, Moon,
-  Ellipsis, Wallet, Droplets, Timer, StickyNote,
+  X, Target, AlertCircle, Pencil, Moon, Ellipsis, Wallet, Droplets, Timer, StickyNote,
 } from "lucide-react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { getItemsByDateSorted, deleteItem, updateItem, addManualItem, generateRoutineItems, generateCourseItems, getItemsByScheduleDay, getWakeTime } from "@/lib/db/daylog.db";
@@ -360,12 +359,12 @@ export default function SchedulePage() {
         </div>
         <div className="flex items-center gap-2">
           <Link
-            href="/tasks"
+            href="/efficiency-v2"
             className="px-3 py-1.5 rounded-full text-[12px] font-medium flex items-center gap-1"
             style={{ background: "var(--lifeflow-brand-50)", color: "var(--lifeflow-primary)" }}
           >
-            <ListTodo className="w-3.5 h-3.5" />
-            分类
+            <Target className="w-3.5 h-3.5" />
+            目标
           </Link>
         </div>
       </div>

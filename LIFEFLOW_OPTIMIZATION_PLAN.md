@@ -218,6 +218,21 @@ LIFEFLOW 不是「待办清单」，而是 **目标驱动的个人管理系统�
 | T14 | 目标系统深度集成：GoalV2 与日程/长期主义数据打通 | goal-v2-engine | 增量 | 目标日行动 → 日程 item → 复盘链闭环 | ✅ 已完成 |
 | T15 | 系统科学化重构（三件套）：a) 课堂节奏 45+5 作息 + 饮水三时段目标制（删除每小时提醒）；b) 训练/体态拉伸/功法合并为完整训练体系；c) 全系统审计 + 页面/入口重规划 | daylog.db / health.db / reviewer / 各页面 | 增量（旧 water 待办定时清理） | ①45+5 自动切分、休息防久坐；②饮水按上午/下午/晚上(睡前2h截止)三时段目标；③训练体系单入口 | ✅ 已完成（a：45+5 课堂节奏 + 饮水三时段目标制；b：训练中心三 Tab 单入口 + 旧路由 redirect；c：第一性原理审计，清理 19 个死页/占位/死代码，proxy 断链规则归零，快捷专注 query 预填） |
 
+#### P3 续 · T16 系统单一化收尾（v2.7+，规划中）
+
+> 背景：T15c 第一性原理审计发现 v1 目标系统（/efficiency 系列 + efficiencyDB 4 表）仍被 /tasks、AI 助手、/more/projects、首页颜色继承活跃引用，与 v2 双轨并存。用户决策：/tasks 下线入口改跳 v2；AI 动作迁移到 v2/新体系；v1 efficiencyDB 4 表数据**全部直接删除**（用户确认，无需归档）。
+> 记录数已核实（2026-08-05）：efficiencyDB goals=6、projects=21、scheduleTasks=0、phases=0；GoalV2 全表 0。
+
+| # | 任务 | 改动范围 | 影响数据 | 验收标准 | 状态 |
+|---|------|---------|---------|---------|------|
+| T16-1 | 日程页「分类」入口改跳 `/efficiency-v2`，/tasks 页下线（proxy 重定向 /tasks→/efficiency-v2） | efficiency/schedule/page.tsx + 删 tasks/page.tsx + proxy.ts | 无 | 分类按钮进 v2 目标页，/tasks 可达即重定向 | ✅ 已完成 |
+| T16-2 | /more/projects 双目录归一：water/reminders/reminder-settings 3 处链接改指向 /more；projects 页下线（proxy /more/projects→/more）；首页 v1 projectColorMap 颜色继承依赖移除 | 3 页面 + 删 projects/page.tsx + proxy.ts + 首页 | 无 | 站点内无 /more/projects 链接，首页不读 v1 projects | ✅ 已完成 |
+| T16-3 | AI 助手 v1 动作迁移：习惯打卡（v1 goals goalType=habit）→ life.db Habit（/more/habits 同源）；创建项目 → 创建 GoalV2；goals 状态查询/增删改 → GoalV2；scheduleTasks → daylog items；navigate_review → /more/review（复盘模块现位于 /more/review，非 /efficiency-v2） | AgentProvider.tsx（10+ 处 v1 引用） | 增量 | AI 动作全部落 v2/新体系，无 v1 写入 | ✅ 已完成 |
+| T16-4 | /efficiency 系列页面下线：/efficiency、/efficiency/create、/efficiency/goals/[goalId]（+tasks 子页）、/efficiency/review（+Review 组件、efficiencyStore、v1-goal-migration、V1GoalMigrationDialog、components/efficiency 孤儿组件），proxy 精确重定向到 /efficiency-v2（排除保留的 /efficiency/schedule） | 删 15 文件 + proxy.ts + settings 页 + BottomTabBar | 无 | 站点内无 v1 目标页面可达；/efficiency/schedule 日程模块正常访问 | ✅ 已完成 |
+| T16-5 | v1 efficiencyDB 数据处置（**执行调研修正**）：4 表并非全删 —— `projects`/`phases` 物理删除（`表名: null` + version 19→20），21 项目数据随之删除；`goals`/`scheduleTasks` 表**保留**（training-plan-generator title 匹配、routineSync/日历/日程活跃依赖）但 upgrade 回调清空 v1 历史数据（goals 6 条删后自动重建）；efficiency.db.ts 删 Project/Phase 类型与 CRUD，initializeEfficiencyDB 移除 projects 播种；ClientProviders 移除 v1 旧任务清理逻辑 | efficiency.db.ts v20 + ClientProviders + 全局引用 | 6 目标清空（可重建）；21 项目已确认删除；scheduleTasks/phases 为 0 | projects/phases 表物理消失，无代码引用；goals/scheduleTasks 正常供训练体系/作息同步使用 | ✅ 已完成 |
+| T16-6 | 验证（typecheck + build + 浏览器走查：重定向/删库后无报错/AI 动作）+ GUIDE/PLAN 文档登记 + git 提交推送 | 全量 | — | 无回归，文档同步 | 🔄 进行中 |
+| T16-7 | （阶段 2）功能科学化深化选点（首页核心闭环 / 复盘系统 / 具体模块），阶段 1 完成后与用户确认 | 待选点 | 待定 | 待定 | ⬜ 待规划 |
+
 > 📌 **T13 验收标准勘误**：原定「数据库表数下降 30%+」口径有误——全库实为 10 个 `LifeFlow*` 库共 98 张表（含遗留 LifeFlowDB 主库 48 表等，非本任务范围），全库口径下删 7 张仅 -7.1%。实际成效以**涉及的两库**为准：效率库 6→4（-33.3%）、健康库 17→12（-29.4%）。deprecated 表清零即达标。
 
 ### 4.3 优先级矩阵（Top 项）

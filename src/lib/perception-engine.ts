@@ -3,7 +3,6 @@ import type { Item } from "@/lib/db/daylog.db";
 import { healthDB, getSleepLogByDate, getSleepLogs, getWaterLogsByDate, getWaterGoal, getSleepGoal } from "@/lib/db/health.db";
 import type { SleepLog } from "@/lib/db/health.db";
 import { getTransactionsByDate, getAllCategories, getAllLedgers, getAllAccounts } from "@/lib/db/accounting.db";
-import { getAllProjects } from "@/lib/db/efficiency.db";
 
 export interface PerceptionCard {
   id: string;
@@ -216,19 +215,20 @@ async function checkDayComplete(): Promise<PerceptionCard | null> {
 
 async function checkHabitNeglected(): Promise<PerceptionCard | null> {
   try {
-    const projects = await getAllProjects();
-    const defaultModules = projects.filter(
-      (p) => p.isDefault === true && p.projectType === "small"
-    );
+    // T16：v1 projects 驱动改为静态模块清单（projects 表已下线）
+    const defaultModules = [
+      { name: "water", label: "饮水" },
+      { name: "sleep", label: "睡眠" },
+    ];
 
     const yesterdayLogs: Record<string, unknown> = {};
     const todayLogs: Record<string, unknown> = {};
 
     for (const mod of defaultModules) {
-      if (mod.name === "water" || mod.name === "饮水") {
+      if (mod.name === "water") {
         yesterdayLogs[mod.name] = await getWaterLogsByDate(yesterdayStr());
         todayLogs[mod.name] = await getWaterLogsByDate(todayStr());
-      } else if (mod.name === "sleep" || mod.name === "睡眠") {
+      } else if (mod.name === "sleep") {
         yesterdayLogs[mod.name] = await getSleepLogByDate(yesterdayStr());
         todayLogs[mod.name] = await getSleepLogByDate(todayStr());
       }
@@ -247,7 +247,7 @@ async function checkHabitNeglected(): Promise<PerceptionCard | null> {
           ruleName: "habit_neglected",
           priority: 3,
           type: "care",
-          headline: `"${mod.name}"的记录空了两天`,
+          headline: `"${mod.label}"的记录空了两天`,
           body: "没关系，不需要有压力。需要帮你调整提醒时间吗？",
           action: { label: "调整提醒", path: "/settings" },
         };
@@ -275,7 +275,7 @@ async function checkNewUserGuide(): Promise<PerceptionCard | null> {
         type: "guidance",
         headline: "欢迎，我还在认识你",
         body: "你可以先新建一个今天要做的事项，或者用语音告诉助手你想做什么。",
-        action: { label: "开始探索", path: "/more/projects" },
+        action: { label: "开始探索", path: "/more" },
       };
     }
 

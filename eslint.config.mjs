@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // 早期 Vite 构建产物（含超大 JS，非源码）
+    "dist/**",
   ]),
 ]);
 

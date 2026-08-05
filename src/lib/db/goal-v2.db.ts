@@ -1,4 +1,5 @@
 import Dexie, { type Table } from 'dexie';
+import { daylogDB, removeModuleItems } from '@/lib/db/daylog.db';
 
 // ============================================================
 // GoalV2 — 五层拆解目标系统
@@ -154,8 +155,21 @@ export async function updateGoalV2(id: string, updates: Partial<GoalV2>): Promis
   await goalV2DB.goalV2Goals.update(id, updates);
 }
 
+// ─── 级联清理：删除 DailyAction 时同步清理其关联的日程 Item（sourceType='goal'） ───
+async function removeDailyActionItems(actions: DailyActionV2[]): Promise<void> {
+  for (const da of actions) {
+    if (da.itemId) {
+      await daylogDB.items.delete(da.itemId);
+    } else {
+      // itemId 缺失时按 sourceType+sourceId 兜底清理
+      await removeModuleItems(da.date, 'goal', da.id);
+    }
+  }
+}
+
 export async function deleteGoalV2(id: string): Promise<void> {
   // 级联删除
+  await removeDailyActionItems(await goalV2DB.goalV2DailyActions.where('goalId').equals(id).toArray());
   await goalV2DB.goalV2KeyResults.where('goalId').equals(id).delete();
   await goalV2DB.goalV2Strategies.where('goalId').equals(id).delete();
   await goalV2DB.goalV2WeeklyTasks.where('goalId').equals(id).delete();
@@ -204,6 +218,7 @@ export async function updateStrategyV2(id: string, updates: Partial<StrategyV2>)
 }
 
 export async function deleteStrategyV2(id: string): Promise<void> {
+  await removeDailyActionItems(await goalV2DB.goalV2DailyActions.where('strategyId').equals(id).toArray());
   await goalV2DB.goalV2WeeklyTasks.where('strategyId').equals(id).delete();
   await goalV2DB.goalV2DailyActions.where('strategyId').equals(id).delete();
   await goalV2DB.goalV2Strategies.delete(id);
@@ -232,6 +247,7 @@ export async function updateWeeklyTaskV2(id: string, updates: Partial<WeeklyTask
 }
 
 export async function deleteWeeklyTaskV2(id: string): Promise<void> {
+  await removeDailyActionItems(await goalV2DB.goalV2DailyActions.where('weeklyTaskId').equals(id).toArray());
   await goalV2DB.goalV2DailyActions.where('weeklyTaskId').equals(id).delete();
   await goalV2DB.goalV2WeeklyTasks.delete(id);
 }
@@ -259,5 +275,9 @@ export async function updateDailyActionV2(id: string, updates: Partial<DailyActi
 }
 
 export async function deleteDailyActionV2(id: string): Promise<void> {
+  const da = await goalV2DB.goalV2DailyActions.get(id);
+  if (da) {
+    await removeDailyActionItems([da]);
+  }
   await goalV2DB.goalV2DailyActions.delete(id);
 }

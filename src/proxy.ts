@@ -1,11 +1,13 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-export function middleware(request: NextRequest) {
+// T12：proxy 约定（Next.js 16 起 middleware 已废弃，改用 proxy）
+
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   const redirects: Record<string, { destination: string; permanent: boolean }> = {
-    '/focus': { destination: '/today', permanent: true },
+    '/focus': { destination: '/more/focus', permanent: true },
     '/goals/long-term': { destination: '/goals?tab=long-term', permanent: true },
     '/goals/short-term': { destination: '/goals?tab=short-term', permanent: true },
     '/goals/daily-trivial': { destination: '/goals?tab=daily-trivial', permanent: true },
@@ -13,6 +15,14 @@ export function middleware(request: NextRequest) {
     // 旧版项目列表/未分类 → 规划页
     '/projects': { destination: '/planner', permanent: true },
     '/projects/unclassified': { destination: '/planner', permanent: true },
+    // T12：旧版 plugins 页面正式下线 → 新版对应页
+    '/plugins': { destination: '/more', permanent: true },
+    '/plugins/finance': { destination: '/more/accounting', permanent: true },
+    '/plugins/focus-timer': { destination: '/more/focus', permanent: true },
+    '/plugins/habit': { destination: '/more/habits', permanent: true },
+    '/plugins/habit/detail': { destination: '/more/habits', permanent: true },
+    '/plugins/task-inbox': { destination: '/pending', permanent: true },
+    '/plugins/timeline': { destination: '/efficiency/schedule', permanent: true },
   };
 
   const redirect = redirects[pathname];
@@ -20,6 +30,13 @@ export function middleware(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = redirect.destination;
     return NextResponse.redirect(url, redirect.permanent ? 308 : 307);
+  }
+
+  // T12：其余 plugins 子路径兜底 → 全部功能目录
+  if (pathname.startsWith('/plugins/')) {
+    const url = request.nextUrl.clone();
+    url.pathname = '/more';
+    return NextResponse.redirect(url, 308);
   }
 
   // 旧版 board/section 路由重定向 → 规划页(带项目过滤)
@@ -77,5 +94,7 @@ export const config = {
     '/goals/habits',
     '/projects',
     '/projects/:path*',
+    '/plugins',
+    '/plugins/:path*',
   ],
 };

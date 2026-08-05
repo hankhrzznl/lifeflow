@@ -295,7 +295,7 @@ export default function TaskDetail({ taskId, onClose, onUpdate }: TaskDetailProp
 
               {cls === "short-term" || cls === "shortterm" ? (
                 <a
-                  href={`/plugins/focus-timer?taskId=${task.id}`}
+                  href="/more/focus"
                   onClick={(e) => e.stopPropagation()}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-purple-100 text-purple-700 text-xs font-medium hover:bg-purple-200 transition-colors"
                 >

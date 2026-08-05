@@ -15,7 +15,7 @@ import {
   getDailyActionsV2, getDailyActionsByDateV2, getWeeklyTasksByGoalV2,
   goalV2DB,
 } from "@/lib/db/goal-v2.db";
-import { recalculateGoalProgress, syncDailyActionToItem, todayStr, getWeekStart } from "@/lib/goal-v2-engine";
+import { recalculateGoalProgress, syncDailyActionToItem, syncAllDailyActionsForGoal, todayStr, getWeekStart } from "@/lib/goal-v2-engine";
 import { showToast } from "@/components/ui/Toast";
 
 // ─── 主题色 ─────────────────────────────────────────────────
@@ -79,6 +79,12 @@ export default function GoalDetailV2Page() {
     });
   }, [strategies]);
 
+  // 历史数据补同步：将该目标所有 DA 同步为日程 Item（幂等，T9 迁移的历史 DA 一并补齐）
+  useEffect(() => {
+    if (!id) return;
+    syncAllDailyActionsForGoal(id).catch(() => {});
+  }, [id]);
+
   // ─── 衍生数据 ─────────────────────────────────────────────
   const weeklyTasksByStrategy = useMemo(() => {
     const map = new Map<string, WeeklyTaskV2[]>();
@@ -100,24 +106,8 @@ export default function GoalDetailV2Page() {
     return map;
   }, [dailyActions]);
 
-  // ─── 404 处理 ─────────────────────────────────────────────
-  if (!goal) {
-    return (
-      <div className="min-h-screen" style={{ maxWidth: 430, margin: "0 auto", background: "var(--lifeflow-background)" }}>
-        <div className="flex items-center h-14 px-4" style={{ paddingTop: "var(--safe-area-top)" }}>
-          <button onClick={() => router.push("/efficiency-v2")} className="w-8 h-8 -ml-1 flex items-center justify-center">
-            <ArrowLeft className="w-6 h-6" style={{ color: "var(--color-text-primary)" }} />
-          </button>
-        </div>
-        <div className="flex flex-col items-center pt-20">
-          <p className="text-[15px]" style={{ color: "var(--color-text-disabled)" }}>目标不存在</p>
-        </div>
-      </div>
-    );
-  }
-
   // ─── 样式常量 ─────────────────────────────────────────────
-  const goalColor = goal.color || ACCENT;
+  const goalColor = goal?.color || ACCENT;
   const btnBase = { border: "1px solid var(--lifeflow-border)", color: "var(--color-text-secondary)", background: "var(--color-surface-card)" };
   const cs = { background: "var(--lifeflow-background)", border: "1px solid var(--lifeflow-border)", color: "var(--color-text-primary)" };
 
@@ -132,9 +122,9 @@ export default function GoalDetailV2Page() {
   }, [id, visionDraft]);
 
   const handleStartVisionEdit = useCallback(() => {
-    setVisionDraft(goal.vision || "");
+    setVisionDraft(goal?.vision || "");
     setVisionEditing(true);
-  }, [goal.vision]);
+  }, [goal?.vision]);
 
   const handleToggleKR = useCallback((kr: KeyResultV2) => {
     setEditingKR(kr.id);
@@ -255,7 +245,7 @@ export default function GoalDetailV2Page() {
       return;
     }
     const strategyActions = dailyActionsByStrategy.get(strategyId) || [];
-    await addDailyActionV2({
+    const daId = await addDailyActionV2({
       weeklyTaskId,
       strategyId,
       goalId: id,
@@ -266,6 +256,11 @@ export default function GoalDetailV2Page() {
       isCompleted: false,
       sortOrder: strategyActions.length,
     });
+    // 计划即入日程：新 DA 立即同步为 Item
+    if (daId) {
+      const da = await goalV2DB.goalV2DailyActions.get(daId);
+      if (da) await syncDailyActionToItem(da);
+    }
     setNewDailyAction((prev) => {
       const next = new Map(prev);
       next.set(strategyId, { title: "", time: "08:00" });
@@ -288,6 +283,22 @@ export default function GoalDetailV2Page() {
     await recalculateGoalProgress(id);
     showToast({ type: "success", message: "日行动已删除" });
   }, [id]);
+
+  // ─── 404 处理（置于所有 hooks 之后，避免 hooks 数量在渲染间变化） ───
+  if (!goal) {
+    return (
+      <div className="min-h-screen" style={{ maxWidth: 430, margin: "0 auto", background: "var(--lifeflow-background)" }}>
+        <div className="flex items-center h-14 px-4" style={{ paddingTop: "var(--safe-area-top)" }}>
+          <button onClick={() => router.push("/efficiency-v2")} className="w-8 h-8 -ml-1 flex items-center justify-center">
+            <ArrowLeft className="w-6 h-6" style={{ color: "var(--color-text-primary)" }} />
+          </button>
+        </div>
+        <div className="flex flex-col items-center pt-20">
+          <p className="text-[15px]" style={{ color: "var(--color-text-disabled)" }}>目标不存在</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen pb-[100px]" style={{ maxWidth: 430, margin: "0 auto", background: "var(--lifeflow-background)" }}>

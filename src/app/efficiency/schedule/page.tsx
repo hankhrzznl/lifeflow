@@ -250,7 +250,21 @@ export default function SchedulePage() {
   // ── 勾选切换（仅当天/未来） ──
   const handleToggle = useCallback(async (item: Item) => {
     if (isPastDate) return; // 历史不可勾选
-    await updateItem(item.id, { isCompleted: !item.isCompleted });
+    const newState = !item.isCompleted;
+    await updateItem(item.id, { isCompleted: newState });
+    if (item.sourceType === "water") {
+      // T6：饮水"待办"完成时同步唯一流水源 waterLogs（每杯 100ml）
+      const { syncWaterLogOnToggle } = await import("@/lib/db/health.db");
+      await syncWaterLogOnToggle(item.date, newState);
+    }
+    if (item.sourceType === "goal" && item.sourceId) {
+      // T14：目标来源事项反向回写 DailyAction，驱动 GoalV2 进度与复盘
+      const { updateDailyActionV2, goalV2DB } = await import("@/lib/db/goal-v2.db");
+      const { recalculateGoalProgress } = await import("@/lib/goal-v2-engine");
+      await updateDailyActionV2(item.sourceId, { isCompleted: newState });
+      const da = await goalV2DB.goalV2DailyActions.get(item.sourceId);
+      if (da?.goalId) await recalculateGoalProgress(da.goalId);
+    }
   }, [isPastDate]);
 
   // ── 删除（仅当天/未来） ──

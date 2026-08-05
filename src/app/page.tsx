@@ -12,16 +12,19 @@ import {
 } from "lucide-react";
 import { getUpcomingItems, addManualItem, updateItem, getItemsByDate, daylogDB } from "@/lib/db/daylog.db";
 import type { Item } from "@/lib/db/daylog.db";
+import { updateDailyActionV2, goalV2DB } from "@/lib/db/goal-v2.db";
+import { recalculateGoalProgress } from "@/lib/goal-v2-engine";
 import { getPendingReminders } from "@/lib/db";
 import type { Reminder } from "@/lib/types";
 
 import { showToast } from "@/components/ui/Toast";
 import HomeReview from "@/components/dashboard/HomeReview";
+import OnboardingCard from "@/components/ui/OnboardingCard";
 import { getAllProjects } from "@/lib/db/efficiency.db";
 import type { Project } from "@/lib/db/efficiency.db";
 import { getCountdowns } from "@/lib/db/life.db";
 import type { Countdown } from "@/lib/db/life.db";
-import { getWaterGoal } from "@/lib/db/health.db";
+import { getWaterGoal, healthDB } from "@/lib/db/health.db";
 import WaterReminderSheet from "@/components/water/WaterReminderSheet";
 
 // ============================================================
@@ -223,6 +226,12 @@ export default function HomePage() {
     setOptimisticCompleted(prev => { const next = new Set(prev); next.add(item.id!); return next; });
     try {
       await updateItem(item.id, { isCompleted: newState });
+      // 目标来源事项：反向回写 DailyAction 完成状态，驱动 GoalV2 进度与复盘
+      if (item.sourceType === "goal" && item.sourceId) {
+        await updateDailyActionV2(item.sourceId, { isCompleted: newState });
+        const da = await goalV2DB.goalV2DailyActions.get(item.sourceId);
+        if (da?.goalId) await recalculateGoalProgress(da.goalId);
+      }
     } catch {
       // 写入失败，清除乐观标记
       setOptimisticCompleted(prev => { const next = new Set(prev); next.delete(item.id!); return next; });
@@ -258,14 +267,16 @@ export default function HomePage() {
   const [waterActive, setWaterActive] = useState(false);
   const [waterReminderEnabled, setWaterReminderEnabled] = useState(true);
 
-  // 独立的饮水数据查询（与饮水页面口径一致）
-  const todayWaterItems = useLiveQuery(
-    () => daylogDB.items.where("date").equals(today).filter(i => i.sourceType === "water").toArray(),
+  // 今日实际饮水量（唯一流水源 waterLogs，与长期主义/饮水页口径一致）
+  const todayWaterLogs = useLiveQuery(
+    () => healthDB.waterLogs.where("date").equals(today).toArray(),
     [today],
     [],
   );
-  const waterCompleted = useMemo(() => todayWaterItems.filter(i => i.isCompleted).length, [todayWaterItems]);
-  const waterTotal = todayWaterItems.length;
+  const todayWaterMl = useMemo(
+    () => todayWaterLogs.reduce((s, l) => s + (l.amount || 0), 0),
+    [todayWaterLogs],
+  );
 
   useEffect(() => {
     getWaterGoal().then(g => {
@@ -341,7 +352,7 @@ export default function HomePage() {
             <span className="text-[11px] font-medium" style={{ color: "var(--color-text-secondary)" }}>设置</span>
           </Link>
           <Link
-            href="/more/projects"
+            href="/more"
             className="h-7 flex items-center gap-1 px-2 rounded-lg active:opacity-60"
             style={{ background: "var(--color-surface-card)", border: "1px solid var(--lifeflow-border)" }}
           >
@@ -350,6 +361,9 @@ export default function HomePage() {
           </Link>
         </div>
       </motion.div>
+
+      {/* ===== 新用户引导（T10：主线路径 目标→日程→复盘） ===== */}
+      <OnboardingCard />
 
       {/* ===== 复盘洞察 ===== */}
       <HomeReview />
@@ -392,7 +406,7 @@ export default function HomePage() {
             <p className="text-[12px] mt-0.5" style={{ color: "var(--color-text-secondary)" }}>
               {waterReminderEnabled
                 ? (waterActive
-                  ? `已开启 · ${waterCompleted}/${waterTotal} 杯`
+                  ? `已开启 · ${todayWaterMl}/${waterSettings.dailyTarget} ml`
                   : "点击开启喝水提醒")
                 : "开启或关闭饮水提醒请前往设置"}
             </p>

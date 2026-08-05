@@ -1,12 +1,14 @@
 /**
- * GuideBrain — 新手引导引擎
- * 逐步式用户 onboarding 流程，进度持久化到 localStorage
+ * GuideBrain — 新手引导引擎（T10）
+ * 主线路径：目标 → 日程 → 复盘（新用户 3 步理解 Life OS 核心闭环）
+ * 进度持久化到 localStorage
  */
 
 export interface GuideStep {
   id: string;
   title: string;
   description: string;
+  path: string;   // 主线步骤目标页
   order: number;
   completed: boolean;
 }
@@ -14,12 +16,9 @@ export interface GuideStep {
 const STORAGE_KEY = "lifeflow_guide_progress";
 
 const DEFAULT_STEPS: Omit<GuideStep, "completed">[] = [
-  { id: "welcome", title: "欢迎", description: "了解 LifeFlow 的核心功能", order: 0 },
-  { id: "create_project", title: "创建项目", description: "设置你的第一个项目", order: 1 },
-  { id: "create_goal", title: "设定目标", description: "创建你的第一个目标", order: 2 },
-  { id: "add_task", title: "添加任务", description: "在目标下添加第一个任务", order: 3 },
-  { id: "first_focus", title: "开始专注", description: "体验番茄钟专注模式", order: 4 },
-  { id: "first_review", title: "首次复盘", description: "查看你的进度总结", order: 5 },
+  { id: "goal", title: "设立目标", description: "用五层拆解，把大目标拆成每天可做的行动", path: "/efficiency-v2", order: 0 },
+  { id: "schedule", title: "安排日程", description: "把行动排进时间轴，到点专注执行", path: "/efficiency/schedule", order: 1 },
+  { id: "review", title: "复盘成长", description: "每日每周复盘，让进步可见", path: "/longtermism", order: 2 },
 ];
 
 function loadProgress(): string[] {
@@ -63,6 +62,14 @@ export class GuideBrain {
       step.completed = true;
       saveProgress(this.steps.filter((s) => s.completed).map((s) => s.id));
     }
+  }
+
+  /**
+   * 标记全部步骤完成（用户明确关闭引导）
+   */
+  completeAll(): void {
+    this.steps.forEach((s) => (s.completed = true));
+    saveProgress(this.steps.map((s) => s.id));
   }
 
   /**

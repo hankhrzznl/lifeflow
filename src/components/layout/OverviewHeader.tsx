@@ -145,7 +145,7 @@ export default function OverviewHeader() {
 
         {/* 专注 */}
         <motion.div variants={itemVariants}>
-          <IconButton icon={Timer} onClick={() => router.push("/focus")} />
+          <IconButton icon={Timer} onClick={() => router.push("/more/focus")} />
         </motion.div>
 
         {/* 提醒 */}

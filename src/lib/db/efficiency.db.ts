@@ -44,50 +44,6 @@ export interface Phase {
   createdAt: number;
 }
 
-export interface EfficiencyGoal {
-  id?: number;
-  name: string;
-  type: 'task' | 'fitness' | 'finance' | 'sleep' | 'water';
-  status: 'active' | 'completed' | 'paused' | 'archived';
-  priority?: string;
-  deadline?: number;
-  progress: number;
-  progressLocked: boolean;
-  weight: number;
-  createdAt: number;
-  updatedAt: number;
-  projectId?: number;
-  description?: string;
-  color?: string;
-}
-
-export interface EfficiencyTask {
-  id?: number;
-  title: string;
-  type: 'longterm' | 'shortterm' | 'daily' | 'habit';
-  status: 'active' | 'done' | 'archived';
-  goalId?: number;
-  planId?: number;
-  startTime?: number;
-  endTime?: number;
-  dueDate?: number;
-  priority?: string;
-  weight?: number;
-  createdAt: number;
-  updatedAt: number;
-  tags?: string[];
-}
-
-export interface EfficiencyHabit {
-  id?: number;
-  title: string;
-  goalId?: number;
-  streak: number;
-  frequency: 'daily' | 'weekly';
-  createdAt: number;
-  updatedAt: number;
-}
-
 export interface ScheduleTask {
   id: string;               // uuid
   goalId: string | null;    // 关联目标ID
@@ -127,8 +83,6 @@ export interface ScheduleTask {
 
 export class EfficiencyDB extends Dexie {
   goals!: Table<Goal, string>;
-  tasks!: Table<EfficiencyTask, number>;
-  habits!: Table<EfficiencyHabit, number>;
   scheduleTasks!: Table<ScheduleTask, string>;
   projects!: Table<Project, string>;
   phases!: Table<Phase, string>;
@@ -286,6 +240,18 @@ export class EfficiencyDB extends Dexie {
       phases: '&id, goalId, sortOrder',
       scheduleTasks: '&id, date, goalId, isCompleted, isImportant, phaseId',
     });
+    // v19 (T13): 物理删除 deprecated 死表 tasks/habits（T8 已软冻结，记录数核实为 0）。
+    // 关键机制：Dexie 每个 version 的 dbschema 是历史全部 stores() 的累积并集，
+    // 仅"不再列出"不会让表从累计 schema 消失 → deleteRemovedTables 永不触发。
+    // 必须显式声明 `表名: null` 覆盖历史声明，该表才会从本版本 schema 移除并被物理 drop。
+    this.version(19).stores({
+      goals: '&id, title, status, deadline, quadrant, goalType, streak',
+      scheduleTasks: '&id, date, goalId, isCompleted, isImportant, phaseId',
+      projects: '&id, name, projectType, parentProjectId',
+      phases: '&id, goalId, sortOrder',
+      tasks: null,
+      habits: null,
+    });
   }
 }
 
@@ -361,74 +327,6 @@ export async function getGoal(id: string): Promise<Goal | undefined> {
 
 export async function getAllGoalsV2(): Promise<Goal[]> {
   return efficiencyDB.goals.toArray();
-}
-
-export async function getTasksByGoalId(goalId: string): Promise<EfficiencyTask[]> {
-  return efficiencyDB.tasks.where('goalId').equals(goalId as any).toArray();
-}
-
-export async function recalculateGoalProgress(goalId: string): Promise<number> {
-  const tasks = await efficiencyDB.tasks.where('goalId').equals(goalId as any).toArray();
-  if (tasks.length === 0) return 0;
-  const done = tasks.filter(t => t.status === 'done').length;
-  return Math.round((done / tasks.length) * 100);
-}
-
-// ─── Goals CRUD (Legacy) ─────────────────────────────────────
-
-export async function addGoalLegacy(goal: Omit<EfficiencyGoal, 'id' | 'createdAt' | 'updatedAt'>): Promise<number> {
-  const now = Date.now();
-  return efficiencyDB.tasks.add({} as any) as any; // Deprecated: goals table schema changed to string id
-}
-
-export async function updateGoalLegacy(id: number, updates: Partial<EfficiencyGoal>): Promise<void> {
-  // Deprecated: goals table schema changed to string id
-}
-
-export async function deleteGoalLegacy(id: number): Promise<void> {
-  await efficiencyDB.goals.delete(id as any);
-}
-
-export async function getAllGoals(): Promise<EfficiencyGoal[]> {
-  return efficiencyDB.goals.toArray() as any;
-}
-
-// ─── Tasks CRUD ──────────────────────────────────────────────
-
-export async function addTask(task: Omit<EfficiencyTask, 'id' | 'createdAt' | 'updatedAt'>): Promise<number> {
-  const now = Date.now();
-  return efficiencyDB.tasks.add({ ...task, createdAt: now, updatedAt: now });
-}
-
-export async function updateTask(id: number, updates: Partial<EfficiencyTask>): Promise<void> {
-  await efficiencyDB.tasks.update(id, { ...updates, updatedAt: Date.now() });
-}
-
-export async function deleteTask(id: number): Promise<void> {
-  await efficiencyDB.tasks.delete(id);
-}
-
-export async function getAllTasks(): Promise<EfficiencyTask[]> {
-  return efficiencyDB.tasks.toArray();
-}
-
-// ─── Habits CRUD ─────────────────────────────────────────────
-
-export async function addHabit(habit: Omit<EfficiencyHabit, 'id' | 'createdAt' | 'updatedAt'>): Promise<number> {
-  const now = Date.now();
-  return efficiencyDB.habits.add({ ...habit, createdAt: now, updatedAt: now });
-}
-
-export async function updateHabit(id: number, updates: Partial<EfficiencyHabit>): Promise<void> {
-  await efficiencyDB.habits.update(id, { ...updates, updatedAt: Date.now() });
-}
-
-export async function deleteHabit(id: number): Promise<void> {
-  await efficiencyDB.habits.delete(id);
-}
-
-export async function getAllHabits(): Promise<EfficiencyHabit[]> {
-  return efficiencyDB.habits.toArray();
 }
 
 // ─── Projects CRUD ───────────────────────────────────────────

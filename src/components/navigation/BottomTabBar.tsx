@@ -17,7 +17,7 @@ const FULLSCREEN_PREFIXES = [
 
 const tabs = [
   { label: "首页", path: "/", icon: Home },
-  { label: "目标", path: "/efficiency", icon: Target },
+  { label: "目标", path: "/efficiency-v2", icon: Target },
   { label: "日程", path: "/efficiency/schedule", icon: Calendar },
   { label: "长期主义", path: "/longtermism", icon: Leaf },
 ] as const;
@@ -29,7 +29,7 @@ export default function BottomTabBar() {
 
   const isActive = (path: string) => {
     if (path === "/") return pathname === "/";
-    if (path === "/efficiency") return pathname === "/efficiency" || (pathname.startsWith("/efficiency/") && pathname !== "/efficiency/schedule" && !pathname.startsWith("/efficiency/schedule/"));
+    if (path === "/efficiency-v2") return pathname === "/efficiency-v2" || pathname.startsWith("/efficiency-v2/");
     if (path === "/efficiency/schedule") return pathname === "/efficiency/schedule" || pathname.startsWith("/efficiency/schedule/");
     if (path === "/longtermism") return pathname.startsWith("/longtermism");
     return pathname === path || pathname.startsWith(path + "/");

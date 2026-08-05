@@ -2,15 +2,6 @@ import Dexie, { type Table } from 'dexie';
 
 // ─── Types ───────────────────────────────────────────────────
 
-export interface WaterRecord {
-  id?: number;
-  date: string;
-  amount: number;
-  goal: number;
-  unit: string;
-  createdAt: number;
-}
-
 export interface WaterLog {
   id: string;            // uuid
   date: string;          // YYYY-MM-DD
@@ -32,17 +23,6 @@ export interface WaterGoal {
   updatedAt: number;
 }
 
-export interface SleepRecord {
-  id?: number;
-  date: string;
-  bedTime: string;
-  wakeTime: string;
-  duration: number;
-  quality: 1 | 2 | 3 | 4 | 5;
-  note?: string;
-  createdAt: number;
-}
-
 export interface SleepLog {
   id: string;            // uuid
   date: string;          // YYYY-MM-DD
@@ -62,37 +42,6 @@ export interface SleepGoalV2 {
   earlySleepStepMinutes: number; // 每晚安多少分钟(默认15)
   createdAt: number;
   updatedAt: number;
-}
-
-export interface FitnessRecord {
-  id?: number;
-  date: string;
-  exerciseId: number;
-  sets: number;
-  reps: number;
-  weight: number;
-  duration?: number;
-  note?: string;
-  createdAt: number;
-}
-
-export interface Exercise {
-  id?: number;
-  name: string;
-  muscleGroupId: number;
-  type: string;
-}
-
-export interface MuscleGroup {
-  id?: number;
-  name: string;
-}
-
-export interface WeeklyStats {
-  sessionCount: number;
-  muscleGroupsCovered: number;
-  personalBestCount: number;
-  totalVolumeKg: number;
 }
 
 // ─── Stretch Types ────────────────────────────────────────────
@@ -203,15 +152,10 @@ export interface MedicineLog {
 // ─── Database ────────────────────────────────────────────────
 
 export class HealthDB extends Dexie {
-  waterRecords!: Table<WaterRecord, number>;
   waterLogs!: Table<WaterLog, string>;
   waterGoals!: Table<WaterGoal, number>;
-  sleepRecords!: Table<SleepRecord, number>;
   sleepLogs!: Table<SleepLog, string>;
   sleepGoals!: Table<SleepGoalV2, number>;
-  fitnessRecords!: Table<FitnessRecord, number>;
-  exercises!: Table<Exercise, number>;
-  muscleGroups!: Table<MuscleGroup, number>;
   muscleGroupsV2!: Table<MuscleGroupV2, string>;
   exercisesV2!: Table<ExerciseV2, string>;
   workoutSessions!: Table<WorkoutSession, string>;
@@ -292,6 +236,30 @@ export class HealthDB extends Dexie {
     this.version(8).stores({
       postureSettings: '++id',
     });
+    // v12 (T13): 物理删除 deprecated 旧表（T7 已归档只读，记录数核实为 0）。
+    // 关键机制：Dexie 每个 version 的 dbschema 是历史全部 stores() 的累积并集，
+    // 仅"不再列出"不会让表从累计 schema 消失 → deleteRemovedTables 永不触发。
+    // 必须显式声明 `表名: null` 覆盖历史声明，该表才会从本版本 schema 移除并被物理 drop。
+    this.version(12).stores({
+      waterLogs: '&id, date, timestamp',
+      waterGoals: '++id',
+      sleepLogs: '&id, date',
+      sleepGoals: '++id',
+      muscleGroupsV2: '&id, name, order',
+      exercisesV2: '&id, muscleGroupId, name',
+      workoutSessions: '&id, date',
+      stretchLogs: '++id, exerciseName, postureIssue, date, createdAt',
+      trainingPlans: '&id, trainingType, active, createdAt',
+      medicines: '&id, name',
+      medicineLogs: '&id, medicineId, date',
+      postureSettings: '++id',
+      // 以下 deprecated 旧表显式置 null 强制物理删除
+      waterRecords: null,
+      sleepRecords: null,
+      fitnessRecords: null,
+      exercises: null,
+      muscleGroups: null,
+    });
   }
 }
 
@@ -311,24 +279,6 @@ export async function initializeHealthDB(): Promise<{ success: boolean; error?: 
   }
 }
 
-// ─── Water Records CRUD ──────────────────────────────────────
-
-export async function addWaterRecord(record: Omit<WaterRecord, 'id' | 'createdAt'>): Promise<number> {
-  return healthDB.waterRecords.add({ ...record, createdAt: Date.now() });
-}
-
-export async function updateWaterRecord(id: number, updates: Partial<WaterRecord>): Promise<void> {
-  await healthDB.waterRecords.update(id, updates);
-}
-
-export async function deleteWaterRecord(id: number): Promise<void> {
-  await healthDB.waterRecords.delete(id);
-}
-
-export async function getAllWaterRecords(): Promise<WaterRecord[]> {
-  return healthDB.waterRecords.toArray();
-}
-
 // ─── Water Log CRUD ──────────────────────────────────────────
 
 export async function addWaterLog(record: Omit<WaterLog, 'id'>): Promise<string> {
@@ -343,6 +293,49 @@ export async function getWaterLogsByDate(date: string): Promise<WaterLog[]> {
 
 export async function deleteWaterLog(id: string): Promise<void> {
   await healthDB.waterLogs.delete(id);
+}
+
+// ─── 统一饮水流水口径（T6）───────────────────────────────────
+// 约定：waterLogs 是唯一流水源（实际饮水量 ml）；daylog water items 仅承担"待办"展示。
+// 所有页面统计 ml 一律读取本层，禁止再按 daylog 完成杯数 × 杯量推算。
+
+/** 某日实际饮水量（waterLogs 当日流水求和） */
+export async function getWaterMlByDate(date: string): Promise<number> {
+  const logs = await healthDB.waterLogs.where('date').equals(date).toArray();
+  return logs.reduce((sum, l) => sum + (l.amount || 0), 0);
+}
+
+/** 日期区间实际饮水量汇总，按天聚合 */
+export async function getWaterMlBetween(start: string, end: string): Promise<{ date: string; amount: number }[]> {
+  const logs = await healthDB.waterLogs.where('date').between(start, end, true, true).toArray();
+  const map = new Map<string, number>();
+  for (const l of logs) {
+    map.set(l.date, (map.get(l.date) || 0) + (l.amount || 0));
+  }
+  return Array.from(map.entries()).map(([date, amount]) => ({ date, amount }));
+}
+
+/**
+ * daylog 饮水"待办"勾选/取消时同步流水。
+ * 每杯默认 100ml，与饮水页既有历史口径一致；取消勾选时回退。
+ */
+export async function syncWaterLogOnToggle(date: string, completed: boolean): Promise<void> {
+  const CUP_ML = 100;
+  const existing = await healthDB.waterLogs.where('date').equals(date).first();
+  const delta = completed ? CUP_ML : -CUP_ML;
+  const next = Math.max(0, (existing?.amount || 0) + delta);
+  if (next === 0) {
+    if (existing?.id) await healthDB.waterLogs.delete(existing.id);
+  } else if (existing?.id) {
+    await healthDB.waterLogs.update(existing.id, { amount: next, timestamp: Date.now() });
+  } else {
+    await healthDB.waterLogs.add({
+      id: crypto.randomUUID(),
+      date,
+      amount: next,
+      timestamp: Date.now(),
+    } as WaterLog);
+  }
 }
 
 // ─── Water Goal CRUD ─────────────────────────────────────────
@@ -387,78 +380,6 @@ export async function updateWaterGoal(updates: Partial<WaterGoal>): Promise<void
       updatedAt: Date.now(),
     });
   }
-}
-
-// ─── Sleep Records CRUD ──────────────────────────────────────
-
-export async function addSleepRecord(record: Omit<SleepRecord, 'id' | 'createdAt'>): Promise<number> {
-  return healthDB.sleepRecords.add({ ...record, createdAt: Date.now() });
-}
-
-export async function updateSleepRecord(id: number, updates: Partial<SleepRecord>): Promise<void> {
-  await healthDB.sleepRecords.update(id, updates);
-}
-
-export async function deleteSleepRecord(id: number): Promise<void> {
-  await healthDB.sleepRecords.delete(id);
-}
-
-export async function getAllSleepRecords(): Promise<SleepRecord[]> {
-  return healthDB.sleepRecords.toArray();
-}
-
-// ─── Fitness Records CRUD ────────────────────────────────────
-
-export async function addFitnessRecord(record: Omit<FitnessRecord, 'id' | 'createdAt'>): Promise<number> {
-  return healthDB.fitnessRecords.add({ ...record, createdAt: Date.now() });
-}
-
-export async function updateFitnessRecord(id: number, updates: Partial<FitnessRecord>): Promise<void> {
-  await healthDB.fitnessRecords.update(id, updates);
-}
-
-export async function deleteFitnessRecord(id: number): Promise<void> {
-  await healthDB.fitnessRecords.delete(id);
-}
-
-export async function getAllFitnessRecords(): Promise<FitnessRecord[]> {
-  return healthDB.fitnessRecords.toArray();
-}
-
-// ─── Exercises CRUD ──────────────────────────────────────────
-
-export async function addExercise(exercise: Omit<Exercise, 'id'>): Promise<number> {
-  return healthDB.exercises.add(exercise);
-}
-
-export async function updateExercise(id: number, updates: Partial<Exercise>): Promise<void> {
-  await healthDB.exercises.update(id, updates);
-}
-
-export async function deleteExercise(id: number): Promise<void> {
-  await healthDB.exercises.delete(id);
-}
-
-export async function getAllExercises(): Promise<Exercise[]> {
-  return healthDB.exercises.toArray();
-}
-
-// ─── Muscle Groups CRUD ──────────────────────────────────────
-
-export async function addMuscleGroup(group: Omit<MuscleGroup, 'id'>): Promise<number> {
-  return healthDB.muscleGroups.add(group);
-}
-
-export async function updateMuscleGroup(id: number, updates: Partial<MuscleGroup>): Promise<void> {
-  await healthDB.muscleGroups.update(id, updates);
-}
-
-export async function deleteMuscleGroup(id: number): Promise<void> {
-  await healthDB.muscleGroups.delete(id);
-}
-
-export async function getAllMuscleGroups(): Promise<MuscleGroup[]> {
-  return healthDB.muscleGroups.toArray();
 }
 
 // ─── Sleep Log CRUD ──────────────────────────────────────────

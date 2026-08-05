@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, Target, ListTodo as ListIcon, CheckCircle2 } from "lucide-react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { efficiencyDB, getAllGoals, type Goal, type ScheduleTask } from "@/lib/db/efficiency.db";
+import { efficiencyDB, type Goal, type ScheduleTask } from "@/lib/db/efficiency.db";
 import { getScheduleTasksByDate, updateScheduleTask } from "@/lib/db/efficiency.db";
 import { showToast } from "@/components/ui/Toast";
 

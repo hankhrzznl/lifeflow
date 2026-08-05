@@ -7,10 +7,12 @@ import {
   Droplets, Moon, Wallet, Dumbbell, Utensils,
   Heart, StretchHorizontal, Star, BarChart3,
   ChevronDown, ChevronUp, TrendingUp, Brain,
+  Timer, Pill, CalendarRange, Clock,
 } from "lucide-react";
 import { daylogDB } from "@/lib/db/daylog.db";
 import {
   getWaterGoal, getSleepLogByDate, getWorkoutSessions,
+  getMedicines, getMedicineLogsByDate,
   healthDB,
 } from "@/lib/db/health.db";
 import {
@@ -18,6 +20,7 @@ import {
 } from "@/lib/db/accounting.db";
 import {
   getDietLogsByDate, getWellnessLogsByDate, getWishes,
+  getHabits, getCountdowns, getTotalFocusMinutes,
 } from "@/lib/db/life.db";
 import { reviewerBrain } from "@/lib/brains/reviewer";
 import type { ReviewResult, ReviewPeriod } from "@/lib/brains/reviewer";
@@ -89,6 +92,10 @@ const MODULES: ModuleCard[] = [
   { key: "posture", label: "体态拉伸", path: "/more/posture", icon: <StretchHorizontal className="w-5 h-5" />, color: "#8B5CF6", bgColor: "#F5F3FF" },
   { key: "wishes", label: "心愿", path: "/more/wishes", icon: <Star className="w-5 h-5" />, color: "#F59E0B", bgColor: "#FFFBEB" },
   { key: "ebbinghaus", label: "记忆", path: "/more/ebbinghaus", icon: <Brain className="w-5 h-5" />, color: "#8B5CF6", bgColor: "#F5F3FF" },
+  { key: "focus", label: "专注", path: "/more/focus", icon: <Timer className="w-5 h-5" />, color: "#6366F1", bgColor: "#EEF2FF" },
+  { key: "habits", label: "习惯", path: "/more/habits", icon: <Clock className="w-5 h-5" />, color: "#14B8A6", bgColor: "#F0FDFA" },
+  { key: "medication", label: "吃药", path: "/more/medication", icon: <Pill className="w-5 h-5" />, color: "#0EA5E9", bgColor: "#F0F9FF" },
+  { key: "countdown", label: "倒数日", path: "/more/countdown", icon: <CalendarRange className="w-5 h-5" />, color: "#F97316", bgColor: "#FFF7ED" },
 ];
 
 // ─── 主页面 ──────────────────────────────────────────────────
@@ -133,6 +140,10 @@ export default function LongTermismPage() {
     [today], []
   );
   const waterGoal = useLiveQuery(() => getWaterGoal(), [], null);
+  const todayWaterLogs = useLiveQuery(
+    () => healthDB.waterLogs.where("date").equals(today).toArray(),
+    [today], [],
+  );
 
   // 2. 睡眠
   const sleepLog = useLiveQuery(() => getSleepLogByDate(yesterday), [yesterday], undefined);
@@ -186,14 +197,32 @@ export default function LongTermismPage() {
     [], 0,
   );
 
+  // 10. 专注
+  const todayFocusMinutes = useLiveQuery(
+    () => getTotalFocusMinutes(today),
+    [today], 0,
+  );
+
+  // 11. 习惯
+  const habits = useLiveQuery(() => getHabits(), [], []);
+
+  // 12. 吃药
+  const medicines = useLiveQuery(() => getMedicines(), [], []);
+  const medicineLogs = useLiveQuery(
+    () => getMedicineLogsByDate(today),
+    [today], [],
+  );
+
+  // 13. 倒数日
+  const countdowns = useLiveQuery(() => getCountdowns(), [], []);
+
   // ─── 卡片衍生数据 ──────────────────────────────────────────
 
   const cardData = useMemo(() => {
     // 饮水
     const waterTotal = waterItems.length;
     const waterTarget = waterGoal ? Math.ceil(waterGoal.dailyTarget / 100) : 0;
-    const waterCompletedCount = waterItems.filter(i => i.isCompleted).length;
-    const completedWaterMl = waterCompletedCount * 100;
+    const completedWaterMl = todayWaterLogs.reduce((s, l) => s + (l.amount || 0), 0);
     const dailyTargetMl = waterGoal?.dailyTarget || 0;
     const now = new Date();
     const currentHour = now.getHours();
@@ -246,6 +275,26 @@ export default function LongTermismPage() {
     const pendingWishes = wishes.filter(w => !w.completed).length;
     const completedWishes = wishes.filter(w => w.completed).length;
 
+    // 专注
+    const focusMin = todayFocusMinutes || 0;
+
+    // 习惯
+    const habitsDone = habits.filter(h => h.days[today]).length;
+    const habitsTotal = habits.length;
+
+    // 吃药
+    const activeMedicines = medicines.filter(m => m.active).length;
+    const medicineTaken = medicineLogs.filter(l => l.taken).length;
+
+    // 倒数日
+    const upcoming = countdowns
+      .filter(c => c.date >= today)
+      .sort((a, b) => a.date.localeCompare(b.date));
+    const nearest = upcoming[0];
+    const daysLeft = nearest
+      ? Math.max(1, Math.ceil((new Date(nearest.date + "T00:00:00").getTime() - new Date(today + "T00:00:00").getTime()) / 86400000))
+      : 0;
+
     return [
       {
         key: "water", icon: <Droplets className="w-5 h-5" />, color: "#3B82F6", bgColor: "#EFF6FF",
@@ -295,8 +344,28 @@ export default function LongTermismPage() {
         primary: ebbinghausDueCards > 0 ? `${ebbinghausDueCards} 张待复习` : ebbinghausDeckCount > 0 ? "今日无待复习" : "--",
         guidance: ebbinghausDeckCount > 0 ? `${ebbinghausDeckCount} 个卡组` : "创建卡组",
       },
+      {
+        key: "focus", icon: <Timer className="w-5 h-5" />, color: "#6366F1", bgColor: "#EEF2FF",
+        primary: focusMin > 0 ? `今日 ${focusMin} 分钟` : "--",
+        guidance: focusMin > 0 ? "专注进行时" : "去记录",
+      },
+      {
+        key: "habits", icon: <Clock className="w-5 h-5" />, color: "#14B8A6", bgColor: "#F0FDFA",
+        primary: habitsTotal > 0 ? `今日 ${habitsDone} / ${habitsTotal} 个` : "--",
+        guidance: habitsTotal > 0 ? (habitsDone >= habitsTotal ? "全部完成" : "还有未打卡") : "新建习惯",
+      },
+      {
+        key: "medication", icon: <Pill className="w-5 h-5" />, color: "#0EA5E9", bgColor: "#F0F9FF",
+        primary: activeMedicines > 0 ? `已服 ${medicineTaken} 次` : "--",
+        guidance: activeMedicines > 0 ? `${activeMedicines} 种服用中` : "添加药品",
+      },
+      {
+        key: "countdown", icon: <CalendarRange className="w-5 h-5" />, color: "#F97316", bgColor: "#FFF7ED",
+        primary: nearest ? `还有 ${daysLeft} 天` : "--",
+        guidance: nearest ? nearest.name : "添加倒数日",
+      },
     ];
-  }, [waterItems, waterGoal, sleepLog, monthTransactions, workoutSessions, dietLogs, wellnessLogs, stretchLogs, wishes, ebbinghausDueCards, ebbinghausDeckCount, today, yesterday]);
+  }, [waterItems, waterGoal, todayWaterLogs, sleepLog, monthTransactions, workoutSessions, dietLogs, wellnessLogs, stretchLogs, wishes, ebbinghausDueCards, ebbinghausDeckCount, today, yesterday, todayFocusMinutes, habits, medicines, medicineLogs, countdowns]);
 
   return (
     <div

@@ -6,7 +6,7 @@ import Dexie, { type Table } from 'dexie';
 
 // ─── Types ───────────────────────────────────────────────────
 
-export type SourceType = "task" | "habit" | "course" | "routine" | "manual" | "medication" | "fitness" | "wellness" | "diet" | "water";
+export type SourceType = "task" | "habit" | "course" | "routine" | "manual" | "medication" | "fitness" | "wellness" | "diet" | "water" | "goal";
 
 export interface Item {
   id: string;              // uuid

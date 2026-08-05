@@ -7,7 +7,7 @@ import { motion } from "framer-motion";
 import { ChevronLeft, Droplets, Check, ChevronRight, Settings } from "lucide-react";
 import { daylogDB, ensureModuleItem } from "@/lib/db/daylog.db";
 import type { Item } from "@/lib/db/daylog.db";
-import { healthDB, getWaterGoal, updateWaterGoal } from "@/lib/db/health.db";
+import { healthDB, getWaterGoal, updateWaterGoal, syncWaterLogOnToggle } from "@/lib/db/health.db";
 import { syncItemReminder } from "@/lib/reminderDefaults";
 import { requestPermission } from "@/lib/notificationService";
 import { showToast } from "@/components/ui/Toast";
@@ -85,6 +85,18 @@ export default function WaterPage() {
     [today],
   );
 
+  /* ─── Live query: 今日实际饮水量（唯一流水源 waterLogs） ─── */
+
+  const todayWaterLogs = useLiveQuery(
+    () => healthDB.waterLogs.where("date").equals(today).toArray(),
+    [today],
+    [],
+  );
+  const todayWaterMl = useMemo(
+    () => todayWaterLogs.reduce((s, l) => s + (l.amount || 0), 0),
+    [todayWaterLogs],
+  );
+
   /* ─── Live query: last 30 days history ─── */
 
   const historyStart = dateAddDays(today, -DAYS_HISTORY + 1);
@@ -97,6 +109,21 @@ export default function WaterPage() {
         .toArray(),
     [today, historyStart],
   );
+
+  /* ─── 近 30 天实际饮水量（唯一流水源 waterLogs） ─── */
+
+  const historyWaterLogs = useLiveQuery(
+    () => healthDB.waterLogs.where("date").between(historyStart, today, true, true).toArray(),
+    [today, historyStart],
+    [],
+  );
+  const mlByDate = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const l of historyWaterLogs) {
+      map.set(l.date, (map.get(l.date) || 0) + (l.amount || 0));
+    }
+    return map;
+  }, [historyWaterLogs]);
 
   // ── Group history by date ──
   const historyByDay = useMemo(() => {
@@ -115,18 +142,19 @@ export default function WaterPage() {
         items: items.sort((a, b) => a.plannedStart.localeCompare(b.plannedStart)),
         completed: items.filter(i => i.isCompleted).length,
         total: items.length,
-        totalMl: items.filter(i => i.isCompleted).length * 100,
+        totalMl: mlByDate.get(date) || 0,
       }));
-  }, [historyItems]);
+  }, [historyItems, mlByDate]);
 
   /* ─── 展开的历史日期 ─── */
   const [expandedDate, setExpandedDate] = useState<string | null>(null);
 
   /* ─── Toggle item completion ─── */
 
-  const handleToggle = useCallback(async (id: string, current: boolean) => {
+  const handleToggle = useCallback(async (id: string, current: boolean, date: string) => {
     const { updateItem } = await import("@/lib/db/daylog.db");
     await updateItem(id, { isCompleted: !current });
+    await syncWaterLogOnToggle(date, !current);
   }, []);
 
   /* ─── Save settings to WaterGoal ─── */
@@ -245,12 +273,7 @@ export default function WaterPage() {
 
   /* ─── Derived stats ─── */
 
-  const completedCount = useMemo(
-    () => todayItems?.filter((i) => i.isCompleted).length ?? 0,
-    [todayItems],
-  );
-  const totalCount = todayItems?.length ?? 0;
-  const totalWaterMl = completedCount * 100;
+  const totalWaterMl = todayWaterMl; // 唯一流水源：waterLogs
 
   const percent = settings.dailyTarget > 0
     ? Math.min(100, Math.round((totalWaterMl / settings.dailyTarget) * 100))
@@ -534,7 +557,7 @@ export default function WaterPage() {
                               >
                                 <button
                                   type="button"
-                                  onClick={() => handleToggle(item.id!, item.isCompleted)}
+                                  onClick={() => handleToggle(item.id!, item.isCompleted, day.date)}
                                   className="w-[18px] h-[18px] rounded-full border-2 flex items-center justify-center shrink-0 active:scale-90 transition-transform"
                                   style={{
                                     borderColor: item.isCompleted ? "var(--lifeflow-primary)" : "var(--lifeflow-border)",

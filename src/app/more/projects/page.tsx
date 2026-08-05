@@ -97,7 +97,7 @@ export default function ProjectsPage() {
               <motion.button
                 initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: defaultSmall.length * 0.03 + 0.06 }}
-                onClick={() => router.push("/focus")}
+                onClick={() => router.push("/more/focus")}
                 className="p-3.5 rounded-[16px] flex items-center gap-3 text-left active:scale-[0.98] transition-transform"
                 style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}
               >

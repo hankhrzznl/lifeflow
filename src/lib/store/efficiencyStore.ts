@@ -79,23 +79,17 @@ export const useEfficiencyStore = create<EfficiencyState>()((set, get) => ({
   },
 
   deleteGoal: async (id) => {
-    const tasks = await db.getTasksByGoalId(id);
-    for (const task of tasks) {
-      if (task.id !== undefined) {
-        await db.deleteTask(task.id);
-      }
-    }
+    // tasks 表已于 T13 物理删除，不再有级联子任务
     await db.deleteGoal(id);
     const goals = await db.getAllGoalsV2();
     set({ goals });
   },
 
   refreshProgress: async (goalId) => {
-    const progress = await db.recalculateGoalProgress(goalId);
-    await db.updateGoal(goalId, { progress });
+    // 旧层级 tasks 表已删（T13），进度由 GoalV2 引擎（goal-v2-engine）计算，此处保持兼容 no-op
     set((state) => ({
       goals: state.goals.map((g) =>
-        g.id === goalId ? { ...g, progress } : g,
+        g.id === goalId ? { ...g, progress: g.progress } : g,
       ),
     }));
   },

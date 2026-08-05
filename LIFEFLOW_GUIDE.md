@@ -257,7 +257,7 @@ LifeFlow v1.0，一个讲道理的生活助手。
   - 右侧：模块标签（小号）→ 核心数据（17px 加粗）→ 行动引导（12px 灰色）
 - 卡片点击跳转对应模块页（`/more/water`、`/more/sleep` 等）
 - 数据查询：
-  - 饮水 → `daylogDB.items`（`sourceType === "water"`）+ `getWaterGoal()`
+  - 饮水 → `daylogDB.items`（`sourceType === "water"`，待办展示）+ `getWaterGoal()` + `healthDB.waterLogs`（唯一流水源 ml）
   - 睡眠 → `getSleepLogByDate(yesterday)`
   - 记账 → `getTransactionsByMonth(year, month)`
   - 训练 → `getWorkoutSessions(7)`
@@ -339,12 +339,81 @@ LifeFlow v1.0，一个讲道理的生活助手。
 - 首页不再展示 AI 快捷指令三按钮（今日提醒/安排日程/本周复盘），AI 助手通过全局悬浮球访问
 - 删除上述 UI 时仅限渲染层，不触碰功能代码
 
-### 饮水数据展示统一口径（v2.2+）
+### 饮水数据口径（v2.4+）— waterLogs 为唯一流水源
 
-- 饮水页面 SVG 环形进度内只显示毫升：`{totalWaterMl} / {dailyTarget} ml`，不再显示杯数 `{completedCount}/{totalCount}`
-- 饮水页面「今日统计」卡片已移除
-- 长期主义页面饮水卡片统一为毫升口径：`{completedWaterMl} / {dailyTarget} ml`
-  - `waterCompletedCount = waterItems.filter(i => i.isCompleted).length`
-  - `completedWaterMl = waterCompletedCount * 100`
-  - `dailyTargetMl = waterGoal.dailyTarget`
+- **数据源裁决**：`healthDB.waterLogs` 是唯一流水源（实际饮水量 ml）；`daylog.items(sourceType="water")` 仅承担「待办提醒」展示
+- **统一读取**：首页 / 长期主义 / 饮水页的 ml 一律读取 waterLogs（当日 logs 求和），禁止再按 daylog 完成杯数 × 杯量推算
+- **勾选同步**：日程页与饮水页勾选/取消 daylog 饮水待办时，调用 `syncWaterLogOnToggle(date, completed)` 同步 ±100ml 到 waterLogs（取消时回退，不足 0 归零）
+- **AI 记水**：Agent `handleRecordWater` 直接写 waterLogs（当日单条累加 amount），天然与页面口径一致
+- 饮水页面 SVG 环形进度显示：`{totalWaterMl} / {dailyTarget} ml`（ml 来自 waterLogs）
+- 首页饮水按钮副标题显示：`已开启 · {todayWaterMl}/{dailyTarget} ml`
+- 饮水页「饮水历史（近 30 天）」ml 来自 waterLogs 按天聚合，杯数/待办完成数仍来自 daylog
+
+### 产品定位（v2.3+）
+
+- LIFEFLOW 定位为「目标驱动的个人管理系统」（Life OS），非待办清单
+- 主线用户路径：定目标（五层拆解）→ 排计划 → 每日执行（日程）→ 记录习惯（长期主义）→ 复盘洞察
+- 主画像：有明确长期目标的自我提升者（备考/健身/理财/技能成长）
+
+### 产品优化规划（v2.3+）
+
+- `LIFEFLOW_OPTIMIZATION_PLAN.md` 是产品级优化总文档（审计+架构+路线图）
+- 重大架构变更/新模块引入前，应先在该文档中登记再实施，保持单一事实来源
+
+### 架构经验（v2.3+）
+
+- 单一入口原则：同一功能只保留一个入口、一套数据、一条路由；旧版功能（plugins/efficiency v1）隐藏入口但保留路由与数据
+- 数据口径在引入新表时统一裁决，避免同一域多表并存（如饮水 waterLogs vs daylog items）
+
+### 旧表归档与冻结（v2.4+，T7/T8 → T13 已物理删除）
+
+- **health.db 旧表归档（T7，已删除）**：`waterRecords`/`sleepRecords`/`fitnessRecords`/`exercises`/`muscleGroups` 曾以 hook 只读保护，**T13 起已物理删除**（记录数核实为 0），hook 与旧 CRUD 均已移除
+- **efficiency.db 软冻结（T8，已删除）**：`habits`/`tasks` 曾以 hook 冻结，**T13 起已物理删除**（记录数核实为 0），冻结 hook 与旧 CRUD 均已移除；`goals`/`scheduleTasks`/`projects`/`phases` 仍活跃
+- 冻结/归档阶段使用 Dexie `hook('creating'/'updating'/'deleting')` 拦截抛错；确认无数据后由 T13 物理删除
+
+### 数据全量归一（v2.6+，T13）
+
+- **成果**：效率库 6→4 表（v19，删 tasks/habits）、健康库 17→12 表（v12，删 waterRecords/sleepRecords/fitnessRecords/exercises/muscleGroups），应用运行无报错
+- **⚠️ Dexie 删表机制（核心经验，勿再踩坑）**：
+  - 每个 `version(N).stores()` 的 dbschema 是**历史全部 stores() 声明的累积并集**——仅"最新版本不再列出某表"**不会**让该表消失，`deleteRemovedTables` 永不触发
+  - 必须**显式声明 `表名: null`** 覆盖历史声明，该表才会从累计 schema 移除并被物理 drop
+  - **版本号必须递增**：IndexedDB 原生版本 = 逻辑版本 ×10；若 IDB 已到当前代码最大版本，后续打开**不再触发 versionchange 升级**，删表不执行
+  - 本地验证时务必**干净重启 dev server**（Turbopack HMR 反复重估模块会导致 Dexie 实例/版本号与 schema 不同步，出现"版本已升但表未删"假象）
+- **删表前提**：目标表记录数核实为 0（无数据风险）后方可删除；CRUD/Table 声明/hook 一并清理
+
+### 目标系统深度集成（v2.6+，T14）
+
+- **同步主链路**：GoalV2 日行动（DailyActionV2）→ 日程 Item（`sourceType='goal'`，sourceId=DA.id，icon=Target）→ 首页/日程展示；复盘 reviewer 直接读 DA 完成率 + KR 进度生成洞察
+- **计划即入日程**：`syncDailyActionToItem`（goal-v2-engine）对**未完成** DA 也会创建 Item（isCompleted 跟随 DA）；取消完成不再删除 Item，仅更新状态（保留用户在日程侧的矫正数据）
+- **双向勾选**：目标详情页勾选 DA → 同步 Item 状态；首页勾选 goal 来源 Item → 反向回写 `DA.isCompleted` + `recalculateGoalProgress`（page.tsx `handleToggle`）
+- **sourceType 隔离（勿混淆）**：目标行动一律用 `'goal'`，与习惯模块的 `'habit'` 彻底区分；旧逻辑（T14 前）生成的 `habit` 型目标 Item 会在下次同步时被 `removeModuleItems(date,'habit',da.id)` 自动清理
+- **级联清理**：`deleteGoalV2`/`deleteStrategyV2`/`deleteWeeklyTaskV2`/`deleteDailyActionV2` 均先清理关联的 goal Item（`removeDailyActionItems`）
+- **历史补同步**：`syncAllDailyActionsForGoal`（幂等）在目标详情页挂载时执行；`syncAllDailyActionsByDate` 在目标创建流程（new/page.tsx）中调用
+- **⚠️ React Hooks 顺序坑（勿再踩）**：详情页「目标不存在」404 的提前 `return` 必须置于**所有 hooks（useState/useEffect/useCallback/useMemo）之后**，否则目标数据未加载时 hooks 提前退出、加载后 hook 数量变化，触发 `Rendered more hooks than during the previous render` 崩溃；hooks 区对可能为 undefined 的数据一律用可选链（`goal?.color`）；若本地首次进详情页仍偶发该报错且重进即好，为 dev 模式 Fast Refresh 竞态，干净重启 dev server 即可
+
+### v1 → v2 目标数据迁移工具（v2.6+，T9）
+
+- **入口**：设置页「数据 → 迁移 v1 目标数据」（`src/lib/migrations/v1-goal-migration.ts` + `src/components/ui/V1GoalMigrationDialog.tsx`）
+- **原则**：v1 数据永不删除（迁移只复制）；全程可重入（注册表 `lifeflow_migration_v1v2_goals` 记录 v1Id→v2Id，已迁移自动跳过）；可回滚（仅删除本次迁移创建的 v2 目标，v1 完好）；首次迁移自动生成 v1 完整快照备份，可下载 JSON
+- **字段映射**：title→title、note→vision、deadline→vision「截止」行、color/status/progress/createdAt 直传；`archived`→`paused`
+- **习惯打卡迁移**：以 `daysLog` 有无打卡为准判断（⚠️ 应用启动清理会把 goalType 统一改写为 'task'，不得再用 goalType 判断习惯数据）；打卡记录按周日起始周分组 → Strategy「习惯打卡」+ WeeklyTask + DailyAction(isCompleted=true)
+
+### 新用户引导（v2.6+，T10）
+
+- **主线路径**：设立目标（/efficiency-v2）→ 安排日程（/efficiency/schedule）→ 复盘成长（/longtermism），3 步闭环
+- **入口**：首页头部下方 `OnboardingCard`（`src/components/ui/OnboardingCard.tsx`），仅首次（未完成）显示，支持「去试试」（跳转并标记完成）/「跳过」（推进下一步）/「X」（completeAll 永久关闭）
+- **进度持久化**：`GuideBrain`（`src/lib/brains/guide.ts`）→ localStorage `lifeflow_guide_progress`（已完成 id 数组）；重新实现时保持该键兼容
+
+### /more 目录搜索（v2.6+，T11）
+
+- `/more/page.tsx` 顶部搜索框，按**模块名 / 路径 / 分组名**实时过滤（`MODULE_GROUPS` 静态目录不落库）
+- 无结果显示空状态（SearchX +「未找到相关模块」）；清空恢复全部分组；新增模块只需在 `MODULE_GROUPS` 注册即可被检索
+
+### plugins 路由下线（v2.6+，T12）
+
+- **重定向载体**：`src/proxy.ts`（⚠️ Next.js 16 起 `middleware.ts` 约定已废弃，重定向逻辑一律写 proxy；物理旧页面保留但不直接可达）
+- **映射表**（308 永久）：`/plugins`→`/more`、`/plugins/finance`→`/more/accounting`、`/plugins/focus-timer`→`/more/focus`、`/plugins/habit(/detail)`→`/more/habits`、`/plugins/task-inbox`→`/pending`、`/plugins/timeline`→`/efficiency/schedule`；其余 `/plugins/*` 兜底→`/more`
+- **⚠️ 勿再引入链式重定向**：目标必须直达新版页面（如 `/plugins/focus-timer` 直连 `/more/focus`，而非 `/focus`→`/today`→日程页），避免旧路由接力导致落页错误
+- **内部链接一致性**：专注页唯一正式地址为 `/more/focus`（旧 `/focus` 亦 308 至该页）；全站入口（OverviewHeader、TaskDetail、AgentProvider、more/projects）已统一指向 `/more/focus`
+- **agent 隐藏页判断**：`AgentProvider` 的 `isHiddenPage` 已同步为 `/more/focus`
 

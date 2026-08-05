@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 import { Check, ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
 import { addGoalV2, addKeyResultV2, addStrategyV2, addWeeklyTaskV2, addDailyActionV2, getWeeklyTasksByGoalV2 } from "@/lib/db/goal-v2.db";
 import type { StrategyCycleType, WeeklyCycleConfig, DailyCycleConfig, DailyCycleItem } from "@/lib/db/goal-v2.db";
-import { STRATEGY_TEMPLATES, recalculateGoalProgress, getWeekStart, todayStr, ensureDailyActionsForDate, getDailyActionsForDate } from "@/lib/goal-v2-engine";
+import { STRATEGY_TEMPLATES, recalculateGoalProgress, getWeekStart, todayStr, ensureDailyActionsForDate, getDailyActionsForDate, syncAllDailyActionsByDate } from "@/lib/goal-v2-engine";
 import type { StrategyTemplate } from "@/lib/goal-v2-engine";
 import type { ImportedGoal } from "@/lib/goal-v2-import-parser";
 import { detectTimeConflicts } from "@/lib/conflict-detector";
@@ -732,10 +732,13 @@ export default function NewGoalV2Page() {
         await ensureDailyActionsForDate(goalId, ds);
       }
 
-      // 6. 重算进度
+      // 6. 将今天生成的 DailyAction 同步为日程 Item（计划即入日程）
+      await syncAllDailyActionsByDate(todayStr());
+
+      // 7. 重算进度
       await recalculateGoalProgress(goalId);
 
-      // 7. 跳转
+      // 8. 跳转
       router.push(`/efficiency-v2/goals/${goalId}`);
     } catch (e) {
       console.error("创建目标失败:", e);

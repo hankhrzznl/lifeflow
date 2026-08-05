@@ -6,7 +6,7 @@ import type {
   GoalV2, KeyResultV2, StrategyV2, WeeklyTaskV2, DailyActionV2,
   WeeklyCycleConfig, DailyCycleConfig, DailyCycleItem, StrategyCycleType,
 } from "@/lib/db/goal-v2.db";
-import { daylogDB, addItem, ensureModuleItem } from "@/lib/db/daylog.db";
+import { daylogDB, addItem, ensureModuleItem, removeModuleItems } from "@/lib/db/daylog.db";
 
 // ============================================================
 // 策略模板
@@ -197,37 +197,50 @@ async function getStrategyProgressByDA(strategyId: string): Promise<number> {
 // ============================================================
 
 /**
- * 在 DailyAction 完成/取消完成时同步写入/删除 Item
+ * 将 DailyAction 全量同步到日程 Item：
+ * - 无论是否完成都会创建 Item（计划中的日行动也进入日程待办）
+ * - isCompleted 跟随 DA；取消完成时不再删除 Item，仅更新状态（保留用户在日程侧的矫正数据）
+ * - sourceType 使用 'goal'（sourceId=DA.id），与习惯模块的 'habit' 彻底隔离
  */
 export async function syncDailyActionToItem(action: DailyActionV2): Promise<void> {
-  if (action.isCompleted && !action.itemId) {
-    // 完成 → 创建 Item
-    const itemId = await ensureModuleItem({
-      date: action.date,
-      sourceType: "habit",
-      sourceId: action.id,
-      title: action.title,
-      plannedStart: action.time,
-      plannedEnd: addMinutes(action.time, action.duration),
-      color: "#6366F1",
-      icon: "Target",
-      isCompleted: true,
-    });
-    if (itemId) {
-      await goalV2DB.goalV2DailyActions.update(action.id, { itemId });
-    }
-  } else if (!action.isCompleted && action.itemId) {
-    // 取消完成 → 删除 Item
-    await daylogDB.items.delete(action.itemId);
-    await goalV2DB.goalV2DailyActions.update(action.id, { itemId: undefined });
+  // 清理旧逻辑（sourceType='habit'）生成的目标 Item，避免同源重复展示
+  await removeModuleItems(action.date, 'habit', action.id);
+
+  const itemId = await ensureModuleItem({
+    date: action.date,
+    sourceType: "goal",
+    sourceId: action.id,
+    title: action.title,
+    plannedStart: action.time,
+    plannedEnd: addMinutes(action.time, action.duration),
+    color: "#6366F1",
+    icon: "Target",
+    isCompleted: action.isCompleted,
+  });
+  if (!itemId) return;
+  // 幂等：已有关联则仅同步完成状态（避免覆盖用户在日程侧的矫正数据）
+  if (action.itemId !== itemId) {
+    await goalV2DB.goalV2DailyActions.update(action.id, { itemId });
+  } else {
+    await daylogDB.items.update(itemId, { isCompleted: action.isCompleted });
   }
 }
 
 /**
- * 批量同步：当修改多个 DailyAction 后调用
+ * 批量同步：按日期将该日所有 DailyAction 同步为 Item（未完成也会创建）
  */
 export async function syncAllDailyActionsByDate(date: string): Promise<void> {
   const actions = await goalV2DB.goalV2DailyActions.where('date').equals(date).toArray();
+  for (const a of actions) {
+    await syncDailyActionToItem(a);
+  }
+}
+
+/**
+ * 批量同步：按目标将该目标所有 DailyAction 同步为 Item（幂等，用于历史数据补同步）
+ */
+export async function syncAllDailyActionsForGoal(goalId: string): Promise<void> {
+  const actions = await goalV2DB.goalV2DailyActions.where('goalId').equals(goalId).toArray();
   for (const a of actions) {
     await syncDailyActionToItem(a);
   }

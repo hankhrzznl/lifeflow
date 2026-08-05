@@ -89,7 +89,7 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => { messagesRef.current = messages; }, [messages]);
 
   const isHiddenPage =
-    pathname === "/focus" || pathname.startsWith("/settings");
+    pathname === "/more/focus" || pathname.startsWith("/settings");
   const isAssistantPage = pathname === "/assistant";
 
   useEffect(() => {
@@ -931,7 +931,7 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
       });
       lastActionRef.current = { action: 'start_focus', sourceLogId: today, sourceModule: 'focus', scheduleTaskId: newTaskId };
     } catch { /* schedule task optional */ }
-    setTimeout(() => router.push("/focus"), 500);
+    setTimeout(() => router.push("/more/focus"), 500);
   }, [addAssistantMessage, router]);
 
   const handleCreateNote = useCallback(async (intent: ParsedIntent) => {

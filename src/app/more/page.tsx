@@ -10,6 +10,7 @@ import {
   Search, SearchX, X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useMedicineMode } from "@/lib/use-medicine-mode";
 
 // ============================================================
 // 模块目录（静态分类，全站功能单一入口）
@@ -23,43 +24,59 @@ interface ModuleEntry {
   bgColor: string;
 }
 
-const MODULE_GROUPS: { title: string; items: ModuleEntry[] }[] = [
+const MODULE_GROUPS: { title: string; layer?: string; repair?: boolean; items: ModuleEntry[] }[] = [
   {
-    title: "习惯养成",
+    title: "能量底座 E1",
+    layer: "睡眠是一切地基 · 保证能量才能执行目标",
     items: [
-      { label: "饮水", path: "/more/water", icon: <Droplets className="w-5 h-5" />, color: "#3B82F6", bgColor: "#EFF6FF" },
       { label: "睡眠", path: "/more/sleep", icon: <Moon className="w-5 h-5" />, color: "#6366F1", bgColor: "#EEF2FF" },
-      { label: "训练中心", path: "/more/fitness", icon: <Dumbbell className="w-5 h-5" />, color: "#F97316", bgColor: "#FFF7ED" },
+      { label: "作息模板", path: "/more/schedule/routines", icon: <Clock className="w-5 h-5" />, color: "#1E293B", bgColor: "#F1F5F9" },
+      { label: "饮水", path: "/more/water", icon: <Droplets className="w-5 h-5" />, color: "#3B82F6", bgColor: "#EFF6FF" },
       { label: "饮食", path: "/more/diet", icon: <Utensils className="w-5 h-5" />, color: "#EC4899", bgColor: "#FDF2F8" },
+    ],
+  },
+  {
+    title: "目标执行 E2",
+    layer: "能量充足后，把目标落地为今日行动",
+    items: [
       { label: "习惯打卡", path: "/more/habits", icon: <Clock className="w-5 h-5" />, color: "#14B8A6", bgColor: "#F0FDFA" },
-      { label: "吃药提醒", path: "/more/medication", icon: <Pill className="w-5 h-5" />, color: "#0EA5E9", bgColor: "#F0F9FF" },
       { label: "专注计时", path: "/more/focus", icon: <Timer className="w-5 h-5" />, color: "#6366F1", bgColor: "#EEF2FF" },
     ],
   },
   {
-    title: "生活管理",
+    title: "过程记录 E3",
+    layer: "执行过程中的记录沉淀",
     items: [
       { label: "记账", path: "/more/accounting", icon: <Wallet className="w-5 h-5" />, color: "#10B981", bgColor: "#ECFDF5" },
+      { label: "训练中心", path: "/more/fitness", icon: <Dumbbell className="w-5 h-5" />, color: "#F97316", bgColor: "#FFF7ED" },
+    ],
+  },
+  {
+    title: "成长储备 E4",
+    layer: "长期资产，按需取用",
+    items: [
+      { label: "复盘总览", path: "/more/review", icon: <FolderKanban className="w-5 h-5" />, color: "#10B981", bgColor: "#ECFDF5" },
+      { label: "记忆复习", path: "/more/ebbinghaus", icon: <Brain className="w-5 h-5" />, color: "#8B5CF6", bgColor: "#F5F3FF" },
       { label: "心愿", path: "/more/wishes", icon: <Star className="w-5 h-5" />, color: "#F59E0B", bgColor: "#FFFBEB" },
-      { label: "倒数日", path: "/more/countdown", icon: <CalendarRange className="w-5 h-5" />, color: "#F97316", bgColor: "#FFF7ED" },
       { label: "备忘录", path: "/more/notes", icon: <StickyNote className="w-5 h-5" />, color: "#8B5CF6", bgColor: "#F5F3FF" },
+      { label: "课程表", path: "/more/schedule/courses", icon: <Calendar className="w-5 h-5" />, color: "#007AFF", bgColor: "#EFF6FF" },
+      { label: "倒数日", path: "/more/countdown", icon: <CalendarRange className="w-5 h-5" />, color: "#F97316", bgColor: "#FFF7ED" },
       { label: "日历", path: "/more/calendar", icon: <CalendarDays className="w-5 h-5" />, color: "#3B82F6", bgColor: "#EFF6FF" },
     ],
   },
   {
-    title: "学习记忆",
+    title: "维修模式 ⚙",
+    layer: "条件激活 · 平时隐藏，需要时才出现",
+    repair: true, // T18-6：无用药计划且设置关闭时全站隐藏
     items: [
-      { label: "记忆复习", path: "/more/ebbinghaus", icon: <Brain className="w-5 h-5" />, color: "#8B5CF6", bgColor: "#F5F3FF" },
+      { label: "吃药提醒", path: "/more/medication", icon: <Pill className="w-5 h-5" />, color: "#0EA5E9", bgColor: "#F0F9FF" },
     ],
   },
   {
-    title: "计划管理",
+    title: "系统",
     items: [
-      { label: "课程表", path: "/more/schedule/courses", icon: <Calendar className="w-5 h-5" />, color: "#007AFF", bgColor: "#EFF6FF" },
-      { label: "作息模板", path: "/more/schedule/routines", icon: <Clock className="w-5 h-5" />, color: "#1E293B", bgColor: "#F1F5F9" },
       { label: "提醒", path: "/reminders", icon: <Bell className="w-5 h-5" />, color: "#3B82F6", bgColor: "#EFF6FF" },
       { label: "提醒设置", path: "/more/reminder-settings", icon: <NotebookPen className="w-5 h-5" />, color: "#64748B", bgColor: "#F8FAFC" },
-      { label: "复盘总览", path: "/more/review", icon: <FolderKanban className="w-5 h-5" />, color: "#10B981", bgColor: "#ECFDF5" },
       { label: "设置", path: "/settings", icon: <Settings className="w-5 h-5" />, color: "#64748B", bgColor: "#F8FAFC" },
     ],
   },
@@ -72,12 +89,16 @@ const MODULE_GROUPS: { title: string; items: ModuleEntry[] }[] = [
 export default function MorePage() {
   const router = useRouter();
   const [query, setQuery] = useState("");
+  const { active: medicineActive } = useMedicineMode(); // T18-6：维修模式条件激活
+
+  // 维修模式组仅在条件满足时展示
+  const visibleGroups = useMemo(() => MODULE_GROUPS.filter(g => !g.repair || medicineActive), [medicineActive]);
 
   // 搜索：按模块名 / 路径 / 分组名模糊匹配
   const normalized = query.trim().toLowerCase();
   const searchResults = useMemo(() => {
     if (!normalized) return null;
-    return MODULE_GROUPS.map((group) => ({
+    return visibleGroups.map((group) => ({
       ...group,
       items: group.items.filter(
         (item) =>
@@ -88,9 +109,12 @@ export default function MorePage() {
     })).filter((g) => g.items.length > 0);
   }, [normalized]);
 
-  const renderGroup = (group: (typeof MODULE_GROUPS)[number], gi: number) => (
+  const renderGroup = (group: (typeof visibleGroups)[number], gi: number) => (
     <div key={group.title} className="mb-5">
-      <p className="text-[12px] font-medium mb-2.5" style={{ color: "var(--color-text-disabled)" }}>{group.title}</p>
+      <p className="text-[12px] font-medium mb-0.5" style={{ color: "var(--color-text-disabled)" }}>{group.title}</p>
+      {group.layer && (
+        <p className="text-[11px] mb-2.5" style={{ color: "var(--color-text-disabled)", opacity: 0.8 }}>{group.layer}</p>
+      )}
       <div className="grid grid-cols-2 gap-2.5">
         {group.items.map((item, i) => (
           <Link
@@ -172,7 +196,7 @@ export default function MorePage() {
             searchResults.map((group, gi) => renderGroup(group, gi))
           )
         ) : (
-          MODULE_GROUPS.map((group, gi) => renderGroup(group, gi))
+          visibleGroups.map((group, gi) => renderGroup(group, gi))
         )}
       </div>
     </div>

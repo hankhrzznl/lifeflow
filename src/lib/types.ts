@@ -1023,6 +1023,7 @@ export interface UserSettings {
   layoutDensity?: 'compact' | 'normal' | 'loose';
   warnThreshold?: number;
   dangerThreshold?: number;
+  medicineEnabled?: boolean;  // T18-6：吃药维修模式开关（settings 兜底，无条件时全站隐藏）
   createdAt: number;
 }
 

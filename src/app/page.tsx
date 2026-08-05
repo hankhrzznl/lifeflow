@@ -7,22 +7,19 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useLiveQuery } from "dexie-react-hooks";
 import {
   FolderKanban, Zap, Check, Bell,
-  Droplets, Moon, Dumbbell, Pill,
-  Plus, X, Clock, ChevronDown, ChevronRight, Clock9, Settings,
+  Droplets, Moon, Dumbbell, Sunrise,
+  Plus, X, Clock, ChevronDown, Clock9, Settings, Wallet, Brain, Star,
 } from "lucide-react";
 import { getUpcomingItems, addManualItem, updateItem, getItemsByDate } from "@/lib/db/daylog.db";
 import type { Item } from "@/lib/db/daylog.db";
 import { updateDailyActionV2, goalV2DB } from "@/lib/db/goal-v2.db";
 import { recalculateGoalProgress } from "@/lib/goal-v2-engine";
-import { getPendingReminders } from "@/lib/db";
-import type { Reminder } from "@/lib/types";
 
 import { showToast } from "@/components/ui/Toast";
 import HomeReview from "@/components/dashboard/HomeReview";
 import OnboardingCard from "@/components/ui/OnboardingCard";
-import { getCountdowns } from "@/lib/db/life.db";
-import type { Countdown } from "@/lib/db/life.db";
-import { getWaterGoal, healthDB } from "@/lib/db/health.db";
+import { getWaterGoal, healthDB, getSleepLogByDate } from "@/lib/db/health.db";
+import { getWakeTime } from "@/lib/db/daylog.db";
 
 // ============================================================
 // 工具函数
@@ -41,13 +38,6 @@ function nowTimeStr(): string {
 function formatDateChinese(date: Date): string {
   const weekDays = ["日", "一", "二", "三", "四", "五", "六"];
   return `${date.getMonth() + 1}月${date.getDate()}日 周${weekDays[date.getDay()]}`;
-}
-
-function formatDuration(minutes: number): string {
-  if (minutes <= 0) return "--";
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  return h > 0 ? `${h}h${m > 0 ? m : ""}` : `${m}min`;
 }
 
 function itemDuration(item: Item): number {
@@ -145,54 +135,7 @@ export default function HomePage() {
 
   const displayUpcoming = upcomingItems.length > 0 ? upcomingItems : cachedUpcoming;
 
-  // ── 提醒 ──
-  const [pendingReminders, setPendingReminders] = useState<Reminder[]>([]);
-  useEffect(() => {
-    getPendingReminders().then((r) => setPendingReminders(r.slice(0, 3))).catch(() => {});
-  }, []);
-
-  // ── 倒数日 ──
-  const countdowns = useLiveQuery(() => getCountdowns(), [], [] as Countdown[]);
-
-  const upcomingCountdowns = useMemo(() => {
-    const now = new Date();
-    const today = todayStr();
-    const thisYear = now.getFullYear();
-    return (countdowns ?? [])
-      .map((c) => {
-        // annual 类型：用今年日期重新计算
-        if (c.type === 'annual') {
-          const [m, d] = c.date.split('-').slice(1);
-          const thisYearDate = `${thisYear}-${m}-${d}`;
-          // 如果今年已经过了，用明年
-          if (thisYearDate < today) {
-            return { ...c, _effectiveDate: `${thisYear + 1}-${m}-${d}` };
-          }
-          return { ...c, _effectiveDate: thisYearDate };
-        }
-        return { ...c, _effectiveDate: c.date };
-      })
-      .filter((c: any) => c._effectiveDate >= today)
-      .sort((a: any, b: any) => a._effectiveDate.localeCompare(b._effectiveDate))
-      .slice(0, 3);
-  }, [countdowns]);
-
-  const countdownDays = useCallback((c: any) => {
-    const now = new Date(todayStr() + "T00:00:00");
-    const target = new Date(c._effectiveDate + "T00:00:00");
-    return Math.ceil((target.getTime() - now.getTime()) / 86400000);
-  }, []);
-
-  // ── 核心事项（第一条未完成） ──
-  const coreItem = useMemo(() => {
-    return (displayUpcoming ?? []).find((item) => !item.isCompleted) ?? null;
-  }, [displayUpcoming]);
-
-  // ── 今日事项计数 ──
-  const todayTotal = (displayUpcoming ?? []).length;
-  const completedCount = (displayUpcoming ?? []).filter((i) => i.isCompleted).length;
-
-  // ── 排序 ──
+  // ── 排序（展开全部待办用） ──
   const sortedItems = useMemo(() => {
     return [...(displayUpcoming ?? [])].sort((a, b) => {
       if (a.isCompleted !== b.isCompleted) return a.isCompleted ? 1 : -1;
@@ -224,6 +167,26 @@ export default function HomePage() {
       showToast({ type: "error", message: "操作失败，请重试" });
     }
   }, []);
+
+  // ── E2 合并流勾选：目标日行动直写 DA；日程待办走 Item ──
+  const [optimisticGoal, setOptimisticGoal] = useState<Set<string>>(new Set());
+  const handleToggleMerged = useCallback(async (act: { key: string; id: string; isGoal: boolean; title: string; time: string; endTime: string; isCompleted: boolean; color: string; sourceId: string }) => {
+    const newState = !act.isCompleted;
+    if (act.isGoal) {
+      setOptimisticGoal(prev => { const next = new Set(prev); next.add(act.id); return next; });
+      try {
+        await updateDailyActionV2(act.id, { isCompleted: newState });
+        const da = await goalV2DB.goalV2DailyActions.get(act.id);
+        if (da?.goalId) await recalculateGoalProgress(da.goalId);
+      } catch {
+        setOptimisticGoal(prev => { const next = new Set(prev); next.delete(act.id); return next; });
+        showToast({ type: "error", message: "操作失败，请重试" });
+      }
+    } else {
+      const item = (allTodayItems ?? []).find(i => i.id === act.id);
+      if (item) await handleToggle(item);
+    }
+  }, [allTodayItems, handleToggle]);
 
   // ── 创建弹窗 ──
   const [showCreate, setShowCreate] = useState(false);
@@ -269,6 +232,66 @@ export default function HomePage() {
       });
     }).catch(() => {});
   }, [today]);
+
+  // ── E1 能量区：昨晚睡眠（T18-3 今日驾驶舱） ──
+  const yesterday = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  }, []);
+
+  const lastSleep = useLiveQuery(
+    () => getSleepLogByDate(yesterday),
+    [yesterday],
+    undefined,
+  );
+
+  // ── E1 能量区：起床时间（作息模板） ──
+  const wakeTime = useLiveQuery(() => getWakeTime(), [], "07:00");
+
+  // ── E2 今日执行：目标日行动（GoalV2 每日行动） ──
+  const todayGoalActions = useLiveQuery(
+    () => goalV2DB.goalV2DailyActions.where("date").equals(today).toArray(),
+    [today],
+    [],
+  );
+  // 目标日行动若已同步为日程 Item（sourceType='goal'），从待办合并流中排除避免重复
+  const goalItemIds = useMemo(() => new Set((allTodayItems ?? []).map(i => i.id)), [allTodayItems]);
+  // ── E2 今日执行合并流：目标日行动（未同步为 Item 的）+ 日程待办 ──
+  const mergedActions = useMemo(() => {
+    const goalActs = (todayGoalActions ?? [])
+      .filter(a => !a.itemId || !goalItemIds.has(a.itemId))
+      .map(a => ({
+        key: `goal-${a.id}`,
+        id: a.id,
+        isGoal: true as const,
+        title: a.title,
+        time: a.time || "09:00",
+        endTime: "",
+        isCompleted: a.isCompleted,
+        color: "#6366F1",
+        sourceId: a.id,
+      }));
+    const items = (allTodayItems ?? []).map(i => ({
+      key: `item-${i.id}`,
+      id: i.id!,
+      isGoal: false as const,
+      title: i.title,
+      time: i.plannedStart,
+      endTime: i.plannedEnd,
+      isCompleted: i.isCompleted,
+      color: i.color,
+      sourceId: i.sourceId,
+    }));
+    const merged = [...goalActs, ...items].sort((a, b) =>
+      a.isCompleted !== b.isCompleted ? (a.isCompleted ? 1 : -1) : a.time.localeCompare(b.time),
+    );
+    return merged.slice(0, 12);
+  }, [todayGoalActions, allTodayItems, goalItemIds]);
+
+  // ── E2 今日执行统计 ──
+  const execTotal = (allTodayItems ?? []).length;
+  const execDone = (allTodayItems ?? []).filter(i => i.isCompleted).length;
 
   const handleCreate = useCallback(async () => {
     if (submitting) return;
@@ -342,78 +365,83 @@ export default function HomePage() {
       {/* ===== 新用户引导（T10：主线路径 目标→日程→复盘） ===== */}
       <OnboardingCard />
 
-      {/* ===== 复盘洞察 ===== */}
-      <HomeReview />
-
-      {/* ===== 饮水卡片（T15：时段目标制入口） ===== */}
-      <div className="px-4 mb-3">
-        <motion.button
+      {/* ===== E1 能量区（T18-3 今日驾驶舱 · 三合一健康卡） ===== */}
+      <div className="px-4 mb-4">
+        <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, ease: "easeOut" }}
-          onClick={() => router.push("/more/water")}
-          className="w-full rounded-[16px] p-3.5 flex items-center gap-3 active:opacity-70"
-          style={{
-            background: "var(--color-surface-card)",
-            boxShadow: "var(--shadow-card)",
-          }}
+          className="rounded-[20px] p-4"
+          style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}
         >
-          <div
-            className="w-10 h-10 rounded-xl flex items-center justify-center"
-            style={{ background: "var(--lifeflow-muted)" }}
-          >
-            <Droplets className="w-5 h-5" style={{ color: "var(--lifeflow-primary)" }} />
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: "var(--lifeflow-brand-50)" }}>
+              <Zap className="w-4 h-4" style={{ color: "var(--lifeflow-primary)" }} />
+            </div>
+            <span className="text-[13px] font-semibold" style={{ color: "var(--lifeflow-primary)" }}>能量底座</span>
+            <span className="text-[11px] ml-auto" style={{ color: "var(--color-text-disabled)" }}>睡好 · 喝够 · 规律作息</span>
           </div>
-          <div className="flex-1 text-left">
-            <p className="text-[15px] font-semibold" style={{ color: "var(--color-text-primary)" }}>
-              饮水
-            </p>
-            <p className="text-[12px] mt-0.5" style={{ color: "var(--color-text-secondary)" }}>
-              今日 {todayWaterMl}/{waterSettings.dailyTarget} ml
-            </p>
+
+          {/* 三合一：睡眠 / 饮水 / 作息 */}
+          <div className="grid grid-cols-3 gap-2.5">
+            {/* 睡眠 */}
+            <button
+              type="button"
+              onClick={() => router.push("/more/sleep")}
+              className="rounded-[14px] p-3 text-left active:opacity-70 transition-opacity"
+              style={{ background: "var(--lifeflow-background)" }}
+            >
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center mb-2" style={{ background: "#EEF2FF" }}>
+                <Moon className="w-4 h-4" style={{ color: "#6366F1" }} />
+              </div>
+              <p className="text-[13px] font-bold tabular-nums" style={{ color: "var(--color-text-primary)" }}>
+                {lastSleep ? lastSleep.actualTime.slice(0, 5) : "--"}
+              </p>
+              <p className="text-[10px] mt-0.5 truncate" style={{ color: "var(--color-text-secondary)" }}>
+                昨晚{lastSleep ? (lastSleep.isOnTime ? "按时入睡" : "入睡") : "记录睡眠"}
+              </p>
+            </button>
+
+            {/* 饮水 */}
+            <button
+              type="button"
+              onClick={() => router.push("/more/water")}
+              className="rounded-[14px] p-3 text-left active:opacity-70 transition-opacity"
+              style={{ background: "var(--lifeflow-background)" }}
+            >
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center mb-2" style={{ background: "#EFF6FF" }}>
+                <Droplets className="w-4 h-4" style={{ color: "#3B82F6" }} />
+              </div>
+              <p className="text-[13px] font-bold tabular-nums" style={{ color: "var(--color-text-primary)" }}>
+                {todayWaterMl}/{waterSettings.dailyTarget}
+              </p>
+              <p className="text-[10px] mt-0.5 truncate" style={{ color: "var(--color-text-secondary)" }}>
+                饮水 ml · 目标 {waterSettings.dailyTarget}
+              </p>
+            </button>
+
+            {/* 作息 */}
+            <button
+              type="button"
+              onClick={() => router.push("/more/schedule/routines")}
+              className="rounded-[14px] p-3 text-left active:opacity-70 transition-opacity"
+              style={{ background: "var(--lifeflow-background)" }}
+            >
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center mb-2" style={{ background: "#F1F5F9" }}>
+                <Sunrise className="w-4 h-4" style={{ color: "#1E293B" }} />
+              </div>
+              <p className="text-[13px] font-bold tabular-nums" style={{ color: "var(--color-text-primary)" }}>
+                {wakeTime || "--"}
+              </p>
+              <p className="text-[10px] mt-0.5 truncate" style={{ color: "var(--color-text-secondary)" }}>
+                起床 · 作息模板
+              </p>
+            </button>
           </div>
-        </motion.button>
+        </motion.div>
       </div>
 
-      {/* ===== 矫正聚合提醒卡 ===== */}
-      {uncorrectedItems.length > 0 && (
-        <div className="px-4 mb-4">
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="rounded-[16px] p-4"
-            style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)", borderLeft: "3px solid #FF9500" }}
-          >
-            <div className="mb-2">
-              <p className="text-[15px] font-semibold" style={{ color: "var(--color-text-primary)" }}>
-                今日还有 {uncorrectedItems.length} 个事项未矫正
-              </p>
-              <p className="text-[13px] mt-0.5" style={{ color: "var(--color-text-secondary)" }}>
-                点击去矫正或标记全部已矫正
-              </p>
-            </div>
-            <div className="flex gap-2 mt-3">
-              <button
-                onClick={() => router.push("/efficiency/schedule")}
-                className="flex-1 py-2.5 rounded-full text-[14px] font-semibold text-white active:opacity-90"
-                style={{ background: "var(--lifeflow-primary)" }}
-              >
-                去矫正
-              </button>
-              <button
-                onClick={handleMarkAllCorrected}
-                disabled={correctingAll}
-                className="flex-1 py-2.5 rounded-full text-[14px] font-medium active:opacity-70 disabled:opacity-50"
-                style={{ background: "var(--lifeflow-muted)", color: "var(--color-text-secondary)" }}
-              >
-                {correctingAll ? "处理中..." : "都矫正完了"}
-              </button>
-            </div>
-          </motion.div>
-        </div>
-      )}
-
-      {/* ===== 核心事项高亮卡 ===== */}
+      {/* ===== E2 今日执行（目标日行动 + 日程待办合并流） ===== */}
       <div className="px-4 mb-4">
         <motion.div
           initial={{ opacity: 0, y: 12 }}
@@ -422,51 +450,24 @@ export default function HomePage() {
           className="p-5"
           style={{ background: "var(--color-surface-card)", borderRadius: "20px", boxShadow: "var(--shadow-card)" }}
         >
-          <div className="flex items-center gap-2 mb-3">
+          <div className="flex items-center gap-2 mb-1">
             <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: "var(--lifeflow-brand-50)" }}>
               <Zap className="w-4 h-4" style={{ color: "var(--lifeflow-primary)" }} />
             </div>
-            <span className="text-[13px] font-semibold" style={{ color: "var(--lifeflow-primary)" }}>下一个事项</span>
+            <span className="text-[13px] font-semibold" style={{ color: "var(--lifeflow-primary)" }}>今日执行</span>
+            {execTotal > 0 && (
+              <span className="text-[11px] font-medium px-1.5 py-0.5 rounded-md ml-auto" style={{ background: "var(--lifeflow-brand-50)", color: "var(--lifeflow-primary)" }}>
+                {execDone}/{execTotal} 已完成
+              </span>
+            )}
+            <Link href="/efficiency/schedule" className="text-[12px] font-medium ml-2" style={{ color: "var(--color-text-secondary)" }}>
+              日程
+            </Link>
           </div>
 
-          {coreItem ? (
+          {mergedActions.length === 0 ? (
             <>
-              <p className="text-[20px] font-bold mb-1.5" style={{ color: "var(--color-text-primary)", letterSpacing: "-0.018em" }}>
-                {coreItem.title}
-              </p>
-              <div className="flex items-center gap-3 text-[13px]" style={{ color: "var(--color-text-secondary)" }}>
-                <span className="flex items-center gap-1">
-                  <Clock className="w-3.5 h-3.5" />
-                  {coreItem.plannedStart}
-                  {itemDuration(coreItem) > 0 && ` · ${formatDuration(itemDuration(coreItem))}`}
-                </span>
-                <span
-                  className="px-2 py-0.5 rounded-md text-[11px]"
-                  style={{ background: `${coreItem.color}20`, color: coreItem.color }}
-                >
-                  {coreItem.color === "#FF9500" ? "作息" : coreItem.color === "#007AFF" ? "课程" : "事项"}
-                </span>
-              </div>
-              <div className="flex gap-2 mt-4">
-                <button
-                  onClick={() => handleToggle(coreItem)}
-                  className="flex-1 py-2.5 rounded-full text-white text-[14px] font-semibold active:opacity-90"
-                  style={{ background: coreItem.isCompleted ? "var(--color-text-disabled)" : "var(--lifeflow-primary)" }}
-                >
-                  {coreItem.isCompleted ? "已完成" : "完成"}
-                </button>
-                <Link
-                  href="/efficiency/schedule"
-                  className="py-2.5 px-4 rounded-full text-[14px] font-medium active:opacity-70"
-                  style={{ background: "var(--lifeflow-muted)", color: "var(--color-text-secondary)" }}
-                >
-                  日程
-                </Link>
-              </div>
-            </>
-          ) : (
-            <>
-              <p className="text-[17px] font-semibold mb-1.5" style={{ color: "var(--color-text-primary)" }}>
+              <p className="text-[17px] font-semibold mb-1.5 mt-3" style={{ color: "var(--color-text-primary)" }}>
                 从这里开始你的一天 👋
               </p>
               <p className="text-[13px] mb-4" style={{ color: "var(--color-text-secondary)" }}>
@@ -489,16 +490,59 @@ export default function HomePage() {
                 </Link>
               </div>
             </>
+          ) : (
+            <div className="mt-3 flex flex-col">
+              {mergedActions.map((act, i) => {
+                const isDone = act.isCompleted || (act.isGoal ? optimisticGoal.has(act.id) : optimisticCompleted.has(act.id));
+                return (
+                  <button
+                    key={act.key}
+                    type="button"
+                    onClick={() => handleToggleMerged(act)}
+                    className="flex items-center gap-3 py-2.5 text-left active:opacity-70"
+                    style={{ opacity: isDone ? 0.6 : 1, borderTop: i > 0 ? "1px solid var(--lifeflow-border)" : "none" }}
+                  >
+                    <span
+                      className="w-[20px] h-[20px] rounded-full border-2 flex items-center justify-center flex-shrink-0"
+                      style={{
+                        borderColor: isDone ? "var(--color-text-disabled)" : act.color,
+                        backgroundColor: isDone ? act.color : "transparent",
+                      }}
+                    >
+                      {isDone && <Check className="w-[12px] h-[12px] text-white" strokeWidth={2.5} />}
+                    </span>
+                    <span className="flex-1 min-w-0">
+                      <span
+                        className="block text-[14px] font-medium truncate"
+                        style={{
+                          color: isDone ? "var(--color-text-disabled)" : "var(--color-text-primary)",
+                          textDecoration: isDone ? "line-through" : "none",
+                        }}
+                      >
+                        {act.title}
+                      </span>
+                      <span className="flex items-center gap-1.5 mt-0.5">
+                        <Clock className="w-3 h-3" style={{ color: "var(--color-text-disabled)" }} />
+                        <span className="text-[11px]" style={{ color: "var(--color-text-secondary)" }}>
+                          {act.time}
+                          {act.isGoal && " · 目标"}
+                        </span>
+                      </span>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           )}
 
-          {/* ── 分割线 + 下拉展开今日待办 ── */}
+          {/* ── 分割线 + 下拉展开今日全部待办 ── */}
           <div className="h-px my-4" style={{ background: "var(--lifeflow-border)" }} />
           <button
             onClick={() => setTaskListExpanded(!taskListExpanded)}
             className="w-full flex items-center justify-center gap-1 py-2.5 text-[12px] font-medium active:opacity-70 transition-opacity"
             style={{ color: "var(--color-text-secondary)" }}
           >
-            <span>{taskListExpanded ? '收起今日待办' : '展开今日待办 (' + completedCount + '/' + todayTotal + ')'}</span>
+            <span>{taskListExpanded ? '收起全部待办' : `展开全部待办 (${execDone}/${execTotal})`}</span>
             <ChevronDown className={'w-4 h-4 transition-transform ' + (taskListExpanded ? 'rotate-180' : '')} />
           </button>
 
@@ -506,7 +550,7 @@ export default function HomePage() {
             <div className="mt-4 flex flex-col gap-3">
               <div className="flex items-center justify-between mb-1">
                 <span className="text-[15px] font-semibold" style={{ color: "var(--color-text-primary)" }}>
-                  今日待办
+                  全部待办
                 </span>
                 <Link href="/efficiency/schedule" className="text-[12px] font-medium" style={{ color: "var(--lifeflow-primary)" }}>
                   完整时间轴
@@ -517,7 +561,7 @@ export default function HomePage() {
                   今天还没有安排事项
                 </p>
               ) : (
-                sortedItems.map((item, i) => {
+                sortedItems.map((item) => {
                   const isDone = item.isCompleted || optimisticCompleted.has(item.id!);
                   return (
                     <div
@@ -562,56 +606,78 @@ export default function HomePage() {
         </motion.div>
       </div>
 
-      {/* ===== 倒数日 ===== */}
-      <div className="px-4 mb-4">
+      {/* ===== 矫正聚合提醒卡 ===== */}
+      {uncorrectedItems.length > 0 && (
+        <div className="px-4 mb-4">
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="rounded-[16px] p-4"
+            style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)", borderLeft: "3px solid #FF9500" }}
+          >
+            <div className="mb-2">
+              <p className="text-[15px] font-semibold" style={{ color: "var(--color-text-primary)" }}>
+                今日还有 {uncorrectedItems.length} 个事项未矫正
+              </p>
+              <p className="text-[13px] mt-0.5" style={{ color: "var(--color-text-secondary)" }}>
+                点击去矫正或标记全部已矫正
+              </p>
+            </div>
+            <div className="flex gap-2 mt-3">
+              <button
+                onClick={() => router.push("/efficiency/schedule")}
+                className="flex-1 py-2.5 rounded-full text-[14px] font-semibold text-white active:opacity-90"
+                style={{ background: "var(--lifeflow-primary)" }}
+              >
+                去矫正
+              </button>
+              <button
+                onClick={handleMarkAllCorrected}
+                disabled={correctingAll}
+                className="flex-1 py-2.5 rounded-full text-[14px] font-medium active:opacity-70 disabled:opacity-50"
+                style={{ background: "var(--lifeflow-muted)", color: "var(--color-text-secondary)" }}
+              >
+                {correctingAll ? "处理中..." : "都矫正完了"}
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* ===== 复盘洞察（底部） ===== */}
+      <HomeReview />
+
+      {/* ===== E3/E4 入口行（小图标 · T18-3） ===== */}
+      <div className="px-4 mt-4">
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.10, duration: 0.35, ease: "easeOut" }}
+          className="flex items-center gap-3"
         >
-          <Link
-            href="/more/countdown"
-            className="block p-4 rounded-[20px] active:opacity-70"
-            style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}
-          >
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <Clock9 className="w-4 h-4" style={{ color: "var(--lifeflow-primary)" }} />
-                <span className="text-[13px] font-semibold" style={{ color: "var(--color-text-primary)" }}>
-                  倒数日
-                </span>
-              </div>
-              <ChevronRight className="w-4 h-4" style={{ color: "var(--color-text-disabled)" }} />
-            </div>
-            {upcomingCountdowns.length > 0 ? (
-              <div className="flex gap-3">
-                {upcomingCountdowns.map((c: any) => {
-                  const days = countdownDays(c);
-                  return (
-                    <div
-                      key={c.id}
-                      className="flex-1 text-center py-2 px-1 rounded-xl"
-                      style={{ background: days <= 7 ? "var(--lifeflow-brand-50)" : "var(--lifeflow-background)" }}
-                    >
-                      <span className="text-[20px]">{c.icon}</span>
-                      <p className="text-[12px] font-medium mt-1 truncate" style={{ color: "var(--color-text-primary)" }}>
-                        {c.name}
-                      </p>
-                      <p
-                        className="text-[22px] font-bold font-['SF_Pro_Display']"
-                        style={{ color: days <= 3 ? "#FF3B30" : days <= 7 ? "#FF9500" : "var(--lifeflow-primary)" }}
-                      >
-                        {days === 0 ? "今天" : `${days}天`}
-                      </p>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <p className="text-[13px] py-2" style={{ color: "var(--color-text-disabled)" }}>
-                暂无倒计时，点击添加
-              </p>
-            )}
+          <Link href="/more/accounting" className="flex-1 flex flex-col items-center gap-1 py-2 rounded-xl active:opacity-60" style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}>
+            <Wallet className="w-5 h-5" style={{ color: "#10B981" }} />
+            <span className="text-[10px]" style={{ color: "var(--color-text-secondary)" }}>记账</span>
+          </Link>
+          <Link href="/more/fitness" className="flex-1 flex flex-col items-center gap-1 py-2 rounded-xl active:opacity-60" style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}>
+            <Dumbbell className="w-5 h-5" style={{ color: "#F97316" }} />
+            <span className="text-[10px]" style={{ color: "var(--color-text-secondary)" }}>训练</span>
+          </Link>
+          <Link href="/more/review" className="flex-1 flex flex-col items-center gap-1 py-2 rounded-xl active:opacity-60" style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}>
+            <Brain className="w-5 h-5" style={{ color: "#10B981" }} />
+            <span className="text-[10px]" style={{ color: "var(--color-text-secondary)" }}>复盘</span>
+          </Link>
+          <Link href="/more/ebbinghaus" className="flex-1 flex flex-col items-center gap-1 py-2 rounded-xl active:opacity-60" style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}>
+            <Star className="w-5 h-5" style={{ color: "#8B5CF6" }} />
+            <span className="text-[10px]" style={{ color: "var(--color-text-secondary)" }}>记忆</span>
+          </Link>
+          <Link href="/more/countdown" className="flex-1 flex flex-col items-center gap-1 py-2 rounded-xl active:opacity-60" style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}>
+            <Clock9 className="w-5 h-5" style={{ color: "#F97316" }} />
+            <span className="text-[10px]" style={{ color: "var(--color-text-secondary)" }}>倒数日</span>
+          </Link>
+          <Link href="/more" className="flex-1 flex flex-col items-center gap-1 py-2 rounded-xl active:opacity-60" style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}>
+            <FolderKanban className="w-5 h-5" style={{ color: "var(--color-text-disabled)" }} />
+            <span className="text-[10px]" style={{ color: "var(--color-text-secondary)" }}>更多</span>
           </Link>
         </motion.div>
       </div>

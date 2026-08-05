@@ -7,7 +7,6 @@ import type {
   AgentMemory,
   AgentChatSession,
   Task,
-  HabitLog,
   PluginRegistry,
   ProjectV2,
   TrashItem,
@@ -50,7 +49,6 @@ import type {
   GoalTemplate,
   AiSettings,
   CustomGoalType,
-  CorrelationReport,
 } from "./types";
 import { recalculateAllProgress } from "./linkage";
 
@@ -62,7 +60,6 @@ export class LifeFlowDB extends Dexie {
   agentMemory!: Table<AgentMemory, number>;
   agentChats!: Table<AgentChatSession, string>;
   tasks!: Table<Task, number>;
-  habit_logs!: Table<HabitLog, number>;
   plugin_registry!: Table<PluginRegistry, string>;
   projectV2s!: Table<ProjectV2, number>;
   trashStore!: Table<TrashItem, number>;
@@ -102,9 +99,6 @@ export class LifeFlowDB extends Dexie {
   dailySelfAssessments!: Table<DailySelfAssessment, number>;
   goals!: Table<Goal, number>;
   plans!: Table<Plan, number>;
-  goalTemplates!: Table<GoalTemplate, number>;
-  customGoalTypes!: Table<CustomGoalType, number>;
-  correlationReports!: Table<CorrelationReport, number>;
   migrationMarkers!: Table<{ id?: number; key: string; executedAt: number }, number>;
 
   constructor() {
@@ -868,6 +862,21 @@ export class LifeFlowDB extends Dexie {
         console.log("[LifeFlowDB v33] Formalized reminders schema with moduleType/recurrenceRule support");
       }
     });
+
+    // v34 (T18): 物理删除确认死表（v1 四级拆解引擎遗留）
+    // habit_logs/goalTemplates/customGoalTypes/correlationReports 已确认无任何 UI 消费
+    // （习惯已迁 life.db、模板/自定义类型/关联报告引擎均已废弃）。goals/plans/tasks 保留
+    // （widget/reminders/pending/数据备份仍活跃消费）
+    this.version(34).stores({
+      habit_logs: null,
+      goalTemplates: null,
+      customGoalTypes: null,
+      correlationReports: null,
+    }).upgrade(async () => {
+      if (typeof window !== "undefined" && window.location.hostname === "localhost") {
+        console.log("[LifeFlowDB v34] Removed dead tables: habit_logs/goalTemplates/customGoalTypes/correlationReports (T18)");
+      }
+    });
   }
 }
 
@@ -1593,28 +1602,6 @@ export async function getMonthlyTaskStats(year?: number, month?: number): Promis
   return { completed, active, new: tasks.length };
 }
 
-export async function getMonthlyHabitStats(year?: number, month?: number): Promise<{ completed: number; total: number; streak: number }> {
-  let logs: HabitLog[];
-  
-  if (year && month) {
-    const monthStr = `${year}-${String(month).padStart(2, "0")}`;
-    logs = await db.habit_logs
-      .where("date")
-      .startsWith(monthStr)
-      .toArray();
-  } else {
-    logs = await db.habit_logs.toArray();
-  }
-  
-  const totalHabits = await db.tasks.where("type").equals("habit").count();
-  
-  return { 
-    completed: logs.length, 
-    total: totalHabits, 
-    streak: 0 
-  };
-}
-
 export async function getMonthlyFinanceStats(year?: number, month?: number): Promise<{ income: number; expense: number; balance: number }> {
   let records: FinRecord[];
   
@@ -1856,7 +1843,6 @@ export async function exportAllData(): Promise<string> {
     "events",
     "focusLogs",
     "tasks",
-    "habit_logs",
     "projects",
     "timeSegments",
     "trashStore",
@@ -1898,9 +1884,6 @@ export async function exportAllData(): Promise<string> {
     "scheduleEvents",
     "daySchedules",
     "exercises",
-    "goalTemplates",
-    "customGoalTypes",
-    "correlationReports",
   ];
 
   const data: Record<string, unknown[]> = {};
@@ -1934,7 +1917,6 @@ export async function importAllData(data: any): Promise<void> {
     "events",
     "focusLogs",
     "tasks",
-    "habit_logs",
     "projects",
     "timeSegments",
     "trashStore",
@@ -1976,9 +1958,6 @@ export async function importAllData(data: any): Promise<void> {
     "scheduleEvents",
     "daySchedules",
     "exercises",
-    "goalTemplates",
-    "customGoalTypes",
-    "correlationReports",
   ];
 
   await db.transaction("rw", tables.map(t => (db as any)[t]), async () => {

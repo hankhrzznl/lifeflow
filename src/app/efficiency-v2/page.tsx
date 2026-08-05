@@ -9,11 +9,19 @@ import {
   type GoalV2,
   getAllGoalsV2,
   getKeyResultsV2,
+  getGoalV2,
   goalV2DB,
   deleteGoalV2,
+  getDailyActionsByDateV2,
 } from "@/lib/db/goal-v2.db";
 import { GOAL_V2_AI_PROMPT, parseImportedGoal, validateImportedGoal } from "@/lib/goal-v2-import-parser";
 import { showToast } from "@/components/ui/Toast";
+
+// ─── 今日日期 ──────────────────────────────────────────────
+function todayStr(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
 
 // ─── 状态徽章 ──────────────────────────────────────────────
 function StatusBadge({ status }: { status: GoalV2["status"] }) {
@@ -86,6 +94,23 @@ export default function EfficiencyV2Page() {
   }, [allKeyResults]);
 
   const goalList = goals ?? [];
+
+  // ── 今日日行动（T18-5：目标页焦点 = 活跃目标 + 今日日行动） ──
+  const todayActions = useLiveQuery(
+    () => getDailyActionsByDateV2(todayStr()),
+    [],
+    [],
+  );
+  const todayPending = useMemo(() => {
+    return (todayActions ?? [])
+      .filter(a => !a.isCompleted)
+      .sort((a, b) => (a.time || "09:00").localeCompare(b.time || "09:00"))
+      .slice(0, 5);
+  }, [todayActions]);
+  const todayDoneCount = useMemo(
+    () => (todayActions ?? []).filter(a => a.isCompleted).length,
+    [todayActions],
+  );
 
   // ── 复制提示词 ──
   const handleCopyPrompt = useCallback(async () => {
@@ -250,9 +275,61 @@ export default function EfficiencyV2Page() {
         </div>
       </div>
 
-      {/* ===== Goal Grid ===== */}
+      {/* ===== 今日焦点（T18-5：今日日行动优先呈现） ===== */}
+      {todayPending.length > 0 && (
+        <div className="px-4 mb-4">
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="rounded-[20px] p-4"
+            style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)", borderLeft: "3px solid #6366F1" }}
+          >
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: "#EEF2FF" }}>
+                <Target className="w-4 h-4" style={{ color: "#6366F1" }} />
+              </div>
+              <span className="text-[13px] font-semibold" style={{ color: "#6366F1" }}>今日焦点</span>
+              <span className="text-[11px] ml-auto" style={{ color: "var(--color-text-secondary)" }}>
+                {todayDoneCount} 已完成
+              </span>
+            </div>
+            <div className="flex flex-col">
+              {todayPending.map((a, i) => (
+                <div
+                  key={a.id}
+                  className="flex items-center gap-3 py-2"
+                  style={{ borderTop: i > 0 ? "1px solid var(--lifeflow-border)" : "none" }}
+                >
+                  <span
+                    className="w-[20px] h-[20px] rounded-full border-2 flex-shrink-0"
+                    style={{ borderColor: "#6366F1", backgroundColor: "transparent" }}
+                  />
+                  <span className="flex-1 min-w-0">
+                    <span className="block text-[14px] font-medium truncate" style={{ color: "var(--color-text-primary)" }}>
+                      {a.title}
+                    </span>
+                  </span>
+                  <span className="text-[11px] tabular-nums" style={{ color: "var(--color-text-secondary)" }}>
+                    {a.time || "--"}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <p className="text-[11px] mt-2" style={{ color: "var(--color-text-disabled)" }}>
+              今日日行动来自进行中的目标，勾选在首页/日程完成
+            </p>
+          </motion.div>
+        </div>
+      )}
+
+      {/* ===== Goal Grid（活跃目标优先） ===== */}
       <div className="px-4 grid grid-cols-2 gap-3">
-        {goalList.map((goal, i) => {
+        {[...goalList]
+          .sort((a, b) => {
+            const rank: Record<string, number> = { active: 0, paused: 1, completed: 2 };
+            return (rank[a.status] ?? 3) - (rank[b.status] ?? 3);
+          })
+          .map((goal, i) => {
           const krCount = krCountMap.get(goal.id) ?? 0;
 
           return (

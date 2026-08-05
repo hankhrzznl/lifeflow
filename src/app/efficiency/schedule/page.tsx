@@ -170,6 +170,14 @@ export default function SchedulePage() {
     [] as Item[],
   );
 
+  // ── 今日焦点（T18-5：未完成事项按时间升序取前 5） ──
+  const focusItems = useMemo(() => {
+    return (items || [])
+      .filter(i => !i.isCompleted)
+      .sort((a, b) => a.plannedStart.localeCompare(b.plannedStart))
+      .slice(0, 5);
+  }, [items]);
+
   // ── 周日历条 ──
   const [weekOffset, setWeekOffset] = useState(0);
   const weekDates = useMemo(() => {
@@ -368,6 +376,46 @@ export default function SchedulePage() {
           </Link>
         </div>
       </div>
+
+      {/* ===== 今日焦点（T18-5：高优先级事项优先呈现） ===== */}
+      {isSelectedToday && (
+        <div className="px-5 mb-2">
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="rounded-[16px] p-3.5"
+            style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)", borderLeft: "3px solid var(--lifeflow-primary)" }}
+          >
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className="text-[12px] font-semibold" style={{ color: "var(--lifeflow-primary)" }}>今日焦点</span>
+              <span className="text-[11px] ml-auto" style={{ color: "var(--color-text-secondary)" }}>
+                {focusItems.length > 0 ? `${focusItems.length} 项待办` : "今日无待办"}
+              </span>
+            </div>
+            {focusItems.length > 0 ? (
+              <div className="flex flex-col">
+                {focusItems.map((item, i) => (
+                  <div
+                    key={item.id}
+                    className="flex items-center gap-2.5 py-1.5"
+                    style={{ borderTop: i > 0 ? "1px solid var(--lifeflow-border)" : "none" }}
+                  >
+                    <Clock className="w-3.5 h-3.5 shrink-0" style={{ color: "var(--color-text-disabled)" }} />
+                    <span className="flex-1 min-w-0 text-[13px] font-medium truncate" style={{ color: "var(--color-text-primary)" }}>
+                      {item.title}
+                    </span>
+                    <span className="text-[11px] tabular-nums shrink-0" style={{ color: "var(--color-text-secondary)" }}>
+                      {item.plannedStart}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-[12px]" style={{ color: "var(--color-text-disabled)" }}>安排你的下一个事项，开启高效一天</p>
+            )}
+          </motion.div>
+        </div>
+      )}
 
       {/* ===== 周日历条 ===== */}
       <div className="px-5 mb-2 mt-2">

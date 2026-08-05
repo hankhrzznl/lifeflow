@@ -1,13 +1,14 @@
 "use client";
 
 import { useRef, useState, useEffect, useCallback } from "react";
-import { Moon, Download, Trash2, Info, MessageSquare, ChevronRight, Droplets, Target, Database } from "lucide-react";
+import { Moon, Download, Trash2, Info, MessageSquare, ChevronRight, Droplets, Target, Database, Pill } from "lucide-react";
 import { useTheme } from "@/components/theme/ThemeProvider";
 import Dialog from "@/components/ui/Dialog";
 import { showToast } from "@/components/ui/Toast";
 import { dataExportService } from "@/lib/engine/DataExportService";
 import { getWaterGoal, updateWaterGoal } from "@/lib/db/health.db";
 import { goalV2DB } from "@/lib/db/goal-v2.db";
+import { getUserSettings, saveUserSettings } from "@/lib/db";
 
 // ─── iOS Toggle Switch ────────────────────────────────────────
 function ToggleSwitch({
@@ -40,12 +41,17 @@ export default function SettingsPage() {
   const [resettingGoals, setResettingGoals] = useState(false);
   const [importing, setImporting] = useState(false);
   const [waterReminderEnabled, setWaterReminderEnabled] = useState(false);
+  const [medicineEnabled, setMedicineEnabled] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // 加载饮水提醒状态
   useEffect(() => {
     getWaterGoal().then(g => {
       setWaterReminderEnabled((g.reminderInterval ?? 0) > 0);
+    }).catch(() => {});
+    // T18-6：吃药维修模式开关（settings 兜底）
+    getUserSettings().then(s => {
+      setMedicineEnabled(s?.medicineEnabled === true);
     }).catch(() => {});
   }, []);
 
@@ -64,6 +70,18 @@ export default function SettingsPage() {
       showToast({ type: "error", message: "设置失败，请重试" });
     }
   }, [waterReminderEnabled]);
+
+  const toggleMedicine = useCallback(async () => {
+    const newState = !medicineEnabled;
+    setMedicineEnabled(newState);
+    try {
+      await saveUserSettings({ medicineEnabled: newState });
+      showToast({ type: "success", message: newState ? "吃药提醒已开启" : "吃药提醒已关闭" });
+    } catch {
+      setMedicineEnabled(!newState);
+      showToast({ type: "error", message: "设置失败，请重试" });
+    }
+  }, [medicineEnabled]);
 
   const handleResetGoals = useCallback(async () => {
     setResettingGoals(true);
@@ -140,6 +158,15 @@ export default function SettingsPage() {
               <span className="text-[17px] truncate" style={{ color: "var(--color-text-primary)" }}>饮水提醒</span>
             </div>
             <ToggleSwitch checked={waterReminderEnabled} onChange={toggleWaterReminder} label="饮水提醒" />
+          </div>
+          {/* T18-6：吃药维修模式开关（无条件时全站隐藏吃药入口，此开关作为兜底） */}
+          <div className="h-px" style={{ background: "var(--lifeflow-border)", marginLeft: "52px" }} />
+          <div className="flex items-center justify-between w-full px-5 py-3.5">
+            <div className="flex items-center gap-3 min-w-0">
+              <Pill className="w-5 h-5 shrink-0" style={{ color: "#0EA5E9" }} />
+              <span className="text-[17px] truncate" style={{ color: "var(--color-text-primary)" }}>吃药提醒</span>
+            </div>
+            <ToggleSwitch checked={medicineEnabled} onChange={toggleMedicine} label="吃药提醒" />
           </div>
         </div>
       </div>

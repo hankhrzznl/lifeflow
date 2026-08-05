@@ -1,6 +1,6 @@
 import type { Transaction } from "dexie";
 import { db } from "./db";
-import type { Task, Plan, Goal, GoalStatus, GoalType, Priority } from "./types";
+import type { Task, Plan, Goal, GoalStatus, GoalType } from "./types";
 import { cascadeLock, cascadeUnlock } from "./planDependency";
 
 // ==================== 防抖机制 ====================
@@ -669,117 +669,5 @@ export async function notifyGoalProgressUpdate(goalId: number): Promise<void> {
 }
 
 // ==================== 模板生成 ====================
-
-export async function applyGoalTemplate(
-  templateId: number,
-  projectId: number,
-  startDate: string,
-  previewOnly: boolean = false
-): Promise<{
-  goal: Partial<Goal>;
-  plans: Array<{
-    plan: Partial<Plan>;
-    tasks: Array<Partial<Task>>;
-  }>;
-}> {
-  const template = await db.goalTemplates.get(templateId);
-  if (!template) throw new Error("模板不存在");
-
-  const startTimestamp = new Date(startDate + "T00:00:00").getTime();
-  const deadlineTimestamp = startTimestamp + template.deadlineDays * 24 * 60 * 60 * 1000;
-
-  // 构建目标数据
-  const goal: Partial<Goal> = {
-    projectId,
-    name: template.name,
-    description: template.description,
-    type: template.type,
-    deadline: deadlineTimestamp,
-    priority: "not-urgent-important",
-    status: "active",
-    progress: 0,
-    progressLocked: false,
-    weight: template.plans.reduce((sum, p) => sum + p.weight, 0),
-  };
-
-  // 构建计划与任务数据
-  const plansWithTasks = template.plans.map((tp, idx) => {
-    const planStart = startTimestamp + tp.daysOffset * 24 * 60 * 60 * 1000;
-    const planEnd = idx < template.plans.length - 1
-      ? startTimestamp + template.plans[idx + 1].daysOffset * 24 * 60 * 60 * 1000 - 1
-      : deadlineTimestamp;
-
-    const plan: Partial<Plan> = {
-      goalId: 0, // 将在写入后赋值
-      name: tp.name,
-      weight: tp.weight,
-      status: "active",
-      progress: 0,
-      order: idx,
-      startDate: new Date(planStart).toISOString().slice(0, 10),
-      endDate: new Date(planEnd).toISOString().slice(0, 10),
-      predecessorPlanIds: idx > 0 ? [] : [], // 第一个计划无前置
-      isUnlocked: idx === 0, // 只有第一个计划默认解锁
-    };
-
-    // 设置计划间依赖：每个计划的前置是上一个计划
-    if (idx > 0) {
-      plan.predecessorPlanIds = []; // 实际写入时根据前一个 plan 的 ID 填充
-    }
-
-    const tasks = tp.tasks.map((tt, ti) => ({
-      title: tt.title,
-      type: tt.type as Task["type"],
-      status: "active" as const,
-      priority: "not-urgent-important" as Priority,
-      weight: tt.weight,
-      order: ti,
-      projectId,
-    }));
-
-    return { plan, tasks };
-  });
-
-  if (previewOnly) {
-    return { goal, plans: plansWithTasks };
-  }
-
-  // 写入数据库
-  return await db.transaction("rw", [db.goals, db.plans, db.tasks], async (tx) => {
-    const goalId = await tx.table("goals").add({
-      ...goal,
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    });
-
-    const createdPlans: Array<{ plan: Partial<Plan>; tasks: Array<Partial<Task>> }> = [];
-    let previousPlanId: number | null = null;
-
-    for (const [idx, pw] of plansWithTasks.entries()) {
-      const predecessorIds = idx > 0 && previousPlanId ? [previousPlanId] : [];
-      const planId = await tx.table("plans").add({
-        ...pw.plan,
-        goalId,
-        predecessorPlanIds: predecessorIds,
-        isUnlocked: idx === 0,
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-      });
-
-      for (const task of pw.tasks) {
-        await tx.table("tasks").add({
-          ...task,
-          goalId,
-          planId,
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-        } as any);
-      }
-
-      createdPlans.push({ plan: { ...pw.plan, goalId, predecessorPlanIds: predecessorIds, isUnlocked: idx === 0 }, tasks: pw.tasks.map(t => ({ ...t, goalId, planId })) });
-      previousPlanId = planId;
-    }
-
-    return { goal: { ...goal, id: goalId }, plans: createdPlans };
-  });
-}
+// T18: applyGoalTemplate 已删除 —— 其唯一数据源 goalTemplates 表为确认死表（v34 物理删除），
+// 且函数无任何调用方（模板引擎已被 GoalV2 向导替代）。

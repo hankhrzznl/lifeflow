@@ -47,13 +47,16 @@ LifeFlow v1.0，一个讲道理的生活助手。
 - **创建日期边界**：模板组的 `createdAt` 决定了该模板的事项从哪天开始生成。`dateStr < 组创建日期 YYYY-MM-DD` 的日期不会生成该模板的任何事项
 - 模板组列表视图和详情视图均展示创建时间（格式 `YYYY-MM-DD`）
 
-### 目标-阶段-任务-事项 层级 [已废弃]
+### 目标-阶段-任务-事项 层级 [已下线 v2.4+]
 
-> v2.0 起被「目标五层拆解」系统替代，旧 efficiency.db 中的数据不被迁移，仅保留代码避免编译报错。
+> T16 起 v1 目标系统完全下线：`LifeFlowEfficiency` 的 `projects`/`phases` 表已物理删除（version 20），`goals` 表历史数据已清空；旧路由全部 308 重定向到 v2。仅 `goals`/`scheduleTasks` 两表结构保留——供训练计划生成器（title 匹配存「强健体魄」体系 Goal）与作息同步/日历/日程时间轴活跃依赖。
 
 - 目标 > 阶段（Phase，含日期范围）> 任务（ScheduleTask）> 事项（Item）
 - 阶段可并行，任务只能归属一个阶段，事项可归属阶段或任务
 - 目标进度 = 该目标下所有事项的完成数/总数
+- **路由下线**：`/tasks`、`/efficiency`、`/efficiency/:path*`（排除 `/efficiency/schedule`）、`/more/projects` 全部 308 → `/efficiency-v2` 或 `/more`，见 `src/proxy.ts`
+- **数据下线**：projects/phases 物理删除；goals 6 条历史数据清空后由 `training-plan-generator.ts` 自动重建；scheduleTasks 为活跃写入表，**禁止清空**
+- **AI 助手**：目标创建/查询/更新/删除全部落 GoalV2（`goal-v2.db`），习惯打卡落 `life.db` Habit，任务拆解落 daylog items（sourceType='goal'）
 
 ### 目标五层拆解（GoalV2）
 

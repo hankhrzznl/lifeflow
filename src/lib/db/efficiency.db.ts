@@ -227,8 +227,9 @@ export class EfficiencyDB extends Dexie {
       habits: null,
     });
     // v20 (T16): v1 目标系统退役 → 物理删除 projects/phases 表（用户确认 21 项目直接删除，
-    // phases 记录数核实为 0）；goals/scheduleTasks 保留（训练计划生成器/作息同步/日历活跃依赖），
-    // 但清空 v1 历史数据（goals 6 条，删除后由 training-plan-generator 自动重建「强健体魄」体系 Goal）。
+    // phases 记录数核实为 0）；goals/scheduleTasks 表保留（训练计划生成器/作息同步/日历活跃依赖）。
+    // 只清空 goals 的 v1 历史数据（6 条，删除后由 training-plan-generator 按 title 匹配自动重建「强健体魄」体系 Goal）；
+    // scheduleTasks 不清空——它是活跃写入表（作息同步/训练计划每天生成），即使当前为 0 条也保守跳过。
     this.version(20).stores({
       goals: '&id, title, status, deadline, quadrant, goalType, streak',
       scheduleTasks: '&id, date, goalId, isCompleted, isImportant, phaseId',
@@ -236,7 +237,6 @@ export class EfficiencyDB extends Dexie {
       phases: null,
     }).upgrade(async tx => {
       await tx.table('goals').clear();
-      await tx.table('scheduleTasks').clear();
     });
   }
 }

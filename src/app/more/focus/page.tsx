@@ -22,9 +22,19 @@ export default function FocusPage() {
   const [seconds, setSeconds] = useState(focusMin * 60);
   const [running, setRunning] = useState(false);
   const [sessions, setSessions] = useState<FocusSession[]>([]);
+  const [focusTitle, setFocusTitle] = useState("");
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const totalMin = mode === "focus" ? focusMin : BREAK_MIN;
+
+  // ── 支持日程快捷专注：?title=&duration= 预填（T15c 入口归一） ──
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search);
+    const t = p.get("title");
+    if (t) setFocusTitle(t);
+    const d = Number(p.get("duration"));
+    if (d && d >= 1 && d <= 180) setFocusMin(d);
+  }, []);
 
   useEffect(() => {
     getTodayFocusSessions(todayStr()).then(setSessions);
@@ -96,6 +106,11 @@ export default function FocusPage() {
           </h1>
           <div className="w-9 shrink-0"></div>
         </div>
+        {focusTitle && (
+          <p className="text-center mt-1 text-[13px] font-medium" style={{ color: "var(--lifeflow-primary)" }}>
+            专注：{focusTitle}
+          </p>
+        )}
       </header>
 
       {/* Timer Card */}

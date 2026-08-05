@@ -318,7 +318,7 @@ export default function SchedulePage() {
 
   // ── 快捷专注 ──
   const handleQuickFocus = useCallback((item: Item) => {
-    router.push(`/focus?title=${encodeURIComponent(item.title)}&duration=${timeDiff(item.plannedStart, item.plannedEnd)}`);
+    router.push(`/more/focus?title=${encodeURIComponent(item.title)}&duration=${timeDiff(item.plannedStart, item.plannedEnd)}`);
   }, [router]);
 
   const openNote = useCallback((item: Item) => {

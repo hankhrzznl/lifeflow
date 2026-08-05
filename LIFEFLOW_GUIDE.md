@@ -374,6 +374,15 @@ LifeFlow v1.0，一个讲道理的生活助手。
 - **路由兼容**：`/more/posture` → `redirect('/more/fitness?tab=posture')`、`/more/wellness` → `redirect('/more/fitness?tab=wellness')`；fitness 页用 `useEffect` 读 `?tab=` 初始化顶层 Tab（旧数据/深链不丢）
 - **数据不变**：三块数据模型不动（`workoutSessions` / `stretchLogs` / `wellnessLogs` 各写各表），仅 UI 容器合并；复盘模块 `wellness`/`posture` 仍独立分析
 
+### T15 全系统清理与入口重规划（v2.7+，T15c）— 第一性原理审计
+
+- **原理**：人生管理系统本质 = 帮用户实现目标 → 最小闭环「方向(目标)→计划→执行→记录→反馈→回到方向」→ 三条铁律：①每类用户动作只有一条主路径（单一入口）；②无价值页面不占任何入口；③页面入口必须闭环可达
+- **已删除页面/组件（19 个，数据不动）**：`/focus` 空壳页、`/exercise`+`MusclePage`（旧 Muscle 体系）、`/offline`、`/efficiency/settings` stub、`/more/review/{water,sleep,fitness,goals}` 4 占位页、`/plans/[planId]`（v1 遗留断链）、7 个 plugins 代理页、`TabBar.tsx` 死组件、`plugin-config.ts` 死代码
+- **清理边界**：删除仅限页面/组件/死代码文件，**数据库表与数据一律不动**（plans 数据保留在库中，仅删入口）
+- **proxy.ts 断链规则归零**：仅保留 `/focus`→`/more/focus` 与 `/plugins*` 兜底重定向；凡指向不存在路由的规则一律删除（如 /goals/*、/projects/*）
+- **快捷专注 query 预填**：日程页快捷专注跳 `/more/focus?title=&duration=`，focus 页 `useEffect` 读取预填（duration 1-180 过滤）
+- **复盘目录收敛**：`/more/review` 仅保留有真实复盘内容的模块（finance/schedule），无内容模块不再占入口
+
 ### 产品定位（v2.3+）
 
 - LIFEFLOW 定位为「目标驱动的个人管理系统」（Life OS），非待办清单

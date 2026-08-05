@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import {
-  ChevronLeft, Droplets, Moon, Dumbbell, Utensils, Heart, StretchHorizontal,
+  ChevronLeft, Droplets, Moon, Dumbbell, Utensils,
   Pill, Timer, Wallet, Star, CalendarRange, StickyNote, CalendarDays,
   Brain, Calendar, Bell, Settings, NotebookPen, FolderKanban, Clock,
   Search, SearchX, X,
@@ -29,10 +29,8 @@ const MODULE_GROUPS: { title: string; items: ModuleEntry[] }[] = [
     items: [
       { label: "饮水", path: "/more/water", icon: <Droplets className="w-5 h-5" />, color: "#3B82F6", bgColor: "#EFF6FF" },
       { label: "睡眠", path: "/more/sleep", icon: <Moon className="w-5 h-5" />, color: "#6366F1", bgColor: "#EEF2FF" },
-      { label: "训练", path: "/more/fitness", icon: <Dumbbell className="w-5 h-5" />, color: "#F97316", bgColor: "#FFF7ED" },
+      { label: "训练中心", path: "/more/fitness", icon: <Dumbbell className="w-5 h-5" />, color: "#F97316", bgColor: "#FFF7ED" },
       { label: "饮食", path: "/more/diet", icon: <Utensils className="w-5 h-5" />, color: "#EC4899", bgColor: "#FDF2F8" },
-      { label: "养生", path: "/more/wellness", icon: <Heart className="w-5 h-5" />, color: "#EF4444", bgColor: "#FEF2F2" },
-      { label: "体态拉伸", path: "/more/posture", icon: <StretchHorizontal className="w-5 h-5" />, color: "#8B5CF6", bgColor: "#F5F3FF" },
       { label: "习惯打卡", path: "/more/habits", icon: <Clock className="w-5 h-5" />, color: "#14B8A6", bgColor: "#F0FDFA" },
       { label: "吃药提醒", path: "/more/medication", icon: <Pill className="w-5 h-5" />, color: "#0EA5E9", bgColor: "#F0F9FF" },
       { label: "专注计时", path: "/more/focus", icon: <Timer className="w-5 h-5" />, color: "#6366F1", bgColor: "#EEF2FF" },

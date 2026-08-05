@@ -9,6 +9,8 @@ import type { WorkoutSession, TrainingType, TrainingPlan } from "@/lib/db/health
 import { showToast } from "@/components/ui/Toast";
 import { initializeTrainingPlans, getActiveTrainingPlans, getMonthLabel } from "@/lib/training-plan-generator";
 import { ensureModuleItem, removeModuleItems } from "@/lib/db/daylog.db";
+import PostureTab from "@/components/fitness/PostureTab";
+import WellnessTab from "@/components/fitness/WellnessTab";
 
 /* ────────── Training Systems Definitions ────────── */
 
@@ -147,8 +149,16 @@ export default function FitnessPage() {
 
   const [loading, setLoading] = useState(true);
   const [expandedSession, setExpandedSession] = useState<string | null>(null);
-  const [tab, setTab] = useState<'record' | 'plan'>('record');
+  const [subTab, setSubTab] = useState<'record' | 'plan'>('record');
   const [plans, setPlans] = useState<TrainingPlan[]>([]);
+
+  /* ─── T15b：顶层 Tab（训练 / 体态拉伸 / 功法养生） ─── */
+  const [topTab, setTopTab] = useState<'train' | 'posture' | 'wellness'>('train');
+
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search).get('tab');
+    if (p === 'posture' || p === 'wellness') setTopTab(p);
+  }, []);
 
   /* ─── Record sheet state ─── */
   const [showRecord, setShowRecord] = useState(false);
@@ -403,7 +413,7 @@ export default function FitnessPage() {
           <ChevronLeft className="h-5 w-5" style={{ color: "var(--color-text-primary)" }} />
         </button>
         <h1 className="text-[17px] font-semibold tracking-[-0.018em] truncate" style={{ color: "var(--color-text-primary)" }}>
-          训练
+          {topTab === 'train' ? '训练' : topTab === 'posture' ? '体态拉伸' : '功法养生'}
         </h1>
         {/* Month primary badge */}
         <div
@@ -418,18 +428,51 @@ export default function FitnessPage() {
         </div>
       </header>
 
+      {/* ─── 顶层 Tabs（T15b 训练体系） ─── */}
+      <div className="px-4 mb-4">
+        <div className="flex rounded-full p-1" style={{ background: "var(--lifeflow-muted)" }}>
+          {([
+            { key: 'train', label: '训练' },
+            { key: 'posture', label: '体态拉伸' },
+            { key: 'wellness', label: '功法养生' },
+          ] as const).map(({ key, label }) => (
+            <button
+              key={key}
+              onClick={() => setTopTab(key)}
+              className="flex-1 py-1.5 rounded-full text-[13px] font-medium transition-all"
+              style={{
+                background: topTab === key ? "var(--color-surface-card)" : "transparent",
+                color: topTab === key ? "var(--color-text-primary)" : "var(--color-text-secondary)",
+                boxShadow: topTab === key ? "var(--shadow-card)" : "none",
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* ─── 体态拉伸 Tab ─── */}
+      {topTab === 'posture' && <PostureTab />}
+
+      {/* ─── 功法养生 Tab ─── */}
+      {topTab === 'wellness' && <WellnessTab />}
+
+      {/* ─── 训练 Tab（内部 记录/计划） ─── */}
+      {topTab === 'train' && (
+        <>
       {/* ─── Tabs ─── */}
       <div className="px-4 mb-4">
         <div className="flex rounded-full p-1" style={{ background: "var(--lifeflow-muted)" }}>
           {(['record', 'plan'] as const).map((t) => (
             <button
               key={t}
-              onClick={() => setTab(t)}
+              onClick={() => setSubTab(t)}
               className="flex-1 py-1.5 rounded-full text-[13px] font-medium transition-all"
               style={{
-                background: tab === t ? "var(--color-surface-card)" : "transparent",
-                color: tab === t ? "var(--color-text-primary)" : "var(--color-text-secondary)",
-                boxShadow: tab === t ? "var(--shadow-card)" : "none",
+                background: subTab === t ? "var(--color-surface-card)" : "transparent",
+                color: subTab === t ? "var(--color-text-primary)" : "var(--color-text-secondary)",
+                boxShadow: subTab === t ? "var(--shadow-card)" : "none",
               }}
             >
               {t === 'record' ? '记录' : '计划'}
@@ -439,12 +482,12 @@ export default function FitnessPage() {
       </div>
 
       {/* ─── Plan View ─── */}
-      {tab === 'plan' && (
+      {subTab === 'plan' && (
         <TrainingPlanView plans={plans} />
       )}
 
       {/* ─── Record View ─── */}
-      {tab === 'record' && (
+      {subTab === 'record' && (
       <div className="px-4 pt-0 pb-10 space-y-4">
         {/* ─── Today Summary Card ─── */}
         <motion.div
@@ -754,6 +797,8 @@ export default function FitnessPage() {
           </motion.div>
         )}
       </div>
+      )}
+        </>
       )}
 
       {/* ─── Record Bottom Sheet ─── */}

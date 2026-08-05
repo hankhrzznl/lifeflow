@@ -110,6 +110,24 @@ function GoalEngineInitializer({ children }: { children: React.ReactNode }) {
         }
       }, 800);
 
+      // T15：一次性清理历史 hourly 饮水待办（时段目标制废除 sourceType='water' 待办）
+      setTimeout(async () => {
+        if (cancelled) return;
+        try {
+          const [{ daylogDB }, { db }] = await Promise.all([import("@/lib/db/daylog.db"), import("@/lib/db")]);
+          const waterItems = await daylogDB.items.where("sourceType").equals("water").toArray();
+          if (waterItems.length > 0) {
+            const itemIds = new Set(waterItems.map(i => i.id));
+            const reminders = await db.reminders.where("moduleType").equals("item").toArray();
+            await db.reminders.bulkDelete(reminders.filter(r => r.linkedModuleId && itemIds.has(r.linkedModuleId)).map(r => r.id!).filter(Boolean));
+            await daylogDB.items.bulkDelete(waterItems.map(i => i.id));
+            console.log(`[T15] 已清理 ${waterItems.length} 条历史饮水待办`);
+          }
+        } catch {
+          // 静默忽略
+        }
+      }, 1000);
+
       // 清理旧任务 + goalType 统一
       setTimeout(async () => {
         if (cancelled) return;

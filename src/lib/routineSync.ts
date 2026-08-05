@@ -22,6 +22,7 @@ export async function syncRoutineToSchedule(routine: RoutineTemplate): Promise<v
   const today = todayStr();
 
   if (routine.type === 'custom') return; // 自定义模板不同步
+  if (routine.type === 'focus') return;  // T15：课堂节奏仅生成 daylog 切分事项，不同步 ScheduleTask
 
   const taskTitle = routine.name;        // "起床" / "午睡" / "入睡"
   const category = 'habit' as const;

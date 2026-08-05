@@ -12,13 +12,17 @@ export interface WaterLog {
 export interface WaterGoal {
   id?: number;
   dailyTarget: number;       // 每日目标ml (default 2000)
-  reminderInterval: number;  // 提醒间隔分钟 (30/60/90/120, 0=关闭)
+  reminderInterval: number;  // 提醒间隔分钟 (30/60/90/120, 0=关闭) — T15 起不再生成 hourly 提醒，保留字段兼容
   nightMode: boolean;        // 夜间免打扰
   cupSize?: number;          // 杯量 ml (default 200)
   wakeStart?: string;        // 起床时间 "08:00"
   wakeEnd?: string;          // 入睡时间 "22:00"
   napStart?: string;         // 午睡开始时间 "13:00"
   napEnd?: string;           // 午睡结束时间 "13:30"
+  // T15：三时段目标占比（和=100）。时段边界派生：上午[wakeStart,12:00) 下午[12:00,18:00) 晚上[18:00,wakeEnd-2h)
+  morningPercent?: number;   // 上午占比 (default 35)
+  afternoonPercent?: number; // 下午占比 (default 40)
+  eveningPercent?: number;   // 晚上占比 (default 25)
   createdAt: number;
   updatedAt: number;
 }
@@ -338,6 +342,96 @@ export async function syncWaterLogOnToggle(date: string, completed: boolean): Pr
   }
 }
 
+// ─── T15：饮水时段目标制 ────────────────────────────────────
+// 时段划分（派生自 wakeStart/wakeEnd）：
+//   上午 [wakeStart, 12:00) · 下午 [12:00, 18:00) · 晚上 [18:00, wakeEnd-2h)
+//   wakeEnd-2h 之后为夜间（睡前 2 小时，不参与目标）
+// 约定：waterLogs 仍为唯一流水源；每次饮水一条独立记录（amount=单次杯量，
+// timestamp=时刻），按 timestamp 归属时段聚合。
+
+function todayStr(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function waterMinutesOf(time: string): number {
+  const [h, m] = (time || '08:00').split(':').map(Number);
+  return h * 60 + (m || 0);
+}
+
+function waterTimeOf(minutes: number): string {
+  const h = Math.floor(minutes / 60) % 24;
+  const m = minutes % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+export interface WaterPeriodInfo {
+  key: 'morning' | 'afternoon' | 'evening';
+  label: string;
+  start: string;
+  end: string;
+  target: number; // 时段目标 ml
+}
+
+/** 晚间截止时刻 = wakeEnd - 2h（睡前 2 小时）；下限 18:01 避免空时段 */
+function eveningCutoff(goal: WaterGoal): number {
+  return Math.max(waterMinutesOf(goal.wakeEnd || '22:00') - 120, 18 * 60 + 1);
+}
+
+/** 计算三时段时间范围与目标（占比 × 每日目标） */
+export function getWaterPeriods(goal: WaterGoal): WaterPeriodInfo[] {
+  const daily = goal.dailyTarget || 2000;
+  const pcts = {
+    morning: goal.morningPercent ?? 35,
+    afternoon: goal.afternoonPercent ?? 40,
+    evening: goal.eveningPercent ?? 25,
+  };
+  const raw: WaterPeriodInfo[] = [
+    { key: 'morning', label: '上午', start: waterTimeOf(waterMinutesOf(goal.wakeStart || '08:00')), end: '12:00', target: Math.round(daily * pcts.morning / 100) },
+    { key: 'afternoon', label: '下午', start: '12:00', end: '18:00', target: Math.round(daily * pcts.afternoon / 100) },
+    { key: 'evening', label: '晚上', start: '18:00', end: waterTimeOf(eveningCutoff(goal)), target: Math.round(daily * pcts.evening / 100) },
+  ];
+  // 过滤无效时段（start >= end），如 wakeStart 晚于 12:00 时上午为空
+  return raw.filter(p => waterMinutesOf(p.start) < waterMinutesOf(p.end));
+}
+
+/** 判定某时刻归属的时段；睡前 2 小时内返回 'night'（不计入目标） */
+export function getWaterPeriodOfTime(timeStr: string, goal: WaterGoal): WaterPeriodInfo['key'] | 'night' {
+  const m = waterMinutesOf(timeStr);
+  const wakeStart = waterMinutesOf(goal.wakeStart || '08:00');
+  if (m >= 18 * 60 && m < eveningCutoff(goal)) return 'evening';
+  if (m >= 12 * 60 && m < 18 * 60) return 'afternoon';
+  if (m >= wakeStart && m < 12 * 60) return 'morning';
+  return 'night';
+}
+
+/** 记录一次饮水（「+一杯」直记，逐次流水，按当前时刻归属时段） */
+export async function addWaterCup(date?: string, cupMl?: number): Promise<void> {
+  const goal = await getWaterGoal();
+  const d = date || todayStr();
+  await addWaterLog({
+    date: d,
+    amount: cupMl || goal.cupSize || 200,
+    timestamp: Date.now(),
+  });
+}
+
+/** 某日各时段已饮 ml（按 timestamp 归属；历史「汇总单条」记录按最近时刻尽力归属） */
+export async function getWaterMlByPeriod(
+  date: string,
+  goal: WaterGoal,
+): Promise<Record<'morning' | 'afternoon' | 'evening' | 'night', number>> {
+  const logs = await healthDB.waterLogs.where('date').equals(date).toArray();
+  const result = { morning: 0, afternoon: 0, evening: 0, night: 0 };
+  for (const l of logs) {
+    const dt = new Date(l.timestamp);
+    const timeStr = `${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`;
+    const key = getWaterPeriodOfTime(timeStr, goal);
+    result[key] += l.amount || 0;
+  }
+  return result;
+}
+
 // ─── Water Goal CRUD ─────────────────────────────────────────
 
 const DEFAULT_WATER_GOAL: Omit<WaterGoal, 'id'> = {
@@ -349,6 +443,9 @@ const DEFAULT_WATER_GOAL: Omit<WaterGoal, 'id'> = {
   wakeEnd: '22:00',
   napStart: '',
   napEnd: '',
+  morningPercent: 35,
+  afternoonPercent: 40,
+  eveningPercent: 25,
   createdAt: Date.now(),
   updatedAt: Date.now(),
 };

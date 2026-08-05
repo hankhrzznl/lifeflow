@@ -9,7 +9,6 @@ import {
   ChevronDown, ChevronUp, TrendingUp, Brain,
   Timer, Pill, CalendarRange, Clock,
 } from "lucide-react";
-import { daylogDB } from "@/lib/db/daylog.db";
 import {
   getWaterGoal, getSleepLogByDate, getWorkoutSessions,
   getMedicines, getMedicineLogsByDate,
@@ -88,8 +87,8 @@ const MODULES: ModuleCard[] = [
   { key: "accounting", label: "记账", path: "/more/accounting", icon: <Wallet className="w-5 h-5" />, color: "#10B981", bgColor: "#ECFDF5" },
   { key: "fitness", label: "训练", path: "/more/fitness", icon: <Dumbbell className="w-5 h-5" />, color: "#F97316", bgColor: "#FFF7ED" },
   { key: "diet", label: "饮食", path: "/more/diet", icon: <Utensils className="w-5 h-5" />, color: "#EC4899", bgColor: "#FDF2F8" },
-  { key: "wellness", label: "养生", path: "/more/wellness", icon: <Heart className="w-5 h-5" />, color: "#EF4444", bgColor: "#FEF2F2" },
-  { key: "posture", label: "体态拉伸", path: "/more/posture", icon: <StretchHorizontal className="w-5 h-5" />, color: "#8B5CF6", bgColor: "#F5F3FF" },
+  { key: "wellness", label: "养生", path: "/more/fitness?tab=wellness", icon: <Heart className="w-5 h-5" />, color: "#EF4444", bgColor: "#FEF2F2" },
+  { key: "posture", label: "体态拉伸", path: "/more/fitness?tab=posture", icon: <StretchHorizontal className="w-5 h-5" />, color: "#8B5CF6", bgColor: "#F5F3FF" },
   { key: "wishes", label: "心愿", path: "/more/wishes", icon: <Star className="w-5 h-5" />, color: "#F59E0B", bgColor: "#FFFBEB" },
   { key: "ebbinghaus", label: "记忆", path: "/more/ebbinghaus", icon: <Brain className="w-5 h-5" />, color: "#8B5CF6", bgColor: "#F5F3FF" },
   { key: "focus", label: "专注", path: "/more/focus", icon: <Timer className="w-5 h-5" />, color: "#6366F1", bgColor: "#EEF2FF" },
@@ -134,11 +133,7 @@ export default function LongTermismPage() {
 
   // ─── 模块数据查询 ──────────────────────────────────────────
 
-  // 1. 饮水
-  const waterItems = useLiveQuery(
-    () => daylogDB.items.where("date").equals(today).filter(i => i.sourceType === "water").toArray(),
-    [today], []
-  );
+  // 1. 饮水（T15：唯一流水源 waterLogs + 时段目标制）
   const waterGoal = useLiveQuery(() => getWaterGoal(), [], null);
   const todayWaterLogs = useLiveQuery(
     () => healthDB.waterLogs.where("date").equals(today).toArray(),
@@ -219,28 +214,9 @@ export default function LongTermismPage() {
   // ─── 卡片衍生数据 ──────────────────────────────────────────
 
   const cardData = useMemo(() => {
-    // 饮水
-    const waterTotal = waterItems.length;
-    const waterTarget = waterGoal ? Math.ceil(waterGoal.dailyTarget / 100) : 0;
+    // 饮水（T15：唯一流水源 waterLogs，时段目标制）
     const completedWaterMl = todayWaterLogs.reduce((s, l) => s + (l.amount || 0), 0);
     const dailyTargetMl = waterGoal?.dailyTarget || 0;
-    const now = new Date();
-    const currentHour = now.getHours();
-    const existingHours = new Set(waterItems.map(i => {
-      if (!i.plannedStart) return -1;
-      const h = parseInt(i.plannedStart.split(":")[0]);
-      return isNaN(h) ? -1 : h;
-    }));
-    let nextCupTime = "";
-    for (let h = currentHour + 1; h <= 22; h++) {
-      if (!existingHours.has(h)) {
-        const displayHour = h > 12 ? h - 12 : h;
-        const ampm = h >= 12 ? "下午" : "上午";
-        nextCupTime = `${ampm} ${displayHour}:00`;
-        break;
-      }
-    }
-    if (!nextCupTime && waterTotal < waterTarget) nextCupTime = "今天";
 
     // 睡眠
     let sleepTime = "";
@@ -299,8 +275,10 @@ export default function LongTermismPage() {
       {
         key: "water", icon: <Droplets className="w-5 h-5" />, color: "#3B82F6", bgColor: "#EFF6FF",
         primary: dailyTargetMl > 0 ? `${completedWaterMl} / ${dailyTargetMl} ml` : "--",
-        guidance: waterTotal >= waterTarget && waterTarget > 0 ? "今日目标已完成"
-          : waterTotal > 0 ? (nextCupTime ? `下一杯 ${nextCupTime}` : "还差几杯") : "去记录",
+        guidance: dailyTargetMl > 0
+          ? (completedWaterMl >= dailyTargetMl ? "今日目标已完成"
+            : completedWaterMl > 0 ? `还差 ${dailyTargetMl - completedWaterMl} ml` : "去记录")
+          : "去记录",
       },
       {
         key: "sleep", icon: <Moon className="w-5 h-5" />, color: "#6366F1", bgColor: "#EEF2FF",
@@ -365,7 +343,7 @@ export default function LongTermismPage() {
         guidance: nearest ? nearest.name : "添加倒数日",
       },
     ];
-  }, [waterItems, waterGoal, todayWaterLogs, sleepLog, monthTransactions, workoutSessions, dietLogs, wellnessLogs, stretchLogs, wishes, ebbinghausDueCards, ebbinghausDeckCount, today, yesterday, todayFocusMinutes, habits, medicines, medicineLogs, countdowns]);
+  }, [waterGoal, todayWaterLogs, sleepLog, monthTransactions, workoutSessions, dietLogs, wellnessLogs, stretchLogs, wishes, ebbinghausDueCards, ebbinghausDeckCount, today, yesterday, todayFocusMinutes, habits, medicines, medicineLogs, countdowns]);
 
   return (
     <div

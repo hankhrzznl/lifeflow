@@ -10,7 +10,7 @@ import {
   Droplets, Moon, Dumbbell, Pill,
   Plus, X, Clock, ChevronDown, ChevronRight, Clock9, Settings,
 } from "lucide-react";
-import { getUpcomingItems, addManualItem, updateItem, getItemsByDate, daylogDB } from "@/lib/db/daylog.db";
+import { getUpcomingItems, addManualItem, updateItem, getItemsByDate } from "@/lib/db/daylog.db";
 import type { Item } from "@/lib/db/daylog.db";
 import { updateDailyActionV2, goalV2DB } from "@/lib/db/goal-v2.db";
 import { recalculateGoalProgress } from "@/lib/goal-v2-engine";
@@ -25,7 +25,6 @@ import type { Project } from "@/lib/db/efficiency.db";
 import { getCountdowns } from "@/lib/db/life.db";
 import type { Countdown } from "@/lib/db/life.db";
 import { getWaterGoal, healthDB } from "@/lib/db/health.db";
-import WaterReminderSheet from "@/components/water/WaterReminderSheet";
 
 // ============================================================
 // 工具函数
@@ -261,11 +260,8 @@ export default function HomePage() {
   const [submitting, setSubmitting] = useState(false);
   const [taskListExpanded, setTaskListExpanded] = useState(false);
 
-  // ── 饮水提醒 ──
-  const [showWaterSheet, setShowWaterSheet] = useState(false);
+  // ── 饮水（T15：时段目标制，入口跳转饮水页） ──
   const [waterSettings, setWaterSettings] = useState({ wakeStart: "07:00", wakeEnd: "22:00", dailyTarget: 2000 });
-  const [waterActive, setWaterActive] = useState(false);
-  const [waterReminderEnabled, setWaterReminderEnabled] = useState(true);
 
   // 今日实际饮水量（唯一流水源 waterLogs，与长期主义/饮水页口径一致）
   const todayWaterLogs = useLiveQuery(
@@ -285,10 +281,6 @@ export default function HomePage() {
         wakeEnd: g.wakeEnd || "22:00",
         dailyTarget: g.dailyTarget || 2000,
       });
-      setWaterReminderEnabled((g.reminderInterval ?? 0) > 0);
-    }).catch(() => {});
-    daylogDB.items.where("date").equals(today).filter(i => i.sourceType === "water").count().then(c => {
-      setWaterActive(c > 0);
     }).catch(() => {});
   }, [today]);
 
@@ -368,47 +360,31 @@ export default function HomePage() {
       {/* ===== 复盘洞察 ===== */}
       <HomeReview />
 
-      {/* ===== 饮水提醒按钮 ===== */}
+      {/* ===== 饮水卡片（T15：时段目标制入口） ===== */}
       <div className="px-4 mb-3">
         <motion.button
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, ease: "easeOut" }}
-          onClick={() => {
-            if (waterReminderEnabled) {
-              setShowWaterSheet(true);
-            } else {
-              router.push("/settings");
-            }
-          }}
+          onClick={() => router.push("/more/water")}
           className="w-full rounded-[16px] p-3.5 flex items-center gap-3 active:opacity-70"
           style={{
-            background: waterActive && waterReminderEnabled
-              ? "var(--lifeflow-brand-50)"
-              : "var(--color-surface-card)",
+            background: "var(--color-surface-card)",
             boxShadow: "var(--shadow-card)",
           }}
         >
           <div
             className="w-10 h-10 rounded-xl flex items-center justify-center"
-            style={{
-              background: waterActive && waterReminderEnabled
-                ? "var(--lifeflow-primary)"
-                : "var(--lifeflow-muted)",
-            }}
+            style={{ background: "var(--lifeflow-muted)" }}
           >
-            <Droplets className="w-5 h-5" style={{ color: (waterActive && waterReminderEnabled) ? "#FFF" : "var(--lifeflow-primary)" }} />
+            <Droplets className="w-5 h-5" style={{ color: "var(--lifeflow-primary)" }} />
           </div>
           <div className="flex-1 text-left">
             <p className="text-[15px] font-semibold" style={{ color: "var(--color-text-primary)" }}>
-              饮水提醒
+              饮水
             </p>
             <p className="text-[12px] mt-0.5" style={{ color: "var(--color-text-secondary)" }}>
-              {waterReminderEnabled
-                ? (waterActive
-                  ? `已开启 · ${todayWaterMl}/${waterSettings.dailyTarget} ml`
-                  : "点击开启喝水提醒")
-                : "开启或关闭饮水提醒请前往设置"}
+              今日 {todayWaterMl}/{waterSettings.dailyTarget} ml
             </p>
           </div>
         </motion.button>
@@ -805,16 +781,6 @@ export default function HomePage() {
           </>
         )}
       </AnimatePresence>
-
-      {/* ===== 饮水提醒面板 ===== */}
-      <WaterReminderSheet
-        open={showWaterSheet}
-        onClose={() => setShowWaterSheet(false)}
-        wakeStart={waterSettings.wakeStart}
-        wakeEnd={waterSettings.wakeEnd}
-        dailyTarget={waterSettings.dailyTarget}
-        onStatusChange={(active) => setWaterActive(active)}
-      />
     </div>
   );
 }

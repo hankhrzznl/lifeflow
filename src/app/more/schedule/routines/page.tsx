@@ -49,6 +49,8 @@ export default function RoutinesPage() {
   const [childFormStartTime, setChildFormStartTime] = useState("07:00");
   const [childFormEndTime, setChildFormEndTime] = useState("07:30");
   const [childFormColor, setChildFormColor] = useState(COLORS[0]);
+  // T15：课堂节奏（45+5）类型
+  const [childFormType, setChildFormType] = useState<RoutineTemplate["type"]>("custom");
 
   // Delete group confirm
   const [deletingGroupId, setDeletingGroupId] = useState<string | null>(null);
@@ -81,6 +83,7 @@ export default function RoutinesPage() {
     setChildFormStartTime("07:00");
     setChildFormEndTime("07:30");
     setChildFormColor(COLORS[0]);
+    setChildFormType("custom");
     setEditingChildId(null);
     setAddingChild(false);
   }, []);
@@ -90,6 +93,7 @@ export default function RoutinesPage() {
     setChildFormStartTime(r.startTime);
     setChildFormEndTime(r.endTime);
     setChildFormColor(r.color);
+    setChildFormType(r.type || "custom");
   }, []);
 
   // ─── Helper: format daysOfWeek display ────────────────────
@@ -216,25 +220,26 @@ export default function RoutinesPage() {
         startTime: childFormStartTime,
         endTime: childFormEndTime,
         color: childFormColor,
-        type: existing?.type || ("custom" as RoutineTemplate["type"]),
+        type: childFormType,
       };
       await updateRoutine(editingChildId, {
         name: childFormName.trim(),
         startTime: childFormStartTime,
         endTime: childFormEndTime,
         color: childFormColor,
+        type: childFormType,
       });
       showToast({ type: "success", message: "作息已更新" });
       syncRoutineToSchedule(updated);
     } else {
       const data = {
-        type: "custom" as RoutineTemplate["type"],
+        type: childFormType,
         templateId: groupId,
         name: childFormName.trim(),
         startTime: childFormStartTime,
         endTime: childFormEndTime,
         color: childFormColor,
-        icon: "Moon",
+        icon: childFormType === "focus" ? "Zap" : "Moon",
         isActive: true,
         sortOrder: allRoutines.filter((r) => r.templateId === groupId).length,
       };
@@ -248,6 +253,7 @@ export default function RoutinesPage() {
     childFormStartTime,
     childFormEndTime,
     childFormColor,
+    childFormType,
     editingChildId,
     expandedGroupId,
     allRoutines,
@@ -269,7 +275,7 @@ export default function RoutinesPage() {
             const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
             await daylogDB.items
               .where("date").equals(dateStr)
-              .filter((item: any) => item.sourceType === "routine" && item.sourceId === id)
+              .filter((item: any) => item.sourceType === "routine" && (item.sourceId === id || item.sourceId.startsWith(id + "#")))
               .delete();
           }
         } catch { /* ignore */ }
@@ -690,6 +696,41 @@ export default function RoutinesPage() {
                         className="w-full text-[16px] outline-none bg-transparent mb-3"
                         style={{ color: "var(--color-text-primary)" }}
                       />
+                      {/* T15：类型选择（普通 / 课堂节奏 45+5） */}
+                      <div className="mb-3">
+                        <p className="text-[13px] mb-2" style={{ color: "var(--color-text-secondary)" }}>
+                          类型
+                        </p>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setChildFormType("custom")}
+                            className="flex-1 h-9 rounded-lg text-[13px] font-medium transition-colors"
+                            style={{
+                              background: childFormType === "custom" ? "var(--lifeflow-brand-50)" : "var(--color-surface-secondary)",
+                              color: childFormType === "custom" ? "var(--lifeflow-primary)" : "var(--color-text-secondary)",
+                            }}
+                          >
+                            普通作息
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setChildFormType("focus")}
+                            className="flex-1 h-9 rounded-lg text-[13px] font-medium transition-colors"
+                            style={{
+                              background: childFormType === "focus" ? "var(--lifeflow-brand-50)" : "var(--color-surface-secondary)",
+                              color: childFormType === "focus" ? "var(--lifeflow-primary)" : "var(--color-text-secondary)",
+                            }}
+                          >
+                            课堂节奏 · 45+5
+                          </button>
+                        </div>
+                        {childFormType === "focus" && (
+                          <p className="text-[11px] mt-1.5" style={{ color: "var(--color-text-secondary)" }}>
+                            该时间段将自动切分为 45 分钟上课 + 5 分钟休息（起身活动 · 顺便喝水），防久坐
+                          </p>
+                        )}
+                      </div>
                       <div className="mb-3">
                         <p className="text-[13px] mb-2" style={{ color: "var(--color-text-secondary)" }}>
                           时间段
@@ -857,6 +898,41 @@ export default function RoutinesPage() {
                     className="w-full text-[16px] outline-none bg-transparent mb-3"
                     style={{ color: "var(--color-text-primary)" }}
                   />
+                  {/* T15：类型选择（普通 / 课堂节奏 45+5） */}
+                  <div className="mb-3">
+                    <p className="text-[13px] mb-2" style={{ color: "var(--color-text-secondary)" }}>
+                      类型
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setChildFormType("custom")}
+                        className="flex-1 h-9 rounded-lg text-[13px] font-medium transition-colors"
+                        style={{
+                          background: childFormType === "custom" ? "var(--lifeflow-brand-50)" : "var(--color-surface-secondary)",
+                          color: childFormType === "custom" ? "var(--lifeflow-primary)" : "var(--color-text-secondary)",
+                        }}
+                      >
+                        普通作息
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setChildFormType("focus")}
+                        className="flex-1 h-9 rounded-lg text-[13px] font-medium transition-colors"
+                        style={{
+                          background: childFormType === "focus" ? "var(--lifeflow-brand-50)" : "var(--color-surface-secondary)",
+                          color: childFormType === "focus" ? "var(--lifeflow-primary)" : "var(--color-text-secondary)",
+                        }}
+                      >
+                        课堂节奏 · 45+5
+                      </button>
+                    </div>
+                    {childFormType === "focus" && (
+                      <p className="text-[11px] mt-1.5" style={{ color: "var(--color-text-secondary)" }}>
+                        该时间段将自动切分为 45 分钟上课 + 5 分钟休息（起身活动 · 顺便喝水），防久坐
+                      </p>
+                    )}
+                  </div>
                   <div className="mb-3">
                     <p className="text-[13px] mb-2" style={{ color: "var(--color-text-secondary)" }}>
                       时间段

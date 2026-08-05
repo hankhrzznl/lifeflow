@@ -63,7 +63,7 @@ export interface Course {
   createdAt: number;
 }
 
-export type RoutineType = 'custom' | 'wake' | 'sleep' | 'nap';
+export type RoutineType = 'custom' | 'wake' | 'sleep' | 'nap' | 'focus';
 
 export interface RoutineTemplateGroup {
   id: string;
@@ -420,6 +420,47 @@ export async function generateCourseItems(dateStr: string): Promise<void> {
  *  使用内存级防重入锁，避免 React Strict Mode double-invoke 产生重复事项 */
 const _generatingRoutineDates = new Set<string>();
 
+// ─── T15：课堂节奏（45+5）切分工具 ───────────────────────────
+
+function addMinutesTime(time: string, mins: number): string {
+  const [h, m] = time.split(':').map(Number);
+  const total = h * 60 + m + mins;
+  const nh = Math.floor(total / 60) % 24;
+  const nm = total % 60;
+  return `${String(nh).padStart(2, '0')}:${String(nm).padStart(2, '0')}`;
+}
+
+function minutesBetween(start: string, end: string): number {
+  const [hs, ms] = start.split(':').map(Number);
+  const [he, me] = end.split(':').map(Number);
+  return he * 60 + me - (hs * 60 + ms);
+}
+
+/** 专注块按「45 分钟上课 + 5 分钟休息」切分；末尾不足 45 分钟作为最后一节上课 */
+export function splitFocusSlots(start: string, end: string): { start: string; end: string; kind: 'class' | 'break' }[] {
+  const slots: { start: string; end: string; kind: 'class' | 'break' }[] = [];
+  let cursor = start;
+  let remaining = minutesBetween(cursor, end);
+  let guard = 0;
+  while (remaining > 0 && guard < 60) {
+    guard++;
+    if (remaining >= 45) {
+      slots.push({ start: cursor, end: addMinutesTime(cursor, 45), kind: 'class' });
+      cursor = addMinutesTime(cursor, 45);
+      remaining = minutesBetween(cursor, end);
+      if (remaining >= 5) {
+        slots.push({ start: cursor, end: addMinutesTime(cursor, 5), kind: 'break' });
+        cursor = addMinutesTime(cursor, 5);
+        remaining = minutesBetween(cursor, end);
+      }
+    } else {
+      slots.push({ start: cursor, end, kind: 'class' });
+      break;
+    }
+  }
+  return slots;
+}
+
 export async function generateRoutineItems(dateStr: string): Promise<void> {
   if (_generatingRoutineDates.has(dateStr)) return;
   _generatingRoutineDates.add(dateStr);
@@ -449,6 +490,34 @@ export async function generateRoutineItems(dateStr: string): Promise<void> {
         // 条件4：创建日期边界 — dateStr 必须 >= 组创建日期
         const groupCreatedDate = _timestampToDateStr(group.createdAt);
         if (dateStr < groupCreatedDate) continue;
+
+        if (r.type === 'focus') {
+          // T15：课堂节奏 — 45 分钟上课 + 5 分钟休息自动切分（sourceId 序号化去重）
+          const slots = splitFocusSlots(r.startTime, r.endTime);
+          for (let i = 0; i < slots.length; i++) {
+            const s = slots[i];
+            const sourceId = `${r.id}#${i}`;
+            // 条件5：未重复生成
+            if (existingSourceIds.has(sourceId)) continue;
+            await addItem({
+              date: dateStr,
+              sourceType: 'routine',
+              sourceId,
+              title: s.kind === 'break' ? '起身活动 · 顺便喝水' : r.name,
+              color: s.kind === 'break' ? '#34C759' : r.color,
+              icon: s.kind === 'break' ? 'Coffee' : (r.icon || 'Zap'),
+              plannedStart: s.start,
+              plannedEnd: s.end,
+              actualStart: s.start,
+              actualEnd: s.end,
+              isCorrected: false,
+              isCompleted: false,
+              sortOrder: timeToSort(s.start),
+            });
+          }
+          continue;
+        }
+
         // 条件5：未重复生成
         if (existingSourceIds.has(r.id)) continue;
 

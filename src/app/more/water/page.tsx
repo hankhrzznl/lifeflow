@@ -1,15 +1,20 @@
 "use client";
 
-import { useEffect, useState, useMemo, useCallback, Fragment } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { motion } from "framer-motion";
-import { ChevronLeft, Droplets, Check, ChevronRight, Settings } from "lucide-react";
-import { daylogDB, ensureModuleItem } from "@/lib/db/daylog.db";
-import type { Item } from "@/lib/db/daylog.db";
-import { healthDB, getWaterGoal, updateWaterGoal, syncWaterLogOnToggle } from "@/lib/db/health.db";
-import { syncItemReminder } from "@/lib/reminderDefaults";
-import { requestPermission } from "@/lib/notificationService";
+import { ChevronLeft, Droplets, Check, ChevronRight, Plus } from "lucide-react";
+import {
+  healthDB,
+  getWaterGoal,
+  updateWaterGoal,
+  addWaterCup,
+  getWaterPeriods,
+  getWaterMlByPeriod,
+  getWaterPeriodOfTime,
+} from "@/lib/db/health.db";
+import type { WaterGoal } from "@/lib/db/health.db";
 import { showToast } from "@/components/ui/Toast";
 
 /* ────────── Helpers ────────── */
@@ -25,21 +30,12 @@ function dateAddDays(dateStr: string, days: number): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-const DAYS_HISTORY = 30;
-
-/* ────────── Settings type ────────── */
-
-interface WaterSettings {
-  wakeStart: string;
-  wakeEnd: string;
-  dailyTarget: number;
+function nowTimeStr(): string {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
-const DEFAULT_SETTINGS: WaterSettings = {
-  wakeStart: "07:00",
-  wakeEnd: "22:00",
-  dailyTarget: 2000,
-};
+const DAYS_HISTORY = 30;
 
 /* ────────── Component ────────── */
 
@@ -47,46 +43,10 @@ export default function WaterPage() {
   const router = useRouter();
   const today = todayStr();
 
-  const [settings, setSettings] = useState<WaterSettings>(DEFAULT_SETTINGS);
-  const [settingsLoaded, setSettingsLoaded] = useState(false);
-
-  /* ─── Nap time from routines ─── */
-  const [napStart, setNapStart] = useState("");
-  const [napEnd, setNapEnd] = useState("");
-  const [hasNap, setHasNap] = useState(false);
-
-  /* ─── Load settings from WaterGoal + nap from routines ─── */
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const goal = await getWaterGoal();
-        setSettings({
-          wakeStart: goal.wakeStart || DEFAULT_SETTINGS.wakeStart,
-          wakeEnd: goal.wakeEnd || DEFAULT_SETTINGS.wakeEnd,
-          dailyTarget: goal.dailyTarget || DEFAULT_SETTINGS.dailyTarget,
-        });
-      } catch {
-        // Use defaults on error
-      }
-      setSettingsLoaded(true);
-    })();
-  }, []);
-
-  /* ─── Live query: today's water items ─── */
-
-  const todayItems = useLiveQuery(
-    () =>
-      daylogDB.items
-        .where("date")
-        .equals(today)
-        .filter((item) => item.sourceType === "water")
-        .sortBy("plannedStart"),
-    [today],
-  );
+  // ─── 配置（实时） ───
+  const goal = useLiveQuery(() => getWaterGoal(), [], null as WaterGoal | null);
 
   /* ─── Live query: 今日实际饮水量（唯一流水源 waterLogs） ─── */
-
   const todayWaterLogs = useLiveQuery(
     () => healthDB.waterLogs.where("date").equals(today).toArray(),
     [today],
@@ -97,190 +57,91 @@ export default function WaterPage() {
     [todayWaterLogs],
   );
 
-  /* ─── Live query: last 30 days history ─── */
+  /* ─── 三时段派生数据 ─── */
+  const periods = useMemo(() => (goal ? getWaterPeriods(goal) : []), [goal]);
 
-  const historyStart = dateAddDays(today, -DAYS_HISTORY + 1);
-  const historyItems = useLiveQuery(
-    () =>
-      daylogDB.items
-        .where("date")
-        .between(historyStart, today, true, true)
-        .filter((item) => item.sourceType === "water")
-        .toArray(),
-    [today, historyStart],
+  const periodMl = useLiveQuery(
+    () => (goal ? getWaterMlByPeriod(today, goal) : Promise.resolve({ morning: 0, afternoon: 0, evening: 0, night: 0 })),
+    [today, goal],
+    { morning: 0, afternoon: 0, evening: 0, night: 0 },
   );
 
-  /* ─── 近 30 天实际饮水量（唯一流水源 waterLogs） ─── */
+  const currentPeriod = useMemo(() => (goal ? getWaterPeriodOfTime(nowTimeStr(), goal) : "night"), [goal]);
 
+  /* ─── Live query: last 30 days waterLogs ─── */
+  const historyStart = dateAddDays(today, -DAYS_HISTORY + 1);
   const historyWaterLogs = useLiveQuery(
     () => healthDB.waterLogs.where("date").between(historyStart, today, true, true).toArray(),
     [today, historyStart],
     [],
   );
-  const mlByDate = useMemo(() => {
-    const map = new Map<string, number>();
+  const historyByDay = useMemo(() => {
+    const map = new Map<string, { amount: number; logs: { time: string; amount: number; id: string }[] }>();
     for (const l of historyWaterLogs) {
-      map.set(l.date, (map.get(l.date) || 0) + (l.amount || 0));
+      const entry = map.get(l.date) ?? { amount: 0, logs: [] };
+      const dt = new Date(l.timestamp);
+      const time = `${String(dt.getHours()).padStart(2, "0")}:${String(dt.getMinutes()).padStart(2, "0")}`;
+      entry.amount += l.amount || 0;
+      entry.logs.push({ time, amount: l.amount || 0, id: l.id });
+      map.set(l.date, entry);
     }
-    return map;
+    return Array.from(map.entries())
+      .sort(([a], [b]) => b.localeCompare(a))
+      .map(([date, v]) => ({ date, ...v }));
   }, [historyWaterLogs]);
 
-  // ── Group history by date ──
-  const historyByDay = useMemo(() => {
-    if (!historyItems) return [];
-    const grouped = new Map<string, Item[]>();
-    for (const item of historyItems) {
-      const list = grouped.get(item.date) ?? [];
-      list.push(item);
-      grouped.set(item.date, list);
-    }
-    // Sort descending by date
-    return Array.from(grouped.entries())
-      .sort(([a], [b]) => b.localeCompare(a))
-      .map(([date, items]) => ({
-        date,
-        items: items.sort((a, b) => a.plannedStart.localeCompare(b.plannedStart)),
-        completed: items.filter(i => i.isCompleted).length,
-        total: items.length,
-        totalMl: mlByDate.get(date) || 0,
-      }));
-  }, [historyItems, mlByDate]);
-
-  /* ─── 展开的历史日期 ─── */
   const [expandedDate, setExpandedDate] = useState<string | null>(null);
 
-  /* ─── Toggle item completion ─── */
+  /* ─── 记录一杯水 ─── */
+  const [adding, setAdding] = useState(false);
+  const handleAddCup = useCallback(async () => {
+    if (adding) return;
+    setAdding(true);
+    try {
+      const cup = goal?.cupSize || 200;
+      await addWaterCup(today);
+      showToast({ type: "success", message: `已记录 ${cup}ml` });
+    } catch {
+      showToast({ type: "error", message: "记录失败，请重试" });
+    } finally {
+      setAdding(false);
+    }
+  }, [adding, goal, today]);
 
-  const handleToggle = useCallback(async (id: string, current: boolean, date: string) => {
-    const { updateItem } = await import("@/lib/db/daylog.db");
-    await updateItem(id, { isCompleted: !current });
-    await syncWaterLogOnToggle(date, !current);
-  }, []);
-
-  /* ─── Save settings to WaterGoal ─── */
-
+  /* ─── 保存基础设置 ─── */
   const handleSaveSettings = useCallback(
-    async (updates: Partial<WaterSettings>) => {
-      const merged = { ...settings, ...updates };
-      setSettings(merged);
+    async (updates: Partial<WaterGoal>) => {
       try {
-        await updateWaterGoal({
-          dailyTarget: merged.dailyTarget,
-          wakeStart: merged.wakeStart,
-          wakeEnd: merged.wakeEnd,
-        });
+        await updateWaterGoal(updates);
       } catch {
         // Silently fail
       }
     },
-    [settings],
+    [],
   );
 
-  /* ─── 重新生成饮水提醒 ─── */
-
-  const [generating, setGenerating] = useState(false);
-
-  const handleGenerateReminders = useCallback(async () => {
-    setGenerating(true);
-    try {
-      await requestPermission();
-
-      const today = todayStr();
-      const startH = parseInt(settings.wakeStart.split(":")[0]);
-      const endH = parseInt(settings.wakeEnd.split(":")[0]);
-      const stopH = endH - 2;
-      const slots: { label: string }[] = [];
-      for (let h = startH; h < stopH; h++) {
-        slots.push({ label: `${String(h).padStart(2, "0")}:30` });
+  /* ─── 时段占比调整（晚上自动补齐，保证总和 100） ─── */
+  const handlePercentAdjust = useCallback(
+    async (field: "morningPercent" | "afternoonPercent", delta: number) => {
+      if (!goal) return;
+      const morning = (goal.morningPercent ?? 35) + (field === "morningPercent" ? delta : 0);
+      const afternoon = (goal.afternoonPercent ?? 40) + (field === "afternoonPercent" ? delta : 0);
+      const m = Math.min(90, Math.max(5, morning));
+      const a = Math.min(90, Math.max(5, afternoon));
+      if (m + a > 90) {
+        showToast({ type: "warning", message: "上午与下午占比合计需 ≤90%" });
+        return;
       }
-
-      // 清理旧数据（未来 7 天）
-      for (let d = 0; d < 7; d++) {
-        const date = dateAddDays(today, d);
-        const oldItems = await daylogDB.items
-          .where("date").equals(date)
-          .filter((item) => item.sourceType === "water")
-          .toArray();
-        const { db } = await import("@/lib/db");
-        for (const item of oldItems) {
-          const reminder = await db.reminders
-            .where("moduleType").equals("item")
-            .filter((r) => r.linkedModuleId === item.id)
-            .first();
-          if (reminder) await db.reminders.delete(reminder.id!);
-        }
-        await daylogDB.items
-          .where("date").equals(date)
-          .filter((item) => item.sourceType === "water")
-          .delete();
-      }
-
-      // 生成新数据
-      for (let d = 0; d < 7; d++) {
-        const date = dateAddDays(today, d);
-        for (const slot of slots) {
-          const timeStr = slot.label;
-          const endTime = (() => {
-            const [h, m] = timeStr.split(":").map(Number);
-            const total = h * 60 + m + 5;
-            const nh = Math.floor(total / 60) % 24;
-            const nm = total % 60;
-            return `${String(nh).padStart(2, "0")}:${String(nm).padStart(2, "0")}`;
-          })();
-          const sourceId = `water_${date}_${timeStr}`;
-          const itemId = await ensureModuleItem({
-            date,
-            sourceType: "water",
-            sourceId,
-            title: "喝口水然后动一动不要久坐",
-            plannedStart: timeStr,
-            plannedEnd: endTime,
-            color: "#0EA5E9",
-            icon: "Droplets",
-            isCompleted: false,
-          });
-          if (itemId) {
-            await syncItemReminder({
-              id: itemId,
-              sourceType: "water",
-              sourceId,
-              date,
-              title: "喝口水然后动一动不要久坐",
-              plannedStart: timeStr,
-              plannedEnd: endTime,
-              actualStart: timeStr,
-              actualEnd: endTime,
-              isCorrected: false,
-              isCompleted: false,
-              sortOrder: 1,
-              createdAt: Date.now(),
-              updatedAt: Date.now(),
-            } as Item);
-          }
-        }
-      }
-
-      // 同步开关状态
-      await updateWaterGoal({ reminderInterval: 60 }).catch(() => {});
-
-      showToast({ type: "success", message: `饮水提醒已生成，每日 ${slots.length} 次` });
-    } catch {
-      showToast({ type: "error", message: "生成失败，请重试" });
-    } finally {
-      setGenerating(false);
-    }
-  }, [settings]);
+      await handleSaveSettings({ morningPercent: m, afternoonPercent: a, eveningPercent: 100 - m - a });
+    },
+    [goal, handleSaveSettings],
+  );
 
   /* ─── Derived stats ─── */
-
-  const totalWaterMl = todayWaterMl; // 唯一流水源：waterLogs
-
-  const percent = settings.dailyTarget > 0
-    ? Math.min(100, Math.round((totalWaterMl / settings.dailyTarget) * 100))
-    : 0;
+  const dailyTarget = goal?.dailyTarget || 2000;
+  const percent = dailyTarget > 0 ? Math.min(100, Math.round((todayWaterMl / dailyTarget) * 100)) : 0;
 
   /* ─── SVG Ring measurements ─── */
-
   const ringSize = 196;
   const ringStroke = 10;
   const ringRadius = (ringSize - ringStroke) / 2;
@@ -288,7 +149,6 @@ export default function WaterPage() {
   const dashOffset = circumference * (1 - percent / 100);
 
   /* ─── Format date for display ─── */
-
   const formatDate = (dateStr: string): string => {
     const d = new Date(dateStr + "T00:00:00");
     const weekDays = ["日", "一", "二", "三", "四", "五", "六"];
@@ -299,8 +159,7 @@ export default function WaterPage() {
   };
 
   /* ─── Loading state ─── */
-
-  if (!settingsLoaded || todayItems === undefined) {
+  if (!goal) {
     return (
       <div className="min-h-screen" style={{ background: "var(--lifeflow-background)" }}>
         <header className="flex items-center h-11 px-4">
@@ -321,7 +180,7 @@ export default function WaterPage() {
     );
   }
 
-  /* ────────── Render ────────── */
+  const periodLabels: Record<string, string> = { morning: "上午", afternoon: "下午", evening: "晚上", night: "夜间" };
 
   return (
     <div className="min-h-screen pb-12" style={{ background: "var(--lifeflow-background)" }}>
@@ -384,14 +243,27 @@ export default function WaterPage() {
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
               <Droplets className="h-9 w-9" style={{ color: "var(--lifeflow-primary)" }} />
               <span className="text-[13px] font-medium" style={{ color: "var(--color-text-secondary)" }}>
-                {totalWaterMl} / {settings.dailyTarget} ml
+                {todayWaterMl} / {dailyTarget} ml
               </span>
             </div>
           </div>
+
+          {/* ── 快速录入 ── */}
+          <motion.button
+            type="button"
+            whileTap={{ scale: 0.96 }}
+            onClick={handleAddCup}
+            disabled={adding}
+            className="mt-5 w-full h-11 rounded-xl text-[15px] font-semibold text-white disabled:opacity-50 flex items-center justify-center gap-2"
+            style={{ background: "var(--lifeflow-primary)" }}
+          >
+            <Plus className="w-4 h-4" />
+            {adding ? "记录中..." : `喝了一杯（${goal.cupSize || 200}ml）`}
+          </motion.button>
         </motion.div>
       </div>
 
-      {/* ─── Settings Card ─── */}
+      {/* ─── 三时段进度卡（T15） ─── */}
       <div className="px-4 pt-4">
         <motion.div
           initial={{ opacity: 0, y: 12 }}
@@ -404,15 +276,94 @@ export default function WaterPage() {
             boxShadow: "var(--shadow-card)",
           }}
         >
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-[17px] font-semibold" style={{ color: "var(--color-text-primary)" }}>
+              今日时段目标
+            </h2>
+            {currentPeriod !== "night" && (
+              <span className="text-[11px] px-2 py-0.5 rounded-full font-medium" style={{ background: "var(--lifeflow-brand-50)", color: "var(--lifeflow-primary)" }}>
+                当前时段 · {periodLabels[currentPeriod]}
+              </span>
+            )}
+          </div>
+
+          {periods.length === 0 ? (
+            <p className="text-[12px] py-3" style={{ color: "var(--color-text-disabled)" }}>
+              无有效时段，请检查起床/入睡时间设置
+            </p>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {periods.map((p) => {
+                const drunk = periodMl[p.key];
+                const pct = p.target > 0 ? Math.min(100, Math.round((drunk / p.target) * 100)) : 0;
+                const isCurrent = currentPeriod === p.key;
+                const done = drunk >= p.target;
+                return (
+                  <div
+                    key={p.key}
+                    className="rounded-xl p-3"
+                    style={{
+                      background: isCurrent ? "var(--lifeflow-brand-50)" : "var(--lifeflow-muted)",
+                    }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[14px] font-semibold" style={{ color: "var(--color-text-primary)" }}>
+                          {p.label}
+                        </span>
+                        {done && <Check className="w-3.5 h-3.5" style={{ color: "#34C759" }} strokeWidth={3} />}
+                      </div>
+                      <span className="text-[12px]" style={{ color: "var(--color-text-secondary)" }}>
+                        {drunk}/{p.target} ml
+                      </span>
+                    </div>
+                    <div className="mt-2 h-[6px] rounded-full overflow-hidden" style={{ background: "var(--lifeflow-background)" }}>
+                      <motion.div
+                        className="h-full rounded-full"
+                        initial={{ width: 0 }}
+                        animate={{ width: `${pct}%` }}
+                        transition={{ duration: 0.5, ease: "easeOut" }}
+                        style={{ background: done ? "#34C759" : "var(--lifeflow-primary)" }}
+                      />
+                    </div>
+                    <p className="mt-1.5 text-[11px]" style={{ color: "var(--color-text-disabled)" }}>
+                      {p.start} - {p.end} · 目标 {pct === 100 ? "达成" : `${100 - pct}% 待完成`}
+                    </p>
+                  </div>
+                );
+              })}
+              {periodMl.night > 0 && (
+                <p className="text-[11px]" style={{ color: "var(--color-text-disabled)" }}>
+                  睡前 2 小时内已饮 {periodMl.night}ml（不纳入目标）
+                </p>
+              )}
+            </div>
+          )}
+        </motion.div>
+      </div>
+
+      {/* ─── Settings Card ─── */}
+      <div className="px-4 pt-4">
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1, duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
+          className="p-4"
+          style={{
+            background: "var(--color-surface-card)",
+            borderRadius: "20px",
+            boxShadow: "var(--shadow-card)",
+          }}
+        >
           <h2 className="text-[17px] font-semibold mb-3" style={{ color: "var(--color-text-primary)" }}>
-            时间设置
+            饮水设置
           </h2>
 
           <div className="flex items-center justify-between h-10">
             <span className="text-[15px]" style={{ color: "var(--color-text-primary)" }}>起床时间</span>
             <input
               type="time"
-              value={settings.wakeStart}
+              value={goal.wakeStart || "08:00"}
               onChange={(e) => handleSaveSettings({ wakeStart: e.target.value })}
               className="h-8 px-3 rounded-lg text-[14px] font-medium outline-none"
               style={{ background: "var(--lifeflow-muted)", color: "var(--color-text-primary)", border: "1px solid var(--lifeflow-border)" }}
@@ -423,11 +374,36 @@ export default function WaterPage() {
             <span className="text-[15px]" style={{ color: "var(--color-text-primary)" }}>入睡时间</span>
             <input
               type="time"
-              value={settings.wakeEnd}
+              value={goal.wakeEnd || "22:00"}
               onChange={(e) => handleSaveSettings({ wakeEnd: e.target.value })}
               className="h-8 px-3 rounded-lg text-[14px] font-medium outline-none"
               style={{ background: "var(--lifeflow-muted)", color: "var(--color-text-primary)", border: "1px solid var(--lifeflow-border)" }}
             />
+          </div>
+
+          <div className="flex items-center justify-between h-10 mt-1">
+            <span className="text-[15px]" style={{ color: "var(--color-text-primary)" }}>杯量（+一杯）</span>
+            <div className="flex items-center gap-3">
+              <motion.button
+                type="button" whileTap={{ scale: 0.9 }}
+                onClick={() => handleSaveSettings({ cupSize: Math.max(50, (goal.cupSize || 200) - 50) })}
+                className="w-7 h-7 rounded-full border-[1.5px] flex items-center justify-center"
+                style={{ borderColor: "var(--lifeflow-primary)", background: "var(--color-surface-card)" }}
+              >
+                <MinusIcon className="w-3.5 h-3.5" style={{ color: "var(--lifeflow-primary)" }} />
+              </motion.button>
+              <span className="text-[16px] font-bold min-w-[56px] text-center" style={{ color: "var(--color-text-primary)" }}>
+                {goal.cupSize || 200}ml
+              </span>
+              <motion.button
+                type="button" whileTap={{ scale: 0.9 }}
+                onClick={() => handleSaveSettings({ cupSize: Math.min(500, (goal.cupSize || 200) + 50) })}
+                className="w-7 h-7 rounded-full border-[1.5px] flex items-center justify-center"
+                style={{ borderColor: "var(--lifeflow-primary)", background: "var(--color-surface-card)" }}
+              >
+                <PlusIcon className="w-3.5 h-3.5" style={{ color: "var(--lifeflow-primary)" }} />
+              </motion.button>
+            </div>
           </div>
 
           <div className="my-3" style={{ height: "0.5px", background: "var(--lifeflow-border)" }} />
@@ -437,18 +413,18 @@ export default function WaterPage() {
             <div className="flex items-center gap-4">
               <motion.button
                 type="button" whileTap={{ scale: 0.9 }}
-                onClick={() => handleSaveSettings({ dailyTarget: Math.max(100, settings.dailyTarget - 100) })}
+                onClick={() => handleSaveSettings({ dailyTarget: Math.max(100, dailyTarget - 100) })}
                 className="w-7 h-7 rounded-full border-[1.5px] flex items-center justify-center"
                 style={{ borderColor: "var(--lifeflow-primary)", background: "var(--color-surface-card)" }}
               >
                 <MinusIcon className="w-3.5 h-3.5" style={{ color: "var(--lifeflow-primary)" }} />
               </motion.button>
               <span className="text-[16px] font-bold min-w-[60px] text-center" style={{ color: "var(--color-text-primary)" }}>
-                {settings.dailyTarget}ml
+                {dailyTarget}ml
               </span>
               <motion.button
                 type="button" whileTap={{ scale: 0.9 }}
-                onClick={() => handleSaveSettings({ dailyTarget: settings.dailyTarget + 100 })}
+                onClick={() => handleSaveSettings({ dailyTarget: dailyTarget + 100 })}
                 className="w-7 h-7 rounded-full border-[1.5px] flex items-center justify-center"
                 style={{ borderColor: "var(--lifeflow-primary)", background: "var(--color-surface-card)" }}
               >
@@ -457,18 +433,69 @@ export default function WaterPage() {
             </div>
           </div>
 
-          <p className="text-[11px] mt-2" style={{ color: "var(--color-text-disabled)" }}>
-            饮水的时段和提醒次数请在首页「饮水提醒」中确认调整
+          <div className="my-3" style={{ height: "0.5px", background: "var(--lifeflow-border)" }} />
+
+          {/* ── 时段占比（晚上自动补齐） ── */}
+          <p className="text-[13px] font-medium mb-2" style={{ color: "var(--color-text-primary)" }}>
+            时段目标占比
           </p>
-          <button
-            type="button"
-            onClick={handleGenerateReminders}
-            disabled={generating}
-            className="w-full mt-3 h-10 rounded-[10px] text-[14px] font-semibold text-white disabled:opacity-50"
-            style={{ background: "var(--lifeflow-primary)" }}
-          >
-            {generating ? "生成中..." : "生成饮水提醒"}
-          </button>
+          <div className="flex items-center justify-between h-10">
+            <span className="text-[15px]" style={{ color: "var(--color-text-primary)" }}>上午</span>
+            <div className="flex items-center gap-3">
+              <motion.button
+                type="button" whileTap={{ scale: 0.9 }}
+                onClick={() => handlePercentAdjust("morningPercent", -5)}
+                className="w-7 h-7 rounded-full border-[1.5px] flex items-center justify-center"
+                style={{ borderColor: "var(--lifeflow-primary)", background: "var(--color-surface-card)" }}
+              >
+                <MinusIcon className="w-3.5 h-3.5" style={{ color: "var(--lifeflow-primary)" }} />
+              </motion.button>
+              <span className="text-[16px] font-bold min-w-[40px] text-center" style={{ color: "var(--color-text-primary)" }}>
+                {goal.morningPercent ?? 35}%
+              </span>
+              <motion.button
+                type="button" whileTap={{ scale: 0.9 }}
+                onClick={() => handlePercentAdjust("morningPercent", 5)}
+                className="w-7 h-7 rounded-full border-[1.5px] flex items-center justify-center"
+                style={{ borderColor: "var(--lifeflow-primary)", background: "var(--color-surface-card)" }}
+              >
+                <PlusIcon className="w-3.5 h-3.5" style={{ color: "var(--lifeflow-primary)" }} />
+              </motion.button>
+            </div>
+          </div>
+          <div className="flex items-center justify-between h-10">
+            <span className="text-[15px]" style={{ color: "var(--color-text-primary)" }}>下午</span>
+            <div className="flex items-center gap-3">
+              <motion.button
+                type="button" whileTap={{ scale: 0.9 }}
+                onClick={() => handlePercentAdjust("afternoonPercent", -5)}
+                className="w-7 h-7 rounded-full border-[1.5px] flex items-center justify-center"
+                style={{ borderColor: "var(--lifeflow-primary)", background: "var(--color-surface-card)" }}
+              >
+                <MinusIcon className="w-3.5 h-3.5" style={{ color: "var(--lifeflow-primary)" }} />
+              </motion.button>
+              <span className="text-[16px] font-bold min-w-[40px] text-center" style={{ color: "var(--color-text-primary)" }}>
+                {goal.afternoonPercent ?? 40}%
+              </span>
+              <motion.button
+                type="button" whileTap={{ scale: 0.9 }}
+                onClick={() => handlePercentAdjust("afternoonPercent", 5)}
+                className="w-7 h-7 rounded-full border-[1.5px] flex items-center justify-center"
+                style={{ borderColor: "var(--lifeflow-primary)", background: "var(--color-surface-card)" }}
+              >
+                <PlusIcon className="w-3.5 h-3.5" style={{ color: "var(--lifeflow-primary)" }} />
+              </motion.button>
+            </div>
+          </div>
+          <div className="flex items-center justify-between h-10">
+            <span className="text-[15px]" style={{ color: "var(--color-text-primary)" }}>晚上（睡前2h前）</span>
+            <span className="text-[16px] font-bold min-w-[40px] text-right" style={{ color: "var(--color-text-secondary)" }}>
+              {100 - (goal.morningPercent ?? 35) - (goal.afternoonPercent ?? 40)}%
+            </span>
+          </div>
+          <p className="text-[11px] mt-1" style={{ color: "var(--color-text-disabled)" }}>
+            晚上占比自动补齐（总和 100%）；睡前 2 小时内不计入目标
+          </p>
         </motion.div>
       </div>
 
@@ -486,7 +513,7 @@ export default function WaterPage() {
           }}
         >
           <h2 className="text-[17px] font-semibold mb-3" style={{ color: "var(--color-text-primary)" }}>
-            饮水历史（近 30 天）
+            饮水历史（近 {DAYS_HISTORY} 天）
           </h2>
 
           {historyByDay.length === 0 ? (
@@ -496,15 +523,16 @@ export default function WaterPage() {
                 还没有饮水记录
               </p>
               <p className="text-[12px] mt-1" style={{ color: "var(--color-text-disabled)" }}>
-                请从首页「饮水提醒」开启
+                点击上方「喝了一杯」开始记录
               </p>
             </div>
           ) : (
             <div className="flex flex-col max-h-[600px] overflow-y-auto">
               {historyByDay.map((day) => {
                 const isExpanded = expandedDate === day.date;
+                const dayPct = Math.min(100, Math.round((day.amount / dailyTarget) * 100));
                 return (
-                  <Fragment key={day.date}>
+                  <div key={day.date}>
                     {/* 汇总行 */}
                     <div
                       className="flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer active:opacity-70"
@@ -518,14 +546,14 @@ export default function WaterPage() {
                         <div
                           className="h-full rounded-full transition-all"
                           style={{
-                            width: `${Math.min(100, (day.completed / (day.total || 1)) * 100)}%`,
+                            width: `${Math.min(100, dayPct)}%`,
                             background: "var(--lifeflow-primary)",
-                            opacity: day.completed === 0 ? 0.3 : 0.7,
+                            opacity: day.amount === 0 ? 0.3 : 0.7,
                           }}
                         />
                       </div>
                       <span className="text-[12px] font-medium min-w-[70px] text-right" style={{ color: "var(--color-text-secondary)" }}>
-                        {day.completed}/{day.total} · {day.totalMl}ml
+                        {day.amount}ml
                       </span>
                       <motion.div
                         animate={{ rotate: isExpanded ? 90 : 0 }}
@@ -544,41 +572,23 @@ export default function WaterPage() {
                         transition={{ duration: 0.2, ease: "easeInOut" }}
                       >
                         <div className="flex flex-col gap-1 pb-2 pl-3">
-                          {day.items.length === 0 ? (
+                          {day.logs.length === 0 ? (
                             <p className="text-[12px] py-2" style={{ color: "var(--color-text-disabled)" }}>
-                              该日暂无饮水记录
+                              该日暂无记录
                             </p>
                           ) : (
-                            day.items.map((item) => (
+                            day.logs.map((log, idx) => (
                               <div
-                                key={item.id}
+                                key={`${log.id}-${idx}`}
                                 className="flex items-center gap-2.5 py-2 px-3 rounded-xl"
                                 style={{ background: "var(--lifeflow-muted)" }}
                               >
-                                <button
-                                  type="button"
-                                  onClick={() => handleToggle(item.id!, item.isCompleted, day.date)}
-                                  className="w-[18px] h-[18px] rounded-full border-2 flex items-center justify-center shrink-0 active:scale-90 transition-transform"
-                                  style={{
-                                    borderColor: item.isCompleted ? "var(--lifeflow-primary)" : "var(--lifeflow-border)",
-                                    background: item.isCompleted ? "var(--lifeflow-primary)" : "transparent",
-                                  }}
-                                >
-                                  {item.isCompleted && (
-                                    <Check className="w-3 h-3 text-white" strokeWidth={3} />
-                                  )}
-                                </button>
-                                <span
-                                  className="text-[13px] flex-1"
-                                  style={{
-                                    color: item.isCompleted ? "var(--color-text-disabled)" : "var(--color-text-primary)",
-                                    textDecoration: item.isCompleted ? "line-through" : "none",
-                                  }}
-                                >
-                                  {item.title || "喝口水然后动一动不要久坐"}
+                                <Droplets className="w-3.5 h-3.5 shrink-0" style={{ color: "var(--lifeflow-primary)" }} />
+                                <span className="text-[13px] flex-1" style={{ color: "var(--color-text-primary)" }}>
+                                  {log.time}
                                 </span>
                                 <span className="text-[12px]" style={{ color: "var(--color-text-secondary)" }}>
-                                  {item.plannedStart}
+                                  +{log.amount}ml
                                 </span>
                               </div>
                             ))
@@ -586,7 +596,7 @@ export default function WaterPage() {
                         </div>
                       </motion.div>
                     )}
-                  </Fragment>
+                  </div>
                 );
               })}
             </div>

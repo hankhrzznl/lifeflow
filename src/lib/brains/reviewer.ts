@@ -193,47 +193,40 @@ function formatChange(changePercent: number): string {
 // ============================================================
 
 interface WaterStats {
-  total: number;
-  completed: number;
-  days: number;
-  hourlyCompletions: Record<string, number>;
-  hourlyTotal: Record<string, number>;
-  dailyCups: Record<string, number>;
-  dailyCompleted: Record<string, number>;
+  totalMl: number;                        // 区间总 ml
+  days: number;                           // 区间天数
+  dailyTarget: number;                    // 每日目标 ml（来自 WaterGoal）
+  hourlyMl: Record<string, number>;       // 按小时 ml（时段分布）
+  dailyMl: Record<string, number>;        // 每日 ml
+  dailyRecords: Record<string, number>;   // 每日饮水记录次数
 }
 
 async function getWaterData(range: DateRange): Promise<WaterStats> {
   try {
-    const items = await daylogDB.items
-      .where("date")
-      .between(range.start, range.end, true, true)
-      .filter((i: any) => i.sourceType === "water")
-      .toArray();
+    // T15：饮水复盘统一走唯一流水源 waterLogs（hourly 待办已废弃）
+    const logs = await healthDB.waterLogs.where("date").between(range.start, range.end, true, true).toArray();
     const days = daysInRange(range.start, range.end);
-    const hourlyCompletions: Record<string, number> = {};
-    const hourlyTotal: Record<string, number> = {};
-    const dailyCups: Record<string, number> = {};
-    const dailyCompleted: Record<string, number> = {};
-    for (const item of items) {
-      const h = item.plannedStart ? item.plannedStart.split(":")[0] : "00";
-      hourlyTotal[h] = (hourlyTotal[h] || 0) + 1;
-      if (item.isCompleted) {
-        hourlyCompletions[h] = (hourlyCompletions[h] || 0) + 1;
-      }
-      dailyCups[item.date] = (dailyCups[item.date] || 0) + 1;
-      if (item.isCompleted) dailyCompleted[item.date] = (dailyCompleted[item.date] || 0) + 1;
+    const hourlyMl: Record<string, number> = {};
+    const dailyMl: Record<string, number> = {};
+    const dailyRecords: Record<string, number> = {};
+    let totalMl = 0;
+    for (const l of logs) {
+      const amount = l.amount || 0;
+      totalMl += amount;
+      const hh = new Date(l.timestamp).getHours();
+      const key = String(hh).padStart(2, "0");
+      hourlyMl[key] = (hourlyMl[key] || 0) + amount;
+      dailyMl[l.date] = (dailyMl[l.date] || 0) + amount;
+      dailyRecords[l.date] = (dailyRecords[l.date] || 0) + 1;
     }
-    return {
-      total: items.length,
-      completed: items.filter((i: any) => i.isCompleted).length,
-      days,
-      hourlyCompletions,
-      hourlyTotal,
-      dailyCups,
-      dailyCompleted,
-    };
+    let dailyTarget = 2000;
+    try {
+      const goal = await healthDB.waterGoals.toArray();
+      if (goal[0]?.dailyTarget) dailyTarget = goal[0].dailyTarget;
+    } catch { /* keep default */ }
+    return { totalMl, days, dailyTarget, hourlyMl, dailyMl, dailyRecords };
   } catch {
-    return { total: 0, completed: 0, days: 1, hourlyCompletions: {}, hourlyTotal: {}, dailyCups: {}, dailyCompleted: {} };
+    return { totalMl: 0, days: 1, dailyTarget: 2000, hourlyMl: {}, dailyMl: {}, dailyRecords: {} };
   }
 }
 
@@ -549,11 +542,17 @@ class UnifiedReviewer {
   private _analyzeWater(
     fb: FindingBuilder, water: WaterStats, prevWater: WaterStats, period: ReviewPeriod,
   ) {
-    if (water.total === 0) return;
+    if (water.totalMl === 0) return;
 
-    const rate = water.total > 0 ? Math.round((water.completed / water.total) * 100) : 0;
-    const prevRate = prevWater.total > 0 ? Math.round((prevWater.completed / prevWater.total) * 100) : 0;
+    // 达标率：每日实际 ml ≥ 每日目标 的天数占比
+    const activeDays = Object.keys(water.dailyMl).length;
+    const okDays = Object.entries(water.dailyMl).filter(([, ml]) => (ml || 0) >= water.dailyTarget).length;
+    const rate = activeDays > 0 ? Math.round((okDays / activeDays) * 100) : 0;
+    const prevActiveDays = Object.keys(prevWater.dailyMl).length;
+    const prevOkDays = Object.entries(prevWater.dailyMl).filter(([, ml]) => (ml || 0) >= prevWater.dailyTarget).length;
+    const prevRate = prevActiveDays > 0 ? Math.round((prevOkDays / prevActiveDays) * 100) : 0;
     const change = rate - prevRate;
+    const mlDiff = water.totalMl - prevWater.totalMl;
 
     // 趋势
     fb.add({
@@ -561,26 +560,25 @@ class UnifiedReviewer {
       module: "water",
       moduleLabel: "饮水",
       type: change >= 0 ? "improvement" : "decline",
-      title: pick(["饮水完成率", "喝水达标情况", "水分摄入趋势"]),
+      title: pick(["饮水达标率", "喝水达标情况", "水分摄入趋势"]),
       description: pick([
-        `${periodLabel(period)}饮水完成率 ${rate}%${change >= 0 ? `，比${periodLabelPrev(period)}${change > 0 ? "提升" : ""} ${Math.abs(change)}%` : `，比${periodLabelPrev(period)}下降 ${Math.abs(change)}%`}。`,
-        `喝水打卡 ${rate}%${Math.abs(change) > 5 ? `，${change > 0 ? "有所进步" : "还需加把劲"}` : "，和上周差不多"}。`,
+        `${periodLabel(period)}饮水达标率 ${rate}%（每日 ${water.dailyTarget}ml）${change !== 0 ? `，${change > 0 ? "比" + periodLabelPrev(period) + "提升" : "比" + periodLabelPrev(period) + "下降"} ${Math.abs(change)}%` : ""}。`,
+        `喝水达标 ${rate}%${mlDiff !== 0 ? `，总摄入 ${mlDiff > 0 ? "增加" : "减少"} ${Math.abs(mlDiff)}ml` : "，和上周差不多"}。`,
       ]),
-      metric: { current: water.completed, previous: prevWater.completed, changePercent: change, unit: "杯" },
+      metric: { current: water.totalMl, previous: prevWater.totalMl, changePercent: mlDiff, unit: "ml" },
       trend: trendFromRate(rate),
       priority: Math.abs(change) + (rate < 50 ? 20 : 0) + (rate >= 80 ? 5 : 0),
     });
 
-    // 饮水黑洞时段
+    // 饮水薄弱时段（小时摄入显著偏低）
+    const hourEntries = Object.entries(water.hourlyMl);
+    const avgHourly = water.totalMl / Math.max(1, activeDays * 10);
     const holeHours: string[] = [];
     for (let h = 6; h <= 22; h++) {
       const hh = String(h).padStart(2, "0");
-      const total = water.hourlyTotal[hh] || 0;
-      if (total > 0) {
-        const completed = water.hourlyCompletions[hh] || 0;
-        if (completed / total < 0.3) {
-          holeHours.push(`${hh}:00`);
-        }
+      const ml = water.hourlyMl[hh] || 0;
+      if (ml > 0 && avgHourly > 0 && ml / activeDays < avgHourly * 0.3) {
+        holeHours.push(`${hh}:00`);
       }
     }
     if (holeHours.length > 0) {
@@ -589,25 +587,20 @@ class UnifiedReviewer {
         module: "water",
         moduleLabel: "饮水",
         type: "pattern",
-        title: "饮水黑洞时段",
+        title: "饮水薄弱时段",
         description: pick([
-          `你容易在 ${holeHours.slice(0, 3).join("、")} 时段忘记喝水，建议在这些时间点加个提醒。`,
-          `${holeHours.slice(0, 3).join("、")} 是你的饮水薄弱时段，试着在这些整点喝一杯。`,
+          `你容易在 ${holeHours.slice(0, 3).join("、")} 时段忘记喝水，建议在这些时段补充水分。`,
+          `${holeHours.slice(0, 3).join("、")} 是你的饮水薄弱时段，试着在这些时刻喝一杯。`,
         ]),
         trend: "down",
         priority: 30 + holeHours.length * 5,
-        action: "考虑在这些时段增加饮水提醒",
+        action: "可在饮水页查看三时段目标，按时段补充饮水",
       });
     }
 
-    // 达标天数
-    const okDays = Object.entries(water.dailyCups).filter(([d, c]) => {
-      const completed = water.dailyCompleted[d] || 0;
-      return c > 0 && completed / c >= 0.7;
-    }).length;
-    const totalActiveDays = Object.keys(water.dailyCups).length;
-    if (totalActiveDays > 0) {
-      const okRate = Math.round((okDays / totalActiveDays) * 100);
+    // 达标天数偏低
+    if (activeDays > 0) {
+      const okRate = Math.round((okDays / activeDays) * 100);
       if (okRate < 50) {
         fb.add({
           id: "",
@@ -616,12 +609,12 @@ class UnifiedReviewer {
           type: "pattern",
           title: "达标天数偏低",
           description: pick([
-            `${totalActiveDays} 天中只有 ${okDays} 天饮水达到 70% 完成率，需要提高饮水意识。`,
-            `喝水的天数还不够，${totalActiveDays} 天里仅 ${okDays} 天达标。`,
+            `${activeDays} 天中只有 ${okDays} 天达到 ${water.dailyTarget}ml 目标，需要提高饮水意识。`,
+            `喝水的天数还不够，${activeDays} 天里仅 ${okDays} 天达标。`,
           ]),
           trend: "down",
           priority: 25,
-          action: "试着每天设置固定的喝水时间",
+          action: "在饮水页按上午/下午/晚上时段目标分时补充",
         });
       }
     }
@@ -1039,19 +1032,13 @@ class UnifiedReviewer {
   ) {
     // 饮水 vs 睡眠：喝水达标日的入睡时间
     const waterOkDates = new Set(
-      Object.entries(data.water.dailyCups)
-        .filter(([d, c]) => {
-          const completed = data.water.dailyCompleted[d] || 0;
-          return c > 0 && completed / c >= 0.7;
-        })
+      Object.entries(data.water.dailyMl)
+        .filter(([, ml]) => (ml || 0) >= data.water.dailyTarget)
         .map(([d]) => d),
     );
     const waterNotOkDates = new Set(
-      Object.entries(data.water.dailyCups)
-        .filter(([d, c]) => {
-          const completed = data.water.dailyCompleted[d] || 0;
-          return c > 0 && completed / c < 0.7;
-        })
+      Object.entries(data.water.dailyMl)
+        .filter(([, ml]) => (ml || 0) > 0 && (ml || 0) < data.water.dailyTarget)
         .map(([d]) => d),
     );
 
@@ -1340,21 +1327,24 @@ class _OldReviewer {
 
   private async _reviewWater(range: DateRange): Promise<ReviewModuleSummary> {
     try {
-      const items = await daylogDB.items.where("date").between(range.start, range.end, true, true)
-        .filter((i: any) => i.sourceType === "water").toArray();
+      // T15：饮水统计统一走唯一流水源 waterLogs
+      const logs = await healthDB.waterLogs.where("date").between(range.start, range.end, true, true).toArray();
       const days = daysInRange(range.start, range.end);
-      const totalCups = items.length;
-      const completedCups = items.filter((i: any) => i.isCompleted).length;
-      const avgCups = days > 0 ? (totalCups / days).toFixed(1) : "0";
-      const rate = totalCups > 0 ? Math.round((completedCups / totalCups) * 100) : 0;
+      const totalMl = logs.reduce((s: number, l: any) => s + (l.amount || 0), 0);
+      const avgMl = days > 0 ? Math.round(totalMl / days) : 0;
       const byDate: Record<string, number> = {};
-      for (const item of items) byDate[item.date] = (byDate[item.date] || 0) + 1;
-      const target = 13;
-      const okDays = Object.values(byDate).filter(c => c >= target).length;
+      for (const l of logs) byDate[l.date] = (byDate[l.date] || 0) + (l.amount || 0);
+      let target = 2000;
+      try {
+        const goal = await healthDB.waterGoals.toArray();
+        if (goal[0]?.dailyTarget) target = goal[0].dailyTarget;
+      } catch { /* keep default */ }
+      const okDays = Object.values(byDate).filter(ml => ml >= target).length;
+      const rate = days > 0 ? Math.round((okDays / days) * 100) : 0;
       return {
         module: "water", icon: "Droplets", label: "饮水",
-        stats: { "总杯数": totalCups, "完成杯数": completedCups, "完成率": `${rate}%`, "日均杯数": avgCups, "达标天数": `${okDays}/${days}` },
-        highlights: [{ module: "water", label: "饮水完成率", value: `${rate}%`, trend: rate >= 80 ? "up" : rate >= 50 ? "stable" : "down" }],
+        stats: { "总饮水量": `${totalMl}ml`, "日均": `${avgMl}ml`, "达标天数": `${okDays}/${days}`, "达标率": `${rate}%` },
+        highlights: [{ module: "water", label: "饮水达标率", value: `${rate}%`, trend: rate >= 80 ? "up" : rate >= 50 ? "stable" : "down" }],
       };
     } catch { return { module: "water", icon: "Droplets", label: "饮水", stats: {}, highlights: [] }; }
   }

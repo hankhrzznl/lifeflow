@@ -349,6 +349,31 @@ LifeFlow v1.0，一个讲道理的生活助手。
 - 首页饮水按钮副标题显示：`已开启 · {todayWaterMl}/{dailyTarget} ml`
 - 饮水页「饮水历史（近 30 天）」ml 来自 waterLogs 按天聚合，杯数/待办完成数仍来自 daylog
 
+### T15 饮水时段目标制（v2.7+）— 替代每小时提醒
+
+- **每小时提醒已删除**（T15a）：`WaterReminderSheet` 组件移除、首页不再生成 hourly 待办；旧 `sourceType="water"` 的 daylog items 与关联 reminders 由 `ClientProviders` 一次性清理（幂等）
+- **三时段目标制**：上午 `[wakeStart, 12:00)` · 下午 `[12:00, 18:00)` · 晚上 `[18:00, wakeEnd-2h)`；**睡前 2 小时内为夜间**，不计入目标
+- **占比配置**：`WaterGoal.morningPercent/afternoonPercent/eveningPercent`（默认 35/40/25），晚上自动补齐 100%；时段目标 = 每日目标 × 占比
+- **流水口径（强化）**：每次饮水一条独立 waterLogs 记录（`amount`=单次杯量、`timestamp`=时刻）；**禁止**再出现「每日单条累加」写法；按 `timestamp` 归属时段聚合（`getWaterMlByPeriod`）
+- **录入入口**：饮水页「喝了一杯」→ `addWaterCup(date?, cupMl?)`（读 goal 杯量），饮水页与首页/长期主义同步刷新
+- **复盘口径**：`reviewer.ts` 饮水模块全量改读 waterLogs（`_analyzeWater` 达标判定 = 每日 ml ≥ dailyTarget，薄弱时段按 hourlyMl 相对均值）
+- **旧口径勘误**：上方 v2.4+ 节中「勾选同步 syncWaterLogOnToggle / AI 记水单条累加」均为 T15 前旧约定，T15 起不再适用（函数保留但无调用点）
+
+### T15 课堂节奏作息 45+5（v2.7+）
+
+- `RoutineType` 新增 `'focus'`（课堂节奏）：`splitFocusSlots(start,end)` 按「45 分钟上课 + 5 分钟休息」循环切分，末尾不足 45 分钟作为最后一节上课
+- `generateRoutineItems` 对 focus 模板生成多条 Items，`sourceId = ${r.id}#${i}` 序号化去重；休息 Item 专属文案「起身活动 · 顺便喝水」（防久坐方案X，不复用 water sourceType，**不承担饮水语义**）
+- focus 作息**不进 ScheduleTask**（`routineSync.ts` 对 `type==='focus'` 直接 return），仅落时间轴 Items
+- 作息管理页（/more/schedule/routines）表单含「类型」选择：普通作息 / 课堂节奏·45+5；删除子项时按 `sourceId === id || startsWith(id+"#")` 联动清除全部切分 Items
+- 饮水由独立流水与页面承载，作息时间轴仅做执行展示
+
+### T15 训练体系整合（v2.7+，T15b）— 训练中心单入口
+
+- **入口合并**：`/more/fitness` 升级为「训练中心」，顶层三 Tab：训练 / 体态拉伸 / 功法养生；`/more` 目录与长期主义卡片仅保留「训练中心」单入口
+- **组件抽取**：体态拉伸内容 → `src/components/fitness/PostureTab.tsx`、功法养生内容 → `src/components/fitness/WellnessTab.tsx`（均去掉独立 header，由 fitness 容器嵌入）
+- **路由兼容**：`/more/posture` → `redirect('/more/fitness?tab=posture')`、`/more/wellness` → `redirect('/more/fitness?tab=wellness')`；fitness 页用 `useEffect` 读 `?tab=` 初始化顶层 Tab（旧数据/深链不丢）
+- **数据不变**：三块数据模型不动（`workoutSessions` / `stretchLogs` / `wellnessLogs` 各写各表），仅 UI 容器合并；复盘模块 `wellness`/`posture` 仍独立分析
+
 ### 产品定位（v2.3+）
 
 - LIFEFLOW 定位为「目标驱动的个人管理系统」（Life OS），非待办清单

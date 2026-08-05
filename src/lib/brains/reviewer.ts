@@ -394,10 +394,54 @@ async function getGoalsData(range: DateRange) {
       .where("date")
       .between(range.start, range.end, true, true)
       .toArray();
+    const allKRs = await goalV2DB.goalV2KeyResults.toArray();
+    const rangeStartTs = new Date(range.start + "T00:00:00").getTime();
+
+    // 按目标聚合日行动与 KR（T17：目标级推进数据）
+    const daByGoal = new Map<string, (typeof dailyActions)[number][]>();
+    for (const da of dailyActions) {
+      const arr = daByGoal.get(da.goalId) || [];
+      arr.push(da);
+      daByGoal.set(da.goalId, arr);
+    }
+    const krByGoal = new Map<string, (typeof allKRs)[number][]>();
+    for (const kr of allKRs) {
+      const arr = krByGoal.get(kr.goalId) || [];
+      arr.push(kr);
+      krByGoal.set(kr.goalId, arr);
+    }
+
+    const perGoal = activeGoals.map(g => {
+      const gDAs = daByGoal.get(g.id) || [];
+      const gKRs = krByGoal.get(g.id) || [];
+      const totalDA = gDAs.length;
+      const completedDA = gDAs.filter(a => a.isCompleted).length;
+      const daRate = totalDA > 0 ? Math.round((completedDA / totalDA) * 100) : 0;
+      let krProgress = 0, krCount = 0, krDone = 0;
+      for (const kr of gKRs) {
+        if (kr.targetValue > 0) {
+          krProgress += Math.min(100, Math.round((kr.currentValue / kr.targetValue) * 100));
+          krCount++;
+          if (kr.currentValue >= kr.targetValue) krDone++;
+        }
+      }
+      return {
+        goalId: g.id,
+        title: g.title,
+        status: g.status,
+        progress: g.progress || 0,
+        createdInRange: g.createdAt >= rangeStartTs,
+        totalDA, completedDA, daRate,
+        krTotal: krCount, krDone,
+        krAvg: krCount > 0 ? Math.round(krProgress / krCount) : 0,
+        allKRDone: krCount > 0 && krDone === krCount,
+      };
+    });
+
+    // 整体聚合（兼容现有 finding）
     const totalDA = dailyActions.length;
     const completedDA = dailyActions.filter(a => a.isCompleted).length;
     const daRate = totalDA > 0 ? Math.round((completedDA / totalDA) * 100) : 0;
-    const allKRs = await goalV2DB.goalV2KeyResults.toArray();
     let krProgress = 0;
     let krCount = 0;
     for (const kr of allKRs) {
@@ -407,9 +451,9 @@ async function getGoalsData(range: DateRange) {
       }
     }
     const avgKrProgress = krCount > 0 ? Math.round(krProgress / krCount) : 0;
-    return { activeGoals: activeGoals.length, totalDA, completedDA, daRate, avgKrProgress };
+    return { activeGoals: activeGoals.length, totalDA, completedDA, daRate, avgKrProgress, perGoal };
   } catch {
-    return { activeGoals: 0, totalDA: 0, completedDA: 0, daRate: 0, avgKrProgress: 0 };
+    return { activeGoals: 0, totalDA: 0, completedDA: 0, daRate: 0, avgKrProgress: 0, perGoal: [] };
   }
 }
 
@@ -491,7 +535,7 @@ class UnifiedReviewer {
     this._analyzeGoals(fb, goals, prevGoals, period);
 
     // 跨模块关联
-    this._analyzeCrossModule(fb, { water, sleep, fitness, diet }, period);
+    this._analyzeCrossModule(fb, { water, sleep, fitness, diet, goals, schedule }, period);
 
     const allFindings = fb.getAll();
     const suggestions = this._generateSuggestions(allFindings, period);
@@ -989,7 +1033,7 @@ class UnifiedReviewer {
   private _analyzeGoals(
     fb: FindingBuilder, goals: any, prevGoals: any, period: ReviewPeriod,
   ) {
-    if (goals.activeGoals === 0 && goals.totalDA === 0) return;
+    if (goals.activeGoals === 0 && goals.totalDA === 0 && (goals.perGoal?.length || 0) === 0) return;
 
     const change = goals.daRate - prevGoals.daRate;
 
@@ -1021,13 +1065,81 @@ class UnifiedReviewer {
         priority: 15,
       });
     }
+
+    // ── T17：目标级推进洞察 ──
+    const perGoal: any[] = goals.perGoal || [];
+    if (perGoal.length === 0) return;
+
+    // ① 推进最快目标：周期内日行动完成率最高且至少完成 1 项
+    const progressed = perGoal.filter(g => g.completedDA >= 1);
+    if (progressed.length > 0) {
+      const fastest = [...progressed].sort((a, b) => b.daRate - a.daRate)[0];
+      fb.add({
+        id: "",
+        module: "goals",
+        moduleLabel: "目标",
+        type: "improvement",
+        title: "推进最快目标",
+        description: pick([
+          `「${fastest.title}」${periodLabel(period)}完成了 ${fastest.completedDA}/${fastest.totalDA} 个日行动（${fastest.daRate}%），推进最积极。`,
+          `目标「${fastest.title}」本周最活跃，日行动完成率 ${fastest.daRate}%。`,
+        ]),
+        metric: { current: fastest.completedDA, previous: 0, changePercent: 0, unit: "项" },
+        trend: "up",
+        priority: 20,
+      });
+    }
+
+    // ② 停滞目标：非周期内新建 + 周期内 DA=0 + KR 未全部达成
+    const stalled = perGoal.filter(g =>
+      !g.createdInRange && g.completedDA === 0 && !g.allKRDone
+    );
+    if (stalled.length > 0) {
+      const worst = [...stalled].sort((a, b) => b.totalDA - a.totalDA)[0];
+      const hasPlan = worst.totalDA > 0;
+      fb.add({
+        id: "",
+        module: "goals",
+        moduleLabel: "目标",
+        type: "decline",
+        title: "目标停滞",
+        description: pick([
+          hasPlan
+            ? `「${worst.title}」安排了 ${worst.totalDA} 个日行动但一个都没完成，目标推进停滞。`
+            : `「${worst.title}」${periodLabel(period)}没有任何日行动完成，进度停在 ${worst.progress}%。`,
+          `目标「${worst.title}」推进停滞${hasPlan ? `：${worst.totalDA} 个日行动全部未完成` : "，需要重新点燃"}。`,
+        ]),
+        metric: { current: worst.completedDA, previous: 0, changePercent: 0, unit: "项" },
+        trend: "down",
+        priority: 30 + (hasPlan ? 10 : 0),
+        action: hasPlan
+          ? `「${worst.title}」日行动安排过密，试着精简到每天 1-2 个核心行动`
+          : `「${worst.title}」已连续未推进，建议重新规划或暂时暂停`,
+      });
+    }
+
+    // ③ 目标完成里程碑：关键结果已全部达成
+    const milestone = perGoal.find(g => g.allKRDone);
+    if (milestone) {
+      fb.add({
+        id: "",
+        module: "goals",
+        moduleLabel: "目标",
+        type: "milestone",
+        title: "关键结果全部达成",
+        description: `「${milestone.title}」的全部关键结果已达成（${milestone.krDone}/${milestone.krTotal}），目标接近完成！`,
+        metric: { current: milestone.krDone, previous: 0, changePercent: 0, unit: "项" },
+        trend: "up",
+        priority: 40,
+      });
+    }
   }
 
   // ────────────── 跨模块关联 ──────────────
 
   private _analyzeCrossModule(
     fb: FindingBuilder,
-    data: { water: WaterStats; sleep: SleepStats; fitness: FitnessStats; diet: any },
+    data: { water: WaterStats; sleep: SleepStats; fitness: FitnessStats; diet: any; goals: any; schedule: any },
     period: ReviewPeriod,
   ) {
     // 饮水 vs 睡眠：喝水达标日的入睡时间
@@ -1075,6 +1187,34 @@ class UnifiedReviewer {
           trend: diff > 20 ? "down" : "stable",
           priority: 35,
           action: "保持饮水达标可能有助于改善睡眠",
+        });
+      }
+    }
+
+    // T17：目标推进率 vs 日程完成率联动
+    // 目标类事项（sourceType='goal' 的 daylog item）完成率明显低于整体日程 → 目标推进被挤占
+    const goalItems = (data.schedule?.items || []).filter((i: any) => i.sourceType === "goal");
+    const overallItems = data.schedule?.items || [];
+    if (goalItems.length >= 3 && overallItems.length >= 5) {
+      const goalDone = goalItems.filter((i: any) => i.isCompleted).length;
+      const goalRate = Math.round((goalDone / goalItems.length) * 100);
+      const overallDone = overallItems.filter((i: any) => i.isCompleted).length;
+      const overallRate = Math.round((overallDone / overallItems.length) * 100);
+      const gap = overallRate - goalRate;
+      if (gap >= 25) {
+        fb.add({
+          id: "",
+          module: "goals",
+          moduleLabel: "目标",
+          type: "correlation",
+          title: "目标事项被挤占",
+          description: pick([
+            `${periodLabel(period)}目标类事项完成率仅 ${goalRate}%，远低于整体日程的 ${overallRate}%。想推进目标，先把目标行动排进日程并优先完成。`,
+            `整体日程完成 ${overallRate}%，但目标相关事项只完成了 ${goalRate}%——目标行动容易被其他琐事挤掉。`,
+          ]),
+          trend: "down",
+          priority: 28,
+          action: "把目标日行动安排到一天中精力最好的时段，优先于其他琐事执行",
         });
       }
     }

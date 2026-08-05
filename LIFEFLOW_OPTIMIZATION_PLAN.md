@@ -231,7 +231,12 @@ LIFEFLOW 不是「待办清单」，而是 **目标驱动的个人管理系统�
 | T16-4 | /efficiency 系列页面下线：/efficiency、/efficiency/create、/efficiency/goals/[goalId]（+tasks 子页）、/efficiency/review（+Review 组件、efficiencyStore、v1-goal-migration、V1GoalMigrationDialog、components/efficiency 孤儿组件），proxy 精确重定向到 /efficiency-v2（排除保留的 /efficiency/schedule） | 删 15 文件 + proxy.ts + settings 页 + BottomTabBar | 无 | 站点内无 v1 目标页面可达；/efficiency/schedule 日程模块正常访问 | ✅ 已完成 |
 | T16-5 | v1 efficiencyDB 数据处置（**执行调研修正**）：4 表并非全删 —— `projects`/`phases` 物理删除（`表名: null` + version 19→20），21 项目数据随之删除；`goals`/`scheduleTasks` 表**保留**（training-plan-generator title 匹配、routineSync/日历/日程活跃依赖）但 upgrade 回调清空 v1 历史数据（goals 6 条删后自动重建）；efficiency.db.ts 删 Project/Phase 类型与 CRUD，initializeEfficiencyDB 移除 projects 播种；ClientProviders 移除 v1 旧任务清理逻辑 | efficiency.db.ts v20 + ClientProviders + 全局引用 | 6 目标清空（可重建）；21 项目已确认删除；scheduleTasks/phases 为 0 | projects/phases 表物理消失，无代码引用；goals/scheduleTasks 正常供训练体系/作息同步使用 | ✅ 已完成 |
 | T16-6 | 验证（typecheck + build + 浏览器走查：重定向/删库后无报错/AI 动作）+ GUIDE/PLAN 文档登记 + git 提交推送 | 全量 | — | 无回归，文档同步 | ✅ 已完成 |
-| T16-7 | （阶段 2）功能科学化深化选点（首页核心闭环 / 复盘系统 / 具体模块），阶段 1 完成后与用户确认 | 待选点 | 待定 | 待定 | ⬜ 待规划 |
+| T16-7 | （阶段 2）功能科学化深化选点（首页核心闭环 / 复盘系统 / 具体模块），阶段 1 完成后与用户确认 | 待选点 | 待定 | 待定 | ✅ 已完成（用户选定） |
+| T17-1 | 目标复盘数据层增强（`reviewer.ts` `getGoalsData`）：从「整体聚合值」升级为**目标级推进数据**——按 goal 聚合周期内日行动完成率/完成数、KR 当前达成情况（currentValue≥targetValue 计数）、active 目标 list；保留现有整体聚合以兼容现有 finding。注：GoalV2 progress 由引擎实时计算（goal-v2-engine.ts recalculateGoalProgress），**无历史快照**，故不做周期内 progress 差值 | `src/lib/brains/reviewer.ts` | 无（只读） | 返回结构含 per-goal 明细，现有 _analyzeGoals 不回归 | ✅ 已完成 |
+| T17-2 | 目标级推进洞察（`_analyzeGoals` 扩展）：①「推进最快目标」——周期内 DA 完成率最高且 ≥1 的目标（naming 具体目标名）；②「停滞目标」——active 目标周期内 DA=0 且 KR 未全部达成（给出「建议：减少日行动密度或暂停」action）；③「目标完成里程碑」——KR 已全部达成（currentValue≥targetValue）的目标；④ 跨模块：目标推进率 vs 日程完成率联动（目标类事项的完成拖累目标推进） | `src/lib/brains/reviewer.ts` | 无（只读） | 有目标数据时产出 ≥1 条目标级洞察（带具体目标名），无数据时静默跳过 | ✅ 已完成 |
+| T17-3 | 首页复盘洞察联动（`HomeReview.tsx`）：确认目标级洞察自然流入首页 Top 4 洞察流；「目标推进」洞察卡片点击跳转 `/efficiency-v2`（已有模块映射，核对生效） | `src/components/dashboard/HomeReview.tsx` | 无 | 首页洞察流出现目标级卡片，点击可达目标页 | ✅ 已完成（映射已生效，无需改动） |
+| T17-4 | 长期主义目标模块展示增强（`/longtermism` 复盘区 goals 模块）：目标级数据（推进最快/停滞目标名）注入模块洞察卡片。**走查发现并修复截断 bug**：次发现渲染 `finding.description.replace(/^.{0,4}/, "")` 会删掉描述前 4 字符（目标名「走查测试目标」被截成「试目标」、日期「2026-08-06」被截成「-08-06」）→ 移除该 hack 直接渲染完整 description | `src/app/longtermism/page.tsx` | 无 | 长期主义复盘目标卡片展示目标级信息且文案完整 | ✅ 已完成 |
+| T17-5 | 验证（typecheck + 浏览器走查：有目标数据的复盘输出目标级洞察、无目标时静默）+ GUIDE/PLAN 登记 + git 提交推送 | 全量 | — | 无回归，文档同步 | ✅ 已完成 |
 
 > 📌 **T13 验收标准勘误**：原定「数据库表数下降 30%+」口径有误——全库实为 10 个 `LifeFlow*` 库共 98 张表（含遗留 LifeFlowDB 主库 48 表等，非本任务范围），全库口径下删 7 张仅 -7.1%。实际成效以**涉及的两库**为准：效率库 6→4（-33.3%）、健康库 17→12（-29.4%）。deprecated 表清零即达标。
 

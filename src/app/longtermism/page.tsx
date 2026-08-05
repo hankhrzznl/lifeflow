@@ -473,7 +473,7 @@ export default function LongTermismPage() {
                             className="text-[12px] mt-1 leading-relaxed"
                             style={{ color: "var(--color-text-secondary)" }}
                           >
-                            {finding.title}：{finding.description.replace(/^.{0,4}/, "")}
+                            {finding.title}：{finding.description}
                           </p>
                         ))}
                       </div>

@@ -8,6 +8,7 @@ import { showToast } from "@/components/ui/Toast";
 import { dataExportService } from "@/lib/engine/DataExportService";
 import { getWaterGoal, updateWaterGoal } from "@/lib/db/health.db";
 import { goalV2DB } from "@/lib/db/goal-v2.db";
+import { daylogDB } from "@/lib/db/daylog.db";
 import { getUserSettings, saveUserSettings } from "@/lib/db";
 
 // ─── iOS Toggle Switch ────────────────────────────────────────
@@ -91,6 +92,8 @@ export default function SettingsPage() {
       await goalV2DB.goalV2Strategies.clear();
       await goalV2DB.goalV2WeeklyTasks.clear();
       await goalV2DB.goalV2DailyActions.clear();
+      // 同步清理日程中已同步的目标日行动（sourceType='goal'），避免孤儿事项残留
+      await daylogDB.items.where("sourceType").equals("goal").delete();
       setShowResetGoalsDialog(false);
       showToast({ type: "success", message: "所有目标数据已重置" });
     } catch {

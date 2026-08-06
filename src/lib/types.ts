@@ -1024,7 +1024,63 @@ export interface UserSettings {
   warnThreshold?: number;
   dangerThreshold?: number;
   medicineEnabled?: boolean;  // T18-6：吃药维修模式开关（settings 兜底，无条件时全站隐藏）
+  idealDayConfig?: IdealDayConfig; // T19：理想日蓝图配置
   createdAt: number;
+}
+
+// ==================== 理想日蓝图（T19） ====================
+
+/** 学习目标分配：主目标（省考）时长须 ≥ 次目标（四级）2 倍 */
+export interface IdealStudyConfig {
+  totalHours: number;            // 每日学习总时长（小时），默认 8
+  primaryGoalName: string;       // 主目标名称（省考）
+  primaryGoalHours: number;      // 主目标时长（小时）
+  secondaryGoalName: string;     // 次目标名称（四级）
+  secondaryGoalHours: number;    // 次目标时长（小时）
+}
+
+/** 理想日蓝图：把"理想的一天"固化为可排程的结构化配置 */
+export interface IdealDayConfig {
+  enabled: boolean;              // 是否启用理想日系统
+  sleepBedTime: string;          // 上床时间 "22:30"
+  sleepWakeTime: string;         // 起床时间 "06:00"
+  napTime: string;               // 午睡开始时间 "12:30"
+  napMinutes: number;            // 午睡时长（分钟），默认 30
+  wakeRoutineEnd: string;        // 洗漱+早餐完成时间 "07:00"
+  workoutStart: string;          // 健身开始时间 "07:00"
+  workoutEnd: string;            // 健身结束时间 "08:00"
+  studyStart: string;            // 学习开始时间 "08:30"
+  study: IdealStudyConfig;
+  waterTargetMl: number;         // 每日饮水目标（ml），默认 2000
+  leisureQuotaMinutes: number;   // 每日娱乐配额（分钟），默认 90
+  focusEnabled: boolean;         // 学习时段免打扰（执行引导）
+  quotaTrackEnabled: boolean;    // 娱乐配额超时追踪
+}
+
+/** 默认理想日蓝图（与用户确认的基线一致） */
+export function defaultIdealDayConfig(): IdealDayConfig {
+  return {
+    enabled: false,
+    sleepBedTime: "22:30",
+    sleepWakeTime: "06:00",
+    napTime: "12:30",
+    napMinutes: 30,
+    wakeRoutineEnd: "07:00",
+    workoutStart: "07:00",
+    workoutEnd: "08:00",
+    studyStart: "08:30",
+    study: {
+      totalHours: 8,
+      primaryGoalName: "2027 安徽省考",
+      primaryGoalHours: 5.5,
+      secondaryGoalName: "2026.12 英语四级",
+      secondaryGoalHours: 2.5,
+    },
+    waterTargetMl: 2000,
+    leisureQuotaMinutes: 90,
+    focusEnabled: true,
+    quotaTrackEnabled: true,
+  };
 }
 
 // ==================== 每日饮水 ====================

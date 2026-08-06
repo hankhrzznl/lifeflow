@@ -477,3 +477,14 @@ LifeFlow v1.0，一个讲道理的生活助手。
 - **eslint**：`eslint.config.mjs` 增加 `dist/**` 忽略（早期 Vite 产物含超大 JS 导致 formatter 崩溃）
 - **⚠️ 勿再引入**：任何新代码不得写入 `efficiencyDB.goals` 的 v1 语义数据（该表仅训练体系生成器专用）；不得再创建 `projects`/`phases` 表引用（类型已删）
 
+### 理想日系统（v2.9+，T19）— 理想的一天的行为闭环
+
+- **入口**：`/more/ideal-day` 配置页（「功能模块」→ 理想日蓝图），GUIDE 约束单一入口、430px 容器
+- **配置存储**：`userSettings.idealDayConfig`（IdealDayConfig，`src/lib/types.ts`）；读 `getIdealDayConfig`（合并默认值）/ 写 `saveIdealDayConfig`
+- **排程引擎**（`src/lib/ideal-day.ts`）：`buildStudySlots` 双目标学习分段（省考≥四级 2 倍，绕开午睡窗口）；`syncIdealDayRoutines` 写回作息模板（wake/nap/sleep 三型）；`isTrainingDay` 复用训练计划 `weeklyDays`（无计划回退 [1,3,5]）；`generateIdealDayItems` 幂等生成（`sourceType='ideal'`，sourceId=`ideal-study-{primary|secondary}-{i}` / `ideal-workout` / `ideal-leisure`）；`applyIdealDayBlueprint` 保存后自动排今起 7 天
+- **学习/训练/留白用独立 `sourceType='ideal'` 事项，不写 GoalV2**（避免污染目标系统、不删旧）；作息走模板链（`generateRoutineItems`）
+- **执行引导**（`src/lib/ideal-day-guide.ts`，`useIdealDayGuidance` hook）：块前 10 分钟提醒（学习/训练横幅）+ 自由时间执行意图弹窗（localStorage key `lifeflow_ideal_day_intention_{date}`）+ 娱乐配额超时卡片飘红（`overdue` prop：红底 #FFE4E2 + 左边框 #FF3B30）；纯页面内轮询，不依赖休眠的 reminder 调度
+- **达成率复盘**（`src/lib/brains/reviewer.ts` `_analyzeIdeal`）：四维 = 睡眠（夜间按时 + 午睡完成）/ 学习（ideal-study 块完成分钟）/ 饮水（waterLogs≥蓝图 waterTargetMl）/ 配额（leisure 块完成率），四维平均得整体达成率 + 薄弱维度发现；module=`ideal`（色 #FF2D55，icon Sparkles），首页 MODULE_ROUTES → `/more/ideal-day`，长期主义随 insights 自动展示
+- **数据清理**：蓝图关闭仅清今日之后的 ideal 事项（`clearFutureIdealItems`），历史记录保留
+- **⚠️ 勿新增**：勿把学习块写回 GoalV2 DA（已决策独立 ideal 来源）；勿在 effect 内同步 setState（react-hooks/set-state-in-effect lint）
+

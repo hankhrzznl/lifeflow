@@ -19,6 +19,7 @@ import { healthDB, getSleepLogs } from "@/lib/db/health.db";
 import { accountingDB } from "@/lib/db/accounting.db";
 import { lifeDB } from "@/lib/db/life.db";
 import { goalV2DB } from "@/lib/db/goal-v2.db";
+import { getIdealDayConfig } from "@/lib/ideal-day";
 
 // ============================================================
 // 类型定义
@@ -107,6 +108,7 @@ const MODULE_COLORS: Record<string, string> = {
   schedule: "#007AFF",
   medication: "#5856D6",
   goals: "#FF9500",
+  ideal: "#FF2D55",
 };
 
 const MODULE_ICONS: Record<string, string> = {
@@ -120,6 +122,7 @@ const MODULE_ICONS: Record<string, string> = {
   schedule: "Calendar",
   medication: "Pill",
   goals: "Target",
+  ideal: "Sparkles",
 };
 
 // ============================================================
@@ -386,6 +389,123 @@ async function getScheduleData(range: DateRange) {
   }
 }
 
+// ────────────── T19-4 理想日数据 ──────────────
+
+function minutesBetween(start: string, end: string): number {
+  const [sh, sm] = start.split(":").map(Number);
+  const [eh, em] = end.split(":").map(Number);
+  return Math.max(0, (eh * 60 + em) - (sh * 60 + sm));
+}
+
+interface IdealDayStats {
+  enabled: boolean;              // 理想日系统是否启用
+  days: number;
+  hasIdealData: boolean;         // 区间内是否有 ideal 事项
+  // 睡眠维度（夜间按时 + 午睡完成）
+  sleepOkDays: number;
+  sleepRecordDays: number;
+  // 学习维度（ideal-study 块完成分钟 / 计划分钟）
+  studyCompletedMin: number;
+  studyPlannedMin: number;
+  studyDays: number;
+  // 饮水维度（waterLogs ≥ 蓝图饮水目标）
+  waterOkDays: number;
+  waterTrackDays: number;
+  waterTargetMl: number;
+  // 配额维度（ideal-leisure 自由时间块完成率）
+  leisureOk: number;
+  leisureTotal: number;
+}
+
+async function getIdealDayData(range: DateRange): Promise<IdealDayStats> {
+  const empty: IdealDayStats = {
+    enabled: false, days: 1, hasIdealData: false,
+    sleepOkDays: 0, sleepRecordDays: 0,
+    studyCompletedMin: 0, studyPlannedMin: 0, studyDays: 0,
+    waterOkDays: 0, waterTrackDays: 0, waterTargetMl: 2000,
+    leisureOk: 0, leisureTotal: 0,
+  };
+  try {
+    const config = await getIdealDayConfig();
+    if (!config.enabled) return empty;
+
+    const [items, sleepLogs, waterLogs] = await Promise.all([
+      daylogDB.items.where("date").between(range.start, range.end, true, true).toArray(),
+      healthDB.sleepLogs.where("date").between(range.start, range.end, true, true).toArray(),
+      healthDB.waterLogs.where("date").between(range.start, range.end, true, true).toArray(),
+    ]);
+
+    // 午睡模板：routine 中 type='nap' 的项
+    let napRoutineIds = new Set<string>();
+    try {
+      const napRoutines = await daylogDB.routineTemplates.filter((r: any) => r.type === "nap").toArray();
+      napRoutineIds = new Set(napRoutines.map((r) => r.id));
+    } catch { /* 无午睡模板则仅按夜间计算 */ }
+
+    // 睡眠维度：夜间按时（sleepLog.isOnTime）+ 午睡完成（nap routine item 已完成）
+    const sleepOnTimeByDate = new Map<string, boolean>();
+    for (const l of sleepLogs as any[]) sleepOnTimeByDate.set(l.date, !!l.isOnTime);
+    const napDoneDates = new Set<string>();
+    for (const it of items as any[]) {
+      if (it.sourceType === "routine" && napRoutineIds.has(it.sourceId) && it.isCompleted) napDoneDates.add(it.date);
+    }
+    let sleepOkDays = 0;
+    for (const [date, onTime] of sleepOnTimeByDate) {
+      const hasNapItem = (items as any[]).some(
+        (it) => it.sourceType === "routine" && napRoutineIds.has(it.sourceId) && it.date === date,
+      );
+      const napOk = !hasNapItem || napDoneDates.has(date);
+      if (onTime && napOk) sleepOkDays++;
+    }
+
+    // 学习维度：ideal-study 块完成分钟占比
+    let studyCompletedMin = 0;
+    let studyPlannedMin = 0;
+    const studyDates = new Set<string>();
+    for (const it of items as any[]) {
+      if (it.sourceType === "ideal" && typeof it.sourceId === "string" && it.sourceId.startsWith("ideal-study")) {
+        const planned = minutesBetween(it.plannedStart, it.plannedEnd);
+        studyPlannedMin += planned;
+        if (it.isCompleted) studyCompletedMin += planned;
+        studyDates.add(it.date);
+      }
+    }
+
+    // 饮水维度：每日 waterLogs 总量 ≥ 蓝图目标
+    const waterByDate = new Map<string, number>();
+    for (const w of waterLogs as any[]) {
+      waterByDate.set(w.date, (waterByDate.get(w.date) || 0) + (w.amount || 0));
+    }
+    const waterTargetMl = config.waterTargetMl || 2000;
+    let waterOkDays = 0;
+    for (const ml of waterByDate.values()) if (ml >= waterTargetMl) waterOkDays++;
+
+    // 配额维度：ideal-leisure 自由时间块完成率
+    const leisureItems = (items as any[]).filter(
+      (it) => it.sourceType === "ideal" && it.sourceId === "ideal-leisure",
+    );
+    const leisureOk = leisureItems.filter((it) => it.isCompleted).length;
+
+    return {
+      enabled: true,
+      days: daysInRange(range.start, range.end),
+      hasIdealData: (items as any[]).some((it) => it.sourceType === "ideal"),
+      sleepOkDays,
+      sleepRecordDays: sleepOnTimeByDate.size,
+      studyCompletedMin,
+      studyPlannedMin,
+      studyDays: studyDates.size,
+      waterOkDays,
+      waterTrackDays: waterByDate.size,
+      waterTargetMl,
+      leisureOk,
+      leisureTotal: leisureItems.length,
+    };
+  } catch {
+    return empty;
+  }
+}
+
 async function getGoalsData(range: DateRange) {
   try {
     const goals = await goalV2DB.goalV2Goals.toArray();
@@ -517,6 +637,7 @@ class UnifiedReviewer {
       posture, prevPosture,
       schedule, prevSchedule,
       goals, prevGoals,
+      ideal, prevIdeal,
     ] = await this._fetchAllData(dateRange, prevRange);
 
     // 生成旧格式摘要（向后兼容）
@@ -533,6 +654,7 @@ class UnifiedReviewer {
     this._analyzePosture(fb, posture, prevPosture, period);
     this._analyzeSchedule(fb, schedule, prevSchedule, period);
     this._analyzeGoals(fb, goals, prevGoals, period);
+    this._analyzeIdeal(fb, ideal, prevIdeal, period);
 
     // 跨模块关联
     this._analyzeCrossModule(fb, { water, sleep, fitness, diet, goals, schedule }, period);
@@ -578,6 +700,7 @@ class UnifiedReviewer {
       getPostureData(range), getPostureData(prevRange),
       getScheduleData(range), getScheduleData(prevRange),
       getGoalsData(range), getGoalsData(prevRange),
+      getIdealDayData(range), getIdealDayData(prevRange),
     ]);
   }
 
@@ -1131,6 +1254,86 @@ class UnifiedReviewer {
         metric: { current: milestone.krDone, previous: 0, changePercent: 0, unit: "项" },
         trend: "up",
         priority: 40,
+      });
+    }
+  }
+
+  // ────────────── 理想日达成率（T19-4） ──────────────
+
+  private _analyzeIdeal(
+    fb: FindingBuilder, ideal: IdealDayStats, prevIdeal: IdealDayStats, period: ReviewPeriod,
+  ) {
+    if (!ideal.enabled || !ideal.hasIdealData) return;
+
+    // 四维达成率
+    const sleepRate = ideal.sleepRecordDays > 0 ? Math.round((ideal.sleepOkDays / ideal.sleepRecordDays) * 100) : 0;
+    const studyRate = ideal.studyPlannedMin > 0 ? Math.round((ideal.studyCompletedMin / ideal.studyPlannedMin) * 100) : 0;
+    const waterRate = ideal.waterTrackDays > 0 ? Math.round((ideal.waterOkDays / ideal.waterTrackDays) * 100) : 0;
+    const leisureRate = ideal.leisureTotal > 0 ? Math.round((ideal.leisureOk / ideal.leisureTotal) * 100) : 0;
+
+    // 整体达成率 = 有数据的维度取平均
+    const dims = [sleepRate, studyRate, waterRate, leisureRate].filter(r => r > 0);
+    const overall = dims.length > 0 ? Math.round(dims.reduce((s, r) => s + r, 0) / dims.length) : 0;
+
+    // 与上一周期对比
+    const prevSleepRate = prevIdeal.sleepRecordDays > 0 ? Math.round((prevIdeal.sleepOkDays / prevIdeal.sleepRecordDays) * 100) : 0;
+    const prevStudyRate = prevIdeal.studyPlannedMin > 0 ? Math.round((prevIdeal.studyCompletedMin / prevIdeal.studyPlannedMin) * 100) : 0;
+    const prevWaterRate = prevIdeal.waterTrackDays > 0 ? Math.round((prevIdeal.waterOkDays / prevIdeal.waterTrackDays) * 100) : 0;
+    const prevLeisureRate = prevIdeal.leisureTotal > 0 ? Math.round((prevIdeal.leisureOk / prevIdeal.leisureTotal) * 100) : 0;
+    const prevDims = [prevSleepRate, prevStudyRate, prevWaterRate, prevLeisureRate].filter(r => r > 0);
+    const prevOverall = prevDims.length > 0 ? Math.round(prevDims.reduce((s, r) => s + r, 0) / prevDims.length) : 0;
+    const change = prevDims.length > 0 ? overall - prevOverall : 0;
+
+    // 主发现：整体达成率
+    fb.add({
+      id: "",
+      module: "ideal",
+      moduleLabel: "理想日",
+      type: change >= 0 ? "improvement" : "decline",
+      title: pick(["理想日达成率", "理想的一天完成度", "理想日整体达成"]),
+      description: pick([
+        `${periodLabel(period)}理想日达成率 ${overall}%（睡眠 ${sleepRate}% · 学习 ${studyRate}% · 饮水 ${waterRate}% · 自由时间 ${leisureRate}%）${change !== 0 ? `，${change > 0 ? "比" + periodLabelPrev(period) + "提升" : "比" + periodLabelPrev(period) + "下降"} ${Math.abs(change)}%` : ""}。`,
+        `理想日整体达成 ${overall}%：睡眠 ${sleepRate}%、学习 ${studyRate}%、饮水 ${waterRate}%、自由时间 ${leisureRate}%。`,
+      ]),
+      metric: { current: overall, previous: prevOverall, changePercent: change, unit: "%" },
+      trend: trendFromRate(overall),
+      priority: Math.abs(change) + (overall < 60 ? 20 : 0) + (overall >= 80 ? 5 : 0),
+      action: overall < 60 ? "打开「理想日蓝图」看看哪个维度最弱，从最容易的一天做起" : undefined,
+    });
+
+    // 各维度薄弱提示
+    const weakDims: { label: string; rate: number }[] = [
+      ...(ideal.sleepRecordDays > 0 ? [{ label: "睡眠", rate: sleepRate }] : []),
+      ...(ideal.studyPlannedMin > 0 ? [{ label: "学习", rate: studyRate }] : []),
+      ...(ideal.waterTrackDays > 0 ? [{ label: "饮水", rate: waterRate }] : []),
+      ...(ideal.leisureTotal > 0 ? [{ label: "自由时间", rate: leisureRate }] : []),
+    ];
+    for (const w of weakDims) {
+      if (w.rate >= 60) continue;
+      const weakest = w.rate === Math.min(...weakDims.map(d => d.rate));
+      fb.add({
+        id: "",
+        module: "ideal",
+        moduleLabel: "理想日",
+        type: "pattern",
+        title: w.rate > 0 ? `${w.label}达成偏低` : `${w.label}维度缺失`,
+        description: pick([
+          w.rate > 0
+            ? `${periodLabel(period)}${w.label}维度达成率 ${w.rate}%${weakest ? "，是四维中最需要补的一块。" : "，可以再加强。"}`
+            : `${periodLabel(period)}${w.label}维度没有达成数据，理想日的闭环还没转起来。`,
+          w.rate > 0
+            ? `理想日「${w.label}」只完成了 ${w.rate}%${weakest ? "，这是当前最大的短板。" : "。"}`
+            : `理想日「${w.label}」维度暂未记录。`,
+        ]),
+        trend: w.rate >= 50 ? "stable" : "down",
+        priority: weakest ? 30 : 15,
+        action: w.label === "睡眠"
+          ? "固定 22:30 上床 + 12:30 午睡，先在睡眠页记录入睡时间"
+          : w.label === "学习"
+            ? "按蓝图学习时段排程，把学习块设为不可跳过"
+            : w.label === "饮水"
+              ? `按蓝图三时段饮水目标（${ideal.waterTargetMl}ml）按时补充`
+              : "自由时间块按时完成，避免刷视频超时",
       });
     }
   }

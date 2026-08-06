@@ -7,9 +7,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Check, Plus, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, CalendarDays, Clock,
   X, Target, AlertCircle, Pencil, Moon, Ellipsis, Wallet, Droplets, Timer, StickyNote,
+  Bell, Sparkles,
 } from "lucide-react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { getItemsByDateSorted, deleteItem, updateItem, addManualItem, generateRoutineItems, generateCourseItems, getItemsByScheduleDay, getWakeTime } from "@/lib/db/daylog.db";
+import { generateIdealDayItems } from "@/lib/ideal-day";
+import { useIdealDayGuidance } from "@/lib/ideal-day-guide";
 import { getSleepGoal } from "@/lib/db/health.db";
 import { addWaterLog } from "@/lib/db/health.db";
 import type { Item } from "@/lib/db/daylog.db";
@@ -154,12 +157,14 @@ export default function SchedulePage() {
 
   const isSelectedToday = selectedDate === currentScheduleDay;
 
-  // 自动生成作息/课程事项
+  // 自动生成作息/课程/理想日事项
   useEffect(() => {
     if (!selectedDate) return;
     (async () => {
       await generateRoutineItems(selectedDate);
       await generateCourseItems(selectedDate);
+      // T19-2：蓝图启用时按配置生成学习/训练/留白块
+      await generateIdealDayItems(selectedDate);
     })();
   }, [selectedDate]);
 
@@ -169,6 +174,26 @@ export default function SchedulePage() {
     [selectedDate, wakeTime],
     [] as Item[],
   );
+
+  // ── T19-3 执行引导：块前提醒 + 执行意图弹窗 + 娱乐配额超时 ──
+  const guide = useIdealDayGuidance(selectedDate ?? todayStr, items ?? []);
+  const overdueIds = useMemo(() => {
+    const set = new Set<string>();
+    if (guide.leisureItem && guide.leisureOverdue) set.add(guide.leisureItem.id);
+    return set;
+  }, [guide.leisureItem, guide.leisureOverdue]);
+  const [intentionInput, setIntentionInput] = useState("");
+  const [intentionOption, setIntentionOption] = useState("");
+  const handleCommitIntention = () => {
+    guide.commitIntention(intentionOption || intentionInput);
+    setIntentionInput("");
+    setIntentionOption("");
+  };
+  const handleDismissIntention = () => {
+    guide.dismissIntentionModal();
+    setIntentionInput("");
+    setIntentionOption("");
+  };
 
   // ── 今日焦点（T18-5：未完成事项按时间升序取前 5） ──
   const focusItems = useMemo(() => {
@@ -417,6 +442,26 @@ export default function SchedulePage() {
         </div>
       )}
 
+      {/* ===== T19-3 块前提醒横幅（理想日学习/训练块 10 分钟内） ===== */}
+      {guide.upcomingBlock && (
+        <div className="px-5 mb-2 mt-1">
+          <motion.div
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex items-center gap-2.5 px-4 py-3 rounded-[16px]"
+            style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)", borderLeft: "3px solid #F59E0B" }}
+          >
+            <Bell className="w-4 h-4 flex-shrink-0" style={{ color: "#F59E0B" }} />
+            <span className="text-[13px] font-medium flex-1 min-w-0 truncate" style={{ color: "var(--color-text-primary)" }}>
+              即将开始：{guide.upcomingBlock.item.title}
+            </span>
+            <span className="text-[12px] font-semibold tabular-nums shrink-0" style={{ color: "#F59E0B" }}>
+              {guide.upcomingBlock.minutesLeft > 0 ? `${guide.upcomingBlock.minutesLeft} 分钟后` : "现在"} · {guide.upcomingBlock.item.plannedStart}
+            </span>
+          </motion.div>
+        </div>
+      )}
+
       {/* ===== 周日历条 ===== */}
       <div className="px-5 mb-2 mt-2">
         <div
@@ -540,6 +585,21 @@ export default function SchedulePage() {
         </div>
       )}
 
+      {/* ===== T19-3 执行意图展示（自由时间进行中） ===== */}
+      {guide.inLeisureBlock && guide.todayIntention && (
+        <div className="px-4 mb-2">
+          <div
+            className="flex items-center gap-2.5 px-4 rounded-xl"
+            style={{ height: 40, background: "linear-gradient(135deg, rgba(139,92,246,0.12), rgba(99,102,241,0.08))", border: "1px solid rgba(139,92,246,0.2)" }}
+          >
+            <Sparkles className="w-4 h-4 flex-shrink-0" style={{ color: "#8B5CF6" }} />
+            <span className="text-[13px] font-medium flex-1 truncate" style={{ color: "var(--color-text-primary)" }}>
+              执行意图：{guide.todayIntention}
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* ===== 时间轴 ===== */}
       <div
         ref={timelineRef}
@@ -618,6 +678,7 @@ export default function SchedulePage() {
                     onFocus: handleQuickFocus,
                     onAccounting: handleQuickAccounting,
                     conflictItemIds,
+                    overdueIds,
                   })}
                 </div>
               </div>
@@ -840,6 +901,84 @@ export default function SchedulePage() {
         )}
       </AnimatePresence>
 
+      {/* ===== T19-3 执行意图弹窗（自由时间开始） ===== */}
+      <AnimatePresence>
+        {guide.showIntentionModal && guide.leisureItem && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={handleDismissIntention}
+              className="fixed inset-0 z-50 bg-black/40"
+            />
+            <motion.div
+              initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
+              transition={{ duration: 0.4, ease: [0.32, 0.72, 0, 1] }}
+              className="fixed left-0 right-0 bottom-0 z-[60] rounded-t-[20px] max-w-[430px] mx-auto"
+              style={{
+                backgroundColor: "var(--color-surface-card)",
+                paddingBottom: "env(safe-area-inset-bottom)",
+              }}
+            >
+              <div className="flex justify-center pt-2 pb-3">
+                <div className="w-9 h-1 rounded-full bg-[#D4D4D4]" />
+              </div>
+              <div className="px-5 pb-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-[20px] font-bold flex items-center gap-2" style={{ color: "var(--color-text-primary)" }}>
+                    <Sparkles className="w-5 h-5" style={{ color: "#8B5CF6" }} />
+                    自由时间开始
+                  </h3>
+                  <button
+                    onClick={handleDismissIntention}
+                    className="w-8 h-8 rounded-full flex items-center justify-center"
+                    style={{ background: "var(--lifeflow-muted)" }}
+                    aria-label="暂不设置"
+                  >
+                    <X className="w-4 h-4" style={{ color: "var(--color-text-secondary)" }} />
+                  </button>
+                </div>
+                <p className="text-[13px] mb-4 leading-relaxed" style={{ color: "var(--color-text-secondary)" }}>
+                  接下来 {timeDiff(guide.leisureItem.plannedStart, guide.leisureItem.plannedEnd)} 分钟留给自己。
+                  先写下执行意图（“如果…那么…”），避免打开短视频就停不下来。
+                </p>
+                <div className="flex gap-2 mb-3">
+                  {["运动", "娱乐", "社交"].map((opt) => (
+                    <button
+                      key={opt}
+                      type="button"
+                      onClick={() => setIntentionOption(intentionOption === opt ? "" : opt)}
+                      className="flex-1 py-2.5 rounded-xl text-[14px] font-medium active:opacity-80"
+                      style={{
+                        background: intentionOption === opt ? "var(--lifeflow-primary)" : "var(--lifeflow-background)",
+                        color: intentionOption === opt ? "#fff" : "var(--color-text-primary)",
+                        border: intentionOption === opt ? "none" : "1px solid var(--lifeflow-border)",
+                      }}
+                    >
+                      {opt}
+                    </button>
+                  ))}
+                </div>
+                <input
+                  value={intentionInput}
+                  onChange={(e) => setIntentionInput(e.target.value)}
+                  placeholder="或输入自定义执行意图…"
+                  className="w-full px-4 py-3 rounded-xl text-[15px] outline-none mb-4"
+                  style={{ backgroundColor: "var(--lifeflow-background)", color: "var(--color-text-primary)" }}
+                />
+                <button
+                  onClick={handleCommitIntention}
+                  disabled={!intentionOption && !intentionInput.trim()}
+                  className="w-full py-3.5 rounded-full text-white text-[16px] font-semibold active:opacity-90 disabled:opacity-40"
+                  style={{ background: "var(--lifeflow-primary)" }}
+                >
+                  确认执行意图
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
       <div className="h-4" />
     </div>
   );
@@ -864,9 +1003,10 @@ function renderSlotItems(args: {
   onFocus: (item: Item) => void;
   onAccounting: (item: Item) => void;
   conflictItemIds: Set<string>;
+  overdueIds: Set<string>;
 }) {
   const { items, hourLabel, isPastDate, expanded, onToggleExpand, onToggle, onDelete, onCalibrate, onNote,
-    expandedItemId, setExpandedItemId, onWater, onFocus, onAccounting, conflictItemIds } = args;
+    expandedItemId, setExpandedItemId, onWater, onFocus, onAccounting, conflictItemIds, overdueIds } = args;
   if (items.length === 0) return null;
 
   const sorted = [...items].sort((a, b) => a.plannedStart.localeCompare(b.plannedStart));
@@ -893,6 +1033,7 @@ function renderSlotItems(args: {
             onFocus={() => onFocus(item)}
             onAccounting={() => onAccounting(item)}
             hasConflict={conflictItemIds.has(item.id)}
+            overdue={overdueIds.has(item.id)}
           />
         );
       })}
@@ -942,6 +1083,7 @@ function ItemCard({
   onFocus,
   onAccounting,
   hasConflict,
+  overdue,
 }: {
   item: Item;
   hourLabel: string;
@@ -956,6 +1098,7 @@ function ItemCard({
   onFocus: () => void;
   onAccounting: () => void;
   hasConflict?: boolean;
+  overdue?: boolean;
 }) {
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -1062,6 +1205,11 @@ function ItemCard({
           {isHistoryUncompleted && (
             <span className="text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0" style={{ background: "#FF3B3020", color: "#FF3B30" }}>
               未完成
+            </span>
+          )}
+          {overdue && !item.isCompleted && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0" style={{ background: "#FF3B3020", color: "#FF3B30" }}>
+              配额已超时
             </span>
           )}
         </div>

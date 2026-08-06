@@ -7,7 +7,7 @@ import {
   ChevronLeft, Droplets, Moon, Dumbbell, Utensils,
   Pill, Timer, Wallet, Star, CalendarRange, StickyNote, CalendarDays,
   Brain, Calendar, Bell, Settings, NotebookPen, FolderKanban, Clock,
-  Search, SearchX, X,
+  Search, SearchX, X, Sun,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMedicineMode } from "@/lib/use-medicine-mode";
@@ -29,6 +29,7 @@ const MODULE_GROUPS: { title: string; layer?: string; repair?: boolean; items: M
     title: "能量底座 E1",
     layer: "睡眠是一切地基 · 保证能量才能执行目标",
     items: [
+      { label: "理想日蓝图", path: "/more/ideal-day", icon: <Sun className="w-5 h-5" />, color: "#F59E0B", bgColor: "#FFFBEB" },
       { label: "睡眠", path: "/more/sleep", icon: <Moon className="w-5 h-5" />, color: "#6366F1", bgColor: "#EEF2FF" },
       { label: "作息模板", path: "/more/schedule/routines", icon: <Clock className="w-5 h-5" />, color: "#1E293B", bgColor: "#F1F5F9" },
       { label: "饮水", path: "/more/water", icon: <Droplets className="w-5 h-5" />, color: "#3B82F6", bgColor: "#EFF6FF" },

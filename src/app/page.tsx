@@ -11,6 +11,7 @@ import {
   Plus, X, Clock, ChevronDown, Clock9, Settings, Wallet, Brain, Star,
 } from "lucide-react";
 import { getUpcomingItems, addManualItem, updateItem, getItemsByDate } from "@/lib/db/daylog.db";
+import { useIdealDayGuidance } from "@/lib/ideal-day-guide";
 import type { Item } from "@/lib/db/daylog.db";
 import { updateDailyActionV2, goalV2DB } from "@/lib/db/goal-v2.db";
 import { recalculateGoalProgress } from "@/lib/goal-v2-engine";
@@ -98,6 +99,9 @@ export default function HomePage() {
   const uncorrectedItems = useMemo(() => {
     return (allTodayItems ?? []).filter(i => i.isCorrected === false && i.isCompleted === false);
   }, [allTodayItems]);
+
+  // ── T19-3 执行引导：理想日块前提醒（首页轻量接入） ──
+  const idealGuide = useIdealDayGuidance(today, allTodayItems ?? []);
 
   // ── 都矫正完了 handler ──
   const [correctingAll, setCorrectingAll] = useState(false);
@@ -364,6 +368,26 @@ export default function HomePage() {
 
       {/* ===== 新用户引导（T10：主线路径 目标→日程→复盘） ===== */}
       <OnboardingCard />
+
+      {/* ===== T19-3 块前提醒横幅（理想日学习/训练块 10 分钟内） ===== */}
+      {idealGuide.upcomingBlock && (
+        <div className="px-4 mb-3">
+          <motion.div
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex items-center gap-2.5 px-4 py-3 rounded-[16px]"
+            style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)", borderLeft: "3px solid #F59E0B" }}
+          >
+            <Bell className="w-4 h-4 flex-shrink-0" style={{ color: "#F59E0B" }} />
+            <span className="text-[13px] font-medium flex-1 min-w-0 truncate" style={{ color: "var(--color-text-primary)" }}>
+              即将开始：{idealGuide.upcomingBlock.item.title}
+            </span>
+            <span className="text-[12px] font-semibold tabular-nums shrink-0" style={{ color: "#F59E0B" }}>
+              {idealGuide.upcomingBlock.minutesLeft > 0 ? `${idealGuide.upcomingBlock.minutesLeft} 分钟后` : "现在"} · {idealGuide.upcomingBlock.item.plannedStart}
+            </span>
+          </motion.div>
+        </div>
+      )}
 
       {/* ===== E1 能量区（T18-3 今日驾驶舱 · 三合一健康卡） ===== */}
       <div className="px-4 mb-4">

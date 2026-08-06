@@ -115,6 +115,20 @@ export async function removeItemReminder(itemId: string): Promise<void> {
   }
 }
 
+/** 批量删除事项关联的 Reminder（清理孤儿提醒用，itemId 为空集合时直接返回） */
+export async function removeItemReminders(itemIds: string[]): Promise<void> {
+  if (itemIds.length === 0) return;
+  const idSet = new Set(itemIds);
+  const related = await db.reminders
+    .where("moduleType")
+    .equals("item")
+    .filter((r) => !!r.linkedModuleId && idSet.has(r.linkedModuleId))
+    .toArray();
+  if (related.length > 0) {
+    await db.reminders.bulkDelete(related.map((r) => r.id!).filter(Boolean));
+  }
+}
+
 /** 事项完成后自动标记 Reminder 完成 */
 export async function completeItemReminders(itemId: string): Promise<void> {
   const existing = await db.reminders

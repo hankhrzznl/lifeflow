@@ -309,11 +309,18 @@ export async function updateItem(id: string, updates: Partial<Item>): Promise<vo
 }
 
 export async function deleteItem(id: string): Promise<void> {
+  // 联动清理关联 Reminder（moduleType='item'），避免孤儿提醒残留
+  const { removeItemReminder } = await import("@/lib/reminderDefaults");
+  await removeItemReminder(id);
   await daylogDB.items.delete(id);
 }
 
 export async function deleteItemsByDate(dateStr: string): Promise<void> {
-  await daylogDB.items.where('date').equals(dateStr).delete();
+  const targets = await daylogDB.items.where('date').equals(dateStr).toArray();
+  if (targets.length === 0) return;
+  const { removeItemReminders } = await import("@/lib/reminderDefaults");
+  await removeItemReminders(targets.map(i => i.id));
+  await daylogDB.items.bulkDelete(targets.map(i => i.id));
 }
 
 // ─── Courses CRUD ────────────────────────────────────────────
@@ -612,12 +619,16 @@ export async function ensureModuleItem(params: {
   });
 }
 
-/** 删除某日指定来源的事项（用于撤回/修正） */
+/** 删除某日指定来源的事项（用于撤回/修正），联动清理关联 Reminder */
 export async function removeModuleItems(date: string, sourceType: SourceType, sourceId: string): Promise<void> {
-  await daylogDB.items
+  const targets = await daylogDB.items
     .where('date').equals(date)
     .filter(i => i.sourceType === sourceType && i.sourceId === sourceId)
-    .delete();
+    .toArray();
+  if (targets.length === 0) return;
+  const { removeItemReminders } = await import("@/lib/reminderDefaults");
+  await removeItemReminders(targets.map(i => i.id));
+  await daylogDB.items.bulkDelete(targets.map(i => i.id));
 }
 
 // ─── RoutineTemplateGroup CRUD v4 ──────────────────────────

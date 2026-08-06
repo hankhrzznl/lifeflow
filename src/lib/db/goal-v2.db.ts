@@ -159,9 +159,11 @@ export async function updateGoalV2(id: string, updates: Partial<GoalV2>): Promis
 async function removeDailyActionItems(actions: DailyActionV2[]): Promise<void> {
   for (const da of actions) {
     if (da.itemId) {
-      await daylogDB.items.delete(da.itemId);
+      // 复用 deleteItem 联动清理关联 Reminder
+      const { deleteItem } = await import("@/lib/db/daylog.db");
+      await deleteItem(da.itemId);
     } else {
-      // itemId 缺失时按 sourceType+sourceId 兜底清理
+      // itemId 缺失时按 sourceType+sourceId 兜底清理（removeModuleItems 内部已联动清理 Reminder）
       await removeModuleItems(da.date, 'goal', da.id);
     }
   }

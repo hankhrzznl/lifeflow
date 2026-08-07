@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, Moon, Sunrise, Dumbbell, GraduationCap, Droplets, Timer, Sun, AlarmClock, Check } from "lucide-react";
-import { getIdealDayConfig, saveIdealDayConfig, buildIdealDayPreview, buildStudySlots, formatMinutes, applyIdealDayBlueprint } from "@/lib/ideal-day";
-import { defaultIdealDayConfig, type IdealDayConfig } from "@/lib/types";
+import { ChevronLeft, Moon, Sunrise, Dumbbell, GraduationCap, Droplets, Timer, Sun, AlarmClock, Check, CalendarDays } from "lucide-react";
+import { getIdealDayConfig, saveIdealDayConfig, getScheduleMode, switchScheduleMode, buildIdealDayPreview, buildStudySlots, formatMinutes, applyIdealDayBlueprint } from "@/lib/ideal-day";
+import { defaultIdealDayConfig, type IdealDayConfig, type IdealDayMode } from "@/lib/types";
 import { showToast } from "@/components/ui/Toast";
 
 // ─── iOS Toggle Switch ────────────────────────────────────────
@@ -66,8 +66,12 @@ export default function IdealDayPage() {
   const router = useRouter();
   const [config, setConfig] = useState<IdealDayConfig>(defaultIdealDayConfig());
   const [loaded, setLoaded] = useState(false);
+  // T21-7：当前作息模式（暑假/开学）
+  const [mode, setMode] = useState<IdealDayMode>('summer');
+  const [switching, setSwitching] = useState(false);
 
   useEffect(() => {
+    getScheduleMode().then(setMode);
     getIdealDayConfig().then((c) => { setConfig(c); setLoaded(true); });
   }, []);
 
@@ -86,6 +90,24 @@ export default function IdealDayPage() {
     showToast({ type: "success", message: config.enabled ? "理想日蓝图已保存并排程" : "理想日蓝图已保存" });
   };
 
+  // T21-7：一键切换作息模式（保存当前编辑 → 切换 → 模板预置 → 自动重排）
+  const handleSwitchMode = async (next: IdealDayMode) => {
+    if (next === mode || switching || !loaded) return;
+    setSwitching(true);
+    try {
+      await saveIdealDayConfig(config);          // 静默保存当前编辑到当前模式槽位
+      const res = await switchScheduleMode(next); // 切换模式 + 开学模板预置 + 自动重排
+      const nextConfig = await getIdealDayConfig();
+      setConfig(nextConfig);
+      setMode(next);
+      showToast({ type: "success", message: res.applied ? `已切换至${next === 'school' ? '开学' : '暑假'}作息并重排` : "已处于该模式" });
+    } catch {
+      showToast({ type: "error", message: "切换失败，请重试" });
+    } finally {
+      setSwitching(false);
+    }
+  };
+
   return (
     <div className="min-h-screen max-w-[430px] mx-auto pb-[100px]" style={{ background: "var(--lifeflow-background)" }}>
       {/* Header */}
@@ -94,6 +116,44 @@ export default function IdealDayPage() {
           <ChevronLeft className="w-6 h-6" style={{ color: "var(--lifeflow-primary)" }} />
         </button>
         <h1 className="text-title-nav" style={{ color: "var(--color-text-primary)" }}>理想日蓝图</h1>
+      </div>
+
+      {/* 作息模式（T21-7 双作息：暑假/开学一键切换） */}
+      <div className="px-4 pt-6 pb-2">
+        <div className="rounded-[20px] overflow-hidden" style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}>
+          <div className="flex items-center justify-between w-full px-5 py-3.5">
+            <div className="flex items-center gap-3 min-w-0">
+              <CalendarDays className="w-5 h-5 shrink-0" style={{ color: "#F59E0B" }} />
+              <div className="min-w-0">
+                <p className="text-[16px] font-medium" style={{ color: "var(--color-text-primary)" }}>作息模式</p>
+                <p className="text-[12px] mt-0.5" style={{ color: "var(--color-text-secondary)" }}>暑假/开学两套作息，切换后自动重排今日起 7 天</p>
+              </div>
+            </div>
+          </div>
+          <div className="px-5 pb-4">
+            <div className="flex rounded-full p-1" style={{ background: "var(--lifeflow-muted)" }}>
+              {([
+                { key: 'summer', label: '暑假' },
+                { key: 'school', label: '开学' },
+              ] as const).map(({ key, label }) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => handleSwitchMode(key)}
+                  disabled={switching}
+                  className="flex-1 py-1.5 rounded-full text-[13px] font-medium transition-all"
+                  style={{
+                    background: mode === key ? "var(--color-surface-card)" : "transparent",
+                    color: mode === key ? "var(--color-text-primary)" : "var(--color-text-secondary)",
+                    boxShadow: mode === key ? "var(--shadow-card)" : "none",
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* 总开关 */}

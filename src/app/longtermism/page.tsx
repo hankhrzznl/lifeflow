@@ -1,63 +1,16 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
-import { useLiveQuery } from "dexie-react-hooks";
-import Link from "next/link";
+import { useState, useEffect } from "react";
 import {
-  Droplets, Moon, Wallet, Dumbbell, Utensils,
-  Heart, StretchHorizontal, Star, BarChart3,
-  ChevronDown, ChevronUp, TrendingUp, Brain,
-  Timer, Pill, Clock, StickyNote,
-  Calendar, FolderKanban,
+  ChevronDown, ChevronUp, TrendingUp,
 } from "lucide-react";
-import {
-  getWaterGoal, getSleepLogByDate, getWorkoutSessions,
-  getMedicines, getMedicineLogsByDate,
-  healthDB,
-} from "@/lib/db/health.db";
-import {
-  getTransactionsByMonth,
-} from "@/lib/db/accounting.db";
-import {
-  getDietLogsByDate, getWellnessLogsByDate, getWishes,
-  getHabits, getTotalFocusMinutes, getNotes,
-} from "@/lib/db/life.db";
 import { reviewerBrain } from "@/lib/brains/reviewer";
 import type { ReviewResult, ReviewPeriod } from "@/lib/brains/reviewer";
-import { ebbinghausDB } from "@/lib/db/ebbinghaus.db";
-import { getRoutines, getWakeTime, daylogDB, getCourses } from "@/lib/db/daylog.db";
-import { useMedicineMode } from "@/lib/use-medicine-mode";
 
 // ─── 工具函数 ────────────────────────────────────────────────
 
-function todayStr(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
-function yesterdayStr(): string {
-  const d = new Date();
-  d.setDate(d.getDate() - 1);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
-function monthStart(): { year: number; month: number } {
-  const d = new Date();
-  return { year: d.getFullYear(), month: d.getMonth() + 1 };
-}
-
-function weekStartDate(): Date {
-  const d = new Date();
-  const day = d.getDay();
-  const diff = d.getDate() - day;
-  d.setDate(diff);
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
-
-function formatAmount(n: number): string {
-  return n >= 0 ? `¥${n.toLocaleString()}` : `-¥${Math.abs(n).toLocaleString()}`;
-}
+// T20-3：长期主义复盘仅保留周/月粒度（原日/周/月/年 4 粒度，日/年已收敛）
+const REVIEW_PERIODS: ReviewPeriod[] = ["weekly", "monthly"];
 
 const PERIOD_LABELS: Record<ReviewPeriod, string> = {
   daily: "日",
@@ -73,59 +26,9 @@ const PERIOD_FULL_LABELS: Record<ReviewPeriod, string> = {
   yearly: "今年",
 };
 
-// ─── 卡片配置 ────────────────────────────────────────────────
-
-interface ModuleCard {
-  key: string;
-  label: string;
-  path: string;
-  icon: React.ReactNode;
-  color: string;
-  bgColor: string;
-}
-
-const MODULES: ModuleCard[] = [
-  { key: "water", label: "饮水", path: "/more/water", icon: <Droplets className="w-5 h-5" />, color: "#3B82F6", bgColor: "#EFF6FF" },
-  { key: "sleep", label: "睡眠", path: "/more/sleep", icon: <Moon className="w-5 h-5" />, color: "#6366F1", bgColor: "#EEF2FF" },
-  { key: "routine", label: "作息", path: "/more/schedule/routines", icon: <Clock className="w-5 h-5" />, color: "#1E293B", bgColor: "#F1F5F9" },
-  { key: "accounting", label: "记账", path: "/more/accounting", icon: <Wallet className="w-5 h-5" />, color: "#10B981", bgColor: "#ECFDF5" },
-  { key: "fitness", label: "训练", path: "/more/fitness", icon: <Dumbbell className="w-5 h-5" />, color: "#F97316", bgColor: "#FFF7ED" },
-  { key: "diet", label: "饮食", path: "/more/diet", icon: <Utensils className="w-5 h-5" />, color: "#EC4899", bgColor: "#FDF2F8" },
-  { key: "wellness", label: "养生", path: "/more/fitness?tab=wellness", icon: <Heart className="w-5 h-5" />, color: "#EF4444", bgColor: "#FEF2F2" },
-  { key: "posture", label: "体态拉伸", path: "/more/fitness?tab=posture", icon: <StretchHorizontal className="w-5 h-5" />, color: "#8B5CF6", bgColor: "#F5F3FF" },
-  { key: "wishes", label: "心愿", path: "/more/wishes", icon: <Star className="w-5 h-5" />, color: "#F59E0B", bgColor: "#FFFBEB" },
-  { key: "ebbinghaus", label: "记忆", path: "/more/ebbinghaus", icon: <Brain className="w-5 h-5" />, color: "#8B5CF6", bgColor: "#F5F3FF" },
-  { key: "focus", label: "专注", path: "/more/focus", icon: <Timer className="w-5 h-5" />, color: "#6366F1", bgColor: "#EEF2FF" },
-  { key: "habits", label: "习惯", path: "/more/habits", icon: <Clock className="w-5 h-5" />, color: "#14B8A6", bgColor: "#F0FDFA" },
-  { key: "medication", label: "吃药", path: "/more/medication", icon: <Pill className="w-5 h-5" />, color: "#0EA5E9", bgColor: "#F0F9FF" },
-  { key: "review", label: "复盘", path: "/more/review", icon: <FolderKanban className="w-5 h-5" />, color: "#10B981", bgColor: "#ECFDF5" },
-  { key: "notes", label: "备忘录", path: "/more/notes", icon: <StickyNote className="w-5 h-5" />, color: "#8B5CF6", bgColor: "#F5F3FF" },
-  { key: "courses", label: "课程表", path: "/more/schedule/courses", icon: <Calendar className="w-5 h-5" />, color: "#007AFF", bgColor: "#EFF6FF" },
-];
-
-// ─── 金字塔分层分组（T18-4） ─────────────────────────────────
-// E1 能量底座 · E2 目标执行 · E3/E4 成长储备（折叠）
-const LAYER_GROUPS: { layer: "E1" | "E2" | "E34"; title: string; keys: string[] }[] = [
-  { layer: "E1", title: "能量底座", keys: ["sleep", "routine", "water", "diet"] },
-  { layer: "E2", title: "目标执行", keys: ["habits", "focus"] },
-  { layer: "E34", title: "成长储备", keys: ["accounting", "fitness", "wellness", "posture", "review", "ebbinghaus", "wishes", "notes", "courses", "medication"] },
-];
-
 // ─── 主页面 ──────────────────────────────────────────────────
 
 export default function LongTermismPage() {
-  const today = todayStr();
-  const yesterday = yesterdayStr();
-  const { year, month } = monthStart();
-  const weekStart = weekStartDate();
-  const weekStartStr = `${weekStart.getFullYear()}-${String(weekStart.getMonth() + 1).padStart(2, "0")}-${String(weekStart.getDate()).padStart(2, "0")}`;
-  const nextWeekStart = new Date(weekStart);
-  nextWeekStart.setDate(nextWeekStart.getDate() + 7);
-  const weekEndStr = `${nextWeekStart.getFullYear()}-${String(nextWeekStart.getMonth() + 1).padStart(2, "0")}-${String(nextWeekStart.getDate()).padStart(2, "0")}`;
-
-  // T18-6：吃药维修模式（无条件时隐藏吃药卡）
-  const { active: medicineActive } = useMedicineMode();
-
   // ─── 复盘状态 ──────────────────────────────────────────────
 
   const [reviewPeriod, setReviewPeriod] = useState<ReviewPeriod>("weekly");
@@ -133,7 +36,6 @@ export default function LongTermismPage() {
   const [historicalReviews, setHistoricalReviews] = useState<ReviewResult[]>([]);
   const [reviewLoading, setReviewLoading] = useState(true);
   const [showHistory, setShowHistory] = useState(false);
-  const [e34Expanded, setE34Expanded] = useState(false); // T18-4：E3/E4 折叠区默认收起
 
   useEffect(() => {
     setReviewLoading(true);
@@ -148,239 +50,6 @@ export default function LongTermismPage() {
   }, [reviewPeriod]);
 
   const hasReviewData = currentReview?.hasData ?? false;
-
-  // ─── 模块数据查询 ──────────────────────────────────────────
-
-  // 1. 饮水（T15：唯一流水源 waterLogs + 时段目标制）
-  const waterGoal = useLiveQuery(() => getWaterGoal(), [], null);
-  const todayWaterLogs = useLiveQuery(
-    () => healthDB.waterLogs.where("date").equals(today).toArray(),
-    [today], [],
-  );
-
-  // 2. 睡眠
-  const sleepLog = useLiveQuery(() => getSleepLogByDate(yesterday), [yesterday], undefined);
-
-  // 3. 记账
-  const monthTransactions = useLiveQuery(
-    () => getTransactionsByMonth(year, month),
-    [year, month], []
-  );
-
-  // 4. 训练
-  const workoutSessions = useLiveQuery(() => getWorkoutSessions(7), [], []);
-
-  // 5. 饮食
-  const dietLogs = useLiveQuery(() => getDietLogsByDate(today), [today], []);
-
-  // 6. 养生
-  const wellnessLogs = useLiveQuery(() => getWellnessLogsByDate(today), [today], []);
-
-  // 7. 体态拉伸
-  const stretchLogs = useLiveQuery(
-    () => healthDB.stretchLogs
-      .where("date")
-      .between(weekStartStr, weekEndStr, true, false)
-      .toArray(),
-    [weekStartStr, weekEndStr], []
-  );
-
-  // 8. 心愿
-  const wishes = useLiveQuery(() => getWishes(), [], []);
-
-  // 9. 记忆
-  const ebbinghausDueCards = useLiveQuery(
-    async () => {
-      const decks = await ebbinghausDB.decks.toArray();
-      if (decks.length === 0) return 0;
-      const today = todayStr();
-      let total = 0;
-      for (const deck of decks) {
-        total += await ebbinghausDB.cards
-          .where('deckId').equals(deck.id)
-          .filter(c => !c.mastered && c.nextReviewDate <= today)
-          .count();
-      }
-      return total;
-    },
-    [], 0,
-  );
-  const ebbinghausDeckCount = useLiveQuery(
-    () => ebbinghausDB.decks.count(),
-    [], 0,
-  );
-
-  // 10. 专注
-  const todayFocusMinutes = useLiveQuery(
-    () => getTotalFocusMinutes(today),
-    [today], 0,
-  );
-
-  // 11. 习惯
-  const habits = useLiveQuery(() => getHabits(), [], []);
-
-  // 12. 吃药
-  const medicines = useLiveQuery(() => getMedicines(), [], []);
-  const medicineLogs = useLiveQuery(
-    () => getMedicineLogsByDate(today),
-    [today], [],
-  );
-
-  // 13. 备忘录
-  const notes = useLiveQuery(() => getNotes(), [], []);
-
-  // 14. 课程表
-  const courses = useLiveQuery(() => getCourses(), [], []);
-
-  // 15. 作息（起床时间 + 今日作息事项完成数）
-  const wakeTime = useLiveQuery(() => getWakeTime(), [], "07:00");
-  const routineItems = useLiveQuery(
-    async () => {
-      const items = await daylogDB.items.where("date").equals(today).toArray();
-      return items.filter(i => i.sourceType === "routine");
-    },
-    [today], [],
-  );
-
-  // ─── 卡片衍生数据 ──────────────────────────────────────────
-
-  const cardData = useMemo(() => {
-    // 饮水（T15：唯一流水源 waterLogs，时段目标制）
-    const completedWaterMl = todayWaterLogs.reduce((s, l) => s + (l.amount || 0), 0);
-    const dailyTargetMl = waterGoal?.dailyTarget || 0;
-
-    // 睡眠
-    let sleepTime = "";
-    if (sleepLog?.actualTime) {
-      sleepTime = sleepLog.actualTime.slice(0, 5);
-    }
-
-    // 记账
-    let monthlyIncome = 0;
-    let monthlyExpense = 0;
-    for (const t of monthTransactions) {
-      if (t.type === "income") monthlyIncome += t.amount;
-      else monthlyExpense += t.amount;
-    }
-
-    // 训练
-    const todaySessions = workoutSessions.filter(s => s.date === today);
-    const weekSessions = workoutSessions.length;
-
-    // 饮食
-    const mealTypes = new Set(dietLogs.map(d => d.mealType));
-    const mealCount = mealTypes.size;
-
-    // 养生
-    const gongfaCount = wellnessLogs.filter(w => w.type === "gongfa").length;
-    const tigangCount = wellnessLogs.filter(w => w.type === "tigang").length;
-
-    // 体态拉伸
-    const stretchDays = new Set(stretchLogs.map(s => s.date)).size;
-
-    // 心愿
-    const pendingWishes = wishes.filter(w => !w.completed).length;
-    const completedWishes = wishes.filter(w => w.completed).length;
-
-    // 专注
-    const focusMin = todayFocusMinutes || 0;
-
-    // 习惯
-    const habitsDone = habits.filter(h => h.days[today]).length;
-    const habitsTotal = habits.length;
-
-    // 吃药
-    const activeMedicines = medicines.filter(m => m.active).length;
-    const medicineTaken = medicineLogs.filter(l => l.taken).length;
-
-    return [
-      {
-        key: "water", icon: <Droplets className="w-5 h-5" />, color: "#3B82F6", bgColor: "#EFF6FF",
-        primary: dailyTargetMl > 0 ? `${completedWaterMl} / ${dailyTargetMl} ml` : "--",
-        guidance: dailyTargetMl > 0
-          ? (completedWaterMl >= dailyTargetMl ? "今日目标已完成"
-            : completedWaterMl > 0 ? `还差 ${dailyTargetMl - completedWaterMl} ml` : "去记录")
-          : "去记录",
-      },
-      {
-        key: "sleep", icon: <Moon className="w-5 h-5" />, color: "#6366F1", bgColor: "#EEF2FF",
-        primary: sleepTime || "--",
-        guidance: sleepTime ? `昨晚 ${sleepTime} 入睡` : "去记录",
-      },
-      {
-        key: "accounting", icon: <Wallet className="w-5 h-5" />, color: "#10B981", bgColor: "#ECFDF5",
-        primary: `本月 ${formatAmount(monthlyExpense)}`,
-        guidance: monthlyIncome > 0 ? `收入 ${formatAmount(monthlyIncome)}` : "暂无收入记录",
-      },
-      {
-        key: "fitness", icon: <Dumbbell className="w-5 h-5" />, color: "#F97316", bgColor: "#FFF7ED",
-        primary: todaySessions.length > 0 ? `今日 ${todaySessions.length} 次训练` : weekSessions > 0 ? `本周 ${weekSessions} 次` : "--",
-        guidance: todaySessions.length > 0 ? `本周累计 ${weekSessions} 次` : "去记录",
-      },
-      {
-        key: "diet", icon: <Utensils className="w-5 h-5" />, color: "#EC4899", bgColor: "#FDF2F8",
-        primary: dietLogs.length > 0 ? `${mealCount} / 4 餐` : "--",
-        guidance: dietLogs.length > 0 ? (mealCount < 4 ? "还有几餐没记录" : "今日三餐已记录") : "去记录",
-      },
-      {
-        key: "wellness", icon: <Heart className="w-5 h-5" />, color: "#EF4444", bgColor: "#FEF2F2",
-        primary: gongfaCount > 0 || tigangCount > 0
-          ? `${gongfaCount > 0 ? `功法 ${gongfaCount}` : ""}${gongfaCount > 0 && tigangCount > 0 ? " · " : ""}${tigangCount > 0 ? `提肛 ${tigangCount}` : ""}`
-          : "--",
-        guidance: gongfaCount > 0 || tigangCount > 0 ? "今日打卡完成" : "去记录",
-      },
-      {
-        key: "posture", icon: <StretchHorizontal className="w-5 h-5" />, color: "#8B5CF6", bgColor: "#F5F3FF",
-        primary: stretchDays > 0 ? `本周 ${stretchDays} 天` : "--",
-        guidance: stretchDays > 0 ? `共 ${stretchLogs.reduce((s, l) => s + l.sets, 0)} 组` : "去记录",
-      },
-      {
-        key: "wishes", icon: <Star className="w-5 h-5" />, color: "#F59E0B", bgColor: "#FFFBEB",
-        primary: pendingWishes > 0 ? `${pendingWishes} 个待实现` : "全部完成",
-        guidance: completedWishes > 0 ? `已完成 ${completedWishes} 个` : "添加新心愿",
-      },
-      {
-        key: "ebbinghaus", icon: <Brain className="w-5 h-5" />, color: "#8B5CF6", bgColor: "#F5F3FF",
-        primary: ebbinghausDueCards > 0 ? `${ebbinghausDueCards} 张待复习` : ebbinghausDeckCount > 0 ? "今日无待复习" : "--",
-        guidance: ebbinghausDeckCount > 0 ? `${ebbinghausDeckCount} 个卡组` : "创建卡组",
-      },
-      {
-        key: "focus", icon: <Timer className="w-5 h-5" />, color: "#6366F1", bgColor: "#EEF2FF",
-        primary: focusMin > 0 ? `今日 ${focusMin} 分钟` : "--",
-        guidance: focusMin > 0 ? "专注进行时" : "去记录",
-      },
-      {
-        key: "habits", icon: <Clock className="w-5 h-5" />, color: "#14B8A6", bgColor: "#F0FDFA",
-        primary: habitsTotal > 0 ? `今日 ${habitsDone} / ${habitsTotal} 个` : "--",
-        guidance: habitsTotal > 0 ? (habitsDone >= habitsTotal ? "全部完成" : "还有未打卡") : "新建习惯",
-      },
-      {
-        key: "medication", icon: <Pill className="w-5 h-5" />, color: "#0EA5E9", bgColor: "#F0F9FF",
-        primary: activeMedicines > 0 ? `已服 ${medicineTaken} 次` : "--",
-        guidance: activeMedicines > 0 ? `${activeMedicines} 种服用中` : "添加药品",
-      },
-      {
-        key: "review", icon: <FolderKanban className="w-5 h-5" />, color: "#10B981", bgColor: "#ECFDF5",
-        primary: hasReviewData ? "复盘已生成" : "--",
-        guidance: hasReviewData ? "查看完整洞察" : "去复盘",
-      },
-      {
-        key: "notes", icon: <StickyNote className="w-5 h-5" />, color: "#8B5CF6", bgColor: "#F5F3FF",
-        primary: notes.length > 0 ? `${notes.length} 条笔记` : "--",
-        guidance: notes.length > 0 ? "打开备忘录" : "新建笔记",
-      },
-      {
-        key: "courses", icon: <Calendar className="w-5 h-5" />, color: "#007AFF", bgColor: "#EFF6FF",
-        primary: courses.length > 0 ? `${courses.length} 门课程` : "--",
-        guidance: courses.length > 0 ? "查看课程表" : "添加课程",
-      },
-      {
-        key: "routine", icon: <Clock className="w-5 h-5" />, color: "#1E293B", bgColor: "#F1F5F9",
-        primary: routineItems.length > 0 ? `${wakeTime} 起床 · ${routineItems.length} 项作息` : `${wakeTime} 起床`,
-        guidance: routineItems.length > 0 ? "作息模板运行中" : "设置作息模板",
-      },
-    ];
-  }, [waterGoal, todayWaterLogs, sleepLog, monthTransactions, workoutSessions, dietLogs, wellnessLogs, stretchLogs, wishes, ebbinghausDueCards, ebbinghausDeckCount, today, yesterday, todayFocusMinutes, habits, medicines, medicineLogs, notes, courses, hasReviewData, wakeTime, routineItems]);
 
   return (
     <div
@@ -420,7 +89,7 @@ export default function LongTermismPage() {
               </span>
             </div>
             <div className="flex gap-1">
-              {(Object.entries(PERIOD_LABELS) as [ReviewPeriod, string][]).map(([key, label]) => (
+              {REVIEW_PERIODS.map((key) => (
                 <button
                   key={key}
                   onClick={() => setReviewPeriod(key)}
@@ -430,7 +99,7 @@ export default function LongTermismPage() {
                     color: reviewPeriod === key ? "#fff" : "var(--color-text-secondary)",
                   }}
                 >
-                  {label}
+                  {PERIOD_LABELS[key]}
                 </button>
               ))}
             </div>
@@ -574,122 +243,6 @@ export default function LongTermismPage() {
         </div>
       </div>
 
-      {/* ─── 金字塔分组模块卡片（T18-4） ───────────────────── */}
-      <div className="px-4 space-y-4">
-        {LAYER_GROUPS.map((group) => {
-          const keys = medicineActive ? group.keys : group.keys.filter(k => k !== "medication");
-          const cards = cardData.filter(c => keys.includes(c.key));
-          const isE1 = group.layer === "E1";
-          const isE34 = group.layer === "E34";
-          return (
-            <div key={group.layer}>
-              {/* 分组标题 */}
-              <div className="flex items-center gap-2 mb-2 px-0.5">
-                <span
-                  className="text-[11px] font-semibold px-1.5 py-0.5 rounded-md"
-                  style={{
-                    background: isE1 ? "var(--lifeflow-brand-50)" : "var(--lifeflow-muted)",
-                    color: isE1 ? "var(--lifeflow-primary)" : "var(--color-text-secondary)",
-                  }}
-                >
-                  {group.layer}
-                </span>
-                <span className="text-[12px] font-medium" style={{ color: "var(--color-text-primary)" }}>
-                  {group.title}
-                </span>
-                {isE34 && (
-                  <button
-                    type="button"
-                    onClick={() => setE34Expanded(v => !v)}
-                    className="ml-auto flex items-center gap-0.5 text-[11px] font-medium active:opacity-60"
-                    style={{ color: "var(--color-text-secondary)" }}
-                  >
-                    {e34Expanded ? "收起" : "展开"}
-                    <ChevronDown className={'w-3.5 h-3.5 transition-transform ' + (e34Expanded ? 'rotate-180' : '')} />
-                  </button>
-                )}
-              </div>
-
-              {/* E1 能量底座：2 列大卡突出显示；E3/E4 成长储备：默认折叠，展开后单列列表 */}
-              {isE1 ? (
-                <div className="grid grid-cols-2 gap-2.5">
-                  {cards.map((card) => {
-                    const mod = MODULES.find((m) => m.key === card.key)!;
-                    return (
-                      <Link
-                        key={card.key}
-                        href={mod.path}
-                        className="p-3.5 rounded-[16px] no-underline active:opacity-80 transition-opacity"
-                        style={{ background: card.bgColor }}
-                      >
-                        <div
-                          className="flex items-center justify-center shrink-0 mb-2"
-                          style={{
-                            width: 40, height: 40, borderRadius: 12,
-                            background: card.color + "1A", color: card.color,
-                          }}
-                        >
-                          {card.icon}
-                        </div>
-                        <span className="text-[11px] font-semibold tracking-[0.05em]" style={{ color: card.color }}>
-                          {mod.label}
-                        </span>
-                        <p className="text-[15px] font-bold mt-0.5 leading-tight truncate" style={{ color: "var(--color-text-primary)" }}>
-                          {card.primary}
-                        </p>
-                        <p className="text-[11px] mt-0.5 truncate" style={{ color: "var(--color-text-secondary)" }}>
-                          {card.guidance}
-                        </p>
-                      </Link>
-                    );
-                  })}
-                </div>
-              ) : isE34 && !e34Expanded ? null : (
-                /* E2 目标执行 / E3-E4 成长储备（展开后）：单列列表 */
-                <div className="space-y-2">
-                  {cards.map((card) => {
-                    const mod = MODULES.find((m) => m.key === card.key)!;
-                    return (
-                      <Link
-                        key={card.key}
-                        href={mod.path}
-                        className="flex items-center gap-3 p-3 rounded-[16px] no-underline active:opacity-80 transition-opacity"
-                        style={{ background: card.bgColor }}
-                      >
-                        <div
-                          className="flex items-center justify-center shrink-0"
-                          style={{
-                            width: 40, height: 40, borderRadius: 12,
-                            background: card.color + "1A", color: card.color,
-                          }}
-                        >
-                          {card.icon}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <span className="text-[11px] font-semibold tracking-[0.05em]" style={{ color: card.color }}>
-                            {mod.label}
-                          </span>
-                          <p className="text-[15px] font-semibold mt-0.5 leading-tight truncate" style={{ color: "var(--color-text-primary)" }}>
-                            {card.primary}
-                          </p>
-                          <p className="text-[11px] mt-0.5 truncate" style={{ color: "var(--color-text-secondary)" }}>
-                            {card.guidance}
-                          </p>
-                        </div>
-                        <div style={{ color: "var(--color-text-disabled)" }} className="shrink-0">
-                          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                            <path d="M6 4L10 8L6 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                          </svg>
-                        </div>
-                      </Link>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
     </div>
   );
 }

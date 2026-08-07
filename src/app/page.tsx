@@ -8,17 +8,21 @@ import { useLiveQuery } from "dexie-react-hooks";
 import {
   FolderKanban, Zap, Check, Bell,
   Droplets, Moon, Dumbbell, Sunrise,
-  Plus, X, Clock, ChevronDown, Clock9, Settings, Wallet, Brain, Star,
+  Plus, X, Clock, ChevronDown, Clock9, Settings, Wallet, Brain, Star, CalendarDays,
+  Repeat, Target,
 } from "lucide-react";
 import { getUpcomingItems, addManualItem, updateItem, getItemsByDate } from "@/lib/db/daylog.db";
 import { useIdealDayGuidance } from "@/lib/ideal-day-guide";
 import type { Item } from "@/lib/db/daylog.db";
 import { updateDailyActionV2, goalV2DB } from "@/lib/db/goal-v2.db";
+import { lifeDB } from "@/lib/db/life.db";
 import { recalculateGoalProgress } from "@/lib/goal-v2-engine";
 
 import { showToast } from "@/components/ui/Toast";
 import HomeReview from "@/components/dashboard/HomeReview";
 import OnboardingCard from "@/components/ui/OnboardingCard";
+import SleepRitualCard from "@/components/dashboard/SleepRitualCard";
+import ThreeThingsCard from "@/components/dashboard/ThreeThingsCard";
 import { getWaterGoal, healthDB, getSleepLogByDate } from "@/lib/db/health.db";
 import { getWakeTime } from "@/lib/db/daylog.db";
 
@@ -253,6 +257,17 @@ export default function HomePage() {
   // ── E1 能量区：起床时间（作息模板） ──
   const wakeTime = useLiveQuery(() => getWakeTime(), [], "07:00");
 
+  // ── T20-2 驾驶舱概览条：习惯数 / 目标数 ──
+  const habitCount = useLiveQuery(() => lifeDB.habits.count(), [], 0);
+  const activeGoalCount = useLiveQuery(
+    async () => {
+      const goals = await goalV2DB.goalV2Goals.toArray();
+      return goals.filter(g => g.status === "active" || !g.status).length;
+    },
+    [],
+    0,
+  );
+
   // ── E2 今日执行：目标日行动（GoalV2 每日行动） ──
   const todayGoalActions = useLiveQuery(
     () => goalV2DB.goalV2DailyActions.where("date").equals(today).toArray(),
@@ -369,6 +384,50 @@ export default function HomePage() {
       {/* ===== 新用户引导（T10：主线路径 目标→日程→复盘） ===== */}
       <OnboardingCard />
 
+      {/* ===== T20-2 驾驶舱概览条（习惯 X · 目标 Y） ===== */}
+      <div className="px-4 mb-3">
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, ease: "easeOut" }}
+          className="flex items-center rounded-[16px] p-2.5"
+          style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}
+        >
+          <Link
+            href="/more/habits"
+            className="flex-1 flex items-center gap-2.5 px-2 py-1.5 rounded-xl active:opacity-60 transition-opacity"
+          >
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "#F0FDF4" }}>
+              <Repeat className="w-[18px] h-[18px]" style={{ color: "#16A34A" }} />
+            </div>
+            <div>
+              <p className="text-[18px] font-bold leading-tight tabular-nums" style={{ color: "var(--color-text-primary)" }}>
+                {habitCount} <span className="text-[11px] font-medium" style={{ color: "var(--color-text-secondary)" }}>个习惯</span>
+              </p>
+              <p className="text-[11px] mt-0.5" style={{ color: "var(--color-text-secondary)" }}>每天一点，持续改变</p>
+            </div>
+          </Link>
+          <div className="w-px self-stretch mx-1" style={{ background: "var(--lifeflow-border)" }} />
+          <Link
+            href="/efficiency-v2"
+            className="flex-1 flex items-center gap-2.5 px-2 py-1.5 rounded-xl active:opacity-60 transition-opacity"
+          >
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "#FFF7ED" }}>
+              <Target className="w-[18px] h-[18px]" style={{ color: "#F97316" }} />
+            </div>
+            <div>
+              <p className="text-[18px] font-bold leading-tight tabular-nums" style={{ color: "var(--color-text-primary)" }}>
+                {activeGoalCount} <span className="text-[11px] font-medium" style={{ color: "var(--color-text-secondary)" }}>个目标</span>
+              </p>
+              <p className="text-[11px] mt-0.5" style={{ color: "var(--color-text-secondary)" }}>拆解到每天，稳步推进</p>
+            </div>
+          </Link>
+        </motion.div>
+      </div>
+
+      {/* ===== T21-4 今日三件事（自动生成 + 手动可调 + 联动进度） ===== */}
+      <ThreeThingsCard />
+
       {/* ===== T19-3 块前提醒横幅（理想日学习/训练块 10 分钟内） ===== */}
       {idealGuide.upcomingBlock && (
         <div className="px-4 mb-3">
@@ -484,8 +543,13 @@ export default function HomePage() {
                 {execDone}/{execTotal} 已完成
               </span>
             )}
-            <Link href="/efficiency/schedule" className="text-[12px] font-medium ml-2" style={{ color: "var(--color-text-secondary)" }}>
-              日程
+            <Link
+              href="/efficiency/schedule"
+              className="h-6 flex items-center gap-1 px-2 rounded-md ml-2 active:opacity-60"
+              style={{ background: "var(--lifeflow-brand-50)", color: "var(--lifeflow-primary)" }}
+            >
+              <CalendarDays className="w-3.5 h-3.5" />
+              <span className="text-[11px] font-medium">日程</span>
             </Link>
           </div>
 
@@ -667,6 +731,9 @@ export default function HomePage() {
           </motion.div>
         </div>
       )}
+
+      {/* ===== T21-3 睡前仪式（环境营造 → 倒计时 → 入睡打卡 + 渐进目标） ===== */}
+      <SleepRitualCard />
 
       {/* ===== 复盘洞察（底部） ===== */}
       <HomeReview />

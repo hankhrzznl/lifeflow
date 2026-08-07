@@ -4,14 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { TrendingUp } from "lucide-react";
 import { reviewerBrain } from "@/lib/brains/reviewer";
-import type { ReviewResult, ModuleInsight, ReviewPeriod } from "@/lib/brains/reviewer";
-
-// ─── 周期标签 ────────────────────────────────────────────────
-
-const PERIOD_OPTIONS: { key: ReviewPeriod; label: string }[] = [
-  { key: "daily", label: "日" },
-  { key: "weekly", label: "周" },
-];
+import type { ReviewResult, ModuleInsight } from "@/lib/brains/reviewer";
 
 // ============================================================
 // 模块路由
@@ -86,14 +79,14 @@ function InsightCard({ insight, onClick }: { insight: ModuleInsight; onClick: ()
 
 export default function HomeReview() {
   const router = useRouter();
-  const [period, setPeriod] = useState<ReviewPeriod>("daily");
   const [result, setResult] = useState<ReviewResult | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // T20-3：首页复盘固定日粒度（原 daily/weekly 切换已移除）
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    reviewerBrain.generateReview(period, 0).then((r) => {
+    reviewerBrain.generateReview("daily", 0).then((r) => {
       if (!cancelled) {
         setResult(r);
         setLoading(false);
@@ -102,7 +95,7 @@ export default function HomeReview() {
       if (!cancelled) setLoading(false);
     });
     return () => { cancelled = true; };
-  }, [period]);
+  }, []);
 
   const topInsights = result?.insights?.slice(0, 4) || [];
   const hasData = result?.hasData ?? false;
@@ -113,28 +106,16 @@ export default function HomeReview() {
         className="rounded-[16px] overflow-hidden"
         style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}
       >
-        {/* ── 标题行 + 周期切换 ── */}
+        {/* ── 标题行（固定日复盘） ── */}
         <div className="flex items-center justify-between px-4 pt-3.5 pb-2">
           <div className="flex items-center gap-2">
             <TrendingUp className="w-4 h-4" style={{ color: "var(--lifeflow-primary)" }} />
             <span className="text-[13px] font-semibold" style={{ color: "var(--color-text-primary)" }}>
-              复盘
+              今日复盘
             </span>
-          </div>
-          <div className="flex gap-1">
-            {PERIOD_OPTIONS.map((opt) => (
-              <button
-                key={opt.key}
-                onClick={() => setPeriod(opt.key)}
-                className="px-2.5 py-1 rounded-lg text-[12px] font-medium transition-colors"
-                style={{
-                  background: period === opt.key ? "var(--lifeflow-primary)" : "var(--lifeflow-muted)",
-                  color: period === opt.key ? "#fff" : "var(--color-text-secondary)",
-                }}
-              >
-                {opt.label}
-              </button>
-            ))}
+            <span className="text-[11px] font-medium px-1.5 py-0.5 rounded-md" style={{ background: "var(--lifeflow-brand-50)", color: "var(--lifeflow-primary)" }}>
+              日
+            </span>
           </div>
         </div>
 

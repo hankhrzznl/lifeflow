@@ -17,9 +17,16 @@ export interface ToastData {
 }
 
 let addToastFn: ((toast: Omit<ToastData, "id">) => void) | null = null;
+// 挂载前（页面 effect 先于 ToastContainer 注册 addToastFn）触发的 toast 先排队，注册后立即补发
+const pendingToasts: Omit<ToastData, "id">[] = [];
 
 export function showToast(toast: Omit<ToastData, "id">) {
-  addToastFn?.(toast);
+  if (addToastFn) {
+    addToastFn(toast);
+  } else {
+    pendingToasts.push(toast);
+    if (pendingToasts.length > 3) pendingToasts.shift();
+  }
 }
 
 export function ToastContainer() {
@@ -50,6 +57,11 @@ export function ToastContainer() {
 
   useEffect(() => {
     addToastFn = addToast;
+    // 补发注册前排队的 toast
+    while (pendingToasts.length > 0) {
+      const t = pendingToasts.shift();
+      if (t) addToast(t);
+    }
     return () => {
       addToastFn = null;
     };

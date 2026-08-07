@@ -3,21 +3,64 @@
 // ============================================================
 
 import { getUserSettings, saveUserSettings } from "@/lib/db";
-import { defaultIdealDayConfig, type IdealDayConfig, type IdealStudyConfig } from "@/lib/types";
+import { defaultIdealDayConfig, defaultSchoolIdealDayConfig, type IdealDayConfig, type IdealDayMode, type IdealStudyConfig } from "@/lib/types";
 
-/** 读取理想日蓝图（无配置时返回默认值） */
-export async function getIdealDayConfig(): Promise<IdealDayConfig> {
+/** T21-7：当前作息模式（暑假/开学），默认暑假 */
+export async function getScheduleMode(): Promise<IdealDayMode> {
   const settings = await getUserSettings();
-  if (settings.idealDayConfig) {
-    // 合并默认值，兼容旧配置缺字段
-    return { ...defaultIdealDayConfig(), ...settings.idealDayConfig, study: { ...defaultIdealDayConfig().study, ...settings.idealDayConfig.study } };
-  }
-  return defaultIdealDayConfig();
+  return settings.idealDayMode ?? 'summer';
 }
 
-/** 保存理想日蓝图 */
+/** 读取指定模式的配置（无保存值时回退默认模板；summer 兼容旧 idealDayConfig 字段） */
+export async function getIdealDayConfigByMode(mode: IdealDayMode): Promise<IdealDayConfig> {
+  const settings = await getUserSettings();
+  const raw = mode === 'school' ? settings.idealDaySchoolConfig : (settings.idealDaySummerConfig ?? settings.idealDayConfig);
+  const base = mode === 'school' ? defaultSchoolIdealDayConfig() : defaultIdealDayConfig();
+  if (raw) {
+    // 合并默认值，兼容旧配置缺字段
+    return { ...base, ...raw, study: { ...base.study, ...raw.study } };
+  }
+  return base;
+}
+
+/** 保存指定模式的配置（不改变当前模式） */
+export async function saveIdealDayConfigByMode(mode: IdealDayMode, config: IdealDayConfig): Promise<void> {
+  if (mode === 'school') {
+    await saveUserSettings({ idealDaySchoolConfig: config });
+  } else {
+    await saveUserSettings({ idealDaySummerConfig: config });
+  }
+}
+
+/** 读取当前生效模式的理想日蓝图（对外主入口，T19 旧调用兼容） */
+export async function getIdealDayConfig(): Promise<IdealDayConfig> {
+  return getIdealDayConfigByMode(await getScheduleMode());
+}
+
+/** 保存当前生效模式的理想日蓝图（对外主入口，T19 旧调用兼容） */
 export async function saveIdealDayConfig(config: IdealDayConfig): Promise<void> {
-  await saveUserSettings({ idealDayConfig: config });
+  await saveIdealDayConfigByMode(await getScheduleMode(), config);
+}
+
+/**
+ * T21-7：一键切换作息模式。
+ * - 保留全局 enabled 开关（切换不改变系统启停）
+ * - 目标模式无配置时自动用模板预置（开学模板：6:00 起、晚自习等）
+ * - 切换后按新模式自动重排（作息模板同步 + 今日起 7 天蓝图事项刷新）
+ */
+export async function switchScheduleMode(mode: IdealDayMode): Promise<{ applied: boolean }> {
+  const current = await getScheduleMode();
+  if (current === mode) return { applied: false };
+
+  const currentConfig = await getIdealDayConfigByMode(current);
+  const target = await getIdealDayConfigByMode(mode);
+  // 全局开关随切换保留，避免切换后整个理想日系统被关闭/误开
+  const next = { ...target, enabled: currentConfig.enabled };
+  await saveIdealDayConfigByMode(mode, next);
+  await saveUserSettings({ idealDayMode: mode });
+
+  await applyIdealDayBlueprint();
+  return { applied: true };
 }
 
 /** 学习时段槽：按「主目标 ≥ 次目标 2 倍」从 studyStart 开始顺序切分，自动绕开午睡窗口（生成多个不重叠段） */
@@ -232,7 +275,15 @@ export async function generateIdealDayItems(dateStr: string): Promise<void> {
 
   const { ensureModuleItem } = await import("@/lib/db/daylog.db");
 
-  // 1) 双目标学习块（可多段，自动绕开午睡）
+  // 1) 双目标学习块（可多段，自动绕开午睡）——标题接入备考引擎今日任务（T21-2）
+  //    省考块显示「判断推理 第1+2讲」等今日课时；四级块显示「夯实基础 第1+2节」或周末复习
+  const { getExamLessons, getProgressMap, computeTodayTasks, formatTodayTaskSummary } = await import("@/lib/exam-plan");
+  const examLessons = getExamLessons();
+  const examProgress = await getProgressMap();
+  const dayTasks = computeTodayTasks(examLessons, examProgress, dateStr);
+  const primaryTitle = `📚 ${formatTodayTaskSummary("province", dayTasks.filter((t) => t.planId === "province"))}`;
+  const secondaryTitle = `📚 ${formatTodayTaskSummary("cet4", dayTasks.filter((t) => t.planId === "cet4"))}`;
+
   const slots = buildStudySlots(config);
   let primarySeg = 0;
   let secondarySeg = 0;
@@ -243,7 +294,7 @@ export async function generateIdealDayItems(dateStr: string): Promise<void> {
       date: dateStr,
       sourceType: "ideal",
       sourceId: `ideal-study-${isPrimary ? "primary" : "secondary"}-${idx}`,
-      title: `📚 ${slot.goalName}`,
+      title: isPrimary ? primaryTitle : secondaryTitle,
       plannedStart: slot.start,
       plannedEnd: slot.end,
       color: isPrimary ? "#6366F1" : "#10B981",

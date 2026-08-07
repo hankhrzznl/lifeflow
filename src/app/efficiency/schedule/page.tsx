@@ -19,6 +19,7 @@ import type { Item } from "@/lib/db/daylog.db";
 import { showToast } from "@/components/ui/Toast";
 import { detectTimeConflicts } from "@/lib/conflict-detector";
 import type { ConflictItem } from "@/lib/conflict-detector";
+import SleepRitualCard from "@/components/dashboard/SleepRitualCard";
 
 // ============================================================
 // 常量
@@ -441,6 +442,9 @@ export default function SchedulePage() {
           </motion.div>
         </div>
       )}
+
+      {/* ===== T21-3 睡前仪式（仅当天） ===== */}
+      {isSelectedToday && <SleepRitualCard className="px-5 mb-3" />}
 
       {/* ===== T19-3 块前提醒横幅（理想日学习/训练块 10 分钟内） ===== */}
       {guide.upcomingBlock && (

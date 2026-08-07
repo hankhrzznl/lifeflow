@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Target, Calendar, Leaf } from "lucide-react";
+import { Home, Target, Leaf } from "lucide-react";
 
-// 全站统一 4-tab 底部导航：首页/目标/日程/长期主义
+// 全站统一 3-tab 底部导航：首页/目标/长期主义（T20-1，日程 tab 已移除）
 // — 更多入口在首页右上角
-// — 事项已整合进日程页（右上角入口）
+// — 日程页入口移至首页「今日执行」卡片右上角（/efficiency/schedule 路由保留）
 // — AI 助手通过全局悬浮球访问（所有页面可见）
 // — 仅全屏流程页隐藏底导
 
@@ -17,7 +17,6 @@ const FULLSCREEN_PREFIXES = [
 const tabs = [
   { label: "首页", path: "/", icon: Home },
   { label: "目标", path: "/efficiency-v2", icon: Target },
-  { label: "日程", path: "/efficiency/schedule", icon: Calendar },
   { label: "长期主义", path: "/longtermism", icon: Leaf },
 ] as const;
 
@@ -29,7 +28,6 @@ export default function BottomTabBar() {
   const isActive = (path: string) => {
     if (path === "/") return pathname === "/";
     if (path === "/efficiency-v2") return pathname === "/efficiency-v2" || pathname.startsWith("/efficiency-v2/");
-    if (path === "/efficiency/schedule") return pathname === "/efficiency/schedule" || pathname.startsWith("/efficiency/schedule/");
     if (path === "/longtermism") return pathname.startsWith("/longtermism");
     return pathname === path || pathname.startsWith(path + "/");
   };

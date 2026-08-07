@@ -1024,9 +1024,15 @@ export interface UserSettings {
   warnThreshold?: number;
   dangerThreshold?: number;
   medicineEnabled?: boolean;  // T18-6：吃药维修模式开关（settings 兜底，无条件时全站隐藏）
-  idealDayConfig?: IdealDayConfig; // T19：理想日蓝图配置
+  idealDayConfig?: IdealDayConfig; // T19：理想日蓝图配置（旧字段，T21-7 起作为暑假配置的历史来源保留兼容）
+  idealDayMode?: IdealDayMode;     // T21-7：当前作息模式（暑假/开学），默认 'summer'
+  idealDaySummerConfig?: IdealDayConfig; // T21-7：暑假作息配置
+  idealDaySchoolConfig?: IdealDayConfig; // T21-7：开学作息配置
   createdAt: number;
 }
+
+/** T21-7：双作息模式（暑假 / 开学） */
+export type IdealDayMode = 'summer' | 'school';
 
 // ==================== 理想日蓝图（T19） ====================
 
@@ -1078,6 +1084,32 @@ export function defaultIdealDayConfig(): IdealDayConfig {
     },
     waterTargetMl: 2000,
     leisureQuotaMinutes: 90,
+    focusEnabled: true,
+    quotaTrackEnabled: true,
+  };
+}
+
+/** T21-7：开学作息默认模板（预置：6:00 起、学校时段后晚自习 18:30 起；开学后可按实际课表细化） */
+export function defaultSchoolIdealDayConfig(): IdealDayConfig {
+  return {
+    enabled: false,
+    sleepBedTime: "22:30",
+    sleepWakeTime: "06:00",
+    napTime: "12:40",
+    napMinutes: 30,
+    wakeRoutineEnd: "07:00",
+    workoutStart: "07:00",
+    workoutEnd: "08:00",
+    studyStart: "18:30",      // 学校时段后晚自习
+    study: {
+      totalHours: 3.5,        // 晚自习 18:30 - 22:00
+      primaryGoalName: "2027 安徽省考",
+      primaryGoalHours: 2.5,
+      secondaryGoalName: "2026.12 英语四级",
+      secondaryGoalHours: 1,
+    },
+    waterTargetMl: 2000,
+    leisureQuotaMinutes: 30,  // 22:00 - 22:30 睡前自由时间
     focusEnabled: true,
     quotaTrackEnabled: true,
   };

@@ -6,7 +6,7 @@ import Dexie, { type Table } from 'dexie';
 
 // ─── Types ───────────────────────────────────────────────────
 
-export type SourceType = "task" | "habit" | "course" | "routine" | "manual" | "medication" | "fitness" | "wellness" | "diet" | "water" | "goal" | "ideal";
+export type SourceType = "task" | "habit" | "course" | "routine" | "manual" | "medication" | "fitness" | "wellness" | "diet" | "water" | "goal" | "ideal" | "posture";
 
 export interface Item {
   id: string;              // uuid
@@ -599,7 +599,13 @@ export async function ensureModuleItem(params: {
     .where('date').equals(params.date)
     .filter(i => i.sourceType === params.sourceType && i.sourceId === params.sourceId)
     .first();
-  if (existing) return existing.id;
+  if (existing) {
+    // T21-2：模块事项标题随来源数据刷新（如学习块标题随备考进度变化）；不重置已完成状态
+    if (params.title && existing.title !== params.title) {
+      await updateItem(existing.id, { title: params.title });
+    }
+    return existing.id;
+  }
 
   return addItem({
     date: params.date,

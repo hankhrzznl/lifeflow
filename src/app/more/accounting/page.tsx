@@ -4,7 +4,7 @@ import { useMemo, useState, useCallback } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Plus, ChevronDown, Trash2, Wallet, Search, ChevronLeft, ChevronRight, ReceiptText } from "lucide-react";
+import { Plus, ChevronDown, Trash2, Wallet, Search, ChevronLeft, ChevronRight, ReceiptText, Sparkles } from "lucide-react";
 import { getTransactionsByMonth, getTransactionsByYear, getTransactionsByDate, deleteTransaction, getAllCategories, addTransaction, accountingDB, ensureDefaultLedger } from "@/lib/db/accounting.db";
 import type { Transaction, Category, Ledger, Account } from "@/lib/db/accounting.db";
 import { getIcon } from "@/components/accounting/CategoryIcon";
@@ -161,6 +161,91 @@ export default function AccountingPage() {
   const filteredCategories = useMemo(() => {
     return (categories ?? []).filter((c) => c.type === recordType);
   }, [categories, recordType]);
+
+  // ─── T21-9：本周/上周区间（周一起算，用于每周一句话总结） ───
+  const thisWeekDays = useMemo(() => {
+    const now = new Date();
+    const dow = now.getDay();
+    const mon = new Date(now);
+    mon.setDate(now.getDate() - (dow === 0 ? 6 : dow - 1));
+    mon.setHours(0, 0, 0, 0);
+    const days: string[] = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(mon);
+      d.setDate(mon.getDate() + i);
+      if (d.getTime() > now.getTime()) break;
+      days.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`);
+    }
+    return days;
+  }, []);
+  const prevWeekDays = useMemo(() => {
+    const mon = new Date(thisWeekDays[0] + "T00:00:00");
+    const days: string[] = [];
+    for (let i = 7; i >= 1; i--) {
+      const d = new Date(mon);
+      d.setDate(mon.getDate() - i);
+      days.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`);
+    }
+    return days;
+  }, [thisWeekDays]);
+  const weekSummaryTxs = useLiveQuery(
+    () => Promise.all(thisWeekDays.map((d) => getTransactionsByDate(d))),
+    [thisWeekDays.join(",")],
+    [] as Transaction[][],
+  );
+  const prevWeekSummaryTxs = useLiveQuery(
+    () => Promise.all(prevWeekDays.map((d) => getTransactionsByDate(d))),
+    [prevWeekDays.join(",")],
+    [] as Transaction[][],
+  );
+
+  const weekLabel = useMemo(() => {
+    if (thisWeekDays.length === 0) return "";
+    const a = thisWeekDays[0].split("-").map(Number);
+    const b = thisWeekDays[thisWeekDays.length - 1].split("-").map(Number);
+    return `${a[1]}/${a[2]} - ${b[1]}/${b[2]}`;
+  }, [thisWeekDays]);
+
+  /** T21-9：每周一句话总结（不主推统计表，一句话看清本周收支） */
+  const weekSummary = useMemo(() => {
+    const week = (weekSummaryTxs ?? []).flat();
+    const prev = (prevWeekSummaryTxs ?? []).flat();
+    const count = week.length;
+    const expense = week.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0);
+    const income = week.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0);
+
+    if (count === 0) {
+      return { hasData: false, sentence: "本周还没有记账，记一笔吧 ✍️" };
+    }
+
+    // 最大支出分类
+    const catSum = new Map<string, number>();
+    for (const t of week) {
+      if (t.type !== "expense") continue;
+      const key = t.categoryId || "__none__";
+      catSum.set(key, (catSum.get(key) || 0) + t.amount);
+    }
+    let topCat: { name: string; amount: number } | null = null;
+    if (catSum.size > 0) {
+      const [cid, amount] = [...catSum.entries()].sort((a, b) => b[1] - a[1])[0];
+      const cat = cid === "__none__" ? undefined : categoryMap.get(cid);
+      topCat = { name: cat?.name || "未分类", amount };
+    }
+
+    const prevExpense = prev.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0);
+    const delta = expense - prevExpense;
+
+    let s = `本周支出 ¥${fmtCompact(expense)}`;
+    if (income > 0) s += `，收入 ¥${fmtCompact(income)}，结余 ¥${fmtCompact(income - expense)}`;
+    if (topCat) s += `，最多花在「${topCat.name}」¥${fmtCompact(topCat.amount)}`;
+    if (prev.length > 0) {
+      if (delta > 0) s += `，比上周多 ¥${fmtCompact(delta)} ⚠️`;
+      else if (delta < 0) s += `，比上周少 ¥${fmtCompact(-delta)} 👍`;
+      else s += `，与上周持平`;
+    }
+    s += "。";
+    return { hasData: true, sentence: s };
+  }, [weekSummaryTxs, prevWeekSummaryTxs, categoryMap]);
 
   const accountMap = useMemo(() => {
     const map = new Map<string, Account>();
@@ -467,6 +552,32 @@ export default function AccountingPage() {
 
         </div>
       </div>
+
+      {/* ===== 本周一句话总结（T21-9：不主推统计表，一句话看清本周收支） ===== */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        className="mx-4 mt-4 rounded-[20px] p-5 relative overflow-hidden"
+        style={{ background: "linear-gradient(135deg, #10B981 0%, #0EA5E9 100%)", boxShadow: "0 6px 20px rgba(16,185,129,0.22)" }}
+      >
+        <p className="text-[12px] font-medium flex items-center gap-1" style={{ color: "rgba(255,255,255,0.85)" }}>
+          <Sparkles className="w-3.5 h-3.5" />
+          本周一句话总结 · {weekLabel}
+        </p>
+        <p className="mt-2 text-[17px] font-semibold leading-relaxed" style={{ color: "#fff" }}>
+          {weekSummary.sentence}
+        </p>
+        {!weekSummary.hasData && (
+          <button
+            type="button"
+            onClick={() => setShowRecordSheet(true)}
+            className="mt-3 px-4 py-2 rounded-full text-[13px] font-semibold active:opacity-90"
+            style={{ background: "#fff", color: "#0EA5E9" }}
+          >
+            记一笔
+          </button>
+        )}
+      </motion.div>
 
       {/* ===== 搜索栏 ===== */}
       <div className="px-4 mt-4">

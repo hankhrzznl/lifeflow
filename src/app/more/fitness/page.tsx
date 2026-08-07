@@ -18,6 +18,7 @@ interface TrainingSystemDef {
   type: TrainingType;
   label: string;
   subtitle: string;
+  group: 'strength' | 'cardio';  // T21-6：训练 4 Tab（力量/有氧/拉伸/养生）分组
   icon: typeof Dumbbell;
   exercises: string[];
   color: string;          // accent color for card highlight
@@ -30,6 +31,7 @@ const TRAINING_SYSTEMS: TrainingSystemDef[] = [
     type: "gym_compound",
     label: "健身房复合力量",
     subtitle: "全年主食",
+    group: "strength",
     icon: Dumbbell,
     exercises: ["杠铃卧推", "高位下拉", "高脚杯深蹲", "坐姿肩推", "杠铃硬拉"],
     color: "#2563EB",
@@ -40,6 +42,7 @@ const TRAINING_SYSTEMS: TrainingSystemDef[] = [
     type: "low_cardio",
     label: "低强度有氧",
     subtitle: "全年主食",
+    group: "cardio",
     icon: Heart,
     exercises: ["快走", "游泳", "骑行", "划船机"],
     color: "#10B981",
@@ -50,6 +53,7 @@ const TRAINING_SYSTEMS: TrainingSystemDef[] = [
     type: "farmer_walk",
     label: "农夫行走",
     subtitle: "全年贯穿",
+    group: "strength",
     icon: Grip,
     exercises: ["双手农夫行走", "单手农夫行走", "壶铃农夫行走", "哑铃农夫行走"],
     color: "#F59E0B",
@@ -60,6 +64,7 @@ const TRAINING_SYSTEMS: TrainingSystemDef[] = [
     type: "weighted_rotation",
     label: "负重旋转",
     subtitle: "专项训练",
+    group: "strength",
     icon: RotateCw,
     exercises: ["壶铃旋转", "绳索旋转", "药球转体砸地"],
     color: "#8B5CF6",
@@ -70,6 +75,7 @@ const TRAINING_SYSTEMS: TrainingSystemDef[] = [
     type: "power_training",
     label: "爆发力训练",
     subtitle: "专项训练",
+    group: "strength",
     icon: Zap,
     exercises: ["跳箱", "壶铃摆荡", "短冲刺", "药球抛掷"],
     color: "#EF4444",
@@ -152,12 +158,14 @@ export default function FitnessPage() {
   const [subTab, setSubTab] = useState<'record' | 'plan'>('record');
   const [plans, setPlans] = useState<TrainingPlan[]>([]);
 
-  /* ─── T15b：顶层 Tab（训练 / 体态拉伸 / 功法养生） ─── */
-  const [topTab, setTopTab] = useState<'train' | 'posture' | 'wellness'>('train');
+  /* ─── T21-6：顶层 4 Tab（力量 / 有氧 / 拉伸 / 养生）单入口 ─── */
+  const [topTab, setTopTab] = useState<'strength' | 'cardio' | 'stretch' | 'wellness'>('strength');
 
   useEffect(() => {
     const p = new URLSearchParams(window.location.search).get('tab');
-    if (p === 'posture' || p === 'wellness') setTopTab(p);
+    if (p === 'posture' || p === 'stretch') setTopTab('stretch');  // 兼容旧 /more/fitness?tab=posture
+    else if (p === 'cardio') setTopTab('cardio');
+    else if (p === 'wellness') setTopTab('wellness');
   }, []);
 
   /* ─── Record sheet state ─── */
@@ -178,6 +186,21 @@ export default function FitnessPage() {
   const currentPrimary = useMemo(() => getCurrentMonthPrimary(), []);
   const currentPrimaryLabel = useMemo(() => getMonthPrimaryLabel(), []);
 
+  /* ─── T21-6：按当前 Tab 分组过滤训练系统（力量/有氧） ─── */
+  const visibleSystems = useMemo(
+    () => TRAINING_SYSTEMS.filter((s) => s.group === (topTab === 'cardio' ? 'cardio' : 'strength')),
+    [topTab],
+  );
+
+  // T21-6：切换 Tab 时，记录默认类型跟随当前分组（力量→gym_compound / 有氧→low_cardio）
+  useEffect(() => {
+    const first = visibleSystems[0];
+    if (first && visibleSystems.some(s => s.type === selectedTrainingType) === false) {
+      setSelectedTrainingType(first.type);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [topTab]);
+
   useEffect(() => {
     loadFitnessDataV2().finally(() => setLoading(false));
     // Initialize training plans
@@ -196,10 +219,18 @@ export default function FitnessPage() {
     return () => document.removeEventListener("mousedown", handler);
   }, [showExerciseDropdown]);
 
-  /* ─── Today stats ─── */
+  /* ─── Today stats（T21-6：按当前分组过滤；无类型旧数据归力量组） ─── */
+  const groupSessions = useMemo(() => {
+    const types = new Set(visibleSystems.map((s) => s.type));
+    return workoutSessions.filter((s) => {
+      if (!s.trainingType) return topTab !== 'cardio';
+      return types.has(s.trainingType);
+    });
+  }, [workoutSessions, visibleSystems, topTab]);
+
   const todayStats = useMemo(() => {
     const today = localTodayStr();
-    const todaySessions = workoutSessions.filter((s) => s.date === today);
+    const todaySessions = groupSessions.filter((s) => s.date === today);
     const exerciseNames = new Set<string>();
     let totalWeight = 0;
     let totalRpe = 0;
@@ -223,11 +254,11 @@ export default function FitnessPage() {
       avgRpe: rpeCount > 0 ? +(totalRpe / rpeCount).toFixed(1) : 0,
       totalSets: todaySessions.reduce((s, sess) => s + sess.exercises.reduce((t, e) => t + e.sets.length, 0), 0),
     };
-  }, [workoutSessions]);
+  }, [groupSessions]);
 
   /* ─── Week stats ─── */
   const weekStats = useMemo(() => {
-    const weekSessions = workoutSessions.filter((s) => isDateInWeek(s.date));
+    const weekSessions = groupSessions.filter((s) => isDateInWeek(s.date));
     const days = new Set(weekSessions.map((s) => s.date)).size;
     const totalSets = weekSessions.reduce((s, sess) => s + sess.exercises.reduce((t, e) => t + e.sets.length, 0), 0);
     const totalExercises = weekSessions.reduce((s, sess) => s + sess.exercises.length, 0);
@@ -240,13 +271,13 @@ export default function FitnessPage() {
     }
 
     return { days, totalSets, totalExercises, sessionCount: weekSessions.length, typeCount };
-  }, [workoutSessions]);
+  }, [groupSessions]);
 
   const weekRange = useMemo(() => getWeekRangeStr(), []);
 
-  /* ─── Recent records grouped by date ─── */
+  /* ─── Recent records grouped by date（T21-6：按当前分组过滤） ─── */
   const recentGroups = useMemo(() => {
-    const sorted = [...workoutSessions]
+    const sorted = [...groupSessions]
       .sort((a, b) => b.createdAt - a.createdAt)
       .slice(0, 100);
     const map = new Map<string, WorkoutSession[]>();
@@ -413,9 +444,10 @@ export default function FitnessPage() {
           <ChevronLeft className="h-5 w-5" style={{ color: "var(--color-text-primary)" }} />
         </button>
         <h1 className="text-[17px] font-semibold tracking-[-0.018em] truncate" style={{ color: "var(--color-text-primary)" }}>
-          {topTab === 'train' ? '训练' : topTab === 'posture' ? '体态拉伸' : '功法养生'}
+          {topTab === 'strength' ? '力量训练' : topTab === 'cardio' ? '有氧训练' : topTab === 'stretch' ? '体态拉伸' : '功法养生'}
         </h1>
-        {/* Month primary badge */}
+        {/* Month primary badge（仅力量 Tab：月度轮换专项均属力量组） */}
+        {topTab === 'strength' && (
         <div
           className="ml-auto flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[12px] font-medium shrink-0"
           style={{
@@ -426,15 +458,18 @@ export default function FitnessPage() {
           <Star className="h-3 w-3" />
           {new Date().getMonth() + 1}月主项: {currentPrimaryLabel}
         </div>
+        )}
+        {topTab !== 'strength' && <div className="ml-auto shrink-0" />}
       </header>
 
-      {/* ─── 顶层 Tabs（T15b 训练体系） ─── */}
+      {/* ─── T21-6：顶层 4 Tab（力量 / 有氧 / 拉伸 / 养生）单入口 ─── */}
       <div className="px-4 mb-4">
         <div className="flex rounded-full p-1" style={{ background: "var(--lifeflow-muted)" }}>
           {([
-            { key: 'train', label: '训练' },
-            { key: 'posture', label: '体态拉伸' },
-            { key: 'wellness', label: '功法养生' },
+            { key: 'strength', label: '力量' },
+            { key: 'cardio', label: '有氧' },
+            { key: 'stretch', label: '拉伸' },
+            { key: 'wellness', label: '养生' },
           ] as const).map(({ key, label }) => (
             <button
               key={key}
@@ -452,14 +487,14 @@ export default function FitnessPage() {
         </div>
       </div>
 
-      {/* ─── 体态拉伸 Tab ─── */}
-      {topTab === 'posture' && <PostureTab />}
+      {/* ─── 拉伸 Tab（体态拉伸） ─── */}
+      {topTab === 'stretch' && <PostureTab />}
 
-      {/* ─── 功法养生 Tab ─── */}
+      {/* ─── 养生 Tab（功法养生） ─── */}
       {topTab === 'wellness' && <WellnessTab />}
 
-      {/* ─── 训练 Tab（内部 记录/计划） ─── */}
-      {topTab === 'train' && (
+      {/* ─── 力量 / 有氧 Tab（内部 记录/计划） ─── */}
+      {(topTab === 'strength' || topTab === 'cardio') && (
         <>
       {/* ─── Tabs ─── */}
       <div className="px-4 mb-4">
@@ -483,7 +518,7 @@ export default function FitnessPage() {
 
       {/* ─── Plan View ─── */}
       {subTab === 'plan' && (
-        <TrainingPlanView plans={plans} />
+        <TrainingPlanView plans={plans} group={topTab} />
       )}
 
       {/* ─── Record View ─── */}
@@ -551,9 +586,11 @@ export default function FitnessPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1, duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
         >
-          <h2 className="mb-3 px-1 text-[17px] font-semibold" style={{ color: "var(--color-text-primary)" }}>训练体系</h2>
+          <h2 className="mb-3 px-1 text-[17px] font-semibold" style={{ color: "var(--color-text-primary)" }}>
+            {topTab === 'cardio' ? '有氧体系' : '力量体系'}
+          </h2>
           <div className="flex flex-col" style={{ gap: 12 }}>
-            {TRAINING_SYSTEMS.map((sys) => {
+            {visibleSystems.map((sys) => {
               const Icon = sys.icon;
               const isPrimary = sys.type === currentPrimary;
               return (
@@ -826,11 +863,11 @@ export default function FitnessPage() {
                 <button onClick={() => setShowRecord(false)} className="text-[15px] font-medium" style={{ color: "var(--lifeflow-primary)" }}>取消</button>
               </div>
 
-              {/* Training Type Selector */}
+              {/* Training Type Selector（T21-6：仅显示当前 Tab 分组） */}
               <div className="mb-5">
                 <label className="text-[13px] font-medium mb-2 block" style={{ color: "var(--color-text-secondary)" }}>训练类型</label>
                 <div className="flex flex-wrap gap-2">
-                  {TRAINING_SYSTEMS.map((sys) => (
+                  {visibleSystems.map((sys) => (
                     <button
                       key={sys.type}
                       type="button"
@@ -979,7 +1016,7 @@ export default function FitnessPage() {
  * Training Plan View Component
  * ================================================================ */
 
-function TrainingPlanView({ plans }: { plans: TrainingPlan[] }) {
+function TrainingPlanView({ plans, group }: { plans: TrainingPlan[]; group: 'strength' | 'cardio' }) {
   const { primary, secondary } = useMemo(() => {
     const now = new Date();
     const startYear = 2026; const startMonth = 7;
@@ -991,10 +1028,15 @@ function TrainingPlanView({ plans }: { plans: TrainingPlan[] }) {
     return { primary: p, secondary: s };
   }, []);
 
-  const staple = plans.filter(p => p.role === 'staple' && p.active);
-  const rotating = plans.filter(p => p.role === 'rotating' && p.active);
+  // T21-6：按当前 Tab 分组过滤计划（力量 Tab 只看力量类，有氧 Tab 只看有氧类）
+  const groupPlans = useMemo(
+    () => plans.filter(p => p.active && (TRAINING_SYSTEMS.find(s => s.type === p.trainingType)?.group ?? 'strength') === group),
+    [plans, group],
+  );
+  const staple = groupPlans.filter(p => p.role === 'staple');
+  const rotating = groupPlans.filter(p => p.role === 'rotating');
 
-  if (plans.length === 0) {
+  if (groupPlans.length === 0) {
     return (
       <div className="px-4 pt-4 text-center">
         <div
@@ -1011,7 +1053,8 @@ function TrainingPlanView({ plans }: { plans: TrainingPlan[] }) {
 
   return (
     <div className="px-4 pt-0 pb-10 space-y-4">
-      {/* Monthly rotation summary */}
+      {/* Monthly rotation summary（T21-6：仅力量组展示轮换专项） */}
+      {group === 'strength' && (
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
@@ -1038,6 +1081,7 @@ function TrainingPlanView({ plans }: { plans: TrainingPlan[] }) {
           })}
         </div>
       </motion.div>
+      )}
 
       {/* Staple plans */}
       {staple.length > 0 && (

@@ -127,7 +127,7 @@ LifeFlow v1.0，一个讲道理的生活助手。
 
 ### UI 布局原则（v1.1+）
 
-- 底部导航栏为 **4-tab**（首页/目标/日程/长期主义），AI 助手通过全局悬浮球访问，导航栏不再保留助手入口
+- 底部导航栏为 **3-tab（v2.10+ T20，原 4-tab 首页/目标/日程/长期主义）**：首页/目标/长期主义，AI 助手通过全局悬浮球访问，导航栏不再保留助手入口；日程页（`/efficiency/schedule`）路由保留，入口移至首页「今日执行」卡片右上角图标
 - Bottom Sheet / 弹出面板：操作按钮（确认/取消等）必须固定在底部，**放在滚动容器之外**，使用 `flex flex-col` + 独立的 `shrink-0` 按钮区域，确保始终可见
 - 多步向导页面：底部导航栏**禁止使用 `fixed` 定位**，应采用 `flex flex-col h-screen` + 内容区 `flex-1 overflow-y-auto` + 底部 `shrink-0` 的自然流布局，避免 z-index 层叠问题导致按钮被遮挡
   - **注意**：外层容器必须使用 `h-screen`（锁定视口高度）而非 `min-h-screen`（最小高度），否则内容撑高后底部按钮仍会被推出视口
@@ -235,7 +235,7 @@ LifeFlow v1.0，一个讲道理的生活助手。
 - **引擎**：统一使用 `UnifiedReviewer`（`src/lib/brains/reviewer.ts`），`dashboard-summary.ts` 已删除
 - **组件**（`src/components/dashboard/HomeReview.tsx`）：
   - 卡片洞察流风格（Apple Health 趋势页风格）
-  - 支持 2 种粒度：`daily / weekly`
+  - 支持 **仅 1 种粒度：`daily`（v2.10+ T20 收敛，原 daily/weekly 2 种，weekly 已移除）**
   - 每张洞察卡片：左侧模块色条 + 模块标签 + 趋势箭头 + headline + detail 描述
   - 底部「行动建议」区域 + 「查看完整复盘」跳转 `/longtermism`
   - 无数据态和加载态（骨架屏）兜底
@@ -254,36 +254,15 @@ LifeFlow v1.0，一个讲道理的生活助手。
 
 ### 长期主义页面（v2.2+）
 
-- 入口：底部导航栏第 4 个 tab（Leaf 图标），路由 `/longtermism`
-- **模块卡片按能量金字塔分组（v2.8+ T18-4，替代 v2.2 的 8 卡单列平铺）**：
-  - **E1 能量底座**（睡眠/作息/饮水/饮食）置顶突出，卡片视觉权重最大（大图块 + 实时数据）
-  - **E2 目标执行**（习惯/专注）居中
-  - **E3/E4 折叠区**（记账/训练/养生/体态/复盘/记忆/心愿/备忘录/课程表）默认折叠，可展开
-  - 分组顺序与金字塔一致：E1 → E2 → E3/E4
-- 每张卡片结构（与 v2.2 一致，v2.8 起仅按层重排与折叠）：
-  - 左侧：主题色图标（44px 圆角容器）
-  - 右侧：模块标签（小号）→ 核心数据（17px 加粗）→ 行动引导（12px 灰色）
-- 卡片点击跳转对应模块页（`/more/water`、`/more/sleep` 等）
-- **吃药（v2.8+）不在此页展示**：遵循维修模式规则，有用药计划/设置开启时才条件浮现
-- 数据查询：
-  - 饮水 → `daylogDB.items`（`sourceType === "water"`，待办展示）+ `getWaterGoal()` + `healthDB.waterLogs`（唯一流水源 ml）
-  - 睡眠 → `getSleepLogByDate(yesterday)`
-  - 记账 → `getTransactionsByMonth(year, month)`
-  - 训练 → `getWorkoutSessions(7)`
-  - 饮食 → `getDietLogsByDate(today)`
-  - 养生 → `getWellnessLogsByDate(today)`
-  - 体态拉伸 → `healthDB.stretchLogs.where("date").between(weekStart, weekEnd)`
-  - 心愿 → `getWishes()`
-  - 复盘 → `currentReview?.hasData`（卡片复用顶部复盘数据）
-  - 备忘录 → `getNotes()`
-  - 课程表 → `getCourses()`
-- E3/E4 折叠区默认收起（`e34Expanded` state），仅渲染分组标题 + 展开按钮；点击展开后才渲染模块卡片（避免 overflow-hidden 动画约束，用条件渲染折叠）
-- 无数据时显示 `--`，行动引导显示 `「去记录」`
+- 入口：底部导航栏第 3 个 tab（Leaf 图标），路由 `/longtermism`
+- **v2.10+ T20 精简：金字塔模块卡片全部下线**（原 E1 能量底座/E2 目标执行/E3E4 折叠区 16 卡已移除，`LAYER_GROUPS` 分组逻辑删除），模块入口统一收敛到 `/more` 目录，**避免双入口重复**
+- 页面仅保留：顶部复盘时间轴 + 底部「历史复盘」折叠区
+- **吃药（v2.8+）不在此页展示**：遵循维修模式规则，有用药计划/设置开启时才条件浮现（位于 `/more` 目录「身体养护」组）
 
 ### 长期主义复盘时间轴（v2.3+）— 数据叙事风
 
-- 复盘区域位于长期主义页面 Header 下方、金字塔分组模块卡片上方，以独立卡片呈现
-- 顶部标题行 + 4 粒度切换器（日/周/月/年），`ReviewPeriod` 类型定义在 `reviewer.ts`
+- 复盘区域位于长期主义页面 Header 下方，以独立卡片呈现
+- 顶部标题行 + **2 粒度切换器（周/月，v2.10+ T20 收敛，原 4 粒度日/周/月/年，日/年已移除）**，`ReviewPeriod` 类型定义在 `reviewer.ts`
 - 主体内容（数据叙事风格）：
   - Hero 区：大号 headline + 概览文案（`overviewText`）
   - 模块洞察卡片（最多 6 个模块）：模块色条 + 标签 + 趋势箭头 + headline + 所有次发现（findings.slice(1)）
@@ -341,15 +320,16 @@ LifeFlow v1.0，一个讲道理的生活助手。
 - 卡组详情 `/more/ebbinghaus/[deckId]`：两个 Tab — 「今日复习」（翻卡+记住/没记住+进度条）和「所有卡片」（列表+单条/批量添加+删除）
 - 批量添加格式：每行 `正面内容 | 背面内容`，支持 `|` 或制表符分隔
 
-**入口**：仅通过长期主义页面（`/longtermism`）的「记忆」模块卡片进入，底部导航栏和首页不新增入口
+**入口**：仅通过 `/more` 目录「工作/学习」组的「记忆复习」模块进入（v2.10+ T20 起，原「长期主义模块卡片」入口随金字塔卡片下线），底部导航栏和首页不新增入口
 
 ### 首页布局精简（v2.2+）
 
 - **v2.8+ T18-3 起重构为「今日驾驶舱」**，本节 v2.2 的「下一个事项+今日待办合并卡片」约定被下述结构替代：
   - 顶部 **E1 能量区**：睡眠 / 饮水 / 作息 三合一健康卡组（最大视觉权重，实时数据），点击跳对应模块
-  - 中部 **E2 今日执行**：目标日行动 + 日程待办合并为一条时间流（未完成优先，可按时间段展开）
-  - 底部 **复盘洞察**：保留 `HomeReview` Top 4
-  - **E3/E4 入口收敛为小图标行**；吃药维修模式入口不在首页出现
+  - 中部 **E2 今日执行**：目标日行动 + 日程待办合并为一条时间流（未完成优先，可按时间段展开），**v2.10+ T20 起卡片右上角新增日程页入口图标**（原底部导航日程 tab 已移除，日程经此处进入）
+  - 底部 **复盘洞察**：保留 `HomeReview` Top 4，**仅日粒度**
+- **v2.10+ T20 新增驾驶舱概览条「习惯 X · 目标 Y」**：展示活跃习惯数（`life.db Habit` 活跃数）与目标数（GoalV2 active goals 数），点击分别跳 `/more/habits` 与 `/efficiency-v2`
+- **E3/E4 入口收敛为小图标行**；吃药维修模式入口不在首页出现
 - 首页不再展示「今日提醒条」（pendingReminders UI），提醒后台调度 + `/reminders` 页面不受影响
 - 首页不再展示 AI 快捷指令三按钮（今日提醒/安排日程/本周复盘），AI 助手通过全局悬浮球访问
 - 删除上述 UI 时仅限渲染层，不触碰功能代码
@@ -458,6 +438,20 @@ LifeFlow v1.0，一个讲道理的生活助手。
 - `/more/page.tsx` 顶部搜索框，按**模块名 / 路径 / 分组名**实时过滤（`MODULE_GROUPS` 静态目录不落库）
 - 无结果显示空状态（SearchX +「未找到相关模块」）；清空恢复全部分组；新增模块只需在 `MODULE_GROUPS` 注册即可被检索
 
+### /more 目录 8+8+8 分组（v2.10+，T20）— 时间地图替代能量金字塔
+
+- **背景**：原 E1-E4 能量金字塔分组（能量底座/目标执行/过程记录/成长储备/维修/系统）与用户「8+8+8」时间观不符，整体重构为六组，卡片大小 = 模块占据时间的可视化映射（**时间地图**）
+- **六组映射**（`MODULE_GROUPS` 重排）：
+  - **睡觉**（XL）：睡眠
+  - **工作/学习**（XL/L）：专注计时（L）、记忆复习（M）、课程表（M）
+  - **身体养护**（L/M/S）：训练中心（L）、饮食（M）、作息模板（M）、饮水（M）、吃药提醒（S，维修模式条件激活，repair 由组级降条目级）
+  - **生活**（M/S）：记账（M）、心愿（S）、倒数日（S）、备忘录（S）
+  - **计划与复盘**（M）：理想日蓝图、习惯打卡、复盘总览
+  - **系统**（S）：提醒、提醒设置、设置
+- **时间权重尺寸档位**（/more 与首页概览条通用）：XL 大图块（8h 级）→ L 标准卡（1-5h 级）→ M 小卡（轻量高频）→ S 紧凑行（系统工具）
+- **日历隐藏**：`/more` 目录移除日历入口，`/more/calendar` 路由与数据保留（proxy 不新增重定向），符合「数据不丢」铁律
+- **勿回归**：勿将金字塔分组/长期主义模块卡片重新引入；新增模块按 8+8+8 语义放入对应组
+
 ### plugins 路由下线（v2.6+，T12）
 
 - **重定向载体**：`src/proxy.ts`（⚠️ Next.js 16 起 `middleware.ts` 约定已废弃，重定向逻辑一律写 proxy；物理旧页面保留但不直接可达）
@@ -479,7 +473,7 @@ LifeFlow v1.0，一个讲道理的生活助手。
 
 ### 理想日系统（v2.9+，T19）— 理想的一天的行为闭环
 
-- **入口**：`/more/ideal-day` 配置页（「功能模块」→ 理想日蓝图），GUIDE 约束单一入口、430px 容器
+- **入口**：`/more/ideal-day` 配置页（「功能模块」→「计划与复盘」组 → 理想日蓝图），GUIDE 约束单一入口、430px 容器
 - **配置存储**：`userSettings.idealDayConfig`（IdealDayConfig，`src/lib/types.ts`）；读 `getIdealDayConfig`（合并默认值）/ 写 `saveIdealDayConfig`
 - **排程引擎**（`src/lib/ideal-day.ts`）：`buildStudySlots` 双目标学习分段（省考≥四级 2 倍，绕开午睡窗口）；`syncIdealDayRoutines` 写回作息模板（wake/nap/sleep 三型）；`isTrainingDay` 复用训练计划 `weeklyDays`（无计划回退 [1,3,5]）；`generateIdealDayItems` 幂等生成（`sourceType='ideal'`，sourceId=`ideal-study-{primary|secondary}-{i}` / `ideal-workout` / `ideal-leisure`）；`applyIdealDayBlueprint` 保存后自动排今起 7 天
 - **学习/训练/留白用独立 `sourceType='ideal'` 事项，不写 GoalV2**（避免污染目标系统、不删旧）；作息走模板链（`generateRoutineItems`）

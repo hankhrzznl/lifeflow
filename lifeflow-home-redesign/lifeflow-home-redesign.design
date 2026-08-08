@@ -303,15 +303,15 @@
           },
           {
             "domId": "plan-study",
-            "targetPageId": "page-plan-study",
+            "targetPageId": "page-ideal-day",
             "hideEdge": true,
-            "transitionLabel": "目标规划"
+            "transitionLabel": "学习规划（占位）"
           },
           {
             "domId": "plan-workout",
-            "targetPageId": "page-ideal-day-sheet",
+            "targetPageId": "page-ideal-day",
             "hideEdge": true,
-            "transitionLabel": "训练规划 · 底部表单"
+            "transitionLabel": "训练规划（占位）"
           },
           {
             "domId": "plan-sleep",
@@ -321,27 +321,63 @@
           },
           {
             "domId": "plan-posture",
-            "targetPageId": "page-ideal-day-sheet",
+            "targetPageId": "page-plan-posture",
             "hideEdge": true,
-            "transitionLabel": "体态拉伸规划 · 底部表单"
+            "transitionLabel": "体态拉伸规划"
           },
           {
             "domId": "plan-wellness",
-            "targetPageId": "page-ideal-day-sheet",
+            "targetPageId": "page-plan-wellness",
             "hideEdge": true,
-            "transitionLabel": "功法养生规划 · 底部表单"
+            "transitionLabel": "功法养生规划"
           },
           {
             "domId": "plan-routine",
-            "targetPageId": "page-ideal-day-sheet",
+            "targetPageId": "page-plan-routine",
             "hideEdge": true,
-            "transitionLabel": "作息规划 · 底部表单"
+            "transitionLabel": "作息规划"
           },
           {
             "domId": "edit-ideal",
             "targetPageId": "page-ideal-day-edit-step1",
             "hideEdge": true,
             "transitionLabel": "编辑模板 · 第一步"
+          },
+          {
+            "domId": "plan-medication",
+            "targetPageId": "page-plan-medication",
+            "hideEdge": true,
+            "transitionLabel": "吃药规划"
+          },
+          {
+            "domId": "plan-diet",
+            "targetPageId": "page-plan-diet",
+            "hideEdge": true,
+            "transitionLabel": "饮食规划"
+          },
+          {
+            "domId": "plan-water",
+            "targetPageId": "page-plan-water",
+            "hideEdge": true,
+            "transitionLabel": "饮水规划"
+          },
+          {
+            "domId": "plan-focus",
+            "targetPageId": "page-plan-focus",
+            "hideEdge": true,
+            "transitionLabel": "专注规划"
+          },
+          {
+            "domId": "plan-leisure",
+            "targetPageId": "page-plan-leisure",
+            "hideEdge": true,
+            "transitionLabel": "留白规划"
+          },
+          {
+            "domId": "plan-notes",
+            "targetPageId": "page-plan-notes",
+            "hideEdge": true,
+            "transitionLabel": "备忘规划"
           }
         ]
       }

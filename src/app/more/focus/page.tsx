@@ -23,6 +23,8 @@ export default function FocusPage() {
   const [running, setRunning] = useState(false);
   const [sessions, setSessions] = useState<FocusSession[]>([]);
   const [focusTitle, setFocusTitle] = useState("");
+  // T22.7：来自理想日专注的块定位（完成后自动回写完成）
+  const [idealBlock, setIdealBlock] = useState<string | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const totalMin = mode === "focus" ? focusMin : BREAK_MIN;
@@ -34,6 +36,10 @@ export default function FocusPage() {
     if (t) setFocusTitle(t);
     const d = Number(p.get("duration"));
     if (d && d >= 1 && d <= 180) setFocusMin(d);
+    // T22.7：理想日来源（?block=&feature=focus）
+    const blk = p.get("block");
+    const feat = p.get("feature");
+    if (blk && feat === "focus") setIdealBlock(blk);
   }, []);
 
   useEffect(() => {
@@ -51,6 +57,21 @@ export default function FocusPage() {
       if (s <= 1) {
         if (mode === "focus") {
           addFocusSession({ date: todayStr(), duration: focusMin, type: "focus", completed: true, startedAt: Date.now() - focusMin * 60000, endedAt: Date.now() });
+          // T22.7：来自理想日的专注完成 → 自动回写该时段规划完成并同步日程
+          if (idealBlock) {
+            (async () => {
+              try {
+                const { getIdealDayPlans, saveIdealDayPlans } = await import("@/lib/ideal-day-templates");
+                const plans = await getIdealDayPlans(todayStr());
+                const next = plans.map((p) =>
+                  p.blockId === idealBlock && p.feature === "focus" ? { ...p, isCompleted: true } : p,
+                );
+                await saveIdealDayPlans(todayStr(), next);
+                const { generateIdealDayItems } = await import("@/lib/ideal-day");
+                await generateIdealDayItems(todayStr());
+              } catch { /* 回写失败不影响专注记录 */ }
+            })();
+          }
         }
         if (intervalRef.current) clearInterval(intervalRef.current);
         getTodayFocusSessions(todayStr()).then(setSessions);
@@ -59,7 +80,7 @@ export default function FocusPage() {
       }
       return s - 1;
     });
-  }, [mode, focusMin]);
+  }, [mode, focusMin, idealBlock]);
 
   const toggle = () => {
     if (running) {
@@ -107,8 +128,13 @@ export default function FocusPage() {
           <div className="w-9 shrink-0"></div>
         </div>
         {focusTitle && (
-          <p className="text-center mt-1 text-[13px] font-medium" style={{ color: "var(--lifeflow-primary)" }}>
+          <p className="text-center mt-1 text-[13px] font-medium flex items-center justify-center gap-1.5" style={{ color: "var(--lifeflow-primary)" }}>
             专注：{focusTitle}
+            {idealBlock && (
+              <span className="rounded-[5px] px-1.5 py-0.5 text-[10.5px] font-medium" style={{ background: "rgba(99,102,241,0.14)", color: "#6366F1" }}>
+                理想日 · 完成后自动打卡
+              </span>
+            )}
           </p>
         )}
       </header>

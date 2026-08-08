@@ -215,6 +215,30 @@ export default function GoalDetailV2Page() {
     showToast({ type: "success", message: "策略已删除" });
   }, [id]);
 
+  // T22.7：策略内联添加入口（名称 + 描述 + 周期类型）
+  const [showAddStrategy, setShowAddStrategy] = useState(false);
+  const [newStrategyName, setNewStrategyName] = useState("");
+  const [newStrategyDesc, setNewStrategyDesc] = useState("");
+  const [newStrategyCycle, setNewStrategyCycle] = useState<StrategyV2["cycleType"]>("daily");
+  const handleAddStrategy = useCallback(async () => {
+    if (!newStrategyName.trim()) {
+      showToast({ type: "warning", message: "请填写策略名称" });
+      return;
+    }
+    await addStrategyV2({
+      goalId: id,
+      name: newStrategyName.trim(),
+      description: newStrategyDesc.trim(),
+      sortOrder: strategies.length,
+      cycleType: newStrategyCycle,
+    });
+    await recalculateGoalProgress(id);
+    setShowAddStrategy(false);
+    setNewStrategyName("");
+    setNewStrategyDesc("");
+    showToast({ type: "success", message: "策略已添加" });
+  }, [id, newStrategyName, newStrategyDesc, newStrategyCycle, strategies.length]);
+
   const handleAddWeeklyTask = useCallback(async (strategyId: string) => {
     const title = (newWeeklyTaskTitle.get(strategyId) || "").trim();
     if (!title) {
@@ -601,11 +625,83 @@ export default function GoalDetailV2Page() {
       </div>
 
       {/* ─── 策略列表 ───────────────────────────────────────── */}
-      {strategies.length > 0 && (
+      {(strategies.length > 0 || showAddStrategy) && (
         <div className="mx-4 mt-5">
-          <h2 className="text-[13px] font-semibold mb-2 px-1" style={{ color: "var(--color-text-disabled)" }}>
-            策略
-          </h2>
+          <div className="flex items-center justify-between mb-2 px-1">
+            <h2 className="text-[13px] font-semibold" style={{ color: "var(--color-text-disabled)" }}>
+              策略
+            </h2>
+            <button
+              type="button"
+              onClick={() => setShowAddStrategy((v) => !v)}
+              className="flex items-center gap-1 text-[12px] font-medium active:opacity-70"
+              style={{ color: goalColor }}
+            >
+              <Plus className="w-3.5 h-3.5" />
+              添加策略
+            </button>
+          </div>
+
+          {/* T22.7：策略内联添加表单 */}
+          {showAddStrategy && (
+            <div className="rounded-[20px] p-4 mb-3" style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}>
+              <div className="space-y-2.5">
+                <input
+                  value={newStrategyName}
+                  onChange={(e) => setNewStrategyName(e.target.value)}
+                  className="w-full h-10 rounded-xl px-3 text-[14px] outline-none"
+                  style={cs}
+                  placeholder="策略名称（如：行测每日刷题）"
+                  autoFocus
+                  onKeyDown={(e) => { if (e.key === "Enter") handleAddStrategy(); }}
+                />
+                <input
+                  value={newStrategyDesc}
+                  onChange={(e) => setNewStrategyDesc(e.target.value)}
+                  className="w-full h-10 rounded-xl px-3 text-[14px] outline-none"
+                  style={cs}
+                  placeholder="描述（可选，如：每天 2 小时专项训练）"
+                />
+                <div className="flex gap-2">
+                  {([['daily', '每日固定'], ['weekly', '周循环']] as [StrategyV2["cycleType"], string][]).map(([k, label]) => (
+                    <button
+                      key={k}
+                      type="button"
+                      onClick={() => setNewStrategyCycle(k)}
+                      className="flex-1 h-9 rounded-lg text-[13px] font-medium"
+                      style={{
+                        background: newStrategyCycle === k ? `${goalColor}18` : "var(--lifeflow-background)",
+                        border: `1px solid ${newStrategyCycle === k ? goalColor : "var(--lifeflow-border)"}`,
+                        color: newStrategyCycle === k ? goalColor : "var(--color-text-secondary)",
+                      }}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddStrategy(false)}
+                    className="flex-1 h-10 rounded-xl text-[13px] font-medium"
+                    style={{ background: "var(--lifeflow-background)", color: "var(--color-text-secondary)" }}
+                  >
+                    取消
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleAddStrategy}
+                    className="flex-1 h-10 rounded-xl text-[13px] font-semibold text-white"
+                    style={{ background: goalColor }}
+                  >
+                    添加
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {strategies.length > 0 && (
           <div className="flex flex-col gap-3">
             {strategies.map((strategy) => {
               const isExpanded = expandedStrategies.has(strategy.id);
@@ -670,6 +766,12 @@ export default function GoalDetailV2Page() {
                             backgroundColor: 'rgba(255,149,0,0.12)', color: '#FF9500'
                           }}>
                             待开始
+                          </span>
+                        )}
+                        {/* T22.7：本周任务 / 今日行动进度小结 */}
+                        {(strategyWTs.length > 0 || todaysActions.length > 0) && (
+                          <span className="text-[11px] tabular-nums" style={{ color: "var(--color-text-disabled)" }}>
+                            本周 {strategyWTs.filter((w) => w.isCompleted).length}/{strategyWTs.length} · 今日 {todaysActions.filter((a) => a.isCompleted).length}/{todaysActions.length}
                           </span>
                         )}
                       </div>
@@ -737,6 +839,11 @@ export default function GoalDetailV2Page() {
                                     >
                                       {wt.title}
                                     </span>
+                                    {wt.deliverable && (
+                                      <span className="shrink-0 text-[11px] truncate max-w-[140px]" style={{ color: "var(--color-text-disabled)" }}>
+                                        {wt.deliverable}
+                                      </span>
+                                    )}
                                     <button
                                       onClick={() => handleDeleteWeeklyTask(wt.id)}
                                       className="w-6 h-6 rounded-lg flex items-center justify-center active:opacity-60"
@@ -873,11 +980,12 @@ export default function GoalDetailV2Page() {
               );
             })}
           </div>
+          )}
         </div>
       )}
 
       {/* ─── 空目标状态 ─────────────────────────────────────── */}
-      {strategies.length === 0 && (
+      {strategies.length === 0 && !showAddStrategy && (
         <div className="flex flex-col items-center pt-12 px-8">
           <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4" style={{ background: `${goalColor}15` }}>
             <Settings className="w-8 h-8" style={{ color: goalColor }} />
@@ -888,6 +996,15 @@ export default function GoalDetailV2Page() {
           <p className="text-[13px] text-center mt-1 mb-6" style={{ color: "var(--color-text-secondary)" }}>
             添加关键结果来衡量进展，添加策略来规划行动。
           </p>
+          <button
+            type="button"
+            onClick={() => setShowAddStrategy(true)}
+            className="flex items-center gap-1 px-5 h-10 rounded-full text-[13px] font-semibold text-white"
+            style={{ background: goalColor }}
+          >
+            <Plus className="w-4 h-4" />
+            添加第一个策略
+          </button>
         </div>
       )}
     </div>

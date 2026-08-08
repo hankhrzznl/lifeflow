@@ -586,3 +586,10 @@ LifeFlow v1.0，一个讲道理的生活助手。
 - **目标网格状态过滤**：网格上方新增 tabs（全部 N / 进行中 / 已暂停 / 已完成），`goalFilter` state + useMemo 过滤，激活 tab 紫色填充
 - **ISO 周修正**：Header 副标题从 `Math.ceil(日/7)` 改为 ISO 周算法（周四是锚点），显示 `2026 年第 32 周`
 
+### 专注页 ↔ 理想日 联动 + 目标详情策略区补齐（T22.7）
+
+- **理想日 → 专注**：`handleFeatureClick` focus 分支带参跳转 `/more/focus?title=<块label>&duration=<块时长>&block=<blockId>&feature=focus`（时长 = 块时长向上取整至 ≥25 分钟）
+- **专注 → 理想日**：专注页完成一次 focus 后，若带 `?block=&feature=focus` 来源，自动回写该理想日规划 `isCompleted: true` 并 `generateIdealDayItems` 同步日程（失败不影响专注记录）；专注页头部显示「理想日 · 完成后自动打卡」徽标
+- **策略添加入口补齐**：目标详情页策略区新增「+ 添加策略」（名称/描述/周期类型 每日固定|周循环 内联表单），空策略时显示「添加第一个策略」按钮（此前 import 了 `addStrategyV2` 却无 UI）
+- **策略头进度小结**：未展开即可见「本周 x/y · 今日 x/y」；周任务项展示 `deliverable` 交付物副行
+

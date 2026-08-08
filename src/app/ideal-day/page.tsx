@@ -438,6 +438,14 @@ export default function IdealDayHomePage() {
       setSheet({ open: true, feature: f, blockId, content: existing?.content ?? '', detail: existing?.detail ?? '', actions, wellness, routine, posture });
       return;
     }
+    if (f === 'focus') {
+      // T22.7：专注跳转带预填（标题/时长/块定位），完成后自动回写
+      const block = activeTemplate!.blocks.find((b) => b.id === blockId);
+      if (!block) return;
+      const dur = Math.max(25, Math.round((toMin(block.end) - toMin(block.start)) / 60));
+      router.push(`/more/focus?title=${encodeURIComponent(block.label)}&duration=${dur}&block=${blockId}&feature=focus`);
+      return;
+    }
     if (f === 'leisure') {
       showToast({ type: "info", message: "留白 · 自由时间，什么都不安排" });
       return;

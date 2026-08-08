@@ -580,3 +580,9 @@ LifeFlow v1.0，一个讲道理的生活助手。
 - **跳转定位**：首页待办 ideal 项行内新增紫色 Sun 圆钮 → `/ideal-day?block=<blockId>`（与 Timer 专注按钮并列）；`TodayAction` 新增 `blockId` 字段（解析 `ideal-plan-{blockId}-{feature}`）
 - **闭环**：首页勾选 → 理想日规划完成态同步 → 目标页/效率页徽标联动刷新
 
+### 效率页本体打磨（T22.6）
+
+- **今日焦点行升级**：焦点流行内新增时间 + 来源标签（ideal 项紫色「理想日」、其他显示目标/习惯标签）、理想日项 Sun 定位按钮（跳 `/ideal-day?block=`）、全部行 Timer 专注按钮（与首页待办交互一致）
+- **目标网格状态过滤**：网格上方新增 tabs（全部 N / 进行中 / 已暂停 / 已完成），`goalFilter` state + useMemo 过滤，激活 tab 紫色填充
+- **ISO 周修正**：Header 副标题从 `Math.ceil(日/7)` 改为 ISO 周算法（周四是锚点），显示 `2026 年第 32 周`
+

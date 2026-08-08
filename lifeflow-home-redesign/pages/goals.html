@@ -402,7 +402,7 @@
         <header class="flex items-start justify-between gap-3">
           <div class="min-w-0 flex-1">
             <h1 class="lf-h1 leading-tight text-[var(--lifeflow-text-primary)]">目标</h1>
-            <p class="mt-1 text-[13px] text-[var(--lifeflow-text-secondary)]">8月 第 2 周 · 稳步推进中</p>
+            <p class="mt-1 text-[13px] text-[var(--lifeflow-text-secondary)]">2026 年第 32 周 · 稳步推进中</p>
           </div>
           <button type="button" data-dom-id="nav-more" aria-label="更多功能" class="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--lifeflow-card)] text-[var(--lifeflow-text-secondary)] shadow-[var(--lifeflow-shadow-1)] transition-transform active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--lifeflow-ring)]">
             <i data-lucide="ellipsis" class="h-5 w-5"></i>
@@ -447,10 +447,11 @@
             <li class="flex items-center gap-3 border-t border-[var(--lifeflow-border-light)] py-2.5 first:border-t-0">
               <button type="button" aria-label="标记完成：申论大作文框架" class="relative flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 border-dashed border-[var(--lifeflow-border-dashed)] transition-transform active:scale-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--lifeflow-ring)] before:absolute before:inset-[-8px] before:rounded-full before:content-['']"></button>
               <div class="min-w-0 flex-1">
-                <p class="truncate text-[14px] font-medium leading-snug text-[var(--lifeflow-text-primary)]">申论大作文框架</p>
-                <p class="mt-0.5 text-[12px] text-[var(--lifeflow-text-tertiary)] tabular-nums">16:00</p>
+                <p class="truncate text-[14px] font-medium leading-snug text-[var(--lifeflow-text-primary)]">判断推理 第1+2讲</p>
+                <p class="mt-0.5 text-[12px] text-[var(--lifeflow-text-tertiary)] tabular-nums">09:30 <span class="ml-1 rounded-[5px] bg-[rgba(99,102,241,0.14)] px-1 py-0.5 text-[10px] font-medium text-[rgba(99,102,241,1)]">理想日</span></p>
               </div>
-              <span class="shrink-0 rounded-[6px] bg-[var(--lifeflow-primary-light)] px-1.5 py-0.5 text-[11px] text-[var(--lifeflow-primary)]">省考</span>
+              <a href="ideal-day.html" aria-label="理想日：判断推理 第1+2讲" class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[rgba(99,102,241,0.1)] text-[rgba(99,102,241,1)] transition-all active:scale-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--lifeflow-ring)]"><i data-lucide="sun" class="h-3.5 w-3.5"></i></a>
+              <button type="button" aria-label="专注：判断推理 第1+2讲" class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[rgba(139,92,246,0.14)] text-[rgba(139,92,246,1)] transition-all active:scale-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--lifeflow-ring)]"><i data-lucide="timer" class="h-3.5 w-3.5"></i></button>
             </li>
             <li class="flex items-center gap-3 border-t border-[var(--lifeflow-border-light)] py-2.5 first:border-t-0">
               <button type="button" aria-label="标记完成：健身·上肢力量" class="relative flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 border-dashed border-[var(--lifeflow-border-dashed)] transition-transform active:scale-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--lifeflow-ring)] before:absolute before:inset-[-8px] before:rounded-full before:content-['']"></button>
@@ -468,11 +469,18 @@
           </div>
         </section>
 
-        <!-- 3 活跃目标网格 -->
+        <!-- 3 活跃目标网格（状态过滤） -->
         <section id="section-goal-grid">
           <div class="flex items-center justify-between gap-3 px-1">
             <h2 class="lf-h2 leading-tight text-[var(--lifeflow-text-primary)]">活跃目标</h2>
             <a href="#" class="flex shrink-0 items-center whitespace-nowrap text-[13px] font-semibold text-[var(--lifeflow-primary)] transition-opacity active:opacity-70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--lifeflow-ring)]">管理<i data-lucide="arrow-right" class="ml-0.5 h-3 w-3"></i></a>
+          </div>
+          <!-- T22.6：状态过滤 tabs -->
+          <div class="no-scrollbar mt-2.5 flex items-center gap-1.5 overflow-x-auto">
+            <button type="button" aria-pressed="true" class="shrink-0 rounded-full bg-[rgba(99,102,241,1)] px-3.5 h-8 text-[12.5px] font-medium leading-none text-[var(--lifeflow-text-inverse)] transition-colors hover:opacity-90 active:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--lifeflow-ring)]">全部 4</button>
+            <button type="button" class="shrink-0 rounded-full bg-[var(--lifeflow-card)] px-3.5 h-8 text-[12.5px] font-medium leading-none text-[var(--lifeflow-text-secondary)] shadow-[var(--lifeflow-shadow-1)] transition-colors hover:text-[var(--lifeflow-primary)] active:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--lifeflow-ring)]">进行中</button>
+            <button type="button" class="shrink-0 rounded-full bg-[var(--lifeflow-card)] px-3.5 h-8 text-[12.5px] font-medium leading-none text-[var(--lifeflow-text-secondary)] shadow-[var(--lifeflow-shadow-1)] transition-colors hover:text-[var(--lifeflow-primary)] active:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--lifeflow-ring)]">已暂停</button>
+            <button type="button" class="shrink-0 rounded-full bg-[var(--lifeflow-card)] px-3.5 h-8 text-[12.5px] font-medium leading-none text-[var(--lifeflow-text-secondary)] shadow-[var(--lifeflow-shadow-1)] transition-colors hover:text-[var(--lifeflow-primary)] active:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--lifeflow-ring)]">已完成</button>
           </div>
           <div class="mt-3 grid grid-cols-2 gap-3">
             <div class="rounded-xl bg-[var(--lifeflow-card)] px-3.5 pt-3.5 pb-3 shadow-[var(--lifeflow-shadow-1)]">

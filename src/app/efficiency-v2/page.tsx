@@ -3,7 +3,7 @@
 import { useMemo, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Plus, Target, Copy, Download, Trash2, Check, Sparkles } from "lucide-react";
+import { Plus, Target, Copy, Download, Trash2, Check, Sparkles, Sun, Timer } from "lucide-react";
 import { useLiveQuery } from "dexie-react-hooks";
 import {
   type GoalV2,
@@ -111,6 +111,13 @@ export default function EfficiencyV2Page() {
   }, [idealTodayPlans]);
 
   const goalList = goals ?? [];
+
+  // T22.6：目标状态过滤（全部 / 进行中 / 已暂停 / 已完成）
+  const [goalFilter, setGoalFilter] = useState<'all' | GoalV2["status"]>('all');
+  const filteredGoalList = useMemo(
+    () => (goalFilter === 'all' ? goalList : goalList.filter((g) => g.status === goalFilter)),
+    [goalList, goalFilter],
+  );
 
   // ── 今日焦点（T18-5：与首页「今日待办」共用同一数据源） ──
   const { mergedActions, total: focusTotal, done: focusDone, toggle: toggleFocus, isDone: isFocusDone } = useTodayExecution();
@@ -277,7 +284,14 @@ export default function EfficiencyV2Page() {
             目标
           </h1>
           <p className="text-[13px] mt-1" style={{ color: "var(--color-text-secondary)" }}>
-            {new Date().getMonth() + 1}月 第 {Math.ceil(new Date().getDate() / 7)} 周 · 稳步推进中
+            {(() => {
+              // T22.6：ISO 周数修正（原 Math.ceil(日/7) 不准确）
+              const now = new Date();
+              const thursday = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 3 - ((now.getDay() + 6) % 7));
+              const jan1 = new Date(thursday.getFullYear(), 0, 1);
+              const week = Math.ceil(((thursday.getTime() - jan1.getTime()) / 86400000 + 1) / 7);
+              return `${now.getFullYear()} 年第 ${week} 周`;
+            })()} · 稳步推进中
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0 mt-0.5">
@@ -368,10 +382,42 @@ export default function EfficiencyV2Page() {
                       >
                         {a.title}
                       </span>
+                      <span className="block text-[11px] mt-0.5" style={{ color: "var(--color-text-secondary)" }}>
+                        {a.time || "--"}
+                        {a.sourceType === "ideal" && (
+                          <span className="ml-1.5 rounded-[5px] px-1 py-0.5 text-[10px] font-medium" style={{ background: "rgba(99,102,241,0.14)", color: "#6366F1" }}>
+                            理想日
+                          </span>
+                        )}
+                        {a.tag && a.sourceType !== "ideal" && (
+                          <span className="ml-1.5 rounded-[5px] px-1 py-0.5 text-[10px] font-medium" style={{ background: "var(--lifeflow-brand-50)", color: "var(--lifeflow-primary)" }}>
+                            {a.tag}
+                          </span>
+                        )}
+                      </span>
                     </span>
-                    <span className="shrink-0 text-[11px] tabular-nums" style={{ color: "var(--color-text-secondary)" }}>
-                      {a.time || "--"}
-                    </span>
+                    {/* T22.6：理想日规划项定位按钮 */}
+                    {a.sourceType === "ideal" && a.blockId && (
+                      <button
+                        type="button"
+                        aria-label={`理想日：${a.title}`}
+                        onClick={(e) => { e.stopPropagation(); router.push(`/ideal-day?block=${a.blockId}`); }}
+                        className="w-7 h-7 shrink-0 rounded-full flex items-center justify-center active:scale-90 transition-transform"
+                        style={{ background: "rgba(99,102,241,0.1)", color: "#6366F1" }}
+                      >
+                        <Sun className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                    {/* T22.6：专注按钮（与首页待办一致） */}
+                    <button
+                      type="button"
+                      aria-label={`专注：${a.title}`}
+                      onClick={(e) => { e.stopPropagation(); router.push("/more/focus"); }}
+                      className="w-7 h-7 shrink-0 rounded-full flex items-center justify-center active:scale-90 transition-transform"
+                      style={{ background: "rgba(139,92,246,0.14)", color: "rgba(139,92,246,1)" }}
+                    >
+                      <Timer className="w-3.5 h-3.5" />
+                    </button>
                   </button>
                 );
               })}
@@ -389,9 +435,37 @@ export default function EfficiencyV2Page() {
         </motion.div>
       </div>
 
-      {/* ===== Goal Grid（活跃目标优先） ===== */}
-      <div className="px-4 grid grid-cols-2 gap-3">
-        {[...goalList]
+      {/* ===== Goal Grid（活跃目标优先 · 状态过滤） ===== */}
+      <div className="px-4">
+        {/* T22.6：状态过滤 tabs */}
+        <div className="flex items-center gap-1.5 mb-3 overflow-x-auto no-scrollbar">
+          {([
+            { key: 'all', label: `全部 ${goalList.length}` },
+            { key: 'active', label: '进行中' },
+            { key: 'paused', label: '已暂停' },
+            { key: 'completed', label: '已完成' },
+          ] as { key: 'all' | GoalV2["status"]; label: string }[]).map((t) => {
+            const active = goalFilter === t.key;
+            return (
+              <button
+                key={t.key}
+                type="button"
+                onClick={() => setGoalFilter(t.key)}
+                className="shrink-0 px-3.5 h-8 rounded-full text-[12.5px] font-medium transition-all active:opacity-80"
+                style={{
+                  background: active ? "#6366F1" : "var(--color-surface-card)",
+                  color: active ? "#fff" : "var(--color-text-secondary)",
+                  boxShadow: "var(--shadow-card)",
+                }}
+              >
+                {t.label}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+        {[...filteredGoalList]
           .sort((a, b) => {
             const rank: Record<string, number> = { active: 0, paused: 1, completed: 2 };
             return (rank[a.status] ?? 3) - (rank[b.status] ?? 3);
@@ -502,6 +576,7 @@ export default function EfficiencyV2Page() {
             </motion.div>
           );
         })}
+        </div>
       </div>
 
       {/* ===== FAB 新建目标 ===== */}

@@ -15,6 +15,7 @@ import { getTotalFocusMinutes, getHabits } from "@/lib/db/life.db";
 import { showToast } from "@/components/ui/Toast";
 import OnboardingCard from "@/components/ui/OnboardingCard";
 import SleepRitualCard from "@/components/dashboard/SleepRitualCard";
+import { useTheme } from "@/components/theme/ThemeProvider";
 import { useThreeThings } from "@/lib/three-things";
 import { getWaterGoal, healthDB, getSleepLogByDate } from "@/lib/db/health.db";
 import { reviewerBrain } from "@/lib/brains/reviewer";
@@ -68,7 +69,7 @@ function ProgressRing({ percent }: { percent: number }) {
   return (
     <div className="relative h-[84px] w-[84px] shrink-0" aria-hidden="true">
       <svg className="h-full w-full -rotate-90" viewBox="0 0 84 84">
-        <circle cx="42" cy="42" r={R} fill="none" stroke="#E9E9EB" strokeWidth="8" />
+        <circle cx="42" cy="42" r={R} fill="none" stroke="var(--lifeflow-knit-bg)" strokeWidth="8" />
         <circle
           cx="42" cy="42" r={R} fill="none"
           stroke="var(--lifeflow-primary)" strokeWidth="8" strokeLinecap="round"
@@ -93,6 +94,12 @@ export default function HomePage() {
   const router = useRouter();
   const today = todayStr();
   const now = new Date();
+
+  // ── 全局主题：首页右上角日间/夜间切换 ──
+  const { resolvedTheme, setTheme } = useTheme();
+  const toggleTheme = useCallback(() => {
+    setTheme(resolvedTheme === "dark" ? "light" : "dark");
+  }, [resolvedTheme, setTheme]);
 
   // ── 当前时间（每分钟更新） ──
   const [nowTime, setNowTime] = useState(nowTimeStr);
@@ -239,14 +246,27 @@ export default function HomePage() {
             {formatDateChinese(now)} · 今天也一起织
           </p>
         </div>
-        <Link
-          href="/more"
-          aria-label="更多功能"
-          className="mt-0.5 h-10 w-10 shrink-0 flex items-center justify-center rounded-full active:opacity-60"
-          style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}
-        >
-          <Ellipsis className="w-5 h-5" style={{ color: "var(--color-text-secondary)" }} />
-        </Link>
+        <div className="flex shrink-0 items-center gap-2">
+          <Link
+            href="/more"
+            aria-label="更多功能"
+            className="mt-0.5 h-10 w-10 shrink-0 flex items-center justify-center rounded-full active:opacity-60"
+            style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}
+          >
+            <Ellipsis className="w-5 h-5" style={{ color: "var(--color-text-secondary)" }} />
+          </Link>
+          <button
+            type="button"
+            aria-label={resolvedTheme === "dark" ? "切换到白天形态" : "切换到晚间形态"}
+            onClick={toggleTheme}
+            className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-transform active:scale-95 active:opacity-60"
+            style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}
+          >
+            {resolvedTheme === "dark"
+              ? <Sun className="w-5 h-5" style={{ color: "var(--color-text-secondary)" }} />
+              : <Moon className="w-5 h-5" style={{ color: "var(--color-text-secondary)" }} />}
+          </button>
+        </div>
       </motion.div>
 
       {/* ===== 新用户引导 ===== */}

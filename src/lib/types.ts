@@ -1102,6 +1102,8 @@ export interface IdealDayPlanItem {
   start: string;               // 冗余存时间段起止，便于日程页直接消费
   end: string;
   isCompleted: boolean;
+  /** T22.3：目标规划绑定的目标 id（深度联动：进度回写 / 目标页反向展示） */
+  goalId?: string;
 }
 
 /** 理想日蓝图：把"理想的一天"固化为可排程的结构化配置 */

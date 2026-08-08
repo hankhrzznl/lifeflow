@@ -85,6 +85,26 @@ export default function GoalDetailV2Page() {
     syncAllDailyActionsForGoal(id).catch(() => {});
   }, [id]);
 
+  // T22.3：今日理想日推进（目标页 ← 理想日反向联动）
+  const [idealTodayPlans, setIdealTodayPlans] = useState<{ blockId: string; content: string; start: string; end: string; isCompleted: boolean }[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { getIdealDayPlans } = await import("@/lib/ideal-day-templates");
+        const plans = await getIdealDayPlans(today);
+        if (!cancelled) {
+          setIdealTodayPlans(
+            plans
+              .filter((p) => p.goalId === id && p.feature === 'study')
+              .map((p) => ({ blockId: p.blockId, content: p.content, start: p.start, end: p.end, isCompleted: p.isCompleted })),
+          );
+        }
+      } catch { if (!cancelled) setIdealTodayPlans([]); }
+    })();
+    return () => { cancelled = true; };
+  }, [id]);
+
   // ─── 衍生数据 ─────────────────────────────────────────────
   const weeklyTasksByStrategy = useMemo(() => {
     const map = new Map<string, WeeklyTaskV2[]>();
@@ -368,6 +388,42 @@ export default function GoalDetailV2Page() {
           </div>
         </div>
       </div>
+
+      {/* ─── 今日理想日推进（T22.3 目标页 ← 理想日反向联动） ─── */}
+      {idealTodayPlans.length > 0 && (
+        <div className="mx-4 mt-4 p-4 rounded-[20px]" style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}>
+          <div className="flex items-center justify-between mb-2.5">
+            <h2 className="text-[13px] font-semibold" style={{ color: "var(--color-text-disabled)" }}>
+              今日理想日推进
+            </h2>
+            <button type="button" onClick={() => router.push("/ideal-day")}
+              className="text-[11.5px] font-medium active:opacity-70" style={{ color: goalColor }}>
+              去理想日 →
+            </button>
+          </div>
+          <div className="flex flex-col">
+            {idealTodayPlans.map((p) => (
+              <button key={p.blockId} type="button"
+                onClick={() => router.push(`/ideal-day?block=${p.blockId}`)}
+                className="flex items-center gap-2.5 py-2 text-left active:opacity-70"
+                style={{ borderBottom: "1px solid var(--lifeflow-border-light)" }}>
+                <span className="flex h-6 w-6 items-center justify-center rounded-full shrink-0"
+                  style={{ background: p.isCompleted ? "rgba(52,199,89,0.16)" : `${goalColor}1A`, color: p.isCompleted ? GREEN : goalColor }}>
+                  {p.isCompleted ? <Check className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[12.5px] font-medium truncate" style={{ color: p.isCompleted ? "var(--color-text-tertiary)" : "var(--color-text-primary)", textDecoration: p.isCompleted ? "line-through" : "none" }}>
+                    {p.content}
+                  </p>
+                  <p className="text-[11px] tabular-nums mt-0.5" style={{ color: "var(--color-text-tertiary)" }}>
+                    {p.start} - {p.end} · 理想日学习时段
+                  </p>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ─── 关键结果 ───────────────────────────────────────── */}
       <div className="mx-4 mt-4">

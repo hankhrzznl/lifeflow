@@ -8,6 +8,7 @@ import { ChevronLeft, Check, Trash2, Lightbulb, ListChecks, Sparkles } from "luc
 import { getIdealDayConfig } from "@/lib/ideal-day";
 import { ensureTemplates, selectTemplate, getFeatureMeta, getIdealDayPlans, saveIdealDayPlans, upsertIdealDayPlan, SEGMENT_META } from "@/lib/ideal-day-templates";
 import type { IdealDayFeature, IdealDayPlanItem, IdealDayTemplateBlock, IdealDayBlockGroup } from "@/lib/types";
+import type { GoalV2, KeyResultV2, WeeklyTaskV2, DailyActionV2 } from "@/lib/db/goal-v2.db";
 import { showToast } from "@/components/ui/Toast";
 import { generateIdealDayItems } from "@/lib/ideal-day";
 
@@ -119,19 +120,34 @@ export default function IdealDayPlanPage() {
   const [content, setContent] = useState('');
   const [detail, setDetail] = useState('');
   const [saving, setSaving] = useState(false);
-  const [goals, setGoals] = useState<{ id: string; title: string }[]>([]);
+  const [goals, setGoals] = useState<GoalV2[]>([]);
   const [goalId, setGoalId] = useState('');
+  // T22.3：目标拆解联动数据（选中目标后加载）
+  const [goalDetail, setGoalDetail] = useState<{ krs: KeyResultV2[]; weeklyTasks: WeeklyTaskV2[]; todayActions: DailyActionV2[] }>({ krs: [], weeklyTasks: [], todayActions: [] });
+
+  // T22.3：加载选中目标的拆解（KR 进度 / 本周任务 / 今日行动）
+  const loadGoalDetail = useCallback(async (gid: string) => {
+    if (!gid) { setGoalDetail({ krs: [], weeklyTasks: [], todayActions: [] }); return; }
+    try {
+      const { getKeyResultsV2, getWeeklyTasksByGoalV2, getDailyActionsByDateV2 } = await import("@/lib/db/goal-v2.db");
+      const { getWeekStart } = await import("@/lib/goal-v2-engine");
+      const krs = await getKeyResultsV2(gid);
+      const weeklyTasks = (await getWeeklyTasksByGoalV2(gid)).filter((t) => t.weekStart === getWeekStart(new Date()) && !t.isCompleted);
+      const todayActions = (await getDailyActionsByDateV2(today)).filter((a) => a.goalId === gid && !a.isCompleted);
+      setGoalDetail({ krs, weeklyTasks, todayActions });
+    } catch { setGoalDetail({ krs: [], weeklyTasks: [], todayActions: [] }); }
+  }, [today]);
 
   const reload = useCallback(async () => {
     const c = await getIdealDayConfig();
     setConfig(c);
     setPlans(await getIdealDayPlans(today));
-    // 目标规划：加载目标列表（省考/四级等）
+    // 目标规划：加载目标列表（省考/四级等，五层目标库）
     if (feature === 'study') {
       try {
-        const { getAllGoalsV2 } = await import("@/lib/db/efficiency.db");
+        const { getAllGoalsV2 } = await import("@/lib/db/goal-v2.db");
         const list = await getAllGoalsV2();
-        setGoals(list.map((g) => ({ id: g.id, title: g.title })));
+        setGoals(list.filter((g) => g.status === 'active' || g.status === 'completed'));
       } catch { setGoals([]); }
     }
     setLoaded(true);
@@ -157,6 +173,10 @@ export default function IdealDayPlanPage() {
     if (existing) {
       setContent(existing.content ?? '');
       setDetail(existing.detail ?? '');
+      if (feature === 'study' && existing.goalId && existing.goalId !== goalId) {
+        setGoalId(existing.goalId);
+        loadGoalDetail(existing.goalId);
+      }
     }
   }, [loaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -176,6 +196,10 @@ export default function IdealDayPlanPage() {
         showToast({ type: "error", message: "请先填写具体内容" });
         return;
       }
+      if (feature === 'study' && !goalId) {
+        showToast({ type: "error", message: "请先选择本次推进的目标" });
+        return;
+      }
       let merged = [...plans];
       merged = upsertIdealDayPlan(merged, {
         blockId,
@@ -185,6 +209,8 @@ export default function IdealDayPlanPage() {
         start: block.start,
         end: block.end,
         isCompleted: existingPlan?.isCompleted ?? false,
+        // T22.3：目标规划绑定目标 id（供进度回写与目标页反向展示）
+        goalId: feature === 'study' ? goalId : undefined,
       });
       await saveIdealDayPlans(today, merged);
       setPlans(merged);
@@ -303,7 +329,7 @@ export default function IdealDayPlanPage() {
               </div>
             </motion.div>
 
-            {/* 目标选择（目标规划专属，联动目标页面） */}
+            {/* 目标选择（目标规划专属，T22.3 深度联动：绑定 goalId + 拆解带入） */}
             {feature === 'study' && (
               <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}
                 className="rounded-[20px] p-4 mb-3" style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}>
@@ -318,7 +344,11 @@ export default function IdealDayPlanPage() {
                   <div className="flex flex-wrap gap-1.5">
                     {goals.map((g) => (
                       <button key={g.id} type="button"
-                        onClick={() => { setGoalId(g.id); setContent((c) => (c.includes(g.title) ? c : `${g.title} · ${c}`.replace(" · ", c ? " · " : "").trim())); }}
+                        onClick={() => {
+                          setGoalId(g.id);
+                          loadGoalDetail(g.id);
+                          setContent((c) => (c.includes(g.title) ? c : c ? `${g.title} · ${c}` : g.title));
+                        }}
                         className="flex items-center gap-1 px-3 h-8 rounded-full text-[12px] font-medium active:opacity-70"
                         style={{
                           background: goalId === g.id ? "rgba(99,102,241,0.16)" : "var(--lifeflow-background)",
@@ -326,8 +356,79 @@ export default function IdealDayPlanPage() {
                           color: goalId === g.id ? "rgba(99,102,241,1)" : "var(--color-text-primary)",
                         }}>
                         {g.title}
+                        {goalId === g.id && <Check className="w-3 h-3" />}
                       </button>
                     ))}
+                  </div>
+                )}
+
+                {/* T22.3：选中目标后的拆解联动区 */}
+                {goalId && goals.length > 0 && (
+                  <div className="mt-3 pt-3 space-y-2.5" style={{ borderTop: "1px solid var(--lifeflow-border-light)" }}>
+                    {/* KR 进度 */}
+                    {goalDetail.krs.length > 0 && (
+                      <div>
+                        <p className="text-[12px] font-semibold mb-1.5" style={{ color: "var(--color-text-secondary)" }}>关键结果进度</p>
+                        <div className="space-y-1.5">
+                          {goalDetail.krs.map((kr) => {
+                            const pct = kr.targetValue > 0 ? Math.min(100, Math.round((kr.currentValue / kr.targetValue) * 100)) : 0;
+                            return (
+                              <div key={kr.id} className="flex items-center gap-2">
+                                <span className="min-w-0 flex-1 text-[11.5px] truncate" style={{ color: "var(--color-text-primary)" }}>{kr.description}</span>
+                                <div className="w-20 h-1.5 rounded-full shrink-0" style={{ background: "var(--lifeflow-background)" }}>
+                                  <div className="h-full rounded-full" style={{ width: `${pct}%`, background: "var(--lifeflow-primary)" }} />
+                                </div>
+                                <span className="w-12 text-right text-[10.5px] tabular-nums shrink-0" style={{ color: "var(--color-text-tertiary)" }}>
+                                  {kr.currentValue}/{kr.targetValue}{kr.unit}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 本周任务：一键带入 */}
+                    {goalDetail.weeklyTasks.length > 0 && (
+                      <div>
+                        <p className="text-[12px] font-semibold mb-1.5" style={{ color: "var(--color-text-secondary)" }}>本周任务（点击带入）</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {goalDetail.weeklyTasks.map((t) => (
+                            <button key={t.id} type="button"
+                              onClick={() => setContent((c) => (c.includes(t.title) ? c : c ? `${c} · ${t.title}` : t.title))}
+                              className="px-3 h-7 rounded-full text-[12px] font-medium active:opacity-70 text-left max-w-full truncate"
+                              style={{ background: "var(--lifeflow-background)", color: "var(--color-text-primary)" }}>
+                              {t.title}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 今日行动：一键带入 */}
+                    {goalDetail.todayActions.length > 0 && (
+                      <div>
+                        <p className="text-[12px] font-semibold mb-1.5" style={{ color: "var(--color-text-secondary)" }}>今日行动（点击带入）</p>
+                        <div className="space-y-1">
+                          {goalDetail.todayActions.map((a) => (
+                            <button key={a.id} type="button"
+                              onClick={() => setContent((c) => (c.includes(a.title) ? c : c ? `${c} · ${a.title}` : a.title))}
+                              className="w-full text-left px-3 py-2 rounded-xl active:opacity-70 flex items-center gap-2"
+                              style={{ background: "var(--lifeflow-background)" }}>
+                              <span className="text-[11px] tabular-nums shrink-0" style={{ color: "var(--color-text-tertiary)" }}>{a.time}</span>
+                              <span className="min-w-0 flex-1 truncate text-[12.5px]" style={{ color: "var(--color-text-primary)" }}>{a.title}</span>
+                              {a.duration > 0 && <span className="text-[10.5px] shrink-0" style={{ color: "var(--color-text-tertiary)" }}>{a.duration} 分钟</span>}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {goalDetail.krs.length === 0 && goalDetail.weeklyTasks.length === 0 && goalDetail.todayActions.length === 0 && (
+                      <p className="text-[11.5px]" style={{ color: "var(--color-text-tertiary)" }}>
+                        该目标暂无拆解数据，可直接填写内容；或在「目标」页补充关键结果与策略
+                      </p>
+                    )}
                   </div>
                 )}
               </motion.div>

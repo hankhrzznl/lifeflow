@@ -555,3 +555,13 @@ LifeFlow v1.0，一个讲道理的生活助手。
 - **点击互跳**：日程页点击 ideal-plan 项 → study/sleep/medication 跳对应规划页，其余跳 `/ideal-day?block=<blockId>`；ideal-block 块级项 → 定位该时段；理想日页 `?block=` 支持 scrollIntoView 定位 + 2s 紫框高亮闪烁
 - **来源识别**：日程页所有 ideal 项显示紫色 `Sparkles + 理想日` 徽标
 
+### 目标页 ↔ 理想日 深度联动（T22.3）
+
+> 目标规划从"只拼标题文本"升级为"绑定目标 + 拆解带入 + 双向展示"的完整闭环。
+
+- **数据源统一**：目标规划页目标列表从旧 `efficiency.db.getAllGoalsV2` 切换到五层 `goal-v2.db.getAllGoalsV2`（与目标页同库，过滤 active/completed）
+- **绑定 goalId**：`IdealDayPlanItem` 新增可选 `goalId?: string`；目标规划页选择目标后保存即绑定（回填时恢复），保存前置校验"请先选择本次推进的目标"
+- **拆解联动区**：选中目标后加载并展示 KR 进度条（current/target）、本周任务 chips（过滤 weekStart 且未完成）、今日行动列表（getDailyActionsByDateV2 按 goalId 过滤未完成），全部支持一键带入 content（以 `·` 追加、去重）
+- **目标页反向**：目标详情页新增「今日理想日推进」卡片——聚合今日 `goalId` 匹配的 study 规划（含完成态），点击跳 `/ideal-day?block=<blockId>` 定位，右上角「去理想日 →」
+- **闭环语义**：理想日学习时段完成（勾选）→ 日程同步 → 目标页推进卡片显示已完成；不自动标记 DailyAction，避免破坏目标系统完成语义
+

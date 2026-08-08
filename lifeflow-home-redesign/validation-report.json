@@ -120,11 +120,11 @@
     "pages/more.html": "c88327bd3db2177dd9200ae670d507344ef870435eccd43522f1e6c527015b5f",
     "pages/plan-medication.html": "1866429f8a0be7982ad4808c1c80784849717ff53d62736cf6d25cc8baf44905",
     "pages/plan-sleep.html": "ebf9d9ac883ba68367e3f5e0c113abc319aab68338e7e043d7350db1e4e16006",
-    "pages/plan-study.html": "0b3eec8067f4f6c1eebb8c2b5fc1b7c9f8b4543f0bcbc02bee84fb0ceaa179cc",
+    "pages/plan-study.html": "b565b72c6629ef49f5d912eb0314c48e4a19ff8f9c2f875606ab5f3d701c14a2",
     "pages/schedule.html": "dbea0b43114069ea77b17ca25b230df55a4da5f662297bc619cd86f5ff97ba33"
   },
   "designDir": "d:\\hankkk\\lifeflow\\lifeflow-home-redesign",
   "expectedPages": 12,
   "requireInteractions": "plan-study:pages/ideal-day.html,plan-workout:pages/ideal-day.html,plan-posture:pages/ideal-day.html,plan-wellness:pages/ideal-day.html,plan-routine:pages/ideal-day.html,back-ideal:pages/ideal-day-sheet.html,sheet-save:pages/ideal-day-sheet.html,nav-ideal:pages/ideal-day-sheet.html,back-ideal:pages/plan-study.html,nav-ideal:pages/plan-study.html",
-  "checkedAt": "2026-08-08T15:45:51.694Z"
+  "checkedAt": "2026-08-08T15:50:45.740Z"
 }

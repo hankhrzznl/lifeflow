@@ -8,6 +8,7 @@ import {
   Pill, Timer, Wallet, StickyNote,
   Bell, Settings, Compass, ClipboardCheck, Sun, Repeat, Clock,
   BookOpen, Target, Brain, PersonStanding, Star, Hourglass, CalendarDays,
+  Sparkles, BarChart3,
   Search, SearchX, X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -43,6 +44,8 @@ const MODULE_GROUPS: { title: string; items: ModuleEntry[] }[] = [
       { label: "备考目标", path: "/more/exam-plan", icon: <Target className="h-5 w-5" />, color: "var(--lifeflow-primary)", bgColor: "var(--lifeflow-brand-50)", desc: "省考 · 四级目标与课时" },
       { label: "记忆复习", path: "/more/ebbinghaus", icon: <Brain className="h-5 w-5" />, color: "var(--lifeflow-primary)", bgColor: "var(--lifeflow-brand-50)", desc: "艾宾浩斯记忆" },
       { label: "专注计时", path: "/more/focus", icon: <Timer className="h-5 w-5" />, color: "var(--lifeflow-primary)", bgColor: "var(--lifeflow-brand-50)", desc: "番茄专注" },
+      { label: "冥想放松", path: "/more/meditation", icon: <Sparkles className="h-5 w-5" />, color: "var(--lifeflow-primary)", bgColor: "var(--lifeflow-brand-50)", desc: "正念 · 呼吸 · 扫描" },
+      { label: "周报汇总", path: "/more/review/weekly", icon: <BarChart3 className="h-5 w-5" />, color: "var(--lifeflow-primary)", bgColor: "var(--lifeflow-brand-50)", desc: "数据洞察 · 本周回顾" },
     ],
   },
   {

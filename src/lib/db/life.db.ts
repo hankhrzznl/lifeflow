@@ -40,6 +40,17 @@ export interface FocusSession {
   endedAt?: number;
 }
 
+/** T23.1：冥想会话（正念/呼吸/身体扫描计时记录） */
+export interface MeditationSession {
+  id: string;            // uuid
+  date: string;          // YYYY-MM-DD
+  duration: number;      // 分钟
+  style: 'mindfulness' | 'breathing' | 'body-scan' | 'guided';
+  completed: boolean;
+  startedAt: number;     // timestamp ms
+  endedAt?: number;
+}
+
 export interface DietLog {
   id?: number;
   name: string;
@@ -87,6 +98,7 @@ export class LifeDB extends Dexie {
   wellnessLogs!: Table<WellnessLog, number>;
   cheatDays!: Table<CheatDay, number>;
   wishes!: Table<Wish, string>;
+  meditationSessions!: Table<MeditationSession, string>;
 
   constructor() {
     super('LifeFlowLife');
@@ -130,6 +142,17 @@ export class LifeDB extends Dexie {
     });
     this.version(7).stores({
       wishes: '&id, completed, createdAt, sortOrder',
+    });
+    this.version(8).stores({
+      habits: '&id, name, createdAt',
+      countdowns: '&id, name, date, createdAt',
+      notes: '&id, date, createdAt',
+      focusSessions: '&id, date, startedAt',
+      dietLogs: '++id, date, mealType',
+      wellnessLogs: '++id, date, type',
+      cheatDays: '++id, date',
+      wishes: '&id, completed, createdAt, sortOrder',
+      meditationSessions: '&id, date, startedAt',
     });
   }
 }
@@ -254,6 +277,36 @@ export async function getTotalFocusMinutes(date: string): Promise<number> {
   const sessions = await lifeDB.focusSessions
     .where('date').equals(date)
     .filter(s => s.type === 'focus' && s.completed)
+    .toArray();
+  return sessions.reduce((sum, s) => sum + s.duration, 0);
+}
+
+// ─── Meditation Sessions CRUD（T23.1） ───────────────────────
+
+export async function addMeditationSession(s: Omit<MeditationSession, 'id'>): Promise<string> {
+  const id = crypto.randomUUID();
+  await lifeDB.meditationSessions.add({ ...s, id });
+  return id;
+}
+
+export async function getTodayMeditationSessions(date: string): Promise<MeditationSession[]> {
+  return lifeDB.meditationSessions.where('date').equals(date).toArray();
+}
+
+export async function getRecentMeditationSessions(days: number = 7): Promise<MeditationSession[]> {
+  const dates: string[] = [];
+  for (let i = 0; i < days; i++) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    dates.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`);
+  }
+  return lifeDB.meditationSessions.where('date').anyOf(dates).toArray();
+}
+
+export async function getTotalMeditationMinutes(date: string): Promise<number> {
+  const sessions = await lifeDB.meditationSessions
+    .where('date').equals(date)
+    .filter(s => s.completed)
     .toArray();
   return sessions.reduce((sum, s) => sum + s.duration, 0);
 }

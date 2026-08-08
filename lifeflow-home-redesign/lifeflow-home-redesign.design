@@ -620,6 +620,66 @@
           }
         ]
       }
+    },
+    {
+      "id": "page-meditation",
+      "title": "冥想放松 · 正念计时",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786300000000,
+      "canvasData": {
+        "x": 1016,
+        "y": 1450,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 1290,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-meditation1",
+          "measuredAt": 1786300000000
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/meditation.html",
+        "interactions": [
+          {
+            "domId": "back-more",
+            "targetPageId": "page-more",
+            "hideEdge": true,
+            "transitionLabel": "返回更多"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-weekly-report",
+      "title": "周报汇总 · 数据洞察",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786300000000,
+      "canvasData": {
+        "x": 1452,
+        "y": 1450,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 1290,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-weekly1",
+          "measuredAt": 1786300000000
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/weekly-report.html",
+        "interactions": [
+          {
+            "domId": "back-more",
+            "targetPageId": "page-more",
+            "hideEdge": true,
+            "transitionLabel": "返回更多"
+          }
+        ]
+      }
     }
   ],
   "config": {

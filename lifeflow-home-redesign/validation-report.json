@@ -16,7 +16,7 @@
   },
   "operatingMode": "free-explore",
   "renderBlockingErrorCount": 0,
-  "softWarningCount": 12,
+  "softWarningCount": 15,
   "renderBlockingErrors": [],
   "errorSignatures": [],
   "softWarnings": [
@@ -31,12 +31,42 @@
     "[mobile-bottom-overlay] pages/home-night.html: bottom fixed/absolute CTA or navigation found. Ensure it has safe-area spacing and does not cover content. Evidence: class=\"fixed bottom-[84px] right-4 z-40 flex flex-col items-center gap-2\"",
     "[mobile-bottom-overlay] pages/schedule.html: bottom fixed/absolute CTA or navigation found. Ensure it has safe-area spacing and does not cover content. Evidence: class=\"absolute left-1/2 top-[18px] bottom-[-26px] w-px -translate-x-1/2 bg-[var(--lifeflow-border-light)] group-last:hidden\"",
     "[mobile-bottom-overlay] pages/ideal-day-sheet.html: bottom fixed/absolute CTA or navigation found. Ensure it has safe-area spacing and does not cover content. Evidence: class=\"fixed inset-x-0 bottom-0 z-50 mx-auto max-w-md\"",
-    "[html-quality] colors_and_type.css: ordinary/static shadow tokens must keep every shadow alpha <= 0.05; deeper shadows are allowed only for floating-layer tokens such as modal/popover/dropdown/drawer/overlay (--lifeflow-shadow-3: 0 8px 24px rgba(0,0,0,0.12))."
+    "[mobile-navigation-consistency] 2 mobile page(s) do not expose a 3+ item data-nav-key nav cluster while sibling pages do. This is acceptable for detail/reward/modal pages only when planned explicitly.",
+    "[html-quality] colors_and_type.css: ordinary/static shadow tokens must keep every shadow alpha <= 0.05; deeper shadows are allowed only for floating-layer tokens such as modal/popover/dropdown/drawer/overlay (--lifeflow-shadow-3: 0 8px 24px rgba(0,0,0,0.12)).",
+    "[html-quality] meditation.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] weekly-report.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference."
   ],
-  "repairPlanHints": [],
+  "repairPlanHints": [
+    {
+      "errorClass": "hardcoded-color-in-body",
+      "owner": "sub-agent",
+      "repairScope": "targeted-token-replace",
+      "strategy": "targeted_token_replace_once",
+      "affectedFiles": [
+        "meditation.html"
+      ],
+      "repairReportPath": null,
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 2
+    },
+    {
+      "errorClass": "hardcoded-color-in-body",
+      "owner": "sub-agent",
+      "repairScope": "targeted-token-replace",
+      "strategy": "targeted_token_replace_once",
+      "affectedFiles": [
+        "weekly-report.html"
+      ],
+      "repairReportPath": null,
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 2
+    }
+  ],
   "repairActionTable": [],
   "errorCount": 0,
-  "warningCount": 12,
+  "warningCount": 15,
   "errors": [],
   "warnings": [
     "[repair-ledger] validationRepairLedger[] has 3 entries; retry_or_repair_loop risk should be reviewed",
@@ -50,7 +80,10 @@
     "[mobile-bottom-overlay] pages/home-night.html: bottom fixed/absolute CTA or navigation found. Ensure it has safe-area spacing and does not cover content. Evidence: class=\"fixed bottom-[84px] right-4 z-40 flex flex-col items-center gap-2\"",
     "[mobile-bottom-overlay] pages/schedule.html: bottom fixed/absolute CTA or navigation found. Ensure it has safe-area spacing and does not cover content. Evidence: class=\"absolute left-1/2 top-[18px] bottom-[-26px] w-px -translate-x-1/2 bg-[var(--lifeflow-border-light)] group-last:hidden\"",
     "[mobile-bottom-overlay] pages/ideal-day-sheet.html: bottom fixed/absolute CTA or navigation found. Ensure it has safe-area spacing and does not cover content. Evidence: class=\"fixed inset-x-0 bottom-0 z-50 mx-auto max-w-md\"",
-    "[html-quality] colors_and_type.css: ordinary/static shadow tokens must keep every shadow alpha <= 0.05; deeper shadows are allowed only for floating-layer tokens such as modal/popover/dropdown/drawer/overlay (--lifeflow-shadow-3: 0 8px 24px rgba(0,0,0,0.12))."
+    "[mobile-navigation-consistency] 2 mobile page(s) do not expose a 3+ item data-nav-key nav cluster while sibling pages do. This is acceptable for detail/reward/modal pages only when planned explicitly.",
+    "[html-quality] colors_and_type.css: ordinary/static shadow tokens must keep every shadow alpha <= 0.05; deeper shadows are allowed only for floating-layer tokens such as modal/popover/dropdown/drawer/overlay (--lifeflow-shadow-3: 0 8px 24px rgba(0,0,0,0.12)).",
+    "[html-quality] meditation.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] weekly-report.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference."
   ],
   "validationRunDisciplineStatus": {
     "declared": true,
@@ -90,7 +123,7 @@
       "read_status": "ok"
     },
     "renderBlockingErrorCount": 0,
-    "softWarningCount": 12,
+    "softWarningCount": 15,
     "renderBlockingErrors": [],
     "repairActionTable": [],
     "nextCheck": {
@@ -107,9 +140,9 @@
     ]
   },
   "projectFileHashes": {
-    "lifeflow-home-redesign.design": "505988f2ad34235984ebaa8459cafd1d50053297a5a1b20e6a4883dfe6ea60d6",
+    "lifeflow-home-redesign.design": "67d37c9ddb8a98d96879d0ab099c776aa3fb0226ac4766fba1e405484ce7048c",
     "colors_and_type.css": "116fc58ed6f344b9dc6c54bc53de37a63d12518d48ee35d68af52c4a6367fcbd",
-    "runtime-orchestration-summary.json": "e827eaf1bd232ce0c8d9202bef69e64ccb6e44e9a6967456148c4d9a868f961e",
+    "runtime-orchestration-summary.json": "01a45033fabac625a33e38ece87f2c1d53a8b5ce55afbbde095fdc7f0433350b",
     "pages/goals.html": "8de804bf508be584e921f004401921100451e1138004bb567cb8f0c5d78ebad0",
     "pages/home-day.html": "f65b77b1900e36043f0ccf59ba4ba986d892a100e4fded0cd2c723b2efaf8785",
     "pages/home-night.html": "1bff3551fc265132d92e8c38fdbbe2b3a1f23b518bb510f01f0ef63d5bb28304",
@@ -117,14 +150,16 @@
     "pages/ideal-day-edit-step2.html": "0a6392fc496e97d7784d98246d58ac6a4d6ef5fd22c1de9730e6659501b80929",
     "pages/ideal-day-sheet.html": "88b751978045fbc478d84c7d2b8a93911077158ac98cb5fba3ee52baf6788003",
     "pages/ideal-day.html": "c73b6ed01790d71c05e565b7a01cfb6591c7bc6ba3fdff4db78f3ace5cb43626",
+    "pages/meditation.html": "51c48c1f84740a0b577484f05a4135e78d43934a1be0a7d47d8a16c023261642",
     "pages/more.html": "c88327bd3db2177dd9200ae670d507344ef870435eccd43522f1e6c527015b5f",
     "pages/plan-medication.html": "1866429f8a0be7982ad4808c1c80784849717ff53d62736cf6d25cc8baf44905",
     "pages/plan-sleep.html": "ebf9d9ac883ba68367e3f5e0c113abc319aab68338e7e043d7350db1e4e16006",
     "pages/plan-study.html": "b565b72c6629ef49f5d912eb0314c48e4a19ff8f9c2f875606ab5f3d701c14a2",
-    "pages/schedule.html": "dbea0b43114069ea77b17ca25b230df55a4da5f662297bc619cd86f5ff97ba33"
+    "pages/schedule.html": "dbea0b43114069ea77b17ca25b230df55a4da5f662297bc619cd86f5ff97ba33",
+    "pages/weekly-report.html": "44ab3f9a89c7638c19789d991ccaa7251133e2b425a2685c121fe445c1e8793c"
   },
   "designDir": "d:\\hankkk\\lifeflow\\lifeflow-home-redesign",
-  "expectedPages": 12,
-  "requireInteractions": "plan-study:pages/ideal-day.html,plan-workout:pages/ideal-day.html,plan-posture:pages/ideal-day.html,plan-wellness:pages/ideal-day.html,plan-routine:pages/ideal-day.html,back-ideal:pages/ideal-day-sheet.html,sheet-save:pages/ideal-day-sheet.html,nav-ideal:pages/ideal-day-sheet.html,back-ideal:pages/plan-study.html,nav-ideal:pages/plan-study.html",
-  "checkedAt": "2026-08-08T16:09:13.927Z"
+  "expectedPages": 14,
+  "requireInteractions": "plan-study:pages/ideal-day.html,plan-workout:pages/ideal-day.html,plan-posture:pages/ideal-day.html,plan-wellness:pages/ideal-day.html,plan-routine:pages/ideal-day.html,back-ideal:pages/ideal-day-sheet.html,sheet-save:pages/ideal-day-sheet.html,nav-ideal:pages/ideal-day-sheet.html,back-ideal:pages/plan-study.html,nav-ideal:pages/plan-study.html,back-more:pages/meditation.html,back-more:pages/weekly-report.html",
+  "checkedAt": "2026-08-08T16:27:46.963Z"
 }

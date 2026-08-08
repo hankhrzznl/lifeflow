@@ -535,14 +535,8 @@ export default function IdealDayHomePage() {
     showToast({ type: "success", message: allDone ? "已标记未完成" : "整段已完成，日程已同步" });
   };
 
-  if (!loaded || !config || !derived || !activeTemplate) {
-    return <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--lifeflow-background)" }}><p style={{ color: "var(--color-text-secondary)" }}>加载中…</p></div>;
-  }
-
-  const templates = derived.templates;
-  const displayTemplate = editing ?? activeTemplate;
-
   // T22.2/T22.4：日程页 ?block= / 效率页 ?goal= 定位——滚动到目标段并短暂高亮
+  // 注意：必须在加载守卫 return 之前调用（React hooks 规则，否则触发 #310）
   useEffect(() => {
     const targetBlock = searchParams?.get("block");
     const targetGoal = searchParams?.get("goal");
@@ -565,7 +559,14 @@ export default function IdealDayHomePage() {
       return () => clearTimeout(clear);
     }, 250);
     return () => clearTimeout(timer);
-  }, [searchParams, editMode, displayTemplate?.id, loaded, plans]);
+  }, [searchParams, editMode, (editing ?? activeTemplate)?.id, loaded, plans]);
+
+  if (!loaded || !config || !derived || !activeTemplate) {
+    return <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--lifeflow-background)" }}><p style={{ color: "var(--color-text-secondary)" }}>加载中…</p></div>;
+  }
+
+  const templates = derived.templates;
+  const displayTemplate = editing ?? activeTemplate;
 
   // 执行区按 5 段分组
   const blocksBySegment = (tpl: IdealDayTemplate): Map<IdealDayBlockGroup, typeof tpl.blocks> => {

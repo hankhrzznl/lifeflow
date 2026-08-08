@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLiveQuery } from "dexie-react-hooks";
 import {
-  Check, Plus, X, Moon, Droplets, Repeat, Timer, Wallet,
+  Check, Plus, X, Moon, Droplets, Repeat, Timer, Wallet, Sun,
   Ellipsis, ArrowRight, TrendingUp,
 } from "lucide-react";
 import { addManualItem } from "@/lib/db/daylog.db";
@@ -356,10 +356,25 @@ export default function HomePage() {
                   {act.tag && (
                     <span
                       className="shrink-0 rounded-[6px] px-1.5 py-0.5 text-[11px]"
-                      style={{ background: "var(--lifeflow-brand-50)", color: "var(--lifeflow-primary)" }}
+                      style={{
+                        background: act.sourceType === "ideal" ? "rgba(99,102,241,0.14)" : "var(--lifeflow-brand-50)",
+                        color: act.sourceType === "ideal" ? "#6366F1" : "var(--lifeflow-primary)",
+                      }}
                     >
                       {act.tag}
                     </span>
+                  )}
+                  {/* T22.5：理想日规划项跳转定位 */}
+                  {act.sourceType === "ideal" && act.blockId && (
+                    <button
+                      type="button"
+                      aria-label={`理想日：${act.title}`}
+                      onClick={(e) => { e.stopPropagation(); router.push(`/ideal-day?block=${act.blockId}`); }}
+                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full active:scale-90 transition-transform"
+                      style={{ background: "rgba(99,102,241,0.1)", color: "#6366F1" }}
+                    >
+                      <Sun className="h-3.5 w-3.5" />
+                    </button>
                   )}
                   <button
                     type="button"

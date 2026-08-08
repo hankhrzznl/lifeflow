@@ -27,6 +27,8 @@ export interface TodayAction {
   sourceId: string;
   sourceType?: string; // 仅 Item 有
   tag?: string;        // 展示用标签（如「省考」「四级」「习惯」）
+  /** T22.5：理想日规划项所在块 id（点击跳转定位用） */
+  blockId?: string;
 }
 
 const SOURCE_TYPE_LABEL: Record<string, string> = {
@@ -41,7 +43,7 @@ const SOURCE_TYPE_LABEL: Record<string, string> = {
   diet: "饮食",
   water: "饮水",
   goal: "目标",
-  ideal: "蓝图",
+  ideal: "理想日",
   posture: "拉伸",
 };
 
@@ -117,6 +119,8 @@ export function useTodayExecution() {
       sourceId: i.sourceId,
       sourceType: i.sourceType,
       tag: SOURCE_TYPE_LABEL[i.sourceType] ?? "",
+      // T22.5：理想日规划项解析块 id（ideal-plan-{blockId}-{feature}）
+      blockId: i.sourceType === "ideal" && i.sourceId?.startsWith("ideal-plan-") ? i.sourceId.match(/^ideal-plan-(.+)-([a-z]+)$/)?.[1] : undefined,
     }));
     return [...goalActs, ...items].sort((a, b) =>
       a.isCompleted !== b.isCompleted ? (a.isCompleted ? 1 : -1) : a.time.localeCompare(b.time),
@@ -145,6 +149,19 @@ export function useTodayExecution() {
           await updateDailyActionV2(act.sourceId, { isCompleted: newState });
           const da = await goalV2DB.goalV2DailyActions.get(act.sourceId);
           if (da?.goalId) await recalculateGoalProgress(da.goalId);
+        }
+        // T22.5：理想日规划项勾选 → 反向回写 userSettings.idealDayPlans（首页→理想日闭环）
+        if (act.sourceType === "ideal" && act.sourceId?.startsWith("ideal-plan-") && act.blockId) {
+          const m = act.sourceId.match(/^ideal-plan-(.+)-([a-z]+)$/);
+          const feature = m?.[2];
+          if (feature) {
+            const { getIdealDayPlans, saveIdealDayPlans } = await import("@/lib/ideal-day-templates");
+            const plans = await getIdealDayPlans(todayStr());
+            const next = plans.map((p) =>
+              p.blockId === act.blockId && p.feature === feature ? { ...p, isCompleted: newState } : p,
+            );
+            await saveIdealDayPlans(todayStr(), next);
+          }
         }
       }
     } catch {

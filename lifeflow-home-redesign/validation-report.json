@@ -111,7 +111,7 @@
     "colors_and_type.css": "116fc58ed6f344b9dc6c54bc53de37a63d12518d48ee35d68af52c4a6367fcbd",
     "runtime-orchestration-summary.json": "e827eaf1bd232ce0c8d9202bef69e64ccb6e44e9a6967456148c4d9a868f961e",
     "pages/goals.html": "aca28b876a3abba09d0cafc549050afa4468c0e8093fb8a54704d262f229d304",
-    "pages/home-day.html": "69b914d713f4ea6c86ae2c685c2060ac3b2e16663d0b83d580a01ce2c2c1e07f",
+    "pages/home-day.html": "f65b77b1900e36043f0ccf59ba4ba986d892a100e4fded0cd2c723b2efaf8785",
     "pages/home-night.html": "1bff3551fc265132d92e8c38fdbbe2b3a1f23b518bb510f01f0ef63d5bb28304",
     "pages/ideal-day-edit-step1.html": "f977445fef8dee05126ab6be6c4dcdaef04857595e9f1e7ac263292f8874bfbd",
     "pages/ideal-day-edit-step2.html": "0a6392fc496e97d7784d98246d58ac6a4d6ef5fd22c1de9730e6659501b80929",
@@ -126,5 +126,5 @@
   "designDir": "d:\\hankkk\\lifeflow\\lifeflow-home-redesign",
   "expectedPages": 12,
   "requireInteractions": "plan-study:pages/ideal-day.html,plan-workout:pages/ideal-day.html,plan-posture:pages/ideal-day.html,plan-wellness:pages/ideal-day.html,plan-routine:pages/ideal-day.html,back-ideal:pages/ideal-day-sheet.html,sheet-save:pages/ideal-day-sheet.html,nav-ideal:pages/ideal-day-sheet.html,back-ideal:pages/plan-study.html,nav-ideal:pages/plan-study.html",
-  "checkedAt": "2026-08-08T15:55:01.272Z"
+  "checkedAt": "2026-08-08T15:58:37.149Z"
 }

@@ -571,3 +571,12 @@ LifeFlow v1.0，一个讲道理的生活助手。
 - **效率页 × 理想日联动**：目标卡片新增「今日学习 done/total」紫色 Sparkles 徽标（`useLiveQuery` 读今日 idealDayPlans 按 goalId 聚合 study 规划，Dexie 响应式），点击跳 `/ideal-day?goal=<id>`
 - **理想日 ?goal= 定位**：`?goal=<goalId>` 从 plans 筛出该目标全部 study 规划块，滚动定位第一个并紫框高亮（与 ?block= 共用 focus 逻辑）
 
+### 首页「今日待办」↔ 理想日 联动（T22.5）
+
+> 首页待办流（`useTodayExecution` 单一数据源）与理想日闭环打通，与日程页行为一致。
+
+- **反向回写**：`useTodayExecution.toggle` 勾选 `ideal-plan-*` 项 → 正则解析 blockId+feature → 回写 `userSettings.idealDayPlans`（首页→理想日完成态闭环）
+- **来源识别**：`SOURCE_TYPE_LABEL.ideal` 从「蓝图」改为「理想日」；首页待办 ideal 项标签紫色（#6366F1）
+- **跳转定位**：首页待办 ideal 项行内新增紫色 Sun 圆钮 → `/ideal-day?block=<blockId>`（与 Timer 专注按钮并列）；`TodayAction` 新增 `blockId` 字段（解析 `ideal-plan-{blockId}-{feature}`）
+- **闭环**：首页勾选 → 理想日规划完成态同步 → 目标页/效率页徽标联动刷新
+

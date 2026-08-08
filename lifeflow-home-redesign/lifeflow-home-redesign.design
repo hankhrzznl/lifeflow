@@ -1,0 +1,242 @@
+{
+  "data": [
+    {
+      "id": "page-home-day",
+      "title": "首页 · 白天态",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786108281000,
+      "canvasData": {
+        "x": 509,
+        "y": 0,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 928,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-402ed52f",
+          "measuredAt": 1786111867502
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/home-day.html",
+        "interactions": [
+          {
+            "domId": "mode-switch",
+            "targetPageId": "page-home-night",
+            "transitionLabel": "切换晚间形态"
+          },
+          {
+            "domId": "nav-goals",
+            "targetPageId": "page-goals",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 目标"
+          },
+          {
+            "domId": "nav-schedule",
+            "targetPageId": "page-schedule",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 日程"
+          },
+          {
+            "domId": "nav-more",
+            "targetPageId": "page-more",
+            "hideEdge": true,
+            "transitionLabel": "更多功能"
+          },
+          {
+            "domId": "review-entry",
+            "targetPageId": "page-more",
+            "hideEdge": true,
+            "transitionLabel": "今日一句话 · 长期主义"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-home-night",
+      "title": "首页 · 晚间态",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786108281000,
+      "canvasData": {
+        "x": 204,
+        "y": 0,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 1206,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-8cf85f11",
+          "measuredAt": 1786111867502
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/home-night.html",
+        "interactions": [
+          {
+            "domId": "mode-switch",
+            "targetPageId": "page-home-day",
+            "transitionLabel": "切换白天形态"
+          },
+          {
+            "domId": "nav-goals",
+            "targetPageId": "page-goals",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 目标"
+          },
+          {
+            "domId": "nav-schedule",
+            "targetPageId": "page-schedule",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 日程"
+          },
+          {
+            "domId": "nav-more",
+            "targetPageId": "page-more",
+            "hideEdge": true,
+            "transitionLabel": "更多功能"
+          },
+          {
+            "domId": "review-entry",
+            "targetPageId": "page-more",
+            "hideEdge": true,
+            "transitionLabel": "今日一句话 · 长期主义"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-goals",
+      "title": "目标 · 今日焦点",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786110706000,
+      "canvasData": {
+        "x": 678,
+        "y": 0,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 1192,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-07443155",
+          "measuredAt": 1786111867502
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/goals.html",
+        "interactions": [
+          {
+            "domId": "nav-home",
+            "targetPageId": "page-home-day",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 首页"
+          },
+          {
+            "domId": "nav-schedule",
+            "targetPageId": "page-schedule",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 日程"
+          },
+          {
+            "domId": "nav-more",
+            "targetPageId": "page-more",
+            "hideEdge": true,
+            "transitionLabel": "更多功能"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-schedule",
+      "title": "日程 · 时间轴",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786110706000,
+      "canvasData": {
+        "x": 847,
+        "y": 0,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 1277,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-d640a60c",
+          "measuredAt": 1786111867502
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/schedule.html",
+        "interactions": [
+          {
+            "domId": "nav-home",
+            "targetPageId": "page-home-day",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 首页"
+          },
+          {
+            "domId": "nav-goals",
+            "targetPageId": "page-goals",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 目标"
+          },
+          {
+            "domId": "nav-more",
+            "targetPageId": "page-more",
+            "hideEdge": true,
+            "transitionLabel": "更多功能"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-more",
+      "title": "更多 · 功能目录",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786110706000,
+      "canvasData": {
+        "x": 1016,
+        "y": 0,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 1375,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-38fe9a9b",
+          "measuredAt": 1786111867502
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/more.html",
+        "interactions": [
+          {
+            "domId": "back-home",
+            "targetPageId": "page-home-day",
+            "hideEdge": true,
+            "transitionLabel": "返回首页"
+          },
+          {
+            "domId": "nav-goals",
+            "targetPageId": "page-goals",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 目标"
+          },
+          {
+            "domId": "nav-schedule",
+            "targetPageId": "page-schedule",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 日程"
+          }
+        ]
+      }
+    }
+  ],
+  "config": {
+    "autoLayout": false,
+    "deviceType": "mobile",
+    "projectName": "LifeFlow 新首页",
+    "visualEditorEnabled": false
+  }
+}

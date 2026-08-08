@@ -157,10 +157,10 @@ export default function RemindersPage() {
   return (
     <div className="flex flex-col h-full max-w-2xl mx-auto px-4 pt-6 pb-24">
       <div className="flex items-center gap-3 mb-6">
-        <Link href="/today" className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
+        <Link href="/" className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
           <ArrowLeft className="w-5 h-5 text-gray-500" />
         </Link>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-1">
           <Bell className="w-6 h-6 text-blue-500" />
           <h1 className="text-xl font-bold text-gray-900 dark:text-white">提醒中心</h1>
           {reminders.length > 0 && (
@@ -169,6 +169,12 @@ export default function RemindersPage() {
             </span>
           )}
         </div>
+        <Link
+          href="/more/reminder-settings"
+          className="shrink-0 text-xs font-medium text-blue-500 hover:text-blue-600 dark:text-blue-400"
+        >
+          默认提醒设置
+        </Link>
       </div>
 
       {reminders.length === 0 ? (

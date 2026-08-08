@@ -3,25 +3,17 @@
 import { useMemo, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Plus, Target, Copy, Download, Trash2 } from "lucide-react";
+import { Plus, Target, Copy, Download, Trash2, Check } from "lucide-react";
 import { useLiveQuery } from "dexie-react-hooks";
 import {
   type GoalV2,
   getAllGoalsV2,
-  getKeyResultsV2,
-  getGoalV2,
   goalV2DB,
   deleteGoalV2,
-  getDailyActionsByDateV2,
 } from "@/lib/db/goal-v2.db";
 import { GOAL_V2_AI_PROMPT, parseImportedGoal, validateImportedGoal } from "@/lib/goal-v2-import-parser";
 import { showToast } from "@/components/ui/Toast";
-
-// ─── 今日日期 ──────────────────────────────────────────────
-function todayStr(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
+import { useTodayExecution } from "@/lib/today-execution";
 
 // ─── 状态徽章 ──────────────────────────────────────────────
 function StatusBadge({ status }: { status: GoalV2["status"] }) {
@@ -95,22 +87,27 @@ export default function EfficiencyV2Page() {
 
   const goalList = goals ?? [];
 
-  // ── 今日日行动（T18-5：目标页焦点 = 活跃目标 + 今日日行动） ──
-  const todayActions = useLiveQuery(
-    () => getDailyActionsByDateV2(todayStr()),
-    [],
-    [],
-  );
-  const todayPending = useMemo(() => {
-    return (todayActions ?? [])
-      .filter(a => !a.isCompleted)
-      .sort((a, b) => (a.time || "09:00").localeCompare(b.time || "09:00"))
-      .slice(0, 5);
-  }, [todayActions]);
-  const todayDoneCount = useMemo(
-    () => (todayActions ?? []).filter(a => a.isCompleted).length,
-    [todayActions],
-  );
+  // ── 今日焦点（T18-5：与首页「今日待办」共用同一数据源） ──
+  const { mergedActions, total: focusTotal, done: focusDone, toggle: toggleFocus, isDone: isFocusDone } = useTodayExecution();
+  const focusActions = mergedActions.slice(0, 8);
+  const focusPercent = focusTotal > 0 ? Math.round((focusDone / focusTotal) * 100) : 0;
+
+  // ── KR 进度统计（每个目标的 KR 完成数与平均进度） ──
+  const krStatsMap = useMemo(() => {
+    const map = new Map<string, { done: number; total: number; sum: number }>();
+    for (const kr of allKeyResults ?? []) {
+      const st = map.get(kr.goalId) ?? { done: 0, total: 0, sum: 0 };
+      st.total += 1;
+      st.sum += kr.targetValue > 0 ? Math.min(100, (kr.currentValue / kr.targetValue) * 100) : 0;
+      if (kr.targetValue > 0 && kr.currentValue >= kr.targetValue) st.done += 1;
+      map.set(kr.goalId, st);
+    }
+    const out = new Map<string, { done: number; total: number; avg: number }>();
+    for (const [gid, st] of map) {
+      out.set(gid, { done: st.done, total: st.total, avg: st.total > 0 ? Math.round(st.sum / st.total) : 0 });
+    }
+    return out;
+  }, [allKeyResults]);
 
   // ── 复制提示词 ──
   const handleCopyPrompt = useCallback(async () => {
@@ -244,16 +241,21 @@ export default function EfficiencyV2Page() {
     >
       {/* ===== Header ===== */}
       <div
-        className="px-5 pt-[var(--safe-area-top)] pb-4 flex items-center justify-between"
+        className="px-5 pt-[var(--safe-area-top)] pb-4 flex items-start justify-between"
         style={{ paddingTop: "max(var(--safe-area-top), 16px)" }}
       >
-        <h1
-          className="text-title-large font-bold"
-          style={{ color: "var(--color-text-primary)" }}
-        >
-          目标 V2
-        </h1>
-        <div className="flex items-center gap-2">
+        <div className="min-w-0">
+          <h1
+            className="text-[28px] font-bold leading-tight"
+            style={{ color: "var(--color-text-primary)", letterSpacing: "-0.02em" }}
+          >
+            目标
+          </h1>
+          <p className="text-[13px] mt-1" style={{ color: "var(--color-text-secondary)" }}>
+            {new Date().getMonth() + 1}月 第 {Math.ceil(new Date().getDate() / 7)} 周 · 稳步推进中
+          </p>
+        </div>
+        <div className="flex items-center gap-2 shrink-0 mt-0.5">
           <button
             type="button"
             onClick={handleCopyPrompt}
@@ -275,52 +277,92 @@ export default function EfficiencyV2Page() {
         </div>
       </div>
 
-      {/* ===== 今日焦点（T18-5：今日日行动优先呈现） ===== */}
-      {todayPending.length > 0 && (
-        <div className="px-4 mb-4">
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="rounded-[20px] p-4"
-            style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)", borderLeft: "3px solid #6366F1" }}
-          >
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: "#EEF2FF" }}>
-                <Target className="w-4 h-4" style={{ color: "#6366F1" }} />
-              </div>
-              <span className="text-[13px] font-semibold" style={{ color: "#6366F1" }}>今日焦点</span>
-              <span className="text-[11px] ml-auto" style={{ color: "var(--color-text-secondary)" }}>
-                {todayDoneCount} 已完成
-              </span>
+      {/* ===== 今日焦点（与首页待办共用单一数据源） ===== */}
+      <div className="px-4 mb-4">
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-[20px] p-4"
+          style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)", borderLeft: "3px solid #6366F1" }}
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: "#EEF2FF" }}>
+              <Target className="w-4 h-4" style={{ color: "#6366F1" }} />
             </div>
-            <div className="flex flex-col">
-              {todayPending.map((a, i) => (
-                <div
-                  key={a.id}
-                  className="flex items-center gap-3 py-2"
-                  style={{ borderTop: i > 0 ? "1px solid var(--lifeflow-border)" : "none" }}
-                >
-                  <span
-                    className="w-[20px] h-[20px] rounded-full border-2 flex-shrink-0"
-                    style={{ borderColor: "#6366F1", backgroundColor: "transparent" }}
-                  />
-                  <span className="flex-1 min-w-0">
-                    <span className="block text-[14px] font-medium truncate" style={{ color: "var(--color-text-primary)" }}>
-                      {a.title}
+            <span className="text-[13px] font-semibold" style={{ color: "#6366F1" }}>今日焦点</span>
+            <span className="shrink-0 rounded-md px-2 py-0.5 text-[12px] font-semibold tabular-nums ml-auto" style={{ background: "var(--lifeflow-brand-50)", color: "var(--lifeflow-primary)" }}>
+              {focusDone}/{focusTotal} 完成
+            </span>
+          </div>
+
+          {/* 焦点进度 */}
+          <div className="mt-3 flex items-center gap-3">
+            <div className="w-full h-[6px] rounded-full overflow-hidden" style={{ background: "var(--lifeflow-background)" }}>
+              <motion.div
+                className="h-full rounded-full"
+                initial={{ width: 0 }}
+                animate={{ width: `${focusPercent}%` }}
+                transition={{ duration: 0.6, ease: "easeOut" }}
+                style={{ backgroundColor: "#6366F1" }}
+              />
+            </div>
+            <span className="shrink-0 text-[13px] font-semibold leading-none tabular-nums" style={{ color: "var(--color-text-primary)" }}>
+              {focusPercent}%
+            </span>
+          </div>
+
+          {/* 今日日行动（可勾选，与首页联动） */}
+          {focusActions.length > 0 ? (
+            <div className="mt-2 flex flex-col">
+              {focusActions.map((a, i) => {
+                const done = isFocusDone(a);
+                return (
+                  <button
+                    key={a.key}
+                    type="button"
+                    onClick={() => toggleFocus(a)}
+                    className="flex items-center gap-3 py-2.5 text-left active:opacity-70"
+                    style={{ borderTop: i > 0 ? "1px solid var(--lifeflow-border)" : "none" }}
+                  >
+                    <span
+                      className="w-[22px] h-[22px] rounded-full flex items-center justify-center shrink-0 transition-transform active:scale-90"
+                      style={{
+                        background: done ? a.color : "transparent",
+                        border: done ? "none" : `2px solid ${a.color}55`,
+                      }}
+                    >
+                      {done && <Check className="w-[13px] h-[13px] text-white" strokeWidth={3} />}
                     </span>
-                  </span>
-                  <span className="text-[11px] tabular-nums" style={{ color: "var(--color-text-secondary)" }}>
-                    {a.time || "--"}
-                  </span>
-                </div>
-              ))}
+                    <span className="flex-1 min-w-0">
+                      <span
+                        className="block text-[14px] font-medium truncate"
+                        style={{
+                          color: done ? "var(--color-text-secondary)" : "var(--color-text-primary)",
+                          textDecoration: done ? "line-through" : "none",
+                        }}
+                      >
+                        {a.title}
+                      </span>
+                    </span>
+                    <span className="shrink-0 text-[11px] tabular-nums" style={{ color: "var(--color-text-secondary)" }}>
+                      {a.time || "--"}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
-            <p className="text-[11px] mt-2" style={{ color: "var(--color-text-disabled)" }}>
-              今日日行动来自进行中的目标，勾选在首页/日程完成
-            </p>
-          </motion.div>
-        </div>
-      )}
+          ) : (
+            <div className="mt-3 rounded-xl py-5 text-center" style={{ background: "var(--lifeflow-background)" }}>
+              <p className="text-[13px]" style={{ color: "var(--color-text-secondary)" }}>
+                今天还没有安排，去「目标」拆解或「日程」新建事项
+              </p>
+            </div>
+          )}
+          <p className="text-[11px] mt-2" style={{ color: "var(--color-text-disabled)" }}>
+            今日焦点来自目标日行动 · 与首页待办同步勾选
+          </p>
+        </motion.div>
+      </div>
 
       {/* ===== Goal Grid（活跃目标优先） ===== */}
       <div className="px-4 grid grid-cols-2 gap-3">
@@ -331,6 +373,7 @@ export default function EfficiencyV2Page() {
           })
           .map((goal, i) => {
           const krCount = krCountMap.get(goal.id) ?? 0;
+          const krStats = krStatsMap.get(goal.id);
 
           return (
             <motion.div
@@ -401,15 +444,18 @@ export default function EfficiencyV2Page() {
                   </span>
                 </div>
 
-                {/* 底部 row：状态徽章 + KR 数 */}
+                {/* 底部 row：状态徽章 + KR 进度 */}
                 <div className="flex items-center justify-between mt-1">
                   <StatusBadge status={goal.status} />
-                  <span
-                    className="text-[11px]"
-                    style={{ color: "var(--color-text-disabled)" }}
-                  >
-                    {krCount} 个关键结果
-                  </span>
+                  {krStats && krStats.total > 0 ? (
+                    <span className="text-[11px] tabular-nums" style={{ color: "var(--color-text-disabled)" }}>
+                      KR {krStats.done}/{krStats.total} · {krStats.avg}%
+                    </span>
+                  ) : (
+                    <span className="text-[11px]" style={{ color: "var(--color-text-disabled)" }}>
+                      {krCount} 个关键结果
+                    </span>
+                  )}
                 </div>
               </div>
             </motion.div>

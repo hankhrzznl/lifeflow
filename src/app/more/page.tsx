@@ -1,24 +1,23 @@
-"use client";
+﻿"use client";
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import {
-  ChevronLeft, Droplets, Moon, Dumbbell, Utensils,
+  ChevronLeft, ChevronRight, Droplets, Moon, Dumbbell, Utensils,
   Pill, Timer, Wallet, StickyNote,
-  Brain, Bell, Settings, NotebookPen, FolderKanban, Clock,
-  Search, SearchX, X, Sun, GraduationCap, Footprints,
+  Bell, Settings, Compass, ClipboardCheck, Sun, Repeat, Clock,
+  BookOpen, GraduationCap, Brain, PersonStanding, Star, Hourglass, CalendarDays,
+  Search, SearchX, X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMedicineMode } from "@/lib/use-medicine-mode";
 
 // ============================================================
-// 模块目录（静态分类，全站功能单一入口）
+// 功能目录（四组 · iOS 分组列表）
+// 计划与复盘 / 身体养护 / 生活 / 系统
+// 长期主义已从底导移入「计划与复盘」；提醒设置合并进「提醒中心」
 // ============================================================
-
-// T20-5：时间权重尺寸档位（卡片大小 = 模块日占时间的可视化映射）
-// XL 大图块（8h 级）· L 标准大卡（1-5h 级）· M 小卡（轻量高频）· S 紧凑行（系统工具）
-type ModuleSize = "xl" | "l" | "m" | "s";
 
 interface ModuleEntry {
   label: string;
@@ -26,65 +25,52 @@ interface ModuleEntry {
   icon: React.ReactNode;
   color: string;
   bgColor: string;
-  size: ModuleSize;
-  repair?: boolean; // T20-4：条目级维修模式（条件激活，平时隐藏）
+  desc?: string;
+  repair?: boolean; // 维修模式条目（条件激活，平时隐藏）
 }
 
-// T20-4：8+8+8 时间观六组重构（替代原 E1-E4 能量金字塔 + 维修组）
-// 睡觉 8h / 工作学习 8h / 生活 8h；身体养护·计划与复盘·系统为支撑层
-const MODULE_GROUPS: { title: string; layer?: string; items: ModuleEntry[] }[] = [
+const MODULE_GROUPS: { title: string; items: ModuleEntry[] }[] = [
   {
-    title: "睡觉",
-    layer: "8h 睡眠 · 睡够，才有精力",
+    title: "计划与复盘",
     items: [
-      { label: "睡眠", path: "/more/sleep", icon: <Moon className="w-5 h-5" />, color: "#6366F1", bgColor: "#EEF2FF", size: "xl" },
-    ],
-  },
-  {
-    title: "工作/学习",
-    layer: "8h 工作学习 · 专注推进目标",
-    items: [
-      { label: "专注计时", path: "/more/focus", icon: <Timer className="w-5 h-5" />, color: "#6366F1", bgColor: "#EEF2FF", size: "l" },
-      { label: "备考计划", path: "/more/exam-plan", icon: <GraduationCap className="w-5 h-5" />, color: "#F97316", bgColor: "#FFF7ED", size: "l" },
-      { label: "记忆复习", path: "/more/ebbinghaus", icon: <Brain className="w-5 h-5" />, color: "#8B5CF6", bgColor: "#F5F3FF", size: "m" },
+      { label: "长期主义", path: "/longtermism", icon: <Compass className="h-5 w-5" />, color: "var(--lifeflow-primary)", bgColor: "var(--lifeflow-brand-50)", desc: "目标回顾与复盘" },
+      { label: "复盘总览", path: "/more/review", icon: <ClipboardCheck className="h-5 w-5" />, color: "var(--lifeflow-primary)", bgColor: "var(--lifeflow-brand-50)", desc: "日/周复盘记录" },
+      { label: "目标拆解", path: "/efficiency-v2", icon: <Brain className="h-5 w-5" />, color: "var(--lifeflow-primary)", bgColor: "var(--lifeflow-brand-50)", desc: "五层目标 · 今日焦点" },
+      { label: "理想日蓝图", path: "/more/ideal-day", icon: <Sun className="h-5 w-5" />, color: "var(--lifeflow-primary)", bgColor: "var(--lifeflow-brand-50)", desc: "理想的一天模板" },
+      { label: "习惯打卡", path: "/more/habits", icon: <Repeat className="h-5 w-5" />, color: "var(--lifeflow-primary)", bgColor: "var(--lifeflow-brand-50)", desc: "每日习惯追踪" },
+      { label: "作息模板", path: "/more/schedule/routines", icon: <Clock className="h-5 w-5" />, color: "var(--lifeflow-primary)", bgColor: "var(--lifeflow-brand-50)", desc: "起床/就寝固定时间" },
+      { label: "课程表", path: "/more/schedule/courses", icon: <BookOpen className="h-5 w-5" />, color: "var(--lifeflow-primary)", bgColor: "var(--lifeflow-brand-50)", desc: "上课时间安排" },
+      { label: "备考计划", path: "/more/exam-plan", icon: <GraduationCap className="h-5 w-5" />, color: "var(--lifeflow-primary)", bgColor: "var(--lifeflow-brand-50)", desc: "备考阶段拆解" },
+      { label: "记忆复习", path: "/more/ebbinghaus", icon: <Brain className="h-5 w-5" />, color: "var(--lifeflow-primary)", bgColor: "var(--lifeflow-brand-50)", desc: "艾宾浩斯记忆" },
+      { label: "专注计时", path: "/more/focus", icon: <Timer className="h-5 w-5" />, color: "var(--lifeflow-primary)", bgColor: "var(--lifeflow-brand-50)", desc: "番茄专注" },
     ],
   },
   {
     title: "身体养护",
-    layer: "作息与健康 · 身体是长期资产",
     items: [
-      { label: "训练中心", path: "/more/fitness", icon: <Dumbbell className="w-5 h-5" />, color: "#F97316", bgColor: "#FFF7ED", size: "l" },
-      { label: "饮食", path: "/more/diet", icon: <Utensils className="w-5 h-5" />, color: "#EC4899", bgColor: "#FDF2F8", size: "m" },
-      { label: "作息模板", path: "/more/schedule/routines", icon: <Clock className="w-5 h-5" />, color: "#1E293B", bgColor: "#F1F5F9", size: "m" },
-      { label: "饮水", path: "/more/water", icon: <Droplets className="w-5 h-5" />, color: "#3B82F6", bgColor: "#EFF6FF", size: "m" },
-      { label: "坐姿健康", path: "/more/posture-health", icon: <Footprints className="w-5 h-5" />, color: "#10B981", bgColor: "#ECFDF5", size: "m" },
-      { label: "吃药提醒", path: "/more/medication", icon: <Pill className="w-5 h-5" />, color: "#0EA5E9", bgColor: "#F0F9FF", size: "s", repair: true },
+      { label: "睡眠", path: "/more/sleep", icon: <Moon className="h-5 w-5" />, color: "#34C759", bgColor: "rgba(52,199,89,0.12)", desc: "入睡打卡与统计" },
+      { label: "饮水", path: "/more/water", icon: <Droplets className="h-5 w-5" />, color: "#34C759", bgColor: "rgba(52,199,89,0.12)", desc: "饮水记录与目标" },
+      { label: "训练中心", path: "/more/fitness", icon: <Dumbbell className="h-5 w-5" />, color: "#34C759", bgColor: "rgba(52,199,89,0.12)", desc: "训练打卡 · 坐姿 · 养生" },
+      { label: "饮食", path: "/more/diet", icon: <Utensils className="h-5 w-5" />, color: "#34C759", bgColor: "rgba(52,199,89,0.12)", desc: "三餐记录" },
+      { label: "坐姿健康", path: "/more/posture-health", icon: <PersonStanding className="h-5 w-5" />, color: "#34C759", bgColor: "rgba(52,199,89,0.12)", desc: "坐姿矫正与拉伸" },
+      { label: "吃药提醒", path: "/more/medication", icon: <Pill className="h-5 w-5" />, color: "#34C759", bgColor: "rgba(52,199,89,0.12)", desc: "服药计划与提醒", repair: true },
     ],
   },
   {
     title: "生活",
-    layer: "8h 留给自己 · 运动/娱乐/社交",
     items: [
-      { label: "记账", path: "/more/accounting", icon: <Wallet className="w-5 h-5" />, color: "#10B981", bgColor: "#ECFDF5", size: "m" },
-      { label: "备忘录", path: "/more/notes", icon: <StickyNote className="w-5 h-5" />, color: "#8B5CF6", bgColor: "#F5F3FF", size: "s" },
-    ],
-  },
-  {
-    title: "计划与复盘",
-    layer: "规划 · 习惯 · 回顾，让每一天更接近理想",
-    items: [
-      { label: "理想日蓝图", path: "/more/ideal-day", icon: <Sun className="w-5 h-5" />, color: "#F59E0B", bgColor: "#FFFBEB", size: "m" },
-      { label: "习惯打卡", path: "/more/habits", icon: <Clock className="w-5 h-5" />, color: "#14B8A6", bgColor: "#F0FDFA", size: "m" },
-      { label: "复盘总览", path: "/more/review", icon: <FolderKanban className="w-5 h-5" />, color: "#10B981", bgColor: "#ECFDF5", size: "m" },
+      { label: "记账", path: "/more/accounting", icon: <Wallet className="h-5 w-5" />, color: "#007AFF", bgColor: "rgba(0,122,255,0.12)", desc: "收支账本" },
+      { label: "备忘录", path: "/more/notes", icon: <StickyNote className="h-5 w-5" />, color: "#007AFF", bgColor: "rgba(0,122,255,0.12)", desc: "随手记" },
+      { label: "心愿", path: "/more/wishes", icon: <Star className="h-5 w-5" />, color: "#007AFF", bgColor: "rgba(0,122,255,0.12)", desc: "心愿清单" },
+      { label: "倒数日", path: "/more/countdown", icon: <Hourglass className="h-5 w-5" />, color: "#007AFF", bgColor: "rgba(0,122,255,0.12)", desc: "重要日子倒数" },
+      { label: "日历", path: "/more/calendar", icon: <CalendarDays className="h-5 w-5" />, color: "#007AFF", bgColor: "rgba(0,122,255,0.12)", desc: "月视图总览" },
     ],
   },
   {
     title: "系统",
-    layer: "工具与数据",
     items: [
-      { label: "提醒", path: "/reminders", icon: <Bell className="w-5 h-5" />, color: "#3B82F6", bgColor: "#EFF6FF", size: "s" },
-      { label: "提醒设置", path: "/more/reminder-settings", icon: <NotebookPen className="w-5 h-5" />, color: "#64748B", bgColor: "#F8FAFC", size: "s" },
-      { label: "设置", path: "/settings", icon: <Settings className="w-5 h-5" />, color: "#64748B", bgColor: "#F8FAFC", size: "s" },
+      { label: "提醒中心", path: "/reminders", icon: <Bell className="h-5 w-5" />, color: "var(--color-text-secondary)", bgColor: "var(--lifeflow-muted)", desc: "提醒与默认设置" },
+      { label: "设置", path: "/settings", icon: <Settings className="h-5 w-5" />, color: "var(--color-text-secondary)", bgColor: "var(--lifeflow-muted)", desc: "应用设置与数据" },
     ],
   },
 ];
@@ -96,9 +82,9 @@ const MODULE_GROUPS: { title: string; layer?: string; items: ModuleEntry[] }[] =
 export default function MorePage() {
   const router = useRouter();
   const [query, setQuery] = useState("");
-  const { active: medicineActive } = useMedicineMode(); // T18-6：维修模式条件激活
+  const { active: medicineActive } = useMedicineMode();
 
-  // T20-4：维修模式为条目级——吃药提醒仅在条件满足时展示，组内其余条目不受影响
+  // 维修模式为条目级——吃药提醒仅在条件满足时展示
   const visibleGroups = useMemo(() => (
     MODULE_GROUPS
       .map((g) => ({ ...g, items: g.items.filter((it) => !it.repair || medicineActive) }))
@@ -118,82 +104,49 @@ export default function MorePage() {
           group.title.toLowerCase().includes(normalized),
       ),
     })).filter((g) => g.items.length > 0);
-  }, [normalized]);
+  }, [normalized, visibleGroups]);
 
-  // T20-5：按档位分层渲染——XL/L 全宽大图块（时间权重高）→ M 两列标准卡 → S 三列紧凑行
-  const renderGroup = (group: (typeof visibleGroups)[number], gi: number) => {
-    const featured = group.items.filter((it) => it.size === "xl" || it.size === "l");
-    const standard = group.items.filter((it) => it.size === "m");
-    const compact = group.items.filter((it) => it.size === "s");
-    const motionDelay = (base: number) => ({ delay: gi * 0.04 + base });
-
-    // T20-5：按档位调整 icon 容器/标题字号/内边距，形成时间权重视觉层级
-    const SIZE_STYLE: Record<ModuleSize, { box: string; icon: string; title: string; pad: string }> = {
-      xl: { box: "w-12 h-12 rounded-2xl", icon: "w-6 h-6", title: "text-[17px] font-bold", pad: "p-4" },
-      l: { box: "w-11 h-11 rounded-xl", icon: "w-5 h-5", title: "text-[15px] font-bold", pad: "p-4" },
-      m: { box: "w-9 h-9 rounded-xl", icon: "w-5 h-5", title: "text-[14px] font-semibold", pad: "p-3.5" },
-      s: { box: "w-8 h-8 rounded-lg", icon: "w-4 h-4", title: "text-[13px] font-medium", pad: "p-2.5" },
-    };
-
-    const Card = ({ item, base }: { item: ModuleEntry; base: number }) => {
-      const st = SIZE_STYLE[item.size];
-      return (
-        <Link
-          href={item.path}
-          className={`${st.pad} rounded-[16px] flex items-center gap-3 text-left active:scale-[0.98] transition-transform no-underline`}
-          style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}
-        >
-          <motion.div
-            initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-            transition={motionDelay(base)}
-            className={`${st.box} flex-shrink-0 flex items-center justify-center`}
-            style={{ background: item.bgColor }}
+  const renderGroup = (group: (typeof visibleGroups)[number], gi: number) => (
+    <section key={group.title} className="mb-5 space-y-2">
+      <h2 className="px-4 text-[13px] font-medium leading-none" style={{ color: "var(--color-text-secondary)" }}>
+        {group.title}
+      </h2>
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: gi * 0.04, duration: 0.25 }}
+        className="rounded-xl overflow-hidden"
+        style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}
+      >
+        {group.items.map((item, i) => (
+          <Link
+            key={item.path}
+            href={item.path}
+            className="flex min-w-0 items-center gap-3 px-4 py-3 active:opacity-70 no-underline"
+            style={{ borderTop: i > 0 ? "1px solid var(--lifeflow-border-light)" : "none" }}
           >
-            <span className={st.icon} style={{ color: item.color }}>{item.icon}</span>
-          </motion.div>
-          <div className="flex-1 min-w-0">
-            <div className={`${st.title} truncate`} style={{ color: "var(--color-text-primary)" }}>{item.label}</div>
-          </div>
-        </Link>
-      );
-    };
-
-    return (
-      <div key={group.title} className="mb-5">
-        <p className="text-[12px] font-medium mb-0.5" style={{ color: "var(--color-text-disabled)" }}>{group.title}</p>
-        {group.layer && (
-          <p className="text-[11px] mb-2.5" style={{ color: "var(--color-text-disabled)", opacity: 0.8 }}>{group.layer}</p>
-        )}
-
-        {/* XL / L：全宽大图块（icon 大、标题大，代表每天占据大量时间） */}
-        {featured.length > 0 && (
-          <div className="flex flex-col gap-2.5 mb-2.5">
-            {featured.map((item, i) => (
-              <Card key={item.path} item={item} base={i * 0.03} />
-            ))}
-          </div>
-        )}
-
-        {/* M：两列标准卡 */}
-        {standard.length > 0 && (
-          <div className="grid grid-cols-2 gap-2.5 mb-2.5">
-            {standard.map((item, i) => (
-              <Card key={item.path} item={item} base={featured.length * 0.03 + i * 0.02} />
-            ))}
-          </div>
-        )}
-
-        {/* S：三列紧凑行 */}
-        {compact.length > 0 && (
-          <div className="grid grid-cols-3 gap-2.5">
-            {compact.map((item, i) => (
-              <Card key={item.path} item={item} base={(featured.length + standard.length) * 0.03 + i * 0.02} />
-            ))}
-          </div>
-        )}
-      </div>
-    );
-  };
+            <span
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg"
+              style={{ background: item.bgColor, color: item.color }}
+            >
+              {item.icon}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-[15px] font-medium leading-snug" style={{ color: "var(--color-text-primary)" }}>
+                {item.label}
+              </span>
+              {item.desc && (
+                <span className="mt-0.5 block truncate text-[12px] leading-none" style={{ color: "var(--color-text-tertiary)" }}>
+                  {item.desc}
+                </span>
+              )}
+            </span>
+            <ChevronRight className="h-4 w-4 shrink-0" style={{ color: "var(--color-text-tertiary)" }} />
+          </Link>
+        ))}
+      </motion.div>
+    </section>
+  );
 
   return (
     <div className="pb-[100px]">
@@ -206,7 +159,7 @@ export default function MorePage() {
         >
           <ChevronLeft className="w-5 h-5" style={{ color: "var(--color-text-primary)" }} />
         </button>
-        <h1 className="text-[20px] font-bold mx-2 truncate" style={{ color: "var(--color-text-primary)" }}>全部功能</h1>
+        <h1 className="text-[20px] font-bold mx-2 truncate" style={{ color: "var(--color-text-primary)" }}>更多</h1>
         <div className="w-8" />
       </div>
 
@@ -257,3 +210,4 @@ export default function MorePage() {
     </div>
   );
 }
+

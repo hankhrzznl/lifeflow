@@ -1321,7 +1321,7 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
       {!isHiddenPage && !isAssistantPage && !open && (
         <button
           onClick={() => router.push("/assistant")}
-          className="fixed bottom-24 right-5 z-40 w-14 h-14 rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-transform select-none"
+          className="fixed bottom-[84px] left-4 z-40 w-11 h-11 rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-transform select-none"
           style={{ background: "var(--lifeflow-primary)", boxShadow: "0 4px 24px rgba(37, 99, 235, 0.35)" }}
           aria-label="打开助手"
         >

@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Check, Plus, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, CalendarDays, Clock,
   X, Target, AlertCircle, Pencil, Moon, Ellipsis, Wallet, Droplets, Timer, StickyNote,
-  Bell, Sparkles,
+  Bell, Sparkles, Dumbbell,
 } from "lucide-react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { getItemsByDateSorted, deleteItem, updateItem, addManualItem, generateRoutineItems, generateCourseItems, getItemsByScheduleDay, getWakeTime } from "@/lib/db/daylog.db";
@@ -393,12 +393,20 @@ export default function SchedulePage() {
         </div>
         <div className="flex items-center gap-2">
           <Link
-            href="/efficiency-v2"
+            href="/more/calendar"
             className="px-3 py-1.5 rounded-full text-[12px] font-medium flex items-center gap-1"
             style={{ background: "var(--lifeflow-brand-50)", color: "var(--lifeflow-primary)" }}
           >
-            <Target className="w-3.5 h-3.5" />
-            目标
+            <CalendarDays className="w-3.5 h-3.5" />
+            月视图
+          </Link>
+          <Link
+            href="/more"
+            aria-label="更多功能"
+            className="flex h-9 w-9 items-center justify-center rounded-full"
+            style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}
+          >
+            <Ellipsis className="w-5 h-5" style={{ color: "var(--color-text-secondary)" }} />
           </Link>
         </div>
       </div>
@@ -1117,9 +1125,15 @@ function ItemCard({
   const isMultiHour = timeToMinutes(item.plannedEnd) - timeToMinutes(item.plannedStart) > 60;
   const isWater = item.sourceType === "water";
   const isRoutine = item.sourceType === "routine";
+  // T22：训练类事项只显示占位/提醒，打卡归「训练中心」
+  const isTraining = item.sourceType === "fitness" || item.sourceType === "wellness";
 
   // 历史模式卡片行为
   const handleCardClick = () => {
+    if (isTraining && !isPastDate) {
+      window.location.href = "/more/fitness";
+      return;
+    }
     if (isPastDate) {
       // 历史未完成：点击跳备注
       if (!item.isCompleted) {
@@ -1180,17 +1194,26 @@ function ItemCard({
       onContextMenu={(e) => { if (!isPastDate) { e.preventDefault(); onLongPress(); } }}
       onClick={handleCardClick}
     >
-      {/* 状态指示器 */}
-      <div
-        className="w-5 h-5 rounded-full flex items-center justify-center shrink-0"
-        style={{
-          background: item.isCompleted ? item.color : isHistoryUncompleted ? "#FF3B3040" : "transparent",
-          border: item.isCompleted ? "none" : isHistoryUncompleted ? "1.5px solid #FF3B30" : `2px solid ${item.color}40`,
-        }}
-      >
-        {item.isCompleted && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
-        {isHistoryUncompleted && <X className="w-2.5 h-2.5" style={{ color: "#FF3B30" }} strokeWidth={3} />}
-      </div>
+      {/* 状态指示器（训练类显示占位图标，打卡归训练中心） */}
+      {isTraining && !isPastDate ? (
+        <span
+          className="w-5 h-5 rounded-full flex items-center justify-center shrink-0"
+          style={{ background: "rgba(249,115,22,0.14)" }}
+        >
+          <Dumbbell className="w-3 h-3" style={{ color: "#F97316" }} />
+        </span>
+      ) : (
+        <div
+          className="w-5 h-5 rounded-full flex items-center justify-center shrink-0"
+          style={{
+            background: item.isCompleted ? item.color : isHistoryUncompleted ? "#FF3B3040" : "transparent",
+            border: item.isCompleted ? "none" : isHistoryUncompleted ? "1.5px solid #FF3B30" : `2px solid ${item.color}40`,
+          }}
+        >
+          {item.isCompleted && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
+          {isHistoryUncompleted && <X className="w-2.5 h-2.5" style={{ color: "#FF3B30" }} strokeWidth={3} />}
+        </div>
+      )}
 
       {/* 内容 */}
       <div className="flex-1 min-w-0">
@@ -1206,6 +1229,14 @@ function ItemCard({
             {isRoutine && <span className="mr-1">⏰</span>}
             {item.title}
           </p>
+          {isTraining && !isPastDate && (
+            <span
+              className="text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0"
+              style={{ background: "rgba(249,115,22,0.14)", color: "#F97316" }}
+            >
+              打卡归训练中心
+            </span>
+          )}
           {isHistoryUncompleted && (
             <span className="text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0" style={{ background: "#FF3B3020", color: "#FF3B30" }}>
               未完成
@@ -1234,32 +1265,34 @@ function ItemCard({
         )}
       </div>
 
-      {/* 操作按钮 */}
-      <div className="flex items-center gap-0.5 flex-shrink-0">
-        <button
-          onClick={(e) => { e.stopPropagation(); onCalibrate(); }}
-          className="w-6 h-6 rounded-full flex items-center justify-center active:opacity-70"
-          aria-label="校准时间"
-        >
-          <Target className="w-3.5 h-3.5" style={{ color: "var(--color-text-disabled)" }} />
-        </button>
-        {isHistoryUncompleted && (
+      {/* 操作按钮（训练类隐藏，打卡入口在卡片点击） */}
+      {!(isTraining && !isPastDate) && (
+        <div className="flex items-center gap-0.5 flex-shrink-0">
           <button
-            onClick={(e) => { e.stopPropagation(); onNote(); }}
+            onClick={(e) => { e.stopPropagation(); onCalibrate(); }}
             className="w-6 h-6 rounded-full flex items-center justify-center active:opacity-70"
-            aria-label="备注"
+            aria-label="校准时间"
           >
-            <Pencil className="w-3.5 h-3.5" style={{ color: "#FF3B30" }} />
+            <Target className="w-3.5 h-3.5" style={{ color: "var(--color-text-disabled)" }} />
           </button>
-        )}
-        <button
-          onClick={(e) => { e.stopPropagation(); onExpandToggle(); }}
-          className="w-6 h-6 rounded-full flex items-center justify-center active:opacity-70"
-          aria-label="更多操作"
-        >
-          <Ellipsis className="w-3.5 h-3.5" style={{ color: expanded ? "var(--lifeflow-primary)" : "var(--color-text-disabled)" }} />
-        </button>
-      </div>
+          {isHistoryUncompleted && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onNote(); }}
+              className="w-6 h-6 rounded-full flex items-center justify-center active:opacity-70"
+              aria-label="备注"
+            >
+              <Pencil className="w-3.5 h-3.5" style={{ color: "#FF3B30" }} />
+            </button>
+          )}
+          <button
+            onClick={(e) => { e.stopPropagation(); onExpandToggle(); }}
+            className="w-6 h-6 rounded-full flex items-center justify-center active:opacity-70"
+            aria-label="更多操作"
+          >
+            <Ellipsis className="w-3.5 h-3.5" style={{ color: expanded ? "var(--lifeflow-primary)" : "var(--color-text-disabled)" }} />
+          </button>
+        </div>
+      )}
     </motion.div>
     {/* 操作栏 */}
     <AnimatePresence>

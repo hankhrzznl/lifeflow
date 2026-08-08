@@ -1,0 +1,127 @@
+{
+  "success": true,
+  "outcome": "passed",
+  "repairable": true,
+  "terminalViolations": [],
+  "terminalBlockingSummary": null,
+  "skillProvenance": {
+    "name": "solo-design",
+    "version": "2026.07.06.8",
+    "version_source": "skill-release-manifest.json",
+    "runtime_skill_dir": null,
+    "recorded_at": null,
+    "expected_version": "2026.07.22.00.00.00",
+    "status": "mismatch",
+    "read_status": "ok"
+  },
+  "operatingMode": "free-explore",
+  "renderBlockingErrorCount": 0,
+  "softWarningCount": 14,
+  "renderBlockingErrors": [],
+  "errorSignatures": [],
+  "softWarnings": [
+    "[repair-ledger] validationRepairLedger[] has 3 entries; retry_or_repair_loop risk should be reviewed",
+    "[repair-ledger] validationRepairLedger[0].repairActions[0].preEditFileHashes[] is missing (legacy optional evidence)",
+    "[repair-ledger] validationRepairLedger[0].repairActions[0].postEditFileHashes[] is missing (legacy optional evidence)",
+    "[repair-ledger] validationRepairLedger[1].repairActions[0].preEditFileHashes[] is missing (legacy optional evidence)",
+    "[repair-ledger] validationRepairLedger[1].repairActions[0].postEditFileHashes[] is missing (legacy optional evidence)",
+    "[repair-ledger] validationRepairLedger[2].repairActions[0].preEditFileHashes[] is missing (legacy optional evidence)",
+    "[repair-ledger] validationRepairLedger[2].repairActions[0].postEditFileHashes[] is missing (legacy optional evidence)",
+    "[repair-ledger] validationRepairLedger[2].revalidationReportPath is missing",
+    "[repair-ledger] validationRepairLedger[2].revalidationReportHash is missing",
+    "[repair-ledger] validationRepairLedger[2].revalidationSuccess should be a boolean",
+    "[mobile-bottom-overlay] pages/home-day.html: bottom fixed/absolute CTA or navigation found. Ensure it has safe-area spacing and does not cover content. Evidence: class=\"fixed bottom-[84px] right-4 z-40 flex flex-col items-center gap-2\"",
+    "[mobile-bottom-overlay] pages/home-night.html: bottom fixed/absolute CTA or navigation found. Ensure it has safe-area spacing and does not cover content. Evidence: class=\"fixed bottom-[84px] right-4 z-40 flex flex-col items-center gap-2\"",
+    "[mobile-bottom-overlay] pages/schedule.html: bottom fixed/absolute CTA or navigation found. Ensure it has safe-area spacing and does not cover content. Evidence: class=\"absolute left-1/2 top-[18px] bottom-[-26px] w-px -translate-x-1/2 bg-[var(--lifeflow-border-light)] group-last:hidden\"",
+    "[html-quality] colors_and_type.css: ordinary/static shadow tokens must keep every shadow alpha <= 0.05; deeper shadows are allowed only for floating-layer tokens such as modal/popover/dropdown/drawer/overlay (--lifeflow-shadow-3: 0 8px 24px rgba(0,0,0,0.12))."
+  ],
+  "repairPlanHints": [],
+  "repairActionTable": [],
+  "errorCount": 0,
+  "warningCount": 14,
+  "errors": [],
+  "warnings": [
+    "[repair-ledger] validationRepairLedger[] has 3 entries; retry_or_repair_loop risk should be reviewed",
+    "[repair-ledger] validationRepairLedger[0].repairActions[0].preEditFileHashes[] is missing (legacy optional evidence)",
+    "[repair-ledger] validationRepairLedger[0].repairActions[0].postEditFileHashes[] is missing (legacy optional evidence)",
+    "[repair-ledger] validationRepairLedger[1].repairActions[0].preEditFileHashes[] is missing (legacy optional evidence)",
+    "[repair-ledger] validationRepairLedger[1].repairActions[0].postEditFileHashes[] is missing (legacy optional evidence)",
+    "[repair-ledger] validationRepairLedger[2].repairActions[0].preEditFileHashes[] is missing (legacy optional evidence)",
+    "[repair-ledger] validationRepairLedger[2].repairActions[0].postEditFileHashes[] is missing (legacy optional evidence)",
+    "[repair-ledger] validationRepairLedger[2].revalidationReportPath is missing",
+    "[repair-ledger] validationRepairLedger[2].revalidationReportHash is missing",
+    "[repair-ledger] validationRepairLedger[2].revalidationSuccess should be a boolean",
+    "[mobile-bottom-overlay] pages/home-day.html: bottom fixed/absolute CTA or navigation found. Ensure it has safe-area spacing and does not cover content. Evidence: class=\"fixed bottom-[84px] right-4 z-40 flex flex-col items-center gap-2\"",
+    "[mobile-bottom-overlay] pages/home-night.html: bottom fixed/absolute CTA or navigation found. Ensure it has safe-area spacing and does not cover content. Evidence: class=\"fixed bottom-[84px] right-4 z-40 flex flex-col items-center gap-2\"",
+    "[mobile-bottom-overlay] pages/schedule.html: bottom fixed/absolute CTA or navigation found. Ensure it has safe-area spacing and does not cover content. Evidence: class=\"absolute left-1/2 top-[18px] bottom-[-26px] w-px -translate-x-1/2 bg-[var(--lifeflow-border-light)] group-last:hidden\"",
+    "[html-quality] colors_and_type.css: ordinary/static shadow tokens must keep every shadow alpha <= 0.05; deeper shadows are allowed only for floating-layer tokens such as modal/popover/dropdown/drawer/overlay (--lifeflow-shadow-3: 0 8px 24px rgba(0,0,0,0.12))."
+  ],
+  "validationRunDisciplineStatus": {
+    "declared": true,
+    "restoreMode": false,
+    "maxFullValidationRuns": 2,
+    "validationHistoryCount": 5,
+    "repairLedgerCount": 3,
+    "softWarningsTriggerRepair": false,
+    "terminalState": "validation-budget-exhausted",
+    "nextAction": "stop_and_report_blocking_summary",
+    "violations": [
+      "validationHistory has 5 full validation run(s), max allowed is 2"
+    ],
+    "success": false
+  },
+  "terminalState": null,
+  "nextCheck": {
+    "type": "finish-readiness",
+    "command": "node \"D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\validate-finish-readiness.mjs\" \"d:\\hankkk\\lifeflow\\lifeflow-home-redesign\" --check=all",
+    "fullValidationAllowed": false,
+    "reason": "workspace validation passed; run complete finish readiness before final delivery"
+  },
+  "repairBatch": [],
+  "repairContextPacket": {
+    "schema_version": "1.0",
+    "purpose": "small-context repair packet; read this before full validation-report.json",
+    "success": true,
+    "terminalState": null,
+    "skillProvenance": {
+      "name": "solo-design",
+      "version": "2026.07.06.8",
+      "version_source": "skill-release-manifest.json",
+      "runtime_skill_dir": null,
+      "recorded_at": null,
+      "expected_version": "2026.07.22.00.00.00",
+      "status": "mismatch",
+      "read_status": "ok"
+    },
+    "renderBlockingErrorCount": 0,
+    "softWarningCount": 14,
+    "renderBlockingErrors": [],
+    "repairActionTable": [],
+    "nextCheck": {
+      "type": "finish-readiness",
+      "command": "node \"D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\validate-finish-readiness.mjs\" \"d:\\hankkk\\lifeflow\\lifeflow-home-redesign\" --check=all",
+      "fullValidationAllowed": false,
+      "reason": "workspace validation passed; run complete finish readiness before final delivery"
+    },
+    "forbidden": [
+      "do not read validator source",
+      "do not rerun full validation when nextCheck.fullValidationAllowed=false",
+      "do not start preview/browser unless user explicitly asks",
+      "do not hand-edit repair ledger fields"
+    ]
+  },
+  "projectFileHashes": {
+    "lifeflow-home-redesign.design": "a9385e043f775605bfc4177ddedd27650071e19699154400aeccf2b0b3fcaf7c",
+    "colors_and_type.css": "5d465578e14c7f5dd9297f5ecd01d891e6be76927f9f5b066e7449ff02fef751",
+    "runtime-orchestration-summary.json": "d4ae9775a22fa1c4b35d5a0ccde7256ced8915fab742b1d9eaba854c840d72be",
+    "pages/goals.html": "246a12ef17bb6f5e5c967c1b9b9cc65415d45bbedb8dbf139d4c4672809a705a",
+    "pages/home-day.html": "0aaa84ebbb0ab3b771fc12952b3fdceeda53ea0f6533b8668a118aaad781ebb3",
+    "pages/home-night.html": "c06a8ca6de10006d76abe959a64f9ba76e63f705da2a19a5e913c716f90472c7",
+    "pages/more.html": "90dd7c0038e843d4f6a39a6d2925f12b1e03abba7eccca4fb9d1d65eeb91ab5e",
+    "pages/schedule.html": "3b23241a177a6e722dafbf94398a03eea8b91cc1b05775fb1c7c85ace7a18b61"
+  },
+  "designDir": "d:\\hankkk\\lifeflow\\lifeflow-home-redesign",
+  "expectedPages": 5,
+  "requireInteractions": "mode-switch:pages/home-day.html,mode-switch:pages/home-night.html,nav-goals:pages/home-day.html,nav-schedule:pages/home-day.html,nav-more:pages/home-day.html,review-entry:pages/home-day.html,nav-goals:pages/home-night.html,nav-schedule:pages/home-night.html,nav-more:pages/home-night.html,review-entry:pages/home-night.html,nav-home:pages/goals.html,nav-schedule:pages/goals.html,nav-more:pages/goals.html,nav-home:pages/schedule.html,nav-goals:pages/schedule.html,nav-more:pages/schedule.html,back-home:pages/more.html,nav-goals:pages/more.html,nav-schedule:pages/more.html",
+  "checkedAt": "2026-08-07T14:00:21.908Z"
+}

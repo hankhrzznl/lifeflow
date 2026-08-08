@@ -21,7 +21,7 @@ const MODULE_ROUTES: Record<string, string> = {
   schedule: "/efficiency/schedule",
   medication: "/more/medication",
   goals: "/efficiency-v2",
-  ideal: "/more/ideal-day",
+  ideal: "/ideal-day",
 };
 
 // ============================================================

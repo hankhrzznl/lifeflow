@@ -61,7 +61,7 @@ const WEEKDAY_LABELS = ['周一', '周二', '周三', '周四', '周五', '周�
 const TEMPLATE_METAS: TemplateMeta[] = [
   {
     id: 'template_exam',
-    name: '备考计划',
+    name: '备考目标',
     description: '适用于考研/考公/考证，自动生成基础→强化→冲刺→模考四阶段计划',
     category: 'exam',
     icon: '📚',

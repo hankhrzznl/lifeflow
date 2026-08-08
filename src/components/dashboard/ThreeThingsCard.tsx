@@ -149,7 +149,7 @@ export default function ThreeThingsCard() {
         <div className="mt-2 pt-2.5 flex items-center gap-2" style={{ borderTop: "1px solid var(--lifeflow-border)" }}>
           <Sparkles className="w-3.5 h-3.5 shrink-0" style={{ color: "var(--color-text-disabled)" }} />
           <p className="text-[11px] leading-relaxed" style={{ color: "var(--color-text-disabled)" }}>
-            自动来自备考计划 · 打勾联动学习进度 · 点 ✎ 可改成自己的事
+            自动来自备考目标 · 打勾联动学习进度 · 点 ✎ 可改成自己的事
           </p>
         </div>
       </motion.div>

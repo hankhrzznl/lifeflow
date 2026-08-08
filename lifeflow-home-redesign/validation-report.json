@@ -16,7 +16,7 @@
   },
   "operatingMode": "free-explore",
   "renderBlockingErrorCount": 0,
-  "softWarningCount": 14,
+  "softWarningCount": 12,
   "renderBlockingErrors": [],
   "errorSignatures": [],
   "softWarnings": [
@@ -27,18 +27,16 @@
     "[repair-ledger] validationRepairLedger[1].repairActions[0].postEditFileHashes[] is missing (legacy optional evidence)",
     "[repair-ledger] validationRepairLedger[2].repairActions[0].preEditFileHashes[] is missing (legacy optional evidence)",
     "[repair-ledger] validationRepairLedger[2].repairActions[0].postEditFileHashes[] is missing (legacy optional evidence)",
-    "[repair-ledger] validationRepairLedger[2].revalidationReportPath is missing",
-    "[repair-ledger] validationRepairLedger[2].revalidationReportHash is missing",
-    "[repair-ledger] validationRepairLedger[2].revalidationSuccess should be a boolean",
     "[mobile-bottom-overlay] pages/home-day.html: bottom fixed/absolute CTA or navigation found. Ensure it has safe-area spacing and does not cover content. Evidence: class=\"fixed bottom-[84px] right-4 z-40 flex flex-col items-center gap-2\"",
     "[mobile-bottom-overlay] pages/home-night.html: bottom fixed/absolute CTA or navigation found. Ensure it has safe-area spacing and does not cover content. Evidence: class=\"fixed bottom-[84px] right-4 z-40 flex flex-col items-center gap-2\"",
     "[mobile-bottom-overlay] pages/schedule.html: bottom fixed/absolute CTA or navigation found. Ensure it has safe-area spacing and does not cover content. Evidence: class=\"absolute left-1/2 top-[18px] bottom-[-26px] w-px -translate-x-1/2 bg-[var(--lifeflow-border-light)] group-last:hidden\"",
+    "[mobile-bottom-overlay] pages/ideal-day-sheet.html: bottom fixed/absolute CTA or navigation found. Ensure it has safe-area spacing and does not cover content. Evidence: class=\"fixed inset-x-0 bottom-0 z-50 mx-auto max-w-md\"",
     "[html-quality] colors_and_type.css: ordinary/static shadow tokens must keep every shadow alpha <= 0.05; deeper shadows are allowed only for floating-layer tokens such as modal/popover/dropdown/drawer/overlay (--lifeflow-shadow-3: 0 8px 24px rgba(0,0,0,0.12))."
   ],
   "repairPlanHints": [],
   "repairActionTable": [],
   "errorCount": 0,
-  "warningCount": 14,
+  "warningCount": 12,
   "errors": [],
   "warnings": [
     "[repair-ledger] validationRepairLedger[] has 3 entries; retry_or_repair_loop risk should be reviewed",
@@ -48,25 +46,23 @@
     "[repair-ledger] validationRepairLedger[1].repairActions[0].postEditFileHashes[] is missing (legacy optional evidence)",
     "[repair-ledger] validationRepairLedger[2].repairActions[0].preEditFileHashes[] is missing (legacy optional evidence)",
     "[repair-ledger] validationRepairLedger[2].repairActions[0].postEditFileHashes[] is missing (legacy optional evidence)",
-    "[repair-ledger] validationRepairLedger[2].revalidationReportPath is missing",
-    "[repair-ledger] validationRepairLedger[2].revalidationReportHash is missing",
-    "[repair-ledger] validationRepairLedger[2].revalidationSuccess should be a boolean",
     "[mobile-bottom-overlay] pages/home-day.html: bottom fixed/absolute CTA or navigation found. Ensure it has safe-area spacing and does not cover content. Evidence: class=\"fixed bottom-[84px] right-4 z-40 flex flex-col items-center gap-2\"",
     "[mobile-bottom-overlay] pages/home-night.html: bottom fixed/absolute CTA or navigation found. Ensure it has safe-area spacing and does not cover content. Evidence: class=\"fixed bottom-[84px] right-4 z-40 flex flex-col items-center gap-2\"",
     "[mobile-bottom-overlay] pages/schedule.html: bottom fixed/absolute CTA or navigation found. Ensure it has safe-area spacing and does not cover content. Evidence: class=\"absolute left-1/2 top-[18px] bottom-[-26px] w-px -translate-x-1/2 bg-[var(--lifeflow-border-light)] group-last:hidden\"",
+    "[mobile-bottom-overlay] pages/ideal-day-sheet.html: bottom fixed/absolute CTA or navigation found. Ensure it has safe-area spacing and does not cover content. Evidence: class=\"fixed inset-x-0 bottom-0 z-50 mx-auto max-w-md\"",
     "[html-quality] colors_and_type.css: ordinary/static shadow tokens must keep every shadow alpha <= 0.05; deeper shadows are allowed only for floating-layer tokens such as modal/popover/dropdown/drawer/overlay (--lifeflow-shadow-3: 0 8px 24px rgba(0,0,0,0.12))."
   ],
   "validationRunDisciplineStatus": {
     "declared": true,
     "restoreMode": false,
     "maxFullValidationRuns": 2,
-    "validationHistoryCount": 5,
+    "validationHistoryCount": 6,
     "repairLedgerCount": 3,
     "softWarningsTriggerRepair": false,
     "terminalState": "validation-budget-exhausted",
     "nextAction": "stop_and_report_blocking_summary",
     "violations": [
-      "validationHistory has 5 full validation run(s), max allowed is 2"
+      "validationHistory has 6 full validation run(s), max allowed is 2"
     ],
     "success": false
   },
@@ -94,7 +90,7 @@
       "read_status": "ok"
     },
     "renderBlockingErrorCount": 0,
-    "softWarningCount": 14,
+    "softWarningCount": 12,
     "renderBlockingErrors": [],
     "repairActionTable": [],
     "nextCheck": {
@@ -111,17 +107,24 @@
     ]
   },
   "projectFileHashes": {
-    "lifeflow-home-redesign.design": "a9385e043f775605bfc4177ddedd27650071e19699154400aeccf2b0b3fcaf7c",
-    "colors_and_type.css": "5d465578e14c7f5dd9297f5ecd01d891e6be76927f9f5b066e7449ff02fef751",
-    "runtime-orchestration-summary.json": "d4ae9775a22fa1c4b35d5a0ccde7256ced8915fab742b1d9eaba854c840d72be",
-    "pages/goals.html": "246a12ef17bb6f5e5c967c1b9b9cc65415d45bbedb8dbf139d4c4672809a705a",
-    "pages/home-day.html": "0aaa84ebbb0ab3b771fc12952b3fdceeda53ea0f6533b8668a118aaad781ebb3",
-    "pages/home-night.html": "c06a8ca6de10006d76abe959a64f9ba76e63f705da2a19a5e913c716f90472c7",
-    "pages/more.html": "90dd7c0038e843d4f6a39a6d2925f12b1e03abba7eccca4fb9d1d65eeb91ab5e",
-    "pages/schedule.html": "3b23241a177a6e722dafbf94398a03eea8b91cc1b05775fb1c7c85ace7a18b61"
+    "lifeflow-home-redesign.design": "505988f2ad34235984ebaa8459cafd1d50053297a5a1b20e6a4883dfe6ea60d6",
+    "colors_and_type.css": "116fc58ed6f344b9dc6c54bc53de37a63d12518d48ee35d68af52c4a6367fcbd",
+    "runtime-orchestration-summary.json": "e827eaf1bd232ce0c8d9202bef69e64ccb6e44e9a6967456148c4d9a868f961e",
+    "pages/goals.html": "6ab2749c96e8b9e9aea04dc0b15b537b975754e3ddfade89e531dd0dc2a9efef",
+    "pages/home-day.html": "69b914d713f4ea6c86ae2c685c2060ac3b2e16663d0b83d580a01ce2c2c1e07f",
+    "pages/home-night.html": "1bff3551fc265132d92e8c38fdbbe2b3a1f23b518bb510f01f0ef63d5bb28304",
+    "pages/ideal-day-edit-step1.html": "f977445fef8dee05126ab6be6c4dcdaef04857595e9f1e7ac263292f8874bfbd",
+    "pages/ideal-day-edit-step2.html": "0a6392fc496e97d7784d98246d58ac6a4d6ef5fd22c1de9730e6659501b80929",
+    "pages/ideal-day-sheet.html": "88b751978045fbc478d84c7d2b8a93911077158ac98cb5fba3ee52baf6788003",
+    "pages/ideal-day.html": "c73b6ed01790d71c05e565b7a01cfb6591c7bc6ba3fdff4db78f3ace5cb43626",
+    "pages/more.html": "c88327bd3db2177dd9200ae670d507344ef870435eccd43522f1e6c527015b5f",
+    "pages/plan-medication.html": "1866429f8a0be7982ad4808c1c80784849717ff53d62736cf6d25cc8baf44905",
+    "pages/plan-sleep.html": "ebf9d9ac883ba68367e3f5e0c113abc319aab68338e7e043d7350db1e4e16006",
+    "pages/plan-study.html": "0b3eec8067f4f6c1eebb8c2b5fc1b7c9f8b4543f0bcbc02bee84fb0ceaa179cc",
+    "pages/schedule.html": "dbea0b43114069ea77b17ca25b230df55a4da5f662297bc619cd86f5ff97ba33"
   },
   "designDir": "d:\\hankkk\\lifeflow\\lifeflow-home-redesign",
-  "expectedPages": 5,
-  "requireInteractions": "mode-switch:pages/home-day.html,mode-switch:pages/home-night.html,nav-goals:pages/home-day.html,nav-schedule:pages/home-day.html,nav-more:pages/home-day.html,review-entry:pages/home-day.html,nav-goals:pages/home-night.html,nav-schedule:pages/home-night.html,nav-more:pages/home-night.html,review-entry:pages/home-night.html,nav-home:pages/goals.html,nav-schedule:pages/goals.html,nav-more:pages/goals.html,nav-home:pages/schedule.html,nav-goals:pages/schedule.html,nav-more:pages/schedule.html,back-home:pages/more.html,nav-goals:pages/more.html,nav-schedule:pages/more.html",
-  "checkedAt": "2026-08-07T14:00:21.908Z"
+  "expectedPages": 12,
+  "requireInteractions": "plan-study:pages/ideal-day.html,plan-workout:pages/ideal-day.html,plan-posture:pages/ideal-day.html,plan-wellness:pages/ideal-day.html,plan-routine:pages/ideal-day.html,back-ideal:pages/ideal-day-sheet.html,sheet-save:pages/ideal-day-sheet.html,nav-ideal:pages/ideal-day-sheet.html,back-ideal:pages/plan-study.html,nav-ideal:pages/plan-study.html",
+  "checkedAt": "2026-08-08T15:45:51.694Z"
 }

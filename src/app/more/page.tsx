@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
@@ -7,7 +7,7 @@ import {
   ChevronLeft, ChevronRight, Droplets, Moon, Dumbbell, Utensils,
   Pill, Timer, Wallet, StickyNote,
   Bell, Settings, Compass, ClipboardCheck, Sun, Repeat, Clock,
-  BookOpen, GraduationCap, Brain, PersonStanding, Star, Hourglass, CalendarDays,
+  BookOpen, Target, Brain, PersonStanding, Star, Hourglass, CalendarDays,
   Search, SearchX, X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -36,11 +36,11 @@ const MODULE_GROUPS: { title: string; items: ModuleEntry[] }[] = [
       { label: "长期主义", path: "/longtermism", icon: <Compass className="h-5 w-5" />, color: "var(--lifeflow-primary)", bgColor: "var(--lifeflow-brand-50)", desc: "目标回顾与复盘" },
       { label: "复盘总览", path: "/more/review", icon: <ClipboardCheck className="h-5 w-5" />, color: "var(--lifeflow-primary)", bgColor: "var(--lifeflow-brand-50)", desc: "日/周复盘记录" },
       { label: "目标拆解", path: "/efficiency-v2", icon: <Brain className="h-5 w-5" />, color: "var(--lifeflow-primary)", bgColor: "var(--lifeflow-brand-50)", desc: "五层目标 · 今日焦点" },
-      { label: "理想日蓝图", path: "/more/ideal-day", icon: <Sun className="h-5 w-5" />, color: "var(--lifeflow-primary)", bgColor: "var(--lifeflow-brand-50)", desc: "理想的一天模板" },
+      { label: "理想日蓝图", path: "/ideal-day", icon: <Sun className="h-5 w-5" />, color: "var(--lifeflow-primary)", bgColor: "var(--lifeflow-brand-50)", desc: "8+8+8 时间轴模板" },
       { label: "习惯打卡", path: "/more/habits", icon: <Repeat className="h-5 w-5" />, color: "var(--lifeflow-primary)", bgColor: "var(--lifeflow-brand-50)", desc: "每日习惯追踪" },
       { label: "作息模板", path: "/more/schedule/routines", icon: <Clock className="h-5 w-5" />, color: "var(--lifeflow-primary)", bgColor: "var(--lifeflow-brand-50)", desc: "起床/就寝固定时间" },
       { label: "课程表", path: "/more/schedule/courses", icon: <BookOpen className="h-5 w-5" />, color: "var(--lifeflow-primary)", bgColor: "var(--lifeflow-brand-50)", desc: "上课时间安排" },
-      { label: "备考计划", path: "/more/exam-plan", icon: <GraduationCap className="h-5 w-5" />, color: "var(--lifeflow-primary)", bgColor: "var(--lifeflow-brand-50)", desc: "备考阶段拆解" },
+      { label: "备考目标", path: "/more/exam-plan", icon: <Target className="h-5 w-5" />, color: "var(--lifeflow-primary)", bgColor: "var(--lifeflow-brand-50)", desc: "省考 · 四级目标与课时" },
       { label: "记忆复习", path: "/more/ebbinghaus", icon: <Brain className="h-5 w-5" />, color: "var(--lifeflow-primary)", bgColor: "var(--lifeflow-brand-50)", desc: "艾宾浩斯记忆" },
       { label: "专注计时", path: "/more/focus", icon: <Timer className="h-5 w-5" />, color: "var(--lifeflow-primary)", bgColor: "var(--lifeflow-brand-50)", desc: "番茄专注" },
     ],

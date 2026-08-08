@@ -293,6 +293,20 @@ export default function SchedulePage() {
       const da = await goalV2DB.goalV2DailyActions.get(item.sourceId);
       if (da?.goalId) await recalculateGoalProgress(da.goalId);
     }
+    if (item.sourceType === "ideal" && item.sourceId?.startsWith("ideal-plan-")) {
+      // T22.2：理想日规划项勾选 → 反向回写 userSettings.idealDayPlans（打通日程→理想日）
+      const m = item.sourceId.match(/^ideal-plan-(.+)-([a-z]+)$/);
+      const blockId = m?.[1];
+      const feature = m?.[2];
+      if (blockId && feature) {
+        const { getIdealDayPlans, saveIdealDayPlans } = await import("@/lib/ideal-day-templates");
+        const plans = await getIdealDayPlans(item.date);
+        const next = plans.map((p) =>
+          p.blockId === blockId && p.feature === feature ? { ...p, isCompleted: newState } : p,
+        );
+        await saveIdealDayPlans(item.date, next);
+      }
+    }
   }, [isPastDate]);
 
   // ── 删除（仅当天/未来） ──
@@ -1130,6 +1144,24 @@ function ItemCard({
 
   // 历史模式卡片行为
   const handleCardClick = () => {
+    // T22.2：理想日规划项 → 跳回理想日对应规划（打通日程→理想日）
+    if (item.sourceType === "ideal" && item.sourceId?.startsWith("ideal-plan-")) {
+      const m = item.sourceId.match(/^ideal-plan-(.+)-([a-z]+)$/);
+      const blockId = m?.[1];
+      const feature = m?.[2] as string;
+      if (blockId && ["study", "sleep", "medication"].includes(feature)) {
+        window.location.href = `/ideal-day/plan/${blockId}/${feature}`;
+      } else if (blockId) {
+        window.location.href = `/ideal-day?block=${blockId}`;
+      }
+      return;
+    }
+    // T22.2：理想日块级项 → 跳理想日定位该时段
+    if (item.sourceType === "ideal" && item.sourceId?.startsWith("ideal-block-")) {
+      const blockId = item.sourceId.split("-").slice(-1)[0];
+      if (blockId) window.location.href = `/ideal-day?block=${blockId}`;
+      return;
+    }
     if (isTraining && !isPastDate) {
       window.location.href = "/more/fitness";
       return;
@@ -1256,6 +1288,12 @@ function ItemCard({
           {item.isCorrected && (
             <span className="text-[11px] font-medium" style={{ color: "#FF9500" }}>已校准</span>
           )}
+          {/* T22.2：理想日来源徽标 */}
+          {item.sourceType === "ideal" && (
+            <span className="text-[11px] font-medium flex items-center gap-0.5" style={{ color: "#6366F1" }}>
+              <Sparkles className="w-3 h-3" /> 理想日
+            </span>
+          )}
         </div>
         {/* 备注预览（历史日期） */}
         {isPastDate && item.note && (
@@ -1268,6 +1306,17 @@ function ItemCard({
       {/* 操作按钮（训练类隐藏，打卡入口在卡片点击） */}
       {!(isTraining && !isPastDate) && (
         <div className="flex items-center gap-0.5 flex-shrink-0">
+          {/* T22.2：目标事项行内常驻专注按钮 */}
+          {item.sourceType === "goal" && !item.isCompleted && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onFocus(); }}
+              className="w-7 h-7 rounded-full flex items-center justify-center active:scale-90 transition-transform"
+              aria-label={`专注：${item.title}`}
+              style={{ background: "rgba(139,92,246,0.14)", color: "rgba(139,92,246,1)" }}
+            >
+              <Timer className="w-3.5 h-3.5" />
+            </button>
+          )}
           <button
             onClick={(e) => { e.stopPropagation(); onCalibrate(); }}
             className="w-6 h-6 rounded-full flex items-center justify-center active:opacity-70"

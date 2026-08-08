@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "generated_at": "2026-08-07T13:54:33.418Z",
+  "generated_at": "2026-08-08T15:23:09.422Z",
   "source": "build-page-dispatch-manifest.mjs",
   "mode": "free-fast",
   "summary_path": "runtime-orchestration-summary.json",
@@ -12,7 +12,7 @@
   },
   "dispatchPreflightManifest": [
     {
-      "recorded_at": "2026-08-07T13:54:33.407Z",
+      "recorded_at": "2026-08-08T15:23:09.406Z",
       "generatedBy": "build-page-dispatch-manifest.mjs",
       "packetType": "FreePagePacket",
       "laneContract": {
@@ -86,7 +86,7 @@
       "deterministicCommands": null,
       "sourceAuthorityLock": null,
       "preDispatchFileHashes": {
-        "lifeflow-home-redesign.design": "8239cd2dc4f1698cd779a51a21d3150950a666bddb4314455493156e8d56368f"
+        "lifeflow-home-redesign.design": "72e25c0322d2d6ffa0018c06833e0c9b54c5660dad20d4bdd7a3e450fd4b481a"
       },
       "contextPreflight": {
         "workflowPath": "intent-workflows/intent-page-free-exploration/INTENT_WORKFLOW.md",
@@ -113,7 +113,7 @@
         "structurePresent": true,
         "canonicalHtmlIncluded": true,
         "canonicalHtmlSource": "sharedProjectShellContract.mobileNavigation.structure.canonicalHtmlByKey.home",
-        "structureHash": "72e1e30a1f7d1b424605146128cdf7d196d4ad6e3b23148d19a47afbea0a9f44",
+        "structureHash": "8c2ce1a9a6145ffcef92451c4426e73f6cb29e508ae8aef9ba5e254c4613c001",
         "missingFields": []
       },
       "persistedToSummary": true,
@@ -122,7 +122,7 @@
       "largeWorkflowFilesInTaskQuery": null
     },
     {
-      "recorded_at": "2026-08-07T13:54:33.407Z",
+      "recorded_at": "2026-08-08T15:23:09.406Z",
       "generatedBy": "build-page-dispatch-manifest.mjs",
       "packetType": "FreePagePacket",
       "laneContract": {
@@ -186,7 +186,7 @@
       "brandPrefix": "lifeflow",
       "aestheticsMode": "free-explore",
       "toolDisciplineBlockPresent": true,
-      "fillHtmlHeadCommand": null,
+      "fillHtmlHeadCommand": "node \"D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\apply-html-head-contract.mjs\" \"d:\\hankkk\\lifeflow\\lifeflow-home-redesign\\colors_and_type.css\" \"d:\\hankkk\\lifeflow\\lifeflow-home-redesign\\pages\\home-night.html\" --title=\"首页 · 夜间态\" --lang=\"zh-CN\" --prefix=\"lifeflow\" --replace-head",
       "headFillMode": "replace-head-after-body",
       "viewportMode": "document-scroll",
       "completionSchemaExpected": "compact",
@@ -196,7 +196,7 @@
       "deterministicCommands": null,
       "sourceAuthorityLock": null,
       "preDispatchFileHashes": {
-        "lifeflow-home-redesign.design": "8239cd2dc4f1698cd779a51a21d3150950a666bddb4314455493156e8d56368f"
+        "lifeflow-home-redesign.design": "72e25c0322d2d6ffa0018c06833e0c9b54c5660dad20d4bdd7a3e450fd4b481a"
       },
       "contextPreflight": {
         "workflowPath": "intent-workflows/intent-page-free-exploration/INTENT_WORKFLOW.md",
@@ -223,7 +223,7 @@
         "structurePresent": true,
         "canonicalHtmlIncluded": true,
         "canonicalHtmlSource": "sharedProjectShellContract.mobileNavigation.structure.canonicalHtmlByKey.home",
-        "structureHash": "72e1e30a1f7d1b424605146128cdf7d196d4ad6e3b23148d19a47afbea0a9f44",
+        "structureHash": "8c2ce1a9a6145ffcef92451c4426e73f6cb29e508ae8aef9ba5e254c4613c001",
         "missingFields": []
       },
       "persistedToSummary": true,
@@ -232,7 +232,7 @@
       "largeWorkflowFilesInTaskQuery": null
     },
     {
-      "recorded_at": "2026-08-07T13:54:33.407Z",
+      "recorded_at": "2026-08-08T15:23:09.406Z",
       "generatedBy": "build-page-dispatch-manifest.mjs",
       "packetType": "FreePagePacket",
       "laneContract": {
@@ -296,8 +296,8 @@
       "brandPrefix": "lifeflow",
       "aestheticsMode": "free-explore",
       "toolDisciplineBlockPresent": true,
-      "fillHtmlHeadCommand": "node \"D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\apply-html-head-contract.mjs\" \"d:\\hankkk\\lifeflow\\lifeflow-home-redesign\\colors_and_type.css\" \"d:\\hankkk\\lifeflow\\lifeflow-home-redesign\\pages\\goals.html\" --title=\"目标 · 今日焦点\" --lang=\"zh-CN\" --prefix=\"lifeflow\"",
-      "headFillMode": "skeleton-first",
+      "fillHtmlHeadCommand": "node \"D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\apply-html-head-contract.mjs\" \"d:\\hankkk\\lifeflow\\lifeflow-home-redesign\\colors_and_type.css\" \"d:\\hankkk\\lifeflow\\lifeflow-home-redesign\\pages\\goals.html\" --title=\"目标 · 今日目标\" --lang=\"zh-CN\" --prefix=\"lifeflow\" --replace-head",
+      "headFillMode": "replace-head-after-body",
       "viewportMode": "document-scroll",
       "completionSchemaExpected": "compact",
       "restoreFields": null,
@@ -306,7 +306,7 @@
       "deterministicCommands": null,
       "sourceAuthorityLock": null,
       "preDispatchFileHashes": {
-        "lifeflow-home-redesign.design": "8239cd2dc4f1698cd779a51a21d3150950a666bddb4314455493156e8d56368f"
+        "lifeflow-home-redesign.design": "72e25c0322d2d6ffa0018c06833e0c9b54c5660dad20d4bdd7a3e450fd4b481a"
       },
       "contextPreflight": {
         "workflowPath": "intent-workflows/intent-page-free-exploration/INTENT_WORKFLOW.md",
@@ -333,7 +333,7 @@
         "structurePresent": true,
         "canonicalHtmlIncluded": true,
         "canonicalHtmlSource": "sharedProjectShellContract.mobileNavigation.structure.canonicalHtmlByKey.goals",
-        "structureHash": "72e1e30a1f7d1b424605146128cdf7d196d4ad6e3b23148d19a47afbea0a9f44",
+        "structureHash": "8c2ce1a9a6145ffcef92451c4426e73f6cb29e508ae8aef9ba5e254c4613c001",
         "missingFields": []
       },
       "persistedToSummary": true,
@@ -342,7 +342,7 @@
       "largeWorkflowFilesInTaskQuery": null
     },
     {
-      "recorded_at": "2026-08-07T13:54:33.407Z",
+      "recorded_at": "2026-08-08T15:23:09.406Z",
       "generatedBy": "build-page-dispatch-manifest.mjs",
       "packetType": "FreePagePacket",
       "laneContract": {
@@ -406,8 +406,8 @@
       "brandPrefix": "lifeflow",
       "aestheticsMode": "free-explore",
       "toolDisciplineBlockPresent": true,
-      "fillHtmlHeadCommand": "node \"D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\apply-html-head-contract.mjs\" \"d:\\hankkk\\lifeflow\\lifeflow-home-redesign\\colors_and_type.css\" \"d:\\hankkk\\lifeflow\\lifeflow-home-redesign\\pages\\schedule.html\" --title=\"日程 · 时间轴\" --lang=\"zh-CN\" --prefix=\"lifeflow\"",
-      "headFillMode": "skeleton-first",
+      "fillHtmlHeadCommand": "node \"D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\apply-html-head-contract.mjs\" \"d:\\hankkk\\lifeflow\\lifeflow-home-redesign\\colors_and_type.css\" \"d:\\hankkk\\lifeflow\\lifeflow-home-redesign\\pages\\schedule.html\" --title=\"日程 · 时间轴\" --lang=\"zh-CN\" --prefix=\"lifeflow\" --replace-head",
+      "headFillMode": "replace-head-after-body",
       "viewportMode": "document-scroll",
       "completionSchemaExpected": "compact",
       "restoreFields": null,
@@ -416,7 +416,7 @@
       "deterministicCommands": null,
       "sourceAuthorityLock": null,
       "preDispatchFileHashes": {
-        "lifeflow-home-redesign.design": "8239cd2dc4f1698cd779a51a21d3150950a666bddb4314455493156e8d56368f"
+        "lifeflow-home-redesign.design": "72e25c0322d2d6ffa0018c06833e0c9b54c5660dad20d4bdd7a3e450fd4b481a"
       },
       "contextPreflight": {
         "workflowPath": "intent-workflows/intent-page-free-exploration/INTENT_WORKFLOW.md",
@@ -443,7 +443,7 @@
         "structurePresent": true,
         "canonicalHtmlIncluded": true,
         "canonicalHtmlSource": "sharedProjectShellContract.mobileNavigation.structure.canonicalHtmlByKey.schedule",
-        "structureHash": "72e1e30a1f7d1b424605146128cdf7d196d4ad6e3b23148d19a47afbea0a9f44",
+        "structureHash": "8c2ce1a9a6145ffcef92451c4426e73f6cb29e508ae8aef9ba5e254c4613c001",
         "missingFields": []
       },
       "persistedToSummary": true,
@@ -452,7 +452,7 @@
       "largeWorkflowFilesInTaskQuery": null
     },
     {
-      "recorded_at": "2026-08-07T13:54:33.407Z",
+      "recorded_at": "2026-08-08T15:23:09.406Z",
       "generatedBy": "build-page-dispatch-manifest.mjs",
       "packetType": "FreePagePacket",
       "laneContract": {
@@ -516,8 +516,8 @@
       "brandPrefix": "lifeflow",
       "aestheticsMode": "free-explore",
       "toolDisciplineBlockPresent": true,
-      "fillHtmlHeadCommand": "node \"D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\apply-html-head-contract.mjs\" \"d:\\hankkk\\lifeflow\\lifeflow-home-redesign\\colors_and_type.css\" \"d:\\hankkk\\lifeflow\\lifeflow-home-redesign\\pages\\more.html\" --title=\"更多 · 功能目录\" --lang=\"zh-CN\" --prefix=\"lifeflow\"",
-      "headFillMode": "skeleton-first",
+      "fillHtmlHeadCommand": "node \"D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\apply-html-head-contract.mjs\" \"d:\\hankkk\\lifeflow\\lifeflow-home-redesign\\colors_and_type.css\" \"d:\\hankkk\\lifeflow\\lifeflow-home-redesign\\pages\\more.html\" --title=\"更多 · 功能目录\" --lang=\"zh-CN\" --prefix=\"lifeflow\" --replace-head",
+      "headFillMode": "replace-head-after-body",
       "viewportMode": "document-scroll",
       "completionSchemaExpected": "compact",
       "restoreFields": null,
@@ -526,7 +526,7 @@
       "deterministicCommands": null,
       "sourceAuthorityLock": null,
       "preDispatchFileHashes": {
-        "lifeflow-home-redesign.design": "8239cd2dc4f1698cd779a51a21d3150950a666bddb4314455493156e8d56368f"
+        "lifeflow-home-redesign.design": "72e25c0322d2d6ffa0018c06833e0c9b54c5660dad20d4bdd7a3e450fd4b481a"
       },
       "contextPreflight": {
         "workflowPath": "intent-workflows/intent-page-free-exploration/INTENT_WORKFLOW.md",
@@ -553,7 +553,777 @@
         "structurePresent": true,
         "canonicalHtmlIncluded": true,
         "canonicalHtmlSource": "sharedProjectShellContract.mobileNavigation.structure.canonicalHtmlByKey.home",
-        "structureHash": "72e1e30a1f7d1b424605146128cdf7d196d4ad6e3b23148d19a47afbea0a9f44",
+        "structureHash": "8c2ce1a9a6145ffcef92451c4426e73f6cb29e508ae8aef9ba5e254c4613c001",
+        "missingFields": []
+      },
+      "persistedToSummary": true,
+      "taskQueryAudited": false,
+      "proofSource": "summary-only",
+      "largeWorkflowFilesInTaskQuery": null
+    },
+    {
+      "recorded_at": "2026-08-08T15:23:09.406Z",
+      "generatedBy": "build-page-dispatch-manifest.mjs",
+      "packetType": "FreePagePacket",
+      "laneContract": {
+        "resolvedLane": "free_exploration",
+        "packetType": "FreePagePacket",
+        "pageRuntimeGuide": "intent-workflows/intent-page-free-exploration/free-exploration-page-runtime.md",
+        "dispatchContract": "intent-workflows/intent-page-free-exploration/dispatch-contract.md"
+      },
+      "taskLinePresent": true,
+      "outputPathPresent": true,
+      "sharedTemplate": "intent-workflows/intent-page-free-exploration/free-exploration-page-runtime.md",
+      "nodeId": "page-ideal-day",
+      "htmlSrc": "pages/ideal-day.html",
+      "supplementaryReads": [],
+      "allowedWritePaths": [
+        "pages/ideal-day.html",
+        "assets/"
+      ],
+      "forbiddenWriteRoots": [
+        "*.design",
+        "runtime-orchestration-summary.json",
+        "validation-report.json",
+        "finish-readiness-report.json",
+        "restore-contract-report.json",
+        "page-generation-summary.json"
+      ],
+      "toolPolicy": {
+        "todoWriteAllowed": false,
+        "validationScriptsAllowed": false,
+        "previewAllowed": false,
+        "helperScriptsAllowed": false,
+        "designFileWriteAllowed": false,
+        "allowedWritePaths": [
+          "pages/ideal-day.html",
+          "assets/"
+        ]
+      },
+      "skillRuntime": {
+        "skillDir": "D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design",
+        "deterministicToolDir": "D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling",
+        "toolPaths": {
+          "applyHtmlHeadContract": "D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\apply-html-head-contract.mjs",
+          "recordDispatchCompletion": "D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\record-dispatch-completion.mjs",
+          "buildPageDispatchManifest": "D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\build-page-dispatch-manifest.mjs",
+          "validateDesignWorkspace": "D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\validate-design-workspace.mjs",
+          "validateFinishReadiness": "D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\validate-finish-readiness.mjs",
+          "validateRestoreContract": "D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\validate-restore-contract.mjs"
+        },
+        "requiredForPageSubAgent": [
+          "applyHtmlHeadContract",
+          "recordDispatchCompletion"
+        ],
+        "pathInjection": "absolute",
+        "pathContract": "Do not use {SKILL_DIR} placeholders inside Page Sub-Agent packets; use toolPaths.* absolute paths.",
+        "commandTemplates": {
+          "recordDispatchCompletion": "node \"D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\record-dispatch-completion.mjs\" \"d:\\hankkk\\lifeflow\\lifeflow-home-redesign\" --node-id=\"page-ideal-day\" --html-src=\"pages/ideal-day.html\" --status=completed --changed-files=<comma-separated-project-relative-files> --trace-digest=<main-agent-runtime-trace-digest> --tool-ledger-json=<tool-ledger-json-or-file>"
+        }
+      },
+      "cssFilePath": "d:\\hankkk\\lifeflow\\lifeflow-home-redesign\\colors_and_type.css",
+      "htmlFilePath": "d:\\hankkk\\lifeflow\\lifeflow-home-redesign\\pages\\ideal-day.html",
+      "brandPrefix": "lifeflow",
+      "aestheticsMode": "free-explore",
+      "toolDisciplineBlockPresent": true,
+      "fillHtmlHeadCommand": "node \"D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\apply-html-head-contract.mjs\" \"d:\\hankkk\\lifeflow\\lifeflow-home-redesign\\colors_and_type.css\" \"d:\\hankkk\\lifeflow\\lifeflow-home-redesign\\pages\\ideal-day.html\" --title=\"理想日 · 5 大段时间轴\" --lang=\"zh-CN\" --prefix=\"lifeflow\" --replace-head",
+      "headFillMode": "replace-head-after-body",
+      "viewportMode": "document-scroll",
+      "completionSchemaExpected": "compact",
+      "restoreFields": null,
+      "restoreContractStatus": null,
+      "restoreCompactPacket": null,
+      "deterministicCommands": null,
+      "sourceAuthorityLock": null,
+      "preDispatchFileHashes": {
+        "lifeflow-home-redesign.design": "72e25c0322d2d6ffa0018c06833e0c9b54c5660dad20d4bdd7a3e450fd4b481a"
+      },
+      "contextPreflight": {
+        "workflowPath": "intent-workflows/intent-page-free-exploration/INTENT_WORKFLOW.md",
+        "requiredContextFiles": [
+          "shared-runtime/runtime-boundaries/lane-runtime-contracts.md",
+          "shared-runtime/agent-dispatch-runtime/lane-dispatch-index.md",
+          "delivery-quality/page-rendering-quality-gate.md",
+          "delivery-quality/design-artifact-validation.md",
+          "delivery-quality/delivery-evidence-contract.md",
+          "visual-experience/visual-experience-guidelines.md"
+        ],
+        "optionalContextFiles": [],
+        "passed": true
+      },
+      "pageSliceOnly": true,
+      "requiredFieldsPresent": true,
+      "missingFields": [],
+      "fillHtmlHeadCommandValid": true,
+      "mobileNavigation": {
+        "required": true,
+        "appliesToThisPage": true,
+        "activeKey": "ideal",
+        "contractPresent": true,
+        "structurePresent": true,
+        "canonicalHtmlIncluded": true,
+        "canonicalHtmlSource": "sharedProjectShellContract.mobileNavigation.structure.canonicalHtmlByKey.ideal",
+        "structureHash": "8c2ce1a9a6145ffcef92451c4426e73f6cb29e508ae8aef9ba5e254c4613c001",
+        "missingFields": []
+      },
+      "persistedToSummary": true,
+      "taskQueryAudited": false,
+      "proofSource": "summary-only",
+      "largeWorkflowFilesInTaskQuery": null
+    },
+    {
+      "recorded_at": "2026-08-08T15:23:09.406Z",
+      "generatedBy": "build-page-dispatch-manifest.mjs",
+      "packetType": "FreePagePacket",
+      "laneContract": {
+        "resolvedLane": "free_exploration",
+        "packetType": "FreePagePacket",
+        "pageRuntimeGuide": "intent-workflows/intent-page-free-exploration/free-exploration-page-runtime.md",
+        "dispatchContract": "intent-workflows/intent-page-free-exploration/dispatch-contract.md"
+      },
+      "taskLinePresent": true,
+      "outputPathPresent": true,
+      "sharedTemplate": "intent-workflows/intent-page-free-exploration/free-exploration-page-runtime.md",
+      "nodeId": "page-ideal-day-sheet",
+      "htmlSrc": "pages/ideal-day-sheet.html",
+      "supplementaryReads": [],
+      "allowedWritePaths": [
+        "pages/ideal-day-sheet.html",
+        "assets/"
+      ],
+      "forbiddenWriteRoots": [
+        "*.design",
+        "runtime-orchestration-summary.json",
+        "validation-report.json",
+        "finish-readiness-report.json",
+        "restore-contract-report.json",
+        "page-generation-summary.json"
+      ],
+      "toolPolicy": {
+        "todoWriteAllowed": false,
+        "validationScriptsAllowed": false,
+        "previewAllowed": false,
+        "helperScriptsAllowed": false,
+        "designFileWriteAllowed": false,
+        "allowedWritePaths": [
+          "pages/ideal-day-sheet.html",
+          "assets/"
+        ]
+      },
+      "skillRuntime": {
+        "skillDir": "D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design",
+        "deterministicToolDir": "D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling",
+        "toolPaths": {
+          "applyHtmlHeadContract": "D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\apply-html-head-contract.mjs",
+          "recordDispatchCompletion": "D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\record-dispatch-completion.mjs",
+          "buildPageDispatchManifest": "D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\build-page-dispatch-manifest.mjs",
+          "validateDesignWorkspace": "D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\validate-design-workspace.mjs",
+          "validateFinishReadiness": "D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\validate-finish-readiness.mjs",
+          "validateRestoreContract": "D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\validate-restore-contract.mjs"
+        },
+        "requiredForPageSubAgent": [
+          "applyHtmlHeadContract",
+          "recordDispatchCompletion"
+        ],
+        "pathInjection": "absolute",
+        "pathContract": "Do not use {SKILL_DIR} placeholders inside Page Sub-Agent packets; use toolPaths.* absolute paths.",
+        "commandTemplates": {
+          "recordDispatchCompletion": "node \"D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\record-dispatch-completion.mjs\" \"d:\\hankkk\\lifeflow\\lifeflow-home-redesign\" --node-id=\"page-ideal-day-sheet\" --html-src=\"pages/ideal-day-sheet.html\" --status=completed --changed-files=<comma-separated-project-relative-files> --trace-digest=<main-agent-runtime-trace-digest> --tool-ledger-json=<tool-ledger-json-or-file>"
+        }
+      },
+      "cssFilePath": "d:\\hankkk\\lifeflow\\lifeflow-home-redesign\\colors_and_type.css",
+      "htmlFilePath": "d:\\hankkk\\lifeflow\\lifeflow-home-redesign\\pages\\ideal-day-sheet.html",
+      "brandPrefix": "lifeflow",
+      "aestheticsMode": "free-explore",
+      "toolDisciplineBlockPresent": true,
+      "fillHtmlHeadCommand": "node \"D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\apply-html-head-contract.mjs\" \"d:\\hankkk\\lifeflow\\lifeflow-home-redesign\\colors_and_type.css\" \"d:\\hankkk\\lifeflow\\lifeflow-home-redesign\\pages\\ideal-day-sheet.html\" --title=\"理想日 · 底部表单（训练/作息/功法养生/体态拉伸）\" --lang=\"zh-CN\" --prefix=\"lifeflow\" --replace-head",
+      "headFillMode": "replace-head-after-body",
+      "viewportMode": "document-scroll",
+      "completionSchemaExpected": "compact",
+      "restoreFields": null,
+      "restoreContractStatus": null,
+      "restoreCompactPacket": null,
+      "deterministicCommands": null,
+      "sourceAuthorityLock": null,
+      "preDispatchFileHashes": {
+        "lifeflow-home-redesign.design": "72e25c0322d2d6ffa0018c06833e0c9b54c5660dad20d4bdd7a3e450fd4b481a"
+      },
+      "contextPreflight": {
+        "workflowPath": "intent-workflows/intent-page-free-exploration/INTENT_WORKFLOW.md",
+        "requiredContextFiles": [
+          "shared-runtime/runtime-boundaries/lane-runtime-contracts.md",
+          "shared-runtime/agent-dispatch-runtime/lane-dispatch-index.md",
+          "delivery-quality/page-rendering-quality-gate.md",
+          "delivery-quality/design-artifact-validation.md",
+          "delivery-quality/delivery-evidence-contract.md",
+          "visual-experience/visual-experience-guidelines.md"
+        ],
+        "optionalContextFiles": [],
+        "passed": true
+      },
+      "pageSliceOnly": true,
+      "requiredFieldsPresent": true,
+      "missingFields": [],
+      "fillHtmlHeadCommandValid": true,
+      "mobileNavigation": {
+        "required": true,
+        "appliesToThisPage": true,
+        "activeKey": "ideal",
+        "contractPresent": true,
+        "structurePresent": true,
+        "canonicalHtmlIncluded": true,
+        "canonicalHtmlSource": "sharedProjectShellContract.mobileNavigation.structure.canonicalHtmlByKey.ideal",
+        "structureHash": "8c2ce1a9a6145ffcef92451c4426e73f6cb29e508ae8aef9ba5e254c4613c001",
+        "missingFields": []
+      },
+      "persistedToSummary": true,
+      "taskQueryAudited": false,
+      "proofSource": "summary-only",
+      "largeWorkflowFilesInTaskQuery": null
+    },
+    {
+      "recorded_at": "2026-08-08T15:23:09.406Z",
+      "generatedBy": "build-page-dispatch-manifest.mjs",
+      "packetType": "FreePagePacket",
+      "laneContract": {
+        "resolvedLane": "free_exploration",
+        "packetType": "FreePagePacket",
+        "pageRuntimeGuide": "intent-workflows/intent-page-free-exploration/free-exploration-page-runtime.md",
+        "dispatchContract": "intent-workflows/intent-page-free-exploration/dispatch-contract.md"
+      },
+      "taskLinePresent": true,
+      "outputPathPresent": true,
+      "sharedTemplate": "intent-workflows/intent-page-free-exploration/free-exploration-page-runtime.md",
+      "nodeId": "page-ideal-day-edit-step1",
+      "htmlSrc": "pages/ideal-day-edit-step1.html",
+      "supplementaryReads": [],
+      "allowedWritePaths": [
+        "pages/ideal-day-edit-step1.html",
+        "assets/"
+      ],
+      "forbiddenWriteRoots": [
+        "*.design",
+        "runtime-orchestration-summary.json",
+        "validation-report.json",
+        "finish-readiness-report.json",
+        "restore-contract-report.json",
+        "page-generation-summary.json"
+      ],
+      "toolPolicy": {
+        "todoWriteAllowed": false,
+        "validationScriptsAllowed": false,
+        "previewAllowed": false,
+        "helperScriptsAllowed": false,
+        "designFileWriteAllowed": false,
+        "allowedWritePaths": [
+          "pages/ideal-day-edit-step1.html",
+          "assets/"
+        ]
+      },
+      "skillRuntime": {
+        "skillDir": "D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design",
+        "deterministicToolDir": "D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling",
+        "toolPaths": {
+          "applyHtmlHeadContract": "D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\apply-html-head-contract.mjs",
+          "recordDispatchCompletion": "D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\record-dispatch-completion.mjs",
+          "buildPageDispatchManifest": "D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\build-page-dispatch-manifest.mjs",
+          "validateDesignWorkspace": "D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\validate-design-workspace.mjs",
+          "validateFinishReadiness": "D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\validate-finish-readiness.mjs",
+          "validateRestoreContract": "D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\validate-restore-contract.mjs"
+        },
+        "requiredForPageSubAgent": [
+          "applyHtmlHeadContract",
+          "recordDispatchCompletion"
+        ],
+        "pathInjection": "absolute",
+        "pathContract": "Do not use {SKILL_DIR} placeholders inside Page Sub-Agent packets; use toolPaths.* absolute paths.",
+        "commandTemplates": {
+          "recordDispatchCompletion": "node \"D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\record-dispatch-completion.mjs\" \"d:\\hankkk\\lifeflow\\lifeflow-home-redesign\" --node-id=\"page-ideal-day-edit-step1\" --html-src=\"pages/ideal-day-edit-step1.html\" --status=completed --changed-files=<comma-separated-project-relative-files> --trace-digest=<main-agent-runtime-trace-digest> --tool-ledger-json=<tool-ledger-json-or-file>"
+        }
+      },
+      "cssFilePath": "d:\\hankkk\\lifeflow\\lifeflow-home-redesign\\colors_and_type.css",
+      "htmlFilePath": "d:\\hankkk\\lifeflow\\lifeflow-home-redesign\\pages\\ideal-day-edit-step1.html",
+      "brandPrefix": "lifeflow",
+      "aestheticsMode": "free-explore",
+      "toolDisciplineBlockPresent": true,
+      "fillHtmlHeadCommand": "node \"D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\apply-html-head-contract.mjs\" \"d:\\hankkk\\lifeflow\\lifeflow-home-redesign\\colors_and_type.css\" \"d:\\hankkk\\lifeflow\\lifeflow-home-redesign\\pages\\ideal-day-edit-step1.html\" --title=\"理想日编辑 · 第 1 步 选择大段与功能\" --lang=\"zh-CN\" --prefix=\"lifeflow\" --replace-head",
+      "headFillMode": "replace-head-after-body",
+      "viewportMode": "document-scroll",
+      "completionSchemaExpected": "compact",
+      "restoreFields": null,
+      "restoreContractStatus": null,
+      "restoreCompactPacket": null,
+      "deterministicCommands": null,
+      "sourceAuthorityLock": null,
+      "preDispatchFileHashes": {
+        "lifeflow-home-redesign.design": "72e25c0322d2d6ffa0018c06833e0c9b54c5660dad20d4bdd7a3e450fd4b481a"
+      },
+      "contextPreflight": {
+        "workflowPath": "intent-workflows/intent-page-free-exploration/INTENT_WORKFLOW.md",
+        "requiredContextFiles": [
+          "shared-runtime/runtime-boundaries/lane-runtime-contracts.md",
+          "shared-runtime/agent-dispatch-runtime/lane-dispatch-index.md",
+          "delivery-quality/page-rendering-quality-gate.md",
+          "delivery-quality/design-artifact-validation.md",
+          "delivery-quality/delivery-evidence-contract.md",
+          "visual-experience/visual-experience-guidelines.md"
+        ],
+        "optionalContextFiles": [],
+        "passed": true
+      },
+      "pageSliceOnly": true,
+      "requiredFieldsPresent": true,
+      "missingFields": [],
+      "fillHtmlHeadCommandValid": true,
+      "mobileNavigation": {
+        "required": true,
+        "appliesToThisPage": true,
+        "activeKey": "ideal",
+        "contractPresent": true,
+        "structurePresent": true,
+        "canonicalHtmlIncluded": true,
+        "canonicalHtmlSource": "sharedProjectShellContract.mobileNavigation.structure.canonicalHtmlByKey.ideal",
+        "structureHash": "8c2ce1a9a6145ffcef92451c4426e73f6cb29e508ae8aef9ba5e254c4613c001",
+        "missingFields": []
+      },
+      "persistedToSummary": true,
+      "taskQueryAudited": false,
+      "proofSource": "summary-only",
+      "largeWorkflowFilesInTaskQuery": null
+    },
+    {
+      "recorded_at": "2026-08-08T15:23:09.406Z",
+      "generatedBy": "build-page-dispatch-manifest.mjs",
+      "packetType": "FreePagePacket",
+      "laneContract": {
+        "resolvedLane": "free_exploration",
+        "packetType": "FreePagePacket",
+        "pageRuntimeGuide": "intent-workflows/intent-page-free-exploration/free-exploration-page-runtime.md",
+        "dispatchContract": "intent-workflows/intent-page-free-exploration/dispatch-contract.md"
+      },
+      "taskLinePresent": true,
+      "outputPathPresent": true,
+      "sharedTemplate": "intent-workflows/intent-page-free-exploration/free-exploration-page-runtime.md",
+      "nodeId": "page-ideal-day-edit-step2",
+      "htmlSrc": "pages/ideal-day-edit-step2.html",
+      "supplementaryReads": [],
+      "allowedWritePaths": [
+        "pages/ideal-day-edit-step2.html",
+        "assets/"
+      ],
+      "forbiddenWriteRoots": [
+        "*.design",
+        "runtime-orchestration-summary.json",
+        "validation-report.json",
+        "finish-readiness-report.json",
+        "restore-contract-report.json",
+        "page-generation-summary.json"
+      ],
+      "toolPolicy": {
+        "todoWriteAllowed": false,
+        "validationScriptsAllowed": false,
+        "previewAllowed": false,
+        "helperScriptsAllowed": false,
+        "designFileWriteAllowed": false,
+        "allowedWritePaths": [
+          "pages/ideal-day-edit-step2.html",
+          "assets/"
+        ]
+      },
+      "skillRuntime": {
+        "skillDir": "D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design",
+        "deterministicToolDir": "D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling",
+        "toolPaths": {
+          "applyHtmlHeadContract": "D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\apply-html-head-contract.mjs",
+          "recordDispatchCompletion": "D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\record-dispatch-completion.mjs",
+          "buildPageDispatchManifest": "D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\build-page-dispatch-manifest.mjs",
+          "validateDesignWorkspace": "D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\validate-design-workspace.mjs",
+          "validateFinishReadiness": "D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\validate-finish-readiness.mjs",
+          "validateRestoreContract": "D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\validate-restore-contract.mjs"
+        },
+        "requiredForPageSubAgent": [
+          "applyHtmlHeadContract",
+          "recordDispatchCompletion"
+        ],
+        "pathInjection": "absolute",
+        "pathContract": "Do not use {SKILL_DIR} placeholders inside Page Sub-Agent packets; use toolPaths.* absolute paths.",
+        "commandTemplates": {
+          "recordDispatchCompletion": "node \"D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\record-dispatch-completion.mjs\" \"d:\\hankkk\\lifeflow\\lifeflow-home-redesign\" --node-id=\"page-ideal-day-edit-step2\" --html-src=\"pages/ideal-day-edit-step2.html\" --status=completed --changed-files=<comma-separated-project-relative-files> --trace-digest=<main-agent-runtime-trace-digest> --tool-ledger-json=<tool-ledger-json-or-file>"
+        }
+      },
+      "cssFilePath": "d:\\hankkk\\lifeflow\\lifeflow-home-redesign\\colors_and_type.css",
+      "htmlFilePath": "d:\\hankkk\\lifeflow\\lifeflow-home-redesign\\pages\\ideal-day-edit-step2.html",
+      "brandPrefix": "lifeflow",
+      "aestheticsMode": "free-explore",
+      "toolDisciplineBlockPresent": true,
+      "fillHtmlHeadCommand": "node \"D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\apply-html-head-contract.mjs\" \"d:\\hankkk\\lifeflow\\lifeflow-home-redesign\\colors_and_type.css\" \"d:\\hankkk\\lifeflow\\lifeflow-home-redesign\\pages\\ideal-day-edit-step2.html\" --title=\"理想日编辑 · 第 2 步 配置时间与次数\" --lang=\"zh-CN\" --prefix=\"lifeflow\" --replace-head",
+      "headFillMode": "replace-head-after-body",
+      "viewportMode": "document-scroll",
+      "completionSchemaExpected": "compact",
+      "restoreFields": null,
+      "restoreContractStatus": null,
+      "restoreCompactPacket": null,
+      "deterministicCommands": null,
+      "sourceAuthorityLock": null,
+      "preDispatchFileHashes": {
+        "lifeflow-home-redesign.design": "72e25c0322d2d6ffa0018c06833e0c9b54c5660dad20d4bdd7a3e450fd4b481a"
+      },
+      "contextPreflight": {
+        "workflowPath": "intent-workflows/intent-page-free-exploration/INTENT_WORKFLOW.md",
+        "requiredContextFiles": [
+          "shared-runtime/runtime-boundaries/lane-runtime-contracts.md",
+          "shared-runtime/agent-dispatch-runtime/lane-dispatch-index.md",
+          "delivery-quality/page-rendering-quality-gate.md",
+          "delivery-quality/design-artifact-validation.md",
+          "delivery-quality/delivery-evidence-contract.md",
+          "visual-experience/visual-experience-guidelines.md"
+        ],
+        "optionalContextFiles": [],
+        "passed": true
+      },
+      "pageSliceOnly": true,
+      "requiredFieldsPresent": true,
+      "missingFields": [],
+      "fillHtmlHeadCommandValid": true,
+      "mobileNavigation": {
+        "required": true,
+        "appliesToThisPage": true,
+        "activeKey": "ideal",
+        "contractPresent": true,
+        "structurePresent": true,
+        "canonicalHtmlIncluded": true,
+        "canonicalHtmlSource": "sharedProjectShellContract.mobileNavigation.structure.canonicalHtmlByKey.ideal",
+        "structureHash": "8c2ce1a9a6145ffcef92451c4426e73f6cb29e508ae8aef9ba5e254c4613c001",
+        "missingFields": []
+      },
+      "persistedToSummary": true,
+      "taskQueryAudited": false,
+      "proofSource": "summary-only",
+      "largeWorkflowFilesInTaskQuery": null
+    },
+    {
+      "recorded_at": "2026-08-08T15:23:09.406Z",
+      "generatedBy": "build-page-dispatch-manifest.mjs",
+      "packetType": "FreePagePacket",
+      "laneContract": {
+        "resolvedLane": "free_exploration",
+        "packetType": "FreePagePacket",
+        "pageRuntimeGuide": "intent-workflows/intent-page-free-exploration/free-exploration-page-runtime.md",
+        "dispatchContract": "intent-workflows/intent-page-free-exploration/dispatch-contract.md"
+      },
+      "taskLinePresent": true,
+      "outputPathPresent": true,
+      "sharedTemplate": "intent-workflows/intent-page-free-exploration/free-exploration-page-runtime.md",
+      "nodeId": "page-plan-study",
+      "htmlSrc": "pages/plan-study.html",
+      "supplementaryReads": [],
+      "allowedWritePaths": [
+        "pages/plan-study.html",
+        "assets/"
+      ],
+      "forbiddenWriteRoots": [
+        "*.design",
+        "runtime-orchestration-summary.json",
+        "validation-report.json",
+        "finish-readiness-report.json",
+        "restore-contract-report.json",
+        "page-generation-summary.json"
+      ],
+      "toolPolicy": {
+        "todoWriteAllowed": false,
+        "validationScriptsAllowed": false,
+        "previewAllowed": false,
+        "helperScriptsAllowed": false,
+        "designFileWriteAllowed": false,
+        "allowedWritePaths": [
+          "pages/plan-study.html",
+          "assets/"
+        ]
+      },
+      "skillRuntime": {
+        "skillDir": "D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design",
+        "deterministicToolDir": "D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling",
+        "toolPaths": {
+          "applyHtmlHeadContract": "D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\apply-html-head-contract.mjs",
+          "recordDispatchCompletion": "D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\record-dispatch-completion.mjs",
+          "buildPageDispatchManifest": "D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\build-page-dispatch-manifest.mjs",
+          "validateDesignWorkspace": "D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\validate-design-workspace.mjs",
+          "validateFinishReadiness": "D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\validate-finish-readiness.mjs",
+          "validateRestoreContract": "D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\validate-restore-contract.mjs"
+        },
+        "requiredForPageSubAgent": [
+          "applyHtmlHeadContract",
+          "recordDispatchCompletion"
+        ],
+        "pathInjection": "absolute",
+        "pathContract": "Do not use {SKILL_DIR} placeholders inside Page Sub-Agent packets; use toolPaths.* absolute paths.",
+        "commandTemplates": {
+          "recordDispatchCompletion": "node \"D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\record-dispatch-completion.mjs\" \"d:\\hankkk\\lifeflow\\lifeflow-home-redesign\" --node-id=\"page-plan-study\" --html-src=\"pages/plan-study.html\" --status=completed --changed-files=<comma-separated-project-relative-files> --trace-digest=<main-agent-runtime-trace-digest> --tool-ledger-json=<tool-ledger-json-or-file>"
+        }
+      },
+      "cssFilePath": "d:\\hankkk\\lifeflow\\lifeflow-home-redesign\\colors_and_type.css",
+      "htmlFilePath": "d:\\hankkk\\lifeflow\\lifeflow-home-redesign\\pages\\plan-study.html",
+      "brandPrefix": "lifeflow",
+      "aestheticsMode": "free-explore",
+      "toolDisciplineBlockPresent": true,
+      "fillHtmlHeadCommand": "node \"D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\apply-html-head-contract.mjs\" \"d:\\hankkk\\lifeflow\\lifeflow-home-redesign\\colors_and_type.css\" \"d:\\hankkk\\lifeflow\\lifeflow-home-redesign\\pages\\plan-study.html\" --title=\"目标规划 · 主目标学习\" --lang=\"zh-CN\" --prefix=\"lifeflow\" --replace-head",
+      "headFillMode": "replace-head-after-body",
+      "viewportMode": "document-scroll",
+      "completionSchemaExpected": "compact",
+      "restoreFields": null,
+      "restoreContractStatus": null,
+      "restoreCompactPacket": null,
+      "deterministicCommands": null,
+      "sourceAuthorityLock": null,
+      "preDispatchFileHashes": {
+        "lifeflow-home-redesign.design": "72e25c0322d2d6ffa0018c06833e0c9b54c5660dad20d4bdd7a3e450fd4b481a"
+      },
+      "contextPreflight": {
+        "workflowPath": "intent-workflows/intent-page-free-exploration/INTENT_WORKFLOW.md",
+        "requiredContextFiles": [
+          "shared-runtime/runtime-boundaries/lane-runtime-contracts.md",
+          "shared-runtime/agent-dispatch-runtime/lane-dispatch-index.md",
+          "delivery-quality/page-rendering-quality-gate.md",
+          "delivery-quality/design-artifact-validation.md",
+          "delivery-quality/delivery-evidence-contract.md",
+          "visual-experience/visual-experience-guidelines.md"
+        ],
+        "optionalContextFiles": [],
+        "passed": true
+      },
+      "pageSliceOnly": true,
+      "requiredFieldsPresent": true,
+      "missingFields": [],
+      "fillHtmlHeadCommandValid": true,
+      "mobileNavigation": {
+        "required": true,
+        "appliesToThisPage": true,
+        "activeKey": "ideal",
+        "contractPresent": true,
+        "structurePresent": true,
+        "canonicalHtmlIncluded": true,
+        "canonicalHtmlSource": "sharedProjectShellContract.mobileNavigation.structure.canonicalHtmlByKey.ideal",
+        "structureHash": "8c2ce1a9a6145ffcef92451c4426e73f6cb29e508ae8aef9ba5e254c4613c001",
+        "missingFields": []
+      },
+      "persistedToSummary": true,
+      "taskQueryAudited": false,
+      "proofSource": "summary-only",
+      "largeWorkflowFilesInTaskQuery": null
+    },
+    {
+      "recorded_at": "2026-08-08T15:23:09.406Z",
+      "generatedBy": "build-page-dispatch-manifest.mjs",
+      "packetType": "FreePagePacket",
+      "laneContract": {
+        "resolvedLane": "free_exploration",
+        "packetType": "FreePagePacket",
+        "pageRuntimeGuide": "intent-workflows/intent-page-free-exploration/free-exploration-page-runtime.md",
+        "dispatchContract": "intent-workflows/intent-page-free-exploration/dispatch-contract.md"
+      },
+      "taskLinePresent": true,
+      "outputPathPresent": true,
+      "sharedTemplate": "intent-workflows/intent-page-free-exploration/free-exploration-page-runtime.md",
+      "nodeId": "page-plan-sleep",
+      "htmlSrc": "pages/plan-sleep.html",
+      "supplementaryReads": [],
+      "allowedWritePaths": [
+        "pages/plan-sleep.html",
+        "assets/"
+      ],
+      "forbiddenWriteRoots": [
+        "*.design",
+        "runtime-orchestration-summary.json",
+        "validation-report.json",
+        "finish-readiness-report.json",
+        "restore-contract-report.json",
+        "page-generation-summary.json"
+      ],
+      "toolPolicy": {
+        "todoWriteAllowed": false,
+        "validationScriptsAllowed": false,
+        "previewAllowed": false,
+        "helperScriptsAllowed": false,
+        "designFileWriteAllowed": false,
+        "allowedWritePaths": [
+          "pages/plan-sleep.html",
+          "assets/"
+        ]
+      },
+      "skillRuntime": {
+        "skillDir": "D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design",
+        "deterministicToolDir": "D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling",
+        "toolPaths": {
+          "applyHtmlHeadContract": "D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\apply-html-head-contract.mjs",
+          "recordDispatchCompletion": "D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\record-dispatch-completion.mjs",
+          "buildPageDispatchManifest": "D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\build-page-dispatch-manifest.mjs",
+          "validateDesignWorkspace": "D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\validate-design-workspace.mjs",
+          "validateFinishReadiness": "D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\validate-finish-readiness.mjs",
+          "validateRestoreContract": "D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\validate-restore-contract.mjs"
+        },
+        "requiredForPageSubAgent": [
+          "applyHtmlHeadContract",
+          "recordDispatchCompletion"
+        ],
+        "pathInjection": "absolute",
+        "pathContract": "Do not use {SKILL_DIR} placeholders inside Page Sub-Agent packets; use toolPaths.* absolute paths.",
+        "commandTemplates": {
+          "recordDispatchCompletion": "node \"D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\record-dispatch-completion.mjs\" \"d:\\hankkk\\lifeflow\\lifeflow-home-redesign\" --node-id=\"page-plan-sleep\" --html-src=\"pages/plan-sleep.html\" --status=completed --changed-files=<comma-separated-project-relative-files> --trace-digest=<main-agent-runtime-trace-digest> --tool-ledger-json=<tool-ledger-json-or-file>"
+        }
+      },
+      "cssFilePath": "d:\\hankkk\\lifeflow\\lifeflow-home-redesign\\colors_and_type.css",
+      "htmlFilePath": "d:\\hankkk\\lifeflow\\lifeflow-home-redesign\\pages\\plan-sleep.html",
+      "brandPrefix": "lifeflow",
+      "aestheticsMode": "free-explore",
+      "toolDisciplineBlockPresent": true,
+      "fillHtmlHeadCommand": "node \"D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\apply-html-head-contract.mjs\" \"d:\\hankkk\\lifeflow\\lifeflow-home-redesign\\colors_and_type.css\" \"d:\\hankkk\\lifeflow\\lifeflow-home-redesign\\pages\\plan-sleep.html\" --title=\"睡眠规划 · 夜间睡眠\" --lang=\"zh-CN\" --prefix=\"lifeflow\" --replace-head",
+      "headFillMode": "replace-head-after-body",
+      "viewportMode": "document-scroll",
+      "completionSchemaExpected": "compact",
+      "restoreFields": null,
+      "restoreContractStatus": null,
+      "restoreCompactPacket": null,
+      "deterministicCommands": null,
+      "sourceAuthorityLock": null,
+      "preDispatchFileHashes": {
+        "lifeflow-home-redesign.design": "72e25c0322d2d6ffa0018c06833e0c9b54c5660dad20d4bdd7a3e450fd4b481a"
+      },
+      "contextPreflight": {
+        "workflowPath": "intent-workflows/intent-page-free-exploration/INTENT_WORKFLOW.md",
+        "requiredContextFiles": [
+          "shared-runtime/runtime-boundaries/lane-runtime-contracts.md",
+          "shared-runtime/agent-dispatch-runtime/lane-dispatch-index.md",
+          "delivery-quality/page-rendering-quality-gate.md",
+          "delivery-quality/design-artifact-validation.md",
+          "delivery-quality/delivery-evidence-contract.md",
+          "visual-experience/visual-experience-guidelines.md"
+        ],
+        "optionalContextFiles": [],
+        "passed": true
+      },
+      "pageSliceOnly": true,
+      "requiredFieldsPresent": true,
+      "missingFields": [],
+      "fillHtmlHeadCommandValid": true,
+      "mobileNavigation": {
+        "required": true,
+        "appliesToThisPage": true,
+        "activeKey": "ideal",
+        "contractPresent": true,
+        "structurePresent": true,
+        "canonicalHtmlIncluded": true,
+        "canonicalHtmlSource": "sharedProjectShellContract.mobileNavigation.structure.canonicalHtmlByKey.ideal",
+        "structureHash": "8c2ce1a9a6145ffcef92451c4426e73f6cb29e508ae8aef9ba5e254c4613c001",
+        "missingFields": []
+      },
+      "persistedToSummary": true,
+      "taskQueryAudited": false,
+      "proofSource": "summary-only",
+      "largeWorkflowFilesInTaskQuery": null
+    },
+    {
+      "recorded_at": "2026-08-08T15:23:09.406Z",
+      "generatedBy": "build-page-dispatch-manifest.mjs",
+      "packetType": "FreePagePacket",
+      "laneContract": {
+        "resolvedLane": "free_exploration",
+        "packetType": "FreePagePacket",
+        "pageRuntimeGuide": "intent-workflows/intent-page-free-exploration/free-exploration-page-runtime.md",
+        "dispatchContract": "intent-workflows/intent-page-free-exploration/dispatch-contract.md"
+      },
+      "taskLinePresent": true,
+      "outputPathPresent": true,
+      "sharedTemplate": "intent-workflows/intent-page-free-exploration/free-exploration-page-runtime.md",
+      "nodeId": "page-plan-medication",
+      "htmlSrc": "pages/plan-medication.html",
+      "supplementaryReads": [],
+      "allowedWritePaths": [
+        "pages/plan-medication.html",
+        "assets/"
+      ],
+      "forbiddenWriteRoots": [
+        "*.design",
+        "runtime-orchestration-summary.json",
+        "validation-report.json",
+        "finish-readiness-report.json",
+        "restore-contract-report.json",
+        "page-generation-summary.json"
+      ],
+      "toolPolicy": {
+        "todoWriteAllowed": false,
+        "validationScriptsAllowed": false,
+        "previewAllowed": false,
+        "helperScriptsAllowed": false,
+        "designFileWriteAllowed": false,
+        "allowedWritePaths": [
+          "pages/plan-medication.html",
+          "assets/"
+        ]
+      },
+      "skillRuntime": {
+        "skillDir": "D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design",
+        "deterministicToolDir": "D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling",
+        "toolPaths": {
+          "applyHtmlHeadContract": "D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\apply-html-head-contract.mjs",
+          "recordDispatchCompletion": "D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\record-dispatch-completion.mjs",
+          "buildPageDispatchManifest": "D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\build-page-dispatch-manifest.mjs",
+          "validateDesignWorkspace": "D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\validate-design-workspace.mjs",
+          "validateFinishReadiness": "D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\validate-finish-readiness.mjs",
+          "validateRestoreContract": "D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\validate-restore-contract.mjs"
+        },
+        "requiredForPageSubAgent": [
+          "applyHtmlHeadContract",
+          "recordDispatchCompletion"
+        ],
+        "pathInjection": "absolute",
+        "pathContract": "Do not use {SKILL_DIR} placeholders inside Page Sub-Agent packets; use toolPaths.* absolute paths.",
+        "commandTemplates": {
+          "recordDispatchCompletion": "node \"D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\record-dispatch-completion.mjs\" \"d:\\hankkk\\lifeflow\\lifeflow-home-redesign\" --node-id=\"page-plan-medication\" --html-src=\"pages/plan-medication.html\" --status=completed --changed-files=<comma-separated-project-relative-files> --trace-digest=<main-agent-runtime-trace-digest> --tool-ledger-json=<tool-ledger-json-or-file>"
+        }
+      },
+      "cssFilePath": "d:\\hankkk\\lifeflow\\lifeflow-home-redesign\\colors_and_type.css",
+      "htmlFilePath": "d:\\hankkk\\lifeflow\\lifeflow-home-redesign\\pages\\plan-medication.html",
+      "brandPrefix": "lifeflow",
+      "aestheticsMode": "free-explore",
+      "toolDisciplineBlockPresent": true,
+      "fillHtmlHeadCommand": "node \"D:\\TraeData\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\apply-html-head-contract.mjs\" \"d:\\hankkk\\lifeflow\\lifeflow-home-redesign\\colors_and_type.css\" \"d:\\hankkk\\lifeflow\\lifeflow-home-redesign\\pages\\plan-medication.html\" --title=\"吃药规划 · 晨间服药\" --lang=\"zh-CN\" --prefix=\"lifeflow\" --replace-head",
+      "headFillMode": "replace-head-after-body",
+      "viewportMode": "document-scroll",
+      "completionSchemaExpected": "compact",
+      "restoreFields": null,
+      "restoreContractStatus": null,
+      "restoreCompactPacket": null,
+      "deterministicCommands": null,
+      "sourceAuthorityLock": null,
+      "preDispatchFileHashes": {
+        "lifeflow-home-redesign.design": "72e25c0322d2d6ffa0018c06833e0c9b54c5660dad20d4bdd7a3e450fd4b481a"
+      },
+      "contextPreflight": {
+        "workflowPath": "intent-workflows/intent-page-free-exploration/INTENT_WORKFLOW.md",
+        "requiredContextFiles": [
+          "shared-runtime/runtime-boundaries/lane-runtime-contracts.md",
+          "shared-runtime/agent-dispatch-runtime/lane-dispatch-index.md",
+          "delivery-quality/page-rendering-quality-gate.md",
+          "delivery-quality/design-artifact-validation.md",
+          "delivery-quality/delivery-evidence-contract.md",
+          "visual-experience/visual-experience-guidelines.md"
+        ],
+        "optionalContextFiles": [],
+        "passed": true
+      },
+      "pageSliceOnly": true,
+      "requiredFieldsPresent": true,
+      "missingFields": [],
+      "fillHtmlHeadCommandValid": true,
+      "mobileNavigation": {
+        "required": true,
+        "appliesToThisPage": true,
+        "activeKey": "ideal",
+        "contractPresent": true,
+        "structurePresent": true,
+        "canonicalHtmlIncluded": true,
+        "canonicalHtmlSource": "sharedProjectShellContract.mobileNavigation.structure.canonicalHtmlByKey.ideal",
+        "structureHash": "8c2ce1a9a6145ffcef92451c4426e73f6cb29e508ae8aef9ba5e254c4613c001",
         "missingFields": []
       },
       "persistedToSummary": true,
@@ -567,6 +1337,13 @@
     "pages/home-night.html": {},
     "pages/goals.html": {},
     "pages/schedule.html": {},
-    "pages/more.html": {}
+    "pages/more.html": {},
+    "pages/ideal-day.html": {},
+    "pages/ideal-day-sheet.html": {},
+    "pages/ideal-day-edit-step1.html": {},
+    "pages/ideal-day-edit-step2.html": {},
+    "pages/plan-study.html": {},
+    "pages/plan-sleep.html": {},
+    "pages/plan-medication.html": {}
   }
 }

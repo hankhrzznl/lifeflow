@@ -23,6 +23,15 @@ export function proxy(request: NextRequest) {
     '/tasks': { destination: '/efficiency-v2', permanent: true },
     '/more/projects': { destination: '/more', permanent: true },
     '/efficiency': { destination: '/efficiency-v2', permanent: true },
+    // T22：理想日升级为底导 4-tab 一级页面，旧配置页 308 至新路由（数据不丢）
+    '/more/ideal-day': { destination: '/ideal-day', permanent: true },
+    // T22.1：一页一段规划路由重构，旧 /ideal-day/plan/[feature] 单段规划页已废弃 → 理想日
+    '/ideal-day/plan/study': { destination: '/ideal-day', permanent: true },
+    '/ideal-day/plan/workout': { destination: '/ideal-day', permanent: true },
+    '/ideal-day/plan/sleep': { destination: '/ideal-day', permanent: true },
+    '/ideal-day/plan/diet': { destination: '/ideal-day', permanent: true },
+    '/ideal-day/plan/water': { destination: '/ideal-day', permanent: true },
+    '/ideal-day/plan/focus': { destination: '/ideal-day', permanent: true },
   };
 
   const redirect = redirects[pathname];
@@ -55,6 +64,13 @@ export const config = {
     '/focus',
     '/tasks',
     '/more/projects',
+    '/more/ideal-day',
+    '/ideal-day/plan/study',
+    '/ideal-day/plan/workout',
+    '/ideal-day/plan/sleep',
+    '/ideal-day/plan/diet',
+    '/ideal-day/plan/water',
+    '/ideal-day/plan/focus',
     '/efficiency',
     '/efficiency/:path*',
     '/plugins',

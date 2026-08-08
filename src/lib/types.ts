@@ -1028,6 +1028,7 @@ export interface UserSettings {
   idealDayMode?: IdealDayMode;     // T21-7：当前作息模式（暑假/开学），默认 'summer'
   idealDaySummerConfig?: IdealDayConfig; // T21-7：暑假作息配置
   idealDaySchoolConfig?: IdealDayConfig; // T21-7：开学作息配置
+  idealDayPlans?: Record<string, IdealDayPlanItem[]>; // T22：L2 规划层（key = "YYYY-MM-DD"，值 = 该日规划项）
   createdAt: number;
 }
 
@@ -1043,6 +1044,64 @@ export interface IdealStudyConfig {
   primaryGoalHours: number;      // 主目标时长（小时）
   secondaryGoalName: string;     // 次目标名称（四级）
   secondaryGoalHours: number;    // 次目标时长（小时）
+}
+
+/**
+ * T22：理想日时间段可绑定的固定功能集（8+8+8 时间轴 · 一对多功能）
+ * 每项对应固定 lucide 图标 + 模块跳转路由；选择器为固定图标面板（不可自定义）
+ */
+export type IdealDayFeature =
+  | 'sleep'      // 睡眠 → /more/sleep
+  | 'study'      // 学习 → /ideal-day/plan/study（规划页）
+  | 'workout'    // 训练 → /ideal-day/plan/workout（规划页）
+  | 'posture'    // 体态拉伸 → /more/fitness?tab=posture
+  | 'wellness'   // 功法养生 → /more/fitness?tab=wellness
+  | 'water'      // 饮水 → /more/water
+  | 'diet'       // 饮食 → /more/diet
+  | 'focus'      // 专注 → /more/focus
+  | 'leisure'    // 留白（自由时间，无跳转）
+  | 'notes'      // 备忘 → /more/notes
+  | 'routine'    // 作息 → /more/schedule/routines
+  | 'medication' // 吃药 → /more/medication（维修模式条件激活）
+
+/**
+ * T22.1：理想日 5 大段分组（睡眠独特段 + 上午/中午/下午/晚上）
+ * 旧 3 组（sleep/fight/life）读取时按时间段迁移映射到 5 段，见 ideal-day-templates.ts
+ */
+export type IdealDayBlockGroup =
+  | 'sleep'      // 睡眠（独特大段：夜间 22:30-06:00 + 午睡 12:30-13:00，仅睡眠功能，不可追加）
+  | 'morning'    // 上午 06:00-12:00（生活 2h + 目标 3h 推荐配额）
+  | 'noon'       // 中午 12:00-14:00（午餐午休）
+  | 'afternoon'  // 下午 14:00-18:00（生活 2h + 目标 3h 推荐配额）
+  | 'evening';   // 晚上 18:00-22:30（生活 4h + 目标 2h 推荐配额）
+
+/** T22：理想日模板的一个时间段块（一对多功能） */
+export interface IdealDayTemplateBlock {
+  id: string;                  // 块 id（stable，用于规划关联）
+  label: string;               // 块名（如「晨间训练」）
+  start: string;               // "HH:MM"
+  end: string;                 // "HH:MM"
+  group: IdealDayBlockGroup;   // 归属组
+  features: IdealDayFeature[]; // 该时间段要使用的功能集合
+}
+
+/** T22：理想日模板（多模板 · 手动切换 + 可选按星期自动匹配） */
+export interface IdealDayTemplate {
+  id: string;
+  name: string;                // 模板名（工作日 / 周末 / 自定义副本…）
+  daysOfWeek?: number[];       // 可选自动匹配（0=周日~6=周六）；缺省 = 仅手动
+  blocks: IdealDayTemplateBlock[];
+}
+
+/** T22：L2 规划层数据（某日期某功能时间段的规划内容；不新建表，存 userSettings） */
+export interface IdealDayPlanItem {
+  blockId: string;             // 关联模板块 id
+  feature: IdealDayFeature;    // 规划的功能
+  content: string;             // 具体安排内容（如训练动作 / 学习课时）
+  detail?: string;             // 补充说明
+  start: string;               // 冗余存时间段起止，便于日程页直接消费
+  end: string;
+  isCompleted: boolean;
 }
 
 /** 理想日蓝图：把"理想的一天"固化为可排程的结构化配置 */
@@ -1061,6 +1120,9 @@ export interface IdealDayConfig {
   leisureQuotaMinutes: number;   // 每日娱乐配额（分钟），默认 90
   focusEnabled: boolean;         // 学习时段免打扰（执行引导）
   quotaTrackEnabled: boolean;    // 娱乐配额超时追踪
+  // T22：多模板 + 时间段多功能（可选字段，向后兼容旧配置；缺省时从旧字段派生默认模板）
+  templates?: IdealDayTemplate[];
+  activeTemplateId?: string;
 }
 
 /** 默认理想日蓝图（与用户确认的基线一致） */

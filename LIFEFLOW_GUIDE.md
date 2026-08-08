@@ -498,3 +498,60 @@ LifeFlow v1.0，一个讲道理的生活助手。
 - **双作息**（T21-7）：理想日配置支持「暑假/开学」两套存储 + 一键切换（开学模板预置，开学后细化）
 - **⚠️ 勿新增**：省考 9/16 硬约束不得放宽；四级阶段不得跳段；熬夜治理禁止一步到位；所有删除仅隐藏入口、数据与路由保留
 
+### 理想日操作系统（v2.12+，T22）— 8+8+8 时间轴 · 底导 4-tab · 三层架构
+
+> 核心转向：理想日从配置页升级为底部导航一级页面，以「8+8+8 时间轴模板」组织一天。每个时间段绑定**多个功能**（一对多），点击功能进入规划页安排具体内容，规划完成后日程页时间轴自动显示具体事项。
+
+- **底部导航 4-tab**：首页 / 目标 / 日程 / 理想日（新增 `/ideal-day` 路由，Sun 图标）。旧 `/more/ideal-day` 由 `src/proxy.ts` 308 至 `/ideal-day`（数据不丢）
+- **三层架构**：L1 理想日（功能层：8+8+8 模板块 + 功能图标）→ L2 规划页（规划层：`/ideal-day/plan/[feature]`，阶段一落地 study/workout）→ L3 日程页（执行层：`generateIdealDayItems` 自动消费）
+- **数据模型**（`src/lib/types.ts`，向后兼容，不新建表）：
+  - `IdealDayFeature`：固定功能集 12 项（sleep/study/workout/posture/wellness/water/diet/focus/leisure/notes/routine/medication），每项对应固定 lucide 图标 + 跳转路由（`FEATURE_META`）
+  - `IdealDayTemplateBlock`：时间段块（id/label/start/end/group/features[]），group 为 8+8+8 三组（sleep 睡眠区 / fight 战斗区 / life 生活区）
+  - `IdealDayTemplate`：多模板（id/name/daysOfWeek?/blocks[]），工作日（周一~五）与周末（六日）默认按星期自动匹配，支持手动切换、复制、重命名、自定义副本
+  - `IdealDayPlanItem`：L2 规划数据（blockId/feature/content/detail/start/end/isCompleted），存 `userSettings.idealDayPlans`（key=日期）
+- **引擎**（`src/lib/ideal-day-templates.ts`）：`ensureTemplates` 旧配置缺省时从旧字段派生默认模板并回填；`selectTemplate` 按日期自动匹配 + 手动激活兜底；规划读写 `getIdealDayPlans/saveIdealDayPlans/upsertIdealDayPlan`
+- **生成器**（`ideal-day.ts generateIdealDayItems` 升级）：按激活模板 blocks 生成块级事项（`sourceId=ideal-block-{tpl}-{block}`）+ 规划具体事项（`sourceId=ideal-plan-{block}-{feature}`）；T19 旧 study/workout/leisure 单块生成逻辑已移除
+- **规划页交互**：理想日执行区点击功能图标 → `study/workout` 进规划页（其余直接跳模块页）；规划页保存 → 写 `idealDayPlans` + 重排当日 → 日程页自动显示
+- **整段勾选**：执行区点击时间段主体 = 整段完成（仅当该块有规划项时生效，无规划提示先安排）
+- **⚠️ 勿新增**：勿新建 Dexie 表存规划（userSettings 足够）；勿删除 `/more` 目录既有入口（双入口保留）；时段自由配置不硬编码 8h 均分；训练中心三 Tab（训练/体态拉伸/功法养生）保持单入口 + `?tab=` 参数兼容，理想日分别绑定三个 feature
+- **备考计划并入目标（v2.12+，T22）**：「备考计划」更名为「备考目标」（主/次目标归根到底是目标）；`/more` 目录条目改名 + 换 Target 图标（路由 `/more/exam-plan` 与数据保留）；理想日 study feature 图标由 GraduationCap 换为 Target（学习内容来自目标拆解）；goal-engine 模板名、ThreeThingsCard 文案同步改名
+
+### 理想日 5 大段 + 一页一段（v2.12+，T22.1）— 时间段隔离重构
+
+> 核心转向：理想日从「8+8+8 三组直展」重构为「5 大段两步向导 + 一页一段规划」。每个时间段的功能只对该时间段负责，规划数据按 blockId+feature 严格隔离。
+
+- **5 大段分组**（`IdealDayBlockGroup`）：`sleep`（独特段）/ `morning` / `noon` / `afternoon` / `evening`；旧 3 组（sleep/fight/life）读取时按块 start 时间迁移映射（06-12→morning、12-14→noon、14-18→afternoon、其余→evening）
+- **独特睡眠段**：夜间 22:30-06:00 + 午睡 12:30-13:00（共 8h），**仅允许 sleep 功能、不可追加、不可删段**（时间可改）
+- **8+8+8 推荐配额**（`SEGMENT_META.quotaHint` + `EIGHT_EIGHT_EIGHT_HINT`，均可调非硬编码）：睡眠 8h（7.5+0.5）· 目标 8h（上午3+下午3+晚上2）· 生活 8h（上午2+下午2+晚上4）；配额 = Step 2 槽位默认时长来源，槽位允许跨段放置，最终以独立起止时间为准
+- **两步向导**（理想日页编辑态）：Step 1 五段勾选功能 + 段边界可调（睡眠段锁定）→ Step 2 每段每功能「出现次数 N = 生成 N 个独立时间槽」+ 每槽独立起止时间（可增删、可改）；保存时槽位扁平化为 blocks（一槽一功能，`features:[f]`）
+- **一页一段规划路由**：`/ideal-day/plan/[blockId]/[feature]`；旧 `/ideal-day/plan/[feature]` 单段路由 308 → `/ideal-day`（proxy.ts）
+- **可规划功能**（进一页一段）：study/workout/sleep/diet/water/focus 共 6 个；其余（posture/wellness/leisure/notes/routine/medication）由理想日页直接跳模块页
+- **页内详细引导**（`PLAN_GUIDE`）：每功能 = 说明区 + 1-2-3 规划步骤 + 填写项（内容必填带校验/补充可选）+ 2-3 条可点击回填的示例参考
+- **L3 消费**：`generateIdealDayItems` 按模板块（`sourceId=ideal-block-{tpl}-{block}`）+ 规划项（`sourceId=ideal-plan-{block}-{feature}`）生成，槽位独立起止直接消费
+- **⚠️ 勿新增**：勿恢复旧 3 组 UI 硬分组（8+8+8 仅作推荐/总览提示）；勿在睡眠段追加功能；勿新建 Dexie 表；规划页一律一页一段（blockId+feature 定位）
+
+### 规划形态重构（v2.13+，T22.2）— 12 功能三种形态
+
+> 12 个理想日功能不再全是独立规划页，按用户决议分为：独立页 / 内嵌底部表单 / 删除或跳模块。
+
+- **独立规划页（3）**：`study`（改名「目标规划」：目标选择器 + 进度联动）/ `sleep`（丰富引导 + 保存写 `addSleepLog`）/ `medication`（保存写 `upsertMedicineLog`，按时段映射 morning/noon/evening/bedtime）
+- **内嵌底部表单（4）**：`workout` / `wellness` / `posture` / `routine` —— 点击功能图标在理想日页弹底部表单（样式同功能模块），保存写 `userSettings.idealDayPlans` 并重排；`handleFeatureClick` 分发：`PLAN_PAGE_FEATURES`（3 独立页）→ `INLINE_SHEET_FEATURES`（4 表单）→ 其余跳模块页
+- **训练动作清单结构化（T22.2）**：`workout` 表单渲染结构化动作清单（多行：动作名 + `-` `sets×reps` `+` stepper + 删除），10 个快捷动作预设（杠铃卧推/高位下拉/深蹲/硬拉等）；`detail` 存 `JSON.stringify(actions)`，`content` 存文本 `"杠铃卧推 3×12 · 高位下拉 4×10"`；历史单行内容用 `parseActions` 兼容解析回填；保存校验"至少一个动作"
+- **功法养生动作模板（T22.2）**：`wellness` 表单结构化（多行：项目名 + `-` `N分钟` `+` 时长 stepper + 删除），8 个模板预设（八段锦 12 分钟/五禽戏 15 分钟/太极拳 20 分钟/站桩/腹式呼吸/冥想/经络拍打/肩颈放松）；`detail` 存 JSON `[{name, minutes}]`，`content` 存 `"八段锦 · 12分钟"`；`parseWellness` 兼容历史
+- **作息例行清单分项（T22.2）**：`routine` 表单结构化（多行：分项名 + 删除），8 个常用例行预设（洗漱/早餐/整理书包/出门准备/午餐/晚餐/饭后散步/睡前洗漱）；`detail` 存 JSON `[{name}]`，`content` 存 `"洗漱 · 早餐"`；`parseRoutine` 兼容历史
+- **三色环形表动态化（T22.2）**：首页/理想日 8+8+8 推荐条改为 `computeDayDistribution(template)` 实时计算——按 blocks 的 `features` 归类（sleep→紫 #5856D6 / study→蓝 #0A84FF / 其余→绿 #34C759），`conic-gradient` 角度 = 各色分钟/总时长×360°，图例时长与段名列表动态生成，中心显示已安排总小时；切换模板/编辑段即时联动
+- **体态拉伸结构化清单（T22.2）**：`posture` 表单结构化（多行：动作名 + `-` `N秒` `+` 时长 stepper（5 秒步进，5~120）+ 删除），8 个常用拉伸预设（肩颈拉伸 30 秒/斜方肌拉伸 30 秒/猫式伸展 60 秒/坐姿转体 45 秒/站立前屈 60 秒/蝴蝶式 60 秒/小腿拉伸 45 秒/手腕放松 30 秒）；`detail` 存 JSON `[{name, seconds}]`，`content` 存 `"肩颈拉伸 30秒 · 猫式伸展 60秒"`；`parsePosture` 兼容历史
+- **删除/跳模块（5）**：`water` → `/more/water`；`diet` → `/more/diet`；`focus` → `/more/focus`（目标事项旁加「专注」按钮）；`notes` → `/more/notes`；`leisure` → toast 留白提示（无模块）
+- **专注按钮（T22.2）**：日程页 + 首页「今日待办」的目标事项（`sourceType==='goal'`）行内常驻紫色 Timer 圆钮 → `/more/focus`；日程页 `onFocus()` 带 `?title=&duration=` 预填
+- **路由**：`/ideal-day/plan/[blockId]/[feature]` 仅 study/sleep/medication 可达；其余 feature 访问返回 null（由理想日页分发）
+- **画布**：独立页 3 + 底部表单展示页 1（`ideal-day-sheet.html`，训练表单展开态）+ 编辑两步向导 2 屏 + 5 主页面 = 12 页；`plan-medication` 为维修模式条件功能，理想日执行页无图标、不注册交互
+
+### 理想日 ↔ 日程 双向打通（T22.2）
+
+> 单向生成升级为双向联动：完成态互写、点击互跳、来源可识别。
+
+- **正向（理想日→日程）**：规划保存/整段勾选后 `generateIdealDayItems(today)` 重生成日程项（块级 `ideal-block-{templateId}-{blockId}` + 规划级 `ideal-plan-{blockId}-{feature}`）；`handleToggleBlock` 完成态同步日程（toast「日程已同步」）
+- **反向（日程→理想日）**：日程页勾选 `ideal-plan-*` 项 → 正则 `^ideal-plan-(.+)-([a-z]+)$` 解析 blockId+feature（blockId 为 uuid 含连字符，不可 split）→ 回写 `userSettings.idealDayPlans` 对应 isCompleted；goal 类回写 DailyAction 逻辑不变
+- **点击互跳**：日程页点击 ideal-plan 项 → study/sleep/medication 跳对应规划页，其余跳 `/ideal-day?block=<blockId>`；ideal-block 块级项 → 定位该时段；理想日页 `?block=` 支持 scrollIntoView 定位 + 2s 紫框高亮闪烁
+- **来源识别**：日程页所有 ideal 项显示紫色 `Sparkles + 理想日` 徽标
+

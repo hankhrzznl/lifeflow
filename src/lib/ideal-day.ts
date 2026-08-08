@@ -274,62 +274,43 @@ export async function generateIdealDayItems(dateStr: string): Promise<void> {
   if (!config.enabled) return;
 
   const { ensureModuleItem } = await import("@/lib/db/daylog.db");
+  const { ensureTemplates, selectTemplate, getIdealDayPlans, getFeatureMeta } = await import("@/lib/ideal-day-templates");
 
-  // 1) 双目标学习块（可多段，自动绕开午睡）——标题接入备考引擎今日任务（T21-2）
-  //    省考块显示「判断推理 第1+2讲」等今日课时；四级块显示「夯实基础 第1+2节」或周末复习
-  const { getExamLessons, getProgressMap, computeTodayTasks, formatTodayTaskSummary } = await import("@/lib/exam-plan");
-  const examLessons = getExamLessons();
-  const examProgress = await getProgressMap();
-  const dayTasks = computeTodayTasks(examLessons, examProgress, dateStr);
-  const primaryTitle = `📚 ${formatTodayTaskSummary("province", dayTasks.filter((t) => t.planId === "province"))}`;
-  const secondaryTitle = `📚 ${formatTodayTaskSummary("cet4", dayTasks.filter((t) => t.planId === "cet4"))}`;
+  // T22：按激活模板的 8+8+8 时间段块生成（一对多功能）
+  const { templates, config: cfg } = ensureTemplates(config);
+  const template = selectTemplate(cfg, dateStr);
+  const plans = await getIdealDayPlans(dateStr);
 
-  const slots = buildStudySlots(config);
-  let primarySeg = 0;
-  let secondarySeg = 0;
-  for (const slot of slots) {
-    const isPrimary = slot.goalName === config.study.primaryGoalName;
-    const idx = isPrimary ? primarySeg++ : secondarySeg++;
+  // 1) 模板块级事项（sourceId 含模板+块 id，稳定去重）
+  for (const b of template.blocks) {
+    const planOfBlock = plans.filter((p) => p.blockId === b.id);
+    const planTitles = planOfBlock.filter((p) => !p.isCompleted).map((p) => p.content).filter(Boolean);
+    const icon = b.features.length > 0 ? getFeatureMeta(b.features[0]).icon : 'CalendarDays';
     await ensureModuleItem({
       date: dateStr,
       sourceType: "ideal",
-      sourceId: `ideal-study-${isPrimary ? "primary" : "secondary"}-${idx}`,
-      title: isPrimary ? primaryTitle : secondaryTitle,
-      plannedStart: slot.start,
-      plannedEnd: slot.end,
-      color: isPrimary ? "#6366F1" : "#10B981",
-      icon: "GraduationCap",
+      sourceId: `ideal-block-${template.id}-${b.id}`,
+      title: planTitles.length > 0 ? `${b.label} · ${planTitles.join(" / ")}` : b.label,
+      plannedStart: b.start,
+      plannedEnd: b.end,
+      color: "#6366F1",
+      icon,
       isCompleted: false,
     });
   }
 
-  // 2) 训练块（仅训练日）
-  if (await isTrainingDay(dateStr)) {
+  // 2) 规划层具体事项（L3 执行层：日程页自动显示安排好的具体内容）
+  for (const p of plans) {
     await ensureModuleItem({
       date: dateStr,
       sourceType: "ideal",
-      sourceId: "ideal-workout",
-      title: "💪 训练",
-      plannedStart: config.workoutStart,
-      plannedEnd: config.workoutEnd,
-      color: "#F97316",
-      icon: "Dumbbell",
-      isCompleted: false,
-    });
-  }
-
-  // 3) 留白块：睡前娱乐配额窗口
-  if (config.leisureQuotaMinutes > 0) {
-    await ensureModuleItem({
-      date: dateStr,
-      sourceType: "ideal",
-      sourceId: "ideal-leisure",
-      title: "🎮 自由时间",
-      plannedStart: addMinutes(config.sleepBedTime, -config.leisureQuotaMinutes),
-      plannedEnd: config.sleepBedTime,
-      color: "#8B5CF6",
-      icon: "Timer",
-      isCompleted: false,
+      sourceId: `ideal-plan-${p.blockId}-${p.feature}`,
+      title: p.content || getFeatureMeta(p.feature).label,
+      plannedStart: p.start,
+      plannedEnd: p.end,
+      color: getFeatureMeta(p.feature).color,
+      icon: getFeatureMeta(p.feature).icon,
+      isCompleted: p.isCompleted,
     });
   }
 }

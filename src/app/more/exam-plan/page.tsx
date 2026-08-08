@@ -158,7 +158,7 @@ export default function ExamPlanPage() {
         <button type="button" onClick={() => router.back()} className="absolute left-4 top-[calc(var(--safe-area-top)+4px)] p-1" aria-label="返回">
           <ChevronLeft className="w-6 h-6" style={{ color: "var(--lifeflow-primary)" }} />
         </button>
-        <h1 className="text-title-nav" style={{ color: "var(--color-text-primary)" }}>备考计划</h1>
+        <h1 className="text-title-nav" style={{ color: "var(--color-text-primary)" }}>备考目标</h1>
       </div>
 
       {/* 双考试进度 */}

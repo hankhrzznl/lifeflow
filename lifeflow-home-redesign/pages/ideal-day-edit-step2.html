@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>理想日编辑 · 第 2 步 配置时间与次数</title>
+    <style id="theme-vars">
+/* LifeFlow 首页 — 日间浅色 / 夜间深色 双模式 */
+
+/* === LIGHT MODE (日间 · iOS 原生浅色) === */
+:root {
+  /* SURFACE & TEXT */
+  --lifeflow-background: #F2F2F7;
+  --lifeflow-foreground: #1C1C1E;
+  --lifeflow-card: #FFFFFF;
+  --lifeflow-card-foreground: #1C1C1E;
+  --lifeflow-popover: #FFFFFF;
+  --lifeflow-popover-foreground: #1C1C1E;
+  --lifeflow-muted: #F2F2F7;
+  --lifeflow-muted-foreground: #6C6C70;
+  --lifeflow-border: rgba(60,60,67,0.29);
+  --lifeflow-border-light: rgba(60,60,67,0.12);
+  --lifeflow-border-dashed: rgba(60,60,67,0.2);
+  --lifeflow-input: rgba(60,60,67,0.12);
+  --lifeflow-ring: #007AFF;
+
+  /* BRAND */
+  --lifeflow-primary: #007AFF;
+  --lifeflow-primary-hover: #0066D6;
+  --lifeflow-primary-light: rgba(0,122,255,0.12);
+  --lifeflow-primary-foreground: #FFFFFF;
+
+  /* PROGRESS */
+  --lifeflow-knit-thread: #007AFF;
+  --lifeflow-knit-thread-completed: #34C759;
+  --lifeflow-knit-thread-partial: #FF9500;
+  --lifeflow-knit-bg: #E9E9EB;
+  --lifeflow-knit-grid: rgba(60,60,67,0.1);
+
+  /* STATE */
+  --state-success: #34C759;
+  --state-success-light: rgba(52,199,89,0.14);
+  --state-warning: #FF3B30;
+  --state-warning-light: rgba(255,59,48,0.12);
+  --state-error: #FF3B30;
+  --state-error-light: rgba(255,59,48,0.12);
+  --state-info: #007AFF;
+  --state-info-light: rgba(0,122,255,0.12);
+
+  /* TEXT */
+  --lifeflow-text-primary: #1C1C1E;
+  --lifeflow-text-secondary: #6C6C70;
+  --lifeflow-text-tertiary: #8E8E93;
+  --lifeflow-text-inverse: #FFFFFF;
+
+  /* SHADOWS */
+  --lifeflow-shadow-1: 0 0 0 1px rgba(0,0,0,0.02), 0 1px 2px rgba(0,0,0,0.03);
+  --lifeflow-shadow-2: 0 2px 8px rgba(0,0,0,0.05);
+  --lifeflow-shadow-3: 0 8px 24px rgba(0,0,0,0.12);
+  --lifeflow-shadow-knit: none;
+
+  /* TAB BAR (light glass) */
+  --lifeflow-tabbar-bg: rgba(255,255,255,0.72);
+  --lifeflow-tabbar-blur: 20px;
+  --lifeflow-tabbar-blur-saturate: 180%;
+
+  /* AI BALL (deep blue) */
+  --lifeflow-ai-ball: #2E5FA3;
+
+  /* TYPOGRAPHY */
+  --lifeflow-font-display: -apple-system, BlinkMacSystemFont, "SF Pro SC", "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif;
+  --lifeflow-font-body: -apple-system, BlinkMacSystemFont, "SF Pro SC", "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif;
+  --lifeflow-font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+
+  --lifeflow-font-size-display: 34px;
+  --lifeflow-font-size-h1: 28px;
+  --lifeflow-font-size-h2: 20px;
+  --lifeflow-font-size-h3: 17px;
+  --lifeflow-font-size-body: 15px;
+  --lifeflow-font-size-sm: 13px;
+  --lifeflow-font-size-caption: 12px;
+
+  /* SPACING */
+  --lifeflow-space-xs: 4px;
+  --lifeflow-space-sm: 8px;
+  --lifeflow-space-md: 12px;
+  --lifeflow-space-lg: 16px;
+  --lifeflow-space-xl: 24px;
+  --lifeflow-space-2xl: 32px;
+
+  /* RADIUS */
+  --lifeflow-radius-sm: 6px;
+  --lifeflow-radius-md: 10px;
+  --lifeflow-radius-lg: 12px;
+  --lifeflow-radius-xl: 16px;
+  --lifeflow-radius-full: 9999px;
+
+  /* PORTABLE ALIASES */
+  --background: var(--lifeflow-background);
+  --foreground: var(--lifeflow-foreground);
+  --card: var(--lifeflow-card);
+  --card-foreground: var(--lifeflow-card-foreground);
+  --popover: var(--lifeflow-popover);
+  --popover-foreground: var(--lifeflow-popover-foreground);
+  --primary: var(--lifeflow-primary);
+  --primary-foreground: var(--lifeflow-primary-foreground);
+  --muted: var(--lifeflow-muted);
+  --muted-foreground: var(--lifeflow-muted-foreground);
+  --border: var(--lifeflow-border);
+  --input: var(--lifeflow-input);
+  --ring: var(--lifeflow-ring);
+  --radius-sm: var(--lifeflow-radius-sm);
+  --radius-md: var(--lifeflow-radius-md);
+  --radius-lg: var(--lifeflow-radius-lg);
+}
+
+/* === DARK MODE (夜间 · 深色沉浸式 Apple Fitness) === */
+.dark {
+  /* SURFACE & TEXT */
+  --lifeflow-background: #0B0F17;
+  --lifeflow-foreground: #F2F5FA;
+  --lifeflow-card: #141B28;
+  --lifeflow-card-foreground: #F2F5FA;
+  --lifeflow-popover: #1A2232;
+  --lifeflow-popover-foreground: #F2F5FA;
+  --lifeflow-muted: #1C2432;
+  --lifeflow-muted-foreground: rgba(242,245,250,0.6);
+  --lifeflow-border: rgba(255,255,255,0.09);
+  --lifeflow-border-light: rgba(255,255,255,0.06);
+  --lifeflow-border-dashed: rgba(255,255,255,0.18);
+  --lifeflow-input: rgba(255,255,255,0.12);
+  --lifeflow-ring: #0A84FF;
+
+  /* BRAND */
+  --lifeflow-primary: #0A84FF;
+  --lifeflow-primary-hover: #3D9BFF;
+  --lifeflow-primary-light: rgba(10,132,255,0.18);
+  --lifeflow-primary-foreground: #FFFFFF;
+
+  /* PROGRESS */
+  --lifeflow-knit-thread: #0A84FF;
+  --lifeflow-knit-thread-completed: #30D158;
+  --lifeflow-knit-thread-partial: #FF9F0A;
+  --lifeflow-knit-bg: rgba(255,255,255,0.1);
+  --lifeflow-knit-grid: rgba(255,255,255,0.08);
+
+  /* STATE */
+  --state-success: #30D158;
+  --state-success-light: rgba(48,209,88,0.16);
+  --state-warning: #FF453A;
+  --state-warning-light: rgba(255,69,58,0.16);
+  --state-error: #FF453A;
+  --state-error-light: rgba(255,69,58,0.16);
+  --state-info: #64D2FF;
+  --state-info-light: rgba(100,210,255,0.14);
+
+  /* TEXT */
+  --lifeflow-text-primary: #F2F5FA;
+  --lifeflow-text-secondary: rgba(242,245,250,0.72);
+  --lifeflow-text-tertiary: rgba(242,245,250,0.45);
+  --lifeflow-text-inverse: #FFFFFF;
+
+  /* SHADOWS */
+  --lifeflow-shadow-1: 0 1px 2px rgba(0,0,0,0.3);
+  --lifeflow-shadow-2: 0 4px 12px rgba(0,0,0,0.4);
+  --lifeflow-shadow-3: 0 8px 28px rgba(0,0,0,0.55), 0 0 18px rgba(10,132,255,0.28);
+  --lifeflow-shadow-knit: none;
+
+  /* TAB BAR (dark glass) */
+  --lifeflow-tabbar-bg: rgba(13,18,28,0.72);
+  --lifeflow-tabbar-blur: 20px;
+  --lifeflow-tabbar-blur-saturate: 180%;
+
+  /* AI BALL (deep blue) */
+  --lifeflow-ai-ball: #2E5FA3;
+}
+
+/* === TYPOGRAPHY UTILITY CLASSES === */
+.lf-display {
+  font-family: var(--lifeflow-font-display);
+  font-size: var(--lifeflow-font-size-display);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.lf-h1 {
+  font-family: var(--lifeflow-font-display);
+  font-size: var(--lifeflow-font-size-h1);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+
+.lf-h2 {
+  font-family: var(--lifeflow-font-display);
+  font-size: var(--lifeflow-font-size-h2);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+}
+
+.lf-h3 {
+  font-family: var(--lifeflow-font-body);
+  font-size: var(--lifeflow-font-size-h3);
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.lf-body {
+  font-family: var(--lifeflow-font-body);
+  font-size: var(--lifeflow-font-size-body);
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.lf-body-sm {
+  font-family: var(--lifeflow-font-body);
+  font-size: var(--lifeflow-font-size-sm);
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.lf-caption {
+  font-family: var(--lifeflow-font-body);
+  font-size: var(--lifeflow-font-size-caption);
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.lf-mono {
+  font-family: var(--lifeflow-font-mono);
+  font-size: var(--lifeflow-font-size-sm);
+  font-weight: 400;
+  line-height: 1.6;
+}
+
+/* === PROGRESS BAR (iOS thin bar) === */
+.knit-track {
+  position: relative;
+  height: 6px;
+  border-radius: var(--lifeflow-radius-full);
+  overflow: hidden;
+  background: var(--lifeflow-knit-bg);
+}
+
+.knit-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  border-radius: var(--lifeflow-radius-full);
+  background: var(--lifeflow-knit-thread);
+  z-index: 2;
+  transition: width 0.5s ease-in-out;
+}
+
+.knit-fill--done { background: var(--lifeflow-knit-thread-completed); }
+.knit-fill--partial { background: var(--lifeflow-knit-thread-partial); }
+
+.knit-yarn {
+  display: none;
+}
+
+.knit-percent {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 4;
+  font-family: var(--lifeflow-font-body);
+  font-size: var(--lifeflow-font-size-sm);
+  font-weight: 600;
+  color: var(--lifeflow-text-primary);
+  line-height: 1;
+}
+
+/* === TAB BAR (glass, follows mode) === */
+.lf-tabbar-glass {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 40;
+  border-top: 1px solid var(--lifeflow-border);
+  background: var(--lifeflow-tabbar-bg);
+  -webkit-backdrop-filter: saturate(var(--lifeflow-tabbar-blur-saturate)) blur(var(--lifeflow-tabbar-blur));
+  backdrop-filter: saturate(var(--lifeflow-tabbar-blur-saturate)) blur(var(--lifeflow-tabbar-blur));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  @theme inline {
+    --color-background: var(--lifeflow-background);
+    --color-foreground: var(--lifeflow-foreground);
+    --color-card: var(--lifeflow-card);
+    --color-card-foreground: var(--lifeflow-card-foreground);
+    --color-popover: var(--lifeflow-popover);
+    --color-popover-foreground: var(--lifeflow-popover-foreground);
+    --color-primary: var(--lifeflow-primary);
+    --color-primary-foreground: var(--lifeflow-primary-foreground);
+    --color-muted: var(--lifeflow-muted);
+    --color-muted-foreground: var(--lifeflow-muted-foreground);
+    --color-border: var(--lifeflow-border);
+    --color-input: var(--lifeflow-input);
+    --color-ring: var(--lifeflow-ring);
+    --radius-sm: var(--lifeflow-radius-sm);
+    --radius-md: var(--lifeflow-radius-md);
+    --radius-lg: var(--lifeflow-radius-lg);
+    --radius-xl: var(--lifeflow-radius-xl);
+  }
+  @layer base {
+    body { background: var(--lifeflow-background); color: var(--lifeflow-foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style id="semantic-token-fallback">
+      .bg-background { background-color: var(--lifeflow-background); }
+      .text-background { color: var(--lifeflow-background); }
+      .border-background { border-color: var(--lifeflow-background); }
+      .ring-background { --tw-ring-color: var(--lifeflow-background); }
+      .bg-foreground { background-color: var(--lifeflow-foreground); }
+      .text-foreground { color: var(--lifeflow-foreground); }
+      .border-foreground { border-color: var(--lifeflow-foreground); }
+      .ring-foreground { --tw-ring-color: var(--lifeflow-foreground); }
+      .bg-card { background-color: var(--lifeflow-card); }
+      .text-card { color: var(--lifeflow-card); }
+      .border-card { border-color: var(--lifeflow-card); }
+      .ring-card { --tw-ring-color: var(--lifeflow-card); }
+      .bg-card-foreground { background-color: var(--lifeflow-card-foreground); }
+      .text-card-foreground { color: var(--lifeflow-card-foreground); }
+      .border-card-foreground { border-color: var(--lifeflow-card-foreground); }
+      .ring-card-foreground { --tw-ring-color: var(--lifeflow-card-foreground); }
+      .bg-popover { background-color: var(--lifeflow-popover); }
+      .text-popover { color: var(--lifeflow-popover); }
+      .border-popover { border-color: var(--lifeflow-popover); }
+      .ring-popover { --tw-ring-color: var(--lifeflow-popover); }
+      .bg-popover-foreground { background-color: var(--lifeflow-popover-foreground); }
+      .text-popover-foreground { color: var(--lifeflow-popover-foreground); }
+      .border-popover-foreground { border-color: var(--lifeflow-popover-foreground); }
+      .ring-popover-foreground { --tw-ring-color: var(--lifeflow-popover-foreground); }
+      .bg-primary { background-color: var(--lifeflow-primary); }
+      .text-primary { color: var(--lifeflow-primary); }
+      .border-primary { border-color: var(--lifeflow-primary); }
+      .ring-primary { --tw-ring-color: var(--lifeflow-primary); }
+      .bg-primary-foreground { background-color: var(--lifeflow-primary-foreground); }
+      .text-primary-foreground { color: var(--lifeflow-primary-foreground); }
+      .border-primary-foreground { border-color: var(--lifeflow-primary-foreground); }
+      .ring-primary-foreground { --tw-ring-color: var(--lifeflow-primary-foreground); }
+      .bg-muted { background-color: var(--lifeflow-muted); }
+      .text-muted { color: var(--lifeflow-muted); }
+      .border-muted { border-color: var(--lifeflow-muted); }
+      .ring-muted { --tw-ring-color: var(--lifeflow-muted); }
+      .bg-muted-foreground { background-color: var(--lifeflow-muted-foreground); }
+      .text-muted-foreground { color: var(--lifeflow-muted-foreground); }
+      .border-muted-foreground { border-color: var(--lifeflow-muted-foreground); }
+      .ring-muted-foreground { --tw-ring-color: var(--lifeflow-muted-foreground); }
+      .bg-border { background-color: var(--lifeflow-border); }
+      .text-border { color: var(--lifeflow-border); }
+      .border-border { border-color: var(--lifeflow-border); }
+      .ring-border { --tw-ring-color: var(--lifeflow-border); }
+      .bg-input { background-color: var(--lifeflow-input); }
+      .text-input { color: var(--lifeflow-input); }
+      .border-input { border-color: var(--lifeflow-input); }
+      .ring-input { --tw-ring-color: var(--lifeflow-input); }
+      .bg-ring { background-color: var(--lifeflow-ring); }
+      .text-ring { color: var(--lifeflow-ring); }
+      .border-ring { border-color: var(--lifeflow-ring); }
+      .ring-ring { --tw-ring-color: var(--lifeflow-ring); }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+</head>
+<body class="min-h-screen font-sans antialiased">
+    <main>
+      <div class="mx-auto w-full max-w-md px-4 pb-[104px] pt-3" style="font-family:var(--lifeflow-font-body)">
+        <!-- 1. 顶部导航 -->
+        <header class="flex items-center justify-between gap-3 py-2">
+          <button type="button" data-dom-id="step2-back" aria-label="返回" class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--lifeflow-muted)] text-[var(--lifeflow-text-primary)] transition-colors hover:bg-[rgba(60,60,67,0.1)] active:opacity-80 focus-visible:outline-2 focus-visible:outline-[var(--lifeflow-ring)] focus-visible:outline-offset-2 motion-reduce:transition-none"><i data-lucide="chevron-left" class="h-5 w-5"></i></button>
+          <h1 class="min-w-0 truncate text-[17px] font-semibold tracking-tight text-[var(--lifeflow-text-primary)]">配置时间与次数</h1>
+          <button type="button" data-dom-id="edit-cancel" class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[15px] text-[var(--lifeflow-text-secondary)] transition-colors hover:text-[var(--lifeflow-text-primary)] active:opacity-80 focus-visible:outline-2 focus-visible:outline-[var(--lifeflow-ring)] focus-visible:outline-offset-2 motion-reduce:transition-none">取消</button>
+        </header>
+
+        <!-- 2. 步骤指示 -->
+        <div class="flex items-center gap-2 pb-3 pt-0.5" role="list" aria-label="理想日编辑步骤">
+          <div class="flex min-w-0 items-center gap-1.5" role="listitem">
+            <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--lifeflow-muted)] text-[var(--lifeflow-text-secondary)]"><i data-lucide="check" class="h-3.5 w-3.5"></i></span>
+            <span class="whitespace-nowrap text-[12px] text-[var(--lifeflow-text-secondary)]">选择大段与功能</span>
+          </div>
+          <i data-lucide="chevron-right" class="h-3.5 w-3.5 shrink-0 text-[var(--lifeflow-text-tertiary)]"></i>
+          <div class="flex min-w-0 items-center gap-1.5" role="listitem">
+            <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--lifeflow-primary)] text-[11px] font-semibold tabular-nums text-[var(--lifeflow-primary-foreground)]">2</span>
+            <span class="whitespace-nowrap text-[12px] font-semibold text-[var(--lifeflow-text-primary)]">配置时间与次数</span>
+          </div>
+        </div>
+
+        <!-- 3. 8+8+8 推荐提示条 -->
+        <section class="mb-3 flex items-start gap-2.5 rounded-xl bg-[var(--state-info-light)] px-3.5 py-3" aria-label="8+8+8 推荐提示">
+          <i data-lucide="info" class="mt-[1px] h-4 w-4 shrink-0 text-[var(--state-info)]"></i>
+          <p class="min-w-0 text-[12px] leading-relaxed text-[var(--lifeflow-text-secondary)]">8+8+8 推荐：睡眠 8h（22:30-06:00 + 12:30-13:00 午睡）· 目标 8h（上午3+下午3+晚上2）· 生活 8h（上午2+下午2+晚上4）</p>
+        </section>
+
+        <!-- 4. 各段卡片 -->
+        <section class="space-y-3">
+          <!-- 睡眠段 · 2 个时段 -->
+          <div class="overflow-hidden rounded-xl bg-[var(--lifeflow-card)] shadow-[var(--lifeflow-shadow-1)]">
+            <div class="flex items-center gap-2.5 px-4 pb-1 pt-3">
+              <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[rgba(88,86,214,0.14)] text-[rgba(88,86,214,1)]"><i data-lucide="moon" class="h-4 w-4"></i></span>
+              <h2 class="min-w-0 truncate text-[14px] font-semibold text-[var(--lifeflow-text-primary)]">睡眠段 · 2 个时段</h2>
+            </div>
+            <!-- 槽 1 夜间睡眠（锁定） -->
+            <div class="flex items-center gap-2 border-t border-[var(--lifeflow-border-light)] px-4 py-2.5">
+              <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[rgba(88,86,214,0.14)] text-[rgba(88,86,214,1)]"><i data-lucide="moon" class="h-3.5 w-3.5"></i></span>
+              <input value="夜间睡眠" aria-label="时段名称" class="min-w-0 flex-1 bg-transparent outline-none text-[13px] font-medium truncate text-[var(--lifeflow-text-primary)]" />
+              <input type="time" value="23:00" aria-label="夜间睡眠 开始时间" class="h-8 w-[74px] shrink-0 rounded-[10px] border border-[var(--lifeflow-border-light)] bg-[var(--lifeflow-muted)] px-1 text-center text-[12px] font-medium tabular-nums text-[var(--lifeflow-text-primary)] transition-colors focus:border-[var(--lifeflow-primary)] focus-visible:outline-2 focus-visible:outline-[var(--lifeflow-ring)] focus-visible:outline-offset-1 motion-reduce:transition-none">
+              <span class="shrink-0 text-[12px] tabular-nums text-[var(--lifeflow-text-tertiary)]">—</span>
+              <input type="time" value="07:00" aria-label="夜间睡眠 结束时间" class="h-8 w-[74px] shrink-0 rounded-[10px] border border-[var(--lifeflow-border-light)] bg-[var(--lifeflow-muted)] px-1 text-center text-[12px] font-medium tabular-nums text-[var(--lifeflow-text-primary)] transition-colors focus:border-[var(--lifeflow-primary)] focus-visible:outline-2 focus-visible:outline-[var(--lifeflow-ring)] focus-visible:outline-offset-1 motion-reduce:transition-none">
+            </div>
+            <!-- 槽 2 午睡（锁定） -->
+            <div class="flex items-center gap-2 border-t border-[var(--lifeflow-border-light)] px-4 py-2.5">
+              <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[rgba(88,86,214,0.14)] text-[rgba(88,86,214,1)]"><i data-lucide="moon" class="h-3.5 w-3.5"></i></span>
+              <input value="午睡" aria-label="时段名称" class="min-w-0 flex-1 bg-transparent outline-none text-[13px] font-medium truncate text-[var(--lifeflow-text-primary)]" />
+              <input type="time" value="13:00" aria-label="午睡 开始时间" class="h-8 w-[74px] shrink-0 rounded-[10px] border border-[var(--lifeflow-border-light)] bg-[var(--lifeflow-muted)] px-1 text-center text-[12px] font-medium tabular-nums text-[var(--lifeflow-text-primary)] transition-colors focus:border-[var(--lifeflow-primary)] focus-visible:outline-2 focus-visible:outline-[var(--lifeflow-ring)] focus-visible:outline-offset-1 motion-reduce:transition-none">
+              <span class="shrink-0 text-[12px] tabular-nums text-[var(--lifeflow-text-tertiary)]">—</span>
+              <input type="time" value="13:30" aria-label="午睡 结束时间" class="h-8 w-[74px] shrink-0 rounded-[10px] border border-[var(--lifeflow-border-light)] bg-[var(--lifeflow-muted)] px-1 text-center text-[12px] font-medium tabular-nums text-[var(--lifeflow-text-primary)] transition-colors focus:border-[var(--lifeflow-primary)] focus-visible:outline-2 focus-visible:outline-[var(--lifeflow-ring)] focus-visible:outline-offset-1 motion-reduce:transition-none">
+            </div>
+          </div>
+
+          <!-- 上午段 · 3 个时段 -->
+          <div class="overflow-hidden rounded-xl bg-[var(--lifeflow-card)] shadow-[var(--lifeflow-shadow-1)]">
+            <div class="flex items-center gap-2.5 px-4 pb-1 pt-3">
+              <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[rgba(245,158,11,0.14)] text-[rgba(245,158,11,1)]"><i data-lucide="sunrise" class="h-4 w-4"></i></span>
+              <h2 class="min-w-0 truncate text-[14px] font-semibold text-[var(--lifeflow-text-primary)]">上午段 · 3 个时段</h2>
+            </div>
+            <!-- 槽 1 起床洗漱 -->
+            <div class="flex items-center gap-2 border-t border-[var(--lifeflow-border-light)] px-4 py-2.5">
+              <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[rgba(255,45,85,0.12)] text-[rgba(255,45,85,1)]"><i data-lucide="clock" class="h-3.5 w-3.5"></i></span>
+              <input value="起床洗漱" aria-label="时段名称" class="min-w-0 flex-1 bg-transparent outline-none text-[13px] font-medium truncate text-[var(--lifeflow-text-primary)]" />
+              <input type="time" value="06:00" aria-label="起床洗漱 开始时间" class="h-8 w-[74px] shrink-0 rounded-[10px] border border-[var(--lifeflow-border-light)] bg-[var(--lifeflow-muted)] px-1 text-center text-[12px] font-medium tabular-nums text-[var(--lifeflow-text-primary)] transition-colors focus:border-[var(--lifeflow-primary)] focus-visible:outline-2 focus-visible:outline-[var(--lifeflow-ring)] focus-visible:outline-offset-1 motion-reduce:transition-none">
+              <span class="shrink-0 text-[12px] tabular-nums text-[var(--lifeflow-text-tertiary)]">—</span>
+              <input type="time" value="07:00" aria-label="起床洗漱 结束时间" class="h-8 w-[74px] shrink-0 rounded-[10px] border border-[var(--lifeflow-border-light)] bg-[var(--lifeflow-muted)] px-1 text-center text-[12px] font-medium tabular-nums text-[var(--lifeflow-text-primary)] transition-colors focus:border-[var(--lifeflow-primary)] focus-visible:outline-2 focus-visible:outline-[var(--lifeflow-ring)] focus-visible:outline-offset-1 motion-reduce:transition-none">
+              <button type="button" aria-label="删除该时段 起床洗漱" class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--lifeflow-muted)] text-[var(--state-error)] transition-colors hover:bg-[var(--state-error-light)] active:opacity-80 focus-visible:outline-2 focus-visible:outline-[var(--lifeflow-ring)] focus-visible:outline-offset-2 motion-reduce:transition-none"><i data-lucide="x" class="h-3.5 w-3.5"></i></button>
+            </div>
+            <!-- 槽 2 晨间训练 -->
+            <div class="flex items-center gap-2 border-t border-[var(--lifeflow-border-light)] px-4 py-2.5">
+              <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[rgba(249,115,22,0.14)] text-[rgba(249,115,22,1)]"><i data-lucide="dumbbell" class="h-3.5 w-3.5"></i></span>
+              <input value="晨间训练" aria-label="时段名称" class="min-w-0 flex-1 bg-transparent outline-none text-[13px] font-medium truncate text-[var(--lifeflow-text-primary)]" />
+              <input type="time" value="07:00" aria-label="晨间训练 开始时间" class="h-8 w-[74px] shrink-0 rounded-[10px] border border-[var(--lifeflow-border-light)] bg-[var(--lifeflow-muted)] px-1 text-center text-[12px] font-medium tabular-nums text-[var(--lifeflow-text-primary)] transition-colors focus:border-[var(--lifeflow-primary)] focus-visible:outline-2 focus-visible:outline-[var(--lifeflow-ring)] focus-visible:outline-offset-1 motion-reduce:transition-none">
+              <span class="shrink-0 text-[12px] tabular-nums text-[var(--lifeflow-text-tertiary)]">—</span>
+              <input type="time" value="08:00" aria-label="晨间训练 结束时间" class="h-8 w-[74px] shrink-0 rounded-[10px] border border-[var(--lifeflow-border-light)] bg-[var(--lifeflow-muted)] px-1 text-center text-[12px] font-medium tabular-nums text-[var(--lifeflow-text-primary)] transition-colors focus:border-[var(--lifeflow-primary)] focus-visible:outline-2 focus-visible:outline-[var(--lifeflow-ring)] focus-visible:outline-offset-1 motion-reduce:transition-none">
+              <button type="button" aria-label="删除该时段 晨间训练" class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--lifeflow-muted)] text-[var(--state-error)] transition-colors hover:bg-[var(--state-error-light)] active:opacity-80 focus-visible:outline-2 focus-visible:outline-[var(--lifeflow-ring)] focus-visible:outline-offset-2 motion-reduce:transition-none"><i data-lucide="x" class="h-3.5 w-3.5"></i></button>
+            </div>
+            <!-- 槽 3 主目标学习 -->
+            <div class="flex items-center gap-2 border-t border-[var(--lifeflow-border-light)] px-4 py-2.5">
+              <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[rgba(99,102,241,0.14)] text-[rgba(99,102,241,1)]"><i data-lucide="target" class="h-3.5 w-3.5"></i></span>
+              <input value="主目标学习" aria-label="时段名称" class="min-w-0 flex-1 bg-transparent outline-none text-[13px] font-medium truncate text-[var(--lifeflow-text-primary)]" />
+              <input type="time" value="08:00" aria-label="主目标学习 开始时间" class="h-8 w-[74px] shrink-0 rounded-[10px] border border-[var(--lifeflow-border-light)] bg-[var(--lifeflow-muted)] px-1 text-center text-[12px] font-medium tabular-nums text-[var(--lifeflow-text-primary)] transition-colors focus:border-[var(--lifeflow-primary)] focus-visible:outline-2 focus-visible:outline-[var(--lifeflow-ring)] focus-visible:outline-offset-1 motion-reduce:transition-none">
+              <span class="shrink-0 text-[12px] tabular-nums text-[var(--lifeflow-text-tertiary)]">—</span>
+              <input type="time" value="10:00" aria-label="主目标学习 结束时间" class="h-8 w-[74px] shrink-0 rounded-[10px] border border-[var(--lifeflow-border-light)] bg-[var(--lifeflow-muted)] px-1 text-center text-[12px] font-medium tabular-nums text-[var(--lifeflow-text-primary)] transition-colors focus:border-[var(--lifeflow-primary)] focus-visible:outline-2 focus-visible:outline-[var(--lifeflow-ring)] focus-visible:outline-offset-1 motion-reduce:transition-none">
+              <button type="button" aria-label="删除该时段 主目标学习" class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--lifeflow-muted)] text-[var(--state-error)] transition-colors hover:bg-[var(--state-error-light)] active:opacity-80 focus-visible:outline-2 focus-visible:outline-[var(--lifeflow-ring)] focus-visible:outline-offset-2 motion-reduce:transition-none"><i data-lucide="x" class="h-3.5 w-3.5"></i></button>
+            </div>
+            <!-- ＋ 次数胶囊 -->
+            <div class="flex flex-wrap items-center gap-1.5 border-t border-[var(--lifeflow-border-light)] px-4 py-2.5">
+              <button type="button" aria-label="添加一次 学习" class="flex h-7 shrink-0 items-center gap-1 rounded-full bg-[var(--lifeflow-primary-light)] px-3 text-[12px] font-medium text-[var(--lifeflow-primary)] transition-colors hover:bg-[rgba(0,122,255,0.2)] active:opacity-90 focus-visible:outline-2 focus-visible:outline-[var(--lifeflow-ring)] focus-visible:outline-offset-2 motion-reduce:transition-none"><i data-lucide="plus" class="h-3.5 w-3.5"></i><i data-lucide="target" class="h-3.5 w-3.5"></i><span>学习 +1 次</span></button>
+              <button type="button" aria-label="添加一次 训练" class="flex h-7 shrink-0 items-center gap-1 rounded-full bg-[var(--lifeflow-primary-light)] px-3 text-[12px] font-medium text-[var(--lifeflow-primary)] transition-colors hover:bg-[rgba(0,122,255,0.2)] active:opacity-90 focus-visible:outline-2 focus-visible:outline-[var(--lifeflow-ring)] focus-visible:outline-offset-2 motion-reduce:transition-none"><i data-lucide="plus" class="h-3.5 w-3.5"></i><i data-lucide="dumbbell" class="h-3.5 w-3.5"></i><span>训练 +1 次</span></button>
+              <button type="button" aria-label="添加一次 作息" class="flex h-7 shrink-0 items-center gap-1 rounded-full bg-[var(--lifeflow-primary-light)] px-3 text-[12px] font-medium text-[var(--lifeflow-primary)] transition-colors hover:bg-[rgba(0,122,255,0.2)] active:opacity-90 focus-visible:outline-2 focus-visible:outline-[var(--lifeflow-ring)] focus-visible:outline-offset-2 motion-reduce:transition-none"><i data-lucide="plus" class="h-3.5 w-3.5"></i><i data-lucide="clock" class="h-3.5 w-3.5"></i><span>作息 +1 次</span></button>
+            </div>
+          </div>
+
+          <!-- 中午段 · 1 个时段 -->
+          <div class="overflow-hidden rounded-xl bg-[var(--lifeflow-card)] shadow-[var(--lifeflow-shadow-1)]">
+            <div class="flex items-center gap-2.5 px-4 pb-1 pt-3">
+              <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[rgba(16,185,129,0.14)] text-[rgba(16,185,129,1)]"><i data-lucide="coffee" class="h-4 w-4"></i></span>
+              <h2 class="min-w-0 truncate text-[14px] font-semibold text-[var(--lifeflow-text-primary)]">中午段 · 1 个时段</h2>
+            </div>
+            <!-- 槽 1 午餐 -->
+            <div class="flex items-center gap-2 border-t border-[var(--lifeflow-border-light)] px-4 py-2.5">
+              <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[rgba(255,149,0,0.14)] text-[rgba(255,149,0,1)]"><i data-lucide="utensils" class="h-3.5 w-3.5"></i></span>
+              <input value="午餐" aria-label="时段名称" class="min-w-0 flex-1 bg-transparent outline-none text-[13px] font-medium truncate text-[var(--lifeflow-text-primary)]" />
+              <input type="time" value="12:00" aria-label="午餐 开始时间" class="h-8 w-[74px] shrink-0 rounded-[10px] border border-[var(--lifeflow-border-light)] bg-[var(--lifeflow-muted)] px-1 text-center text-[12px] font-medium tabular-nums text-[var(--lifeflow-text-primary)] transition-colors focus:border-[var(--lifeflow-primary)] focus-visible:outline-2 focus-visible:outline-[var(--lifeflow-ring)] focus-visible:outline-offset-1 motion-reduce:transition-none">
+              <span class="shrink-0 text-[12px] tabular-nums text-[var(--lifeflow-text-tertiary)]">—</span>
+              <input type="time" value="12:30" aria-label="午餐 结束时间" class="h-8 w-[74px] shrink-0 rounded-[10px] border border-[var(--lifeflow-border-light)] bg-[var(--lifeflow-muted)] px-1 text-center text-[12px] font-medium tabular-nums text-[var(--lifeflow-text-primary)] transition-colors focus:border-[var(--lifeflow-primary)] focus-visible:outline-2 focus-visible:outline-[var(--lifeflow-ring)] focus-visible:outline-offset-1 motion-reduce:transition-none">
+              <button type="button" aria-label="删除该时段 午餐" class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--lifeflow-muted)] text-[var(--state-error)] transition-colors hover:bg-[var(--state-error-light)] active:opacity-80 focus-visible:outline-2 focus-visible:outline-[var(--lifeflow-ring)] focus-visible:outline-offset-2 motion-reduce:transition-none"><i data-lucide="x" class="h-3.5 w-3.5"></i></button>
+            </div>
+            <!-- ＋ 次数胶囊 -->
+            <div class="flex flex-wrap items-center gap-1.5 border-t border-[var(--lifeflow-border-light)] px-4 py-2.5">
+              <button type="button" aria-label="添加一次 饮食" class="flex h-7 shrink-0 items-center gap-1 rounded-full bg-[var(--lifeflow-primary-light)] px-3 text-[12px] font-medium text-[var(--lifeflow-primary)] transition-colors hover:bg-[rgba(0,122,255,0.2)] active:opacity-90 focus-visible:outline-2 focus-visible:outline-[var(--lifeflow-ring)] focus-visible:outline-offset-2 motion-reduce:transition-none"><i data-lucide="plus" class="h-3.5 w-3.5"></i><i data-lucide="utensils" class="h-3.5 w-3.5"></i><span>饮食 +1 次</span></button>
+            </div>
+          </div>
+
+          <!-- 下午段 · 2 个时段 -->
+          <div class="overflow-hidden rounded-xl bg-[var(--lifeflow-card)] shadow-[var(--lifeflow-shadow-1)]">
+            <div class="flex items-center gap-2.5 px-4 pb-1 pt-3">
+              <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[rgba(99,102,241,0.14)] text-[rgba(99,102,241,1)]"><i data-lucide="cloud-sun" class="h-4 w-4"></i></span>
+              <h2 class="min-w-0 truncate text-[14px] font-semibold text-[var(--lifeflow-text-primary)]">下午段 · 2 个时段</h2>
+            </div>
+            <!-- 槽 1 次目标学习 -->
+            <div class="flex items-center gap-2 border-t border-[var(--lifeflow-border-light)] px-4 py-2.5">
+              <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[rgba(99,102,241,0.14)] text-[rgba(99,102,241,1)]"><i data-lucide="target" class="h-3.5 w-3.5"></i></span>
+              <input value="次目标学习" aria-label="时段名称" class="min-w-0 flex-1 bg-transparent outline-none text-[13px] font-medium truncate text-[var(--lifeflow-text-primary)]" />
+              <input type="time" value="14:00" aria-label="次目标学习 开始时间" class="h-8 w-[74px] shrink-0 rounded-[10px] border border-[var(--lifeflow-border-light)] bg-[var(--lifeflow-muted)] px-1 text-center text-[12px] font-medium tabular-nums text-[var(--lifeflow-text-primary)] transition-colors focus:border-[var(--lifeflow-primary)] focus-visible:outline-2 focus-visible:outline-[var(--lifeflow-ring)] focus-visible:outline-offset-1 motion-reduce:transition-none">
+              <span class="shrink-0 text-[12px] tabular-nums text-[var(--lifeflow-text-tertiary)]">—</span>
+              <input type="time" value="17:00" aria-label="次目标学习 结束时间" class="h-8 w-[74px] shrink-0 rounded-[10px] border border-[var(--lifeflow-border-light)] bg-[var(--lifeflow-muted)] px-1 text-center text-[12px] font-medium tabular-nums text-[var(--lifeflow-text-primary)] transition-colors focus:border-[var(--lifeflow-primary)] focus-visible:outline-2 focus-visible:outline-[var(--lifeflow-ring)] focus-visible:outline-offset-1 motion-reduce:transition-none">
+              <button type="button" aria-label="删除该时段 次目标学习" class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--lifeflow-muted)] text-[var(--state-error)] transition-colors hover:bg-[var(--state-error-light)] active:opacity-80 focus-visible:outline-2 focus-visible:outline-[var(--lifeflow-ring)] focus-visible:outline-offset-2 motion-reduce:transition-none"><i data-lucide="x" class="h-3.5 w-3.5"></i></button>
+            </div>
+            <!-- 槽 2 下午活动 -->
+            <div class="flex items-center gap-2 border-t border-[var(--lifeflow-border-light)] px-4 py-2.5">
+              <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[rgba(142,142,147,0.16)] text-[rgba(142,142,147,1)]"><i data-lucide="coffee" class="h-3.5 w-3.5"></i></span>
+              <input value="下午活动" aria-label="时段名称" class="min-w-0 flex-1 bg-transparent outline-none text-[13px] font-medium truncate text-[var(--lifeflow-text-primary)]" />
+              <input type="time" value="17:00" aria-label="下午活动 开始时间" class="h-8 w-[74px] shrink-0 rounded-[10px] border border-[var(--lifeflow-border-light)] bg-[var(--lifeflow-muted)] px-1 text-center text-[12px] font-medium tabular-nums text-[var(--lifeflow-text-primary)] transition-colors focus:border-[var(--lifeflow-primary)] focus-visible:outline-2 focus-visible:outline-[var(--lifeflow-ring)] focus-visible:outline-offset-1 motion-reduce:transition-none">
+              <span class="shrink-0 text-[12px] tabular-nums text-[var(--lifeflow-text-tertiary)]">—</span>
+              <input type="time" value="18:00" aria-label="下午活动 结束时间" class="h-8 w-[74px] shrink-0 rounded-[10px] border border-[var(--lifeflow-border-light)] bg-[var(--lifeflow-muted)] px-1 text-center text-[12px] font-medium tabular-nums text-[var(--lifeflow-text-primary)] transition-colors focus:border-[var(--lifeflow-primary)] focus-visible:outline-2 focus-visible:outline-[var(--lifeflow-ring)] focus-visible:outline-offset-1 motion-reduce:transition-none">
+              <button type="button" aria-label="删除该时段 下午活动" class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--lifeflow-muted)] text-[var(--state-error)] transition-colors hover:bg-[var(--state-error-light)] active:opacity-80 focus-visible:outline-2 focus-visible:outline-[var(--lifeflow-ring)] focus-visible:outline-offset-2 motion-reduce:transition-none"><i data-lucide="x" class="h-3.5 w-3.5"></i></button>
+            </div>
+            <!-- ＋ 次数胶囊 -->
+            <div class="flex flex-wrap items-center gap-1.5 border-t border-[var(--lifeflow-border-light)] px-4 py-2.5">
+              <button type="button" aria-label="添加一次 学习" class="flex h-7 shrink-0 items-center gap-1 rounded-full bg-[var(--lifeflow-primary-light)] px-3 text-[12px] font-medium text-[var(--lifeflow-primary)] transition-colors hover:bg-[rgba(0,122,255,0.2)] active:opacity-90 focus-visible:outline-2 focus-visible:outline-[var(--lifeflow-ring)] focus-visible:outline-offset-2 motion-reduce:transition-none"><i data-lucide="plus" class="h-3.5 w-3.5"></i><i data-lucide="target" class="h-3.5 w-3.5"></i><span>学习 +1 次</span></button>
+              <button type="button" aria-label="添加一次 留白" class="flex h-7 shrink-0 items-center gap-1 rounded-full bg-[var(--lifeflow-primary-light)] px-3 text-[12px] font-medium text-[var(--lifeflow-primary)] transition-colors hover:bg-[rgba(0,122,255,0.2)] active:opacity-90 focus-visible:outline-2 focus-visible:outline-[var(--lifeflow-ring)] focus-visible:outline-offset-2 motion-reduce:transition-none"><i data-lucide="plus" class="h-3.5 w-3.5"></i><i data-lucide="coffee" class="h-3.5 w-3.5"></i><span>留白 +1 次</span></button>
+            </div>
+          </div>
+
+          <!-- 晚上段 · 4 个时段 -->
+          <div class="overflow-hidden rounded-xl bg-[var(--lifeflow-card)] shadow-[var(--lifeflow-shadow-1)]">
+            <div class="flex items-center gap-2.5 px-4 pb-1 pt-3">
+              <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[rgba(139,92,246,0.14)] text-[rgba(139,92,246,1)]"><i data-lucide="moon-star" class="h-4 w-4"></i></span>
+              <h2 class="min-w-0 truncate text-[14px] font-semibold text-[var(--lifeflow-text-primary)]">晚上段 · 4 个时段</h2>
+            </div>
+            <!-- 槽 1 晚餐 -->
+            <div class="flex items-center gap-2 border-t border-[var(--lifeflow-border-light)] px-4 py-2.5">
+              <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[rgba(255,149,0,0.14)] text-[rgba(255,149,0,1)]"><i data-lucide="utensils" class="h-3.5 w-3.5"></i></span>
+              <input value="晚餐" aria-label="时段名称" class="min-w-0 flex-1 bg-transparent outline-none text-[13px] font-medium truncate text-[var(--lifeflow-text-primary)]" />
+              <input type="time" value="18:00" aria-label="晚餐 开始时间" class="h-8 w-[74px] shrink-0 rounded-[10px] border border-[var(--lifeflow-border-light)] bg-[var(--lifeflow-muted)] px-1 text-center text-[12px] font-medium tabular-nums text-[var(--lifeflow-text-primary)] transition-colors focus:border-[var(--lifeflow-primary)] focus-visible:outline-2 focus-visible:outline-[var(--lifeflow-ring)] focus-visible:outline-offset-1 motion-reduce:transition-none">
+              <span class="shrink-0 text-[12px] tabular-nums text-[var(--lifeflow-text-tertiary)]">—</span>
+              <input type="time" value="19:00" aria-label="晚餐 结束时间" class="h-8 w-[74px] shrink-0 rounded-[10px] border border-[var(--lifeflow-border-light)] bg-[var(--lifeflow-muted)] px-1 text-center text-[12px] font-medium tabular-nums text-[var(--lifeflow-text-primary)] transition-colors focus:border-[var(--lifeflow-primary)] focus-visible:outline-2 focus-visible:outline-[var(--lifeflow-ring)] focus-visible:outline-offset-1 motion-reduce:transition-none">
+              <button type="button" aria-label="删除该时段 晚餐" class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--lifeflow-muted)] text-[var(--state-error)] transition-colors hover:bg-[var(--state-error-light)] active:opacity-80 focus-visible:outline-2 focus-visible:outline-[var(--lifeflow-ring)] focus-visible:outline-offset-2 motion-reduce:transition-none"><i data-lucide="x" class="h-3.5 w-3.5"></i></button>
+            </div>
+            <!-- 槽 2 晚间复盘 -->
+            <div class="flex items-center gap-2 border-t border-[var(--lifeflow-border-light)] px-4 py-2.5">
+              <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[rgba(99,102,241,0.14)] text-[rgba(99,102,241,1)]"><i data-lucide="target" class="h-3.5 w-3.5"></i></span>
+              <input value="晚间复盘" aria-label="时段名称" class="min-w-0 flex-1 bg-transparent outline-none text-[13px] font-medium truncate text-[var(--lifeflow-text-primary)]" />
+              <input type="time" value="19:00" aria-label="晚间复盘 开始时间" class="h-8 w-[74px] shrink-0 rounded-[10px] border border-[var(--lifeflow-border-light)] bg-[var(--lifeflow-muted)] px-1 text-center text-[12px] font-medium tabular-nums text-[var(--lifeflow-text-primary)] transition-colors focus:border-[var(--lifeflow-primary)] focus-visible:outline-2 focus-visible:outline-[var(--lifeflow-ring)] focus-visible:outline-offset-1 motion-reduce:transition-none">
+              <span class="shrink-0 text-[12px] tabular-nums text-[var(--lifeflow-text-tertiary)]">—</span>
+              <input type="time" value="20:30" aria-label="晚间复盘 结束时间" class="h-8 w-[74px] shrink-0 rounded-[10px] border border-[var(--lifeflow-border-light)] bg-[var(--lifeflow-muted)] px-1 text-center text-[12px] font-medium tabular-nums text-[var(--lifeflow-text-primary)] transition-colors focus:border-[var(--lifeflow-primary)] focus-visible:outline-2 focus-visible:outline-[var(--lifeflow-ring)] focus-visible:outline-offset-1 motion-reduce:transition-none">
+              <button type="button" aria-label="删除该时段 晚间复盘" class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--lifeflow-muted)] text-[var(--state-error)] transition-colors hover:bg-[var(--state-error-light)] active:opacity-80 focus-visible:outline-2 focus-visible:outline-[var(--lifeflow-ring)] focus-visible:outline-offset-2 motion-reduce:transition-none"><i data-lucide="x" class="h-3.5 w-3.5"></i></button>
+            </div>
+            <!-- 槽 3 拉伸养生 -->
+            <div class="flex items-center gap-2 border-t border-[var(--lifeflow-border-light)] px-4 py-2.5">
+              <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[rgba(16,185,129,0.14)] text-[rgba(16,185,129,1)]"><i data-lucide="person-standing" class="h-3.5 w-3.5"></i></span>
+              <input value="拉伸养生" aria-label="时段名称" class="min-w-0 flex-1 bg-transparent outline-none text-[13px] font-medium truncate text-[var(--lifeflow-text-primary)]" />
+              <input type="time" value="20:30" aria-label="拉伸养生 开始时间" class="h-8 w-[74px] shrink-0 rounded-[10px] border border-[var(--lifeflow-border-light)] bg-[var(--lifeflow-muted)] px-1 text-center text-[12px] font-medium tabular-nums text-[var(--lifeflow-text-primary)] transition-colors focus:border-[var(--lifeflow-primary)] focus-visible:outline-2 focus-visible:outline-[var(--lifeflow-ring)] focus-visible:outline-offset-1 motion-reduce:transition-none">
+              <span class="shrink-0 text-[12px] tabular-nums text-[var(--lifeflow-text-tertiary)]">—</span>
+              <input type="time" value="21:00" aria-label="拉伸养生 结束时间" class="h-8 w-[74px] shrink-0 rounded-[10px] border border-[var(--lifeflow-border-light)] bg-[var(--lifeflow-muted)] px-1 text-center text-[12px] font-medium tabular-nums text-[var(--lifeflow-text-primary)] transition-colors focus:border-[var(--lifeflow-primary)] focus-visible:outline-2 focus-visible:outline-[var(--lifeflow-ring)] focus-visible:outline-offset-1 motion-reduce:transition-none">
+              <button type="button" aria-label="删除该时段 拉伸养生" class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--lifeflow-muted)] text-[var(--state-error)] transition-colors hover:bg-[var(--state-error-light)] active:opacity-80 focus-visible:outline-2 focus-visible:outline-[var(--lifeflow-ring)] focus-visible:outline-offset-2 motion-reduce:transition-none"><i data-lucide="x" class="h-3.5 w-3.5"></i></button>
+            </div>
+            <!-- 槽 4 自由时间 -->
+            <div class="flex items-center gap-2 border-t border-[var(--lifeflow-border-light)] px-4 py-2.5">
+              <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[rgba(142,142,147,0.16)] text-[rgba(142,142,147,1)]"><i data-lucide="coffee" class="h-3.5 w-3.5"></i></span>
+              <input value="自由时间" aria-label="时段名称" class="min-w-0 flex-1 bg-transparent outline-none text-[13px] font-medium truncate text-[var(--lifeflow-text-primary)]" />
+              <input type="time" value="21:00" aria-label="自由时间 开始时间" class="h-8 w-[74px] shrink-0 rounded-[10px] border border-[var(--lifeflow-border-light)] bg-[var(--lifeflow-muted)] px-1 text-center text-[12px] font-medium tabular-nums text-[var(--lifeflow-text-primary)] transition-colors focus:border-[var(--lifeflow-primary)] focus-visible:outline-2 focus-visible:outline-[var(--lifeflow-ring)] focus-visible:outline-offset-1 motion-reduce:transition-none">
+              <span class="shrink-0 text-[12px] tabular-nums text-[var(--lifeflow-text-tertiary)]">—</span>
+              <input type="time" value="23:00" aria-label="自由时间 结束时间" class="h-8 w-[74px] shrink-0 rounded-[10px] border border-[var(--lifeflow-border-light)] bg-[var(--lifeflow-muted)] px-1 text-center text-[12px] font-medium tabular-nums text-[var(--lifeflow-text-primary)] transition-colors focus:border-[var(--lifeflow-primary)] focus-visible:outline-2 focus-visible:outline-[var(--lifeflow-ring)] focus-visible:outline-offset-1 motion-reduce:transition-none">
+              <button type="button" aria-label="删除该时段 自由时间" class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--lifeflow-muted)] text-[var(--state-error)] transition-colors hover:bg-[var(--state-error-light)] active:opacity-80 focus-visible:outline-2 focus-visible:outline-[var(--lifeflow-ring)] focus-visible:outline-offset-2 motion-reduce:transition-none"><i data-lucide="x" class="h-3.5 w-3.5"></i></button>
+            </div>
+            <!-- ＋ 次数胶囊 -->
+            <div class="flex flex-wrap items-center gap-1.5 border-t border-[var(--lifeflow-border-light)] px-4 py-2.5">
+              <button type="button" aria-label="添加一次 饮食" class="flex h-7 shrink-0 items-center gap-1 rounded-full bg-[var(--lifeflow-primary-light)] px-3 text-[12px] font-medium text-[var(--lifeflow-primary)] transition-colors hover:bg-[rgba(0,122,255,0.2)] active:opacity-90 focus-visible:outline-2 focus-visible:outline-[var(--lifeflow-ring)] focus-visible:outline-offset-2 motion-reduce:transition-none"><i data-lucide="plus" class="h-3.5 w-3.5"></i><i data-lucide="utensils" class="h-3.5 w-3.5"></i><span>饮食 +1 次</span></button>
+              <button type="button" aria-label="添加一次 学习" class="flex h-7 shrink-0 items-center gap-1 rounded-full bg-[var(--lifeflow-primary-light)] px-3 text-[12px] font-medium text-[var(--lifeflow-primary)] transition-colors hover:bg-[rgba(0,122,255,0.2)] active:opacity-90 focus-visible:outline-2 focus-visible:outline-[var(--lifeflow-ring)] focus-visible:outline-offset-2 motion-reduce:transition-none"><i data-lucide="plus" class="h-3.5 w-3.5"></i><i data-lucide="target" class="h-3.5 w-3.5"></i><span>学习 +1 次</span></button>
+              <button type="button" aria-label="添加一次 拉伸" class="flex h-7 shrink-0 items-center gap-1 rounded-full bg-[var(--lifeflow-primary-light)] px-3 text-[12px] font-medium text-[var(--lifeflow-primary)] transition-colors hover:bg-[rgba(0,122,255,0.2)] active:opacity-90 focus-visible:outline-2 focus-visible:outline-[var(--lifeflow-ring)] focus-visible:outline-offset-2 motion-reduce:transition-none"><i data-lucide="plus" class="h-3.5 w-3.5"></i><i data-lucide="person-standing" class="h-3.5 w-3.5"></i><span>拉伸 +1 次</span></button>
+              <button type="button" aria-label="添加一次 留白" class="flex h-7 shrink-0 items-center gap-1 rounded-full bg-[var(--lifeflow-primary-light)] px-3 text-[12px] font-medium text-[var(--lifeflow-primary)] transition-colors hover:bg-[rgba(0,122,255,0.2)] active:opacity-90 focus-visible:outline-2 focus-visible:outline-[var(--lifeflow-ring)] focus-visible:outline-offset-2 motion-reduce:transition-none"><i data-lucide="plus" class="h-3.5 w-3.5"></i><i data-lucide="coffee" class="h-3.5 w-3.5"></i><span>留白 +1 次</span></button>
+            </div>
+          </div>
+        </section>
+
+        <!-- 5. 操作条 -->
+        <div class="flex items-center gap-3 pt-4">
+          <button type="button" data-dom-id="step2-back" class="h-11 shrink-0 rounded-full border border-[var(--lifeflow-border-light)] bg-[var(--lifeflow-muted)] px-4 text-[14px] font-medium text-[var(--lifeflow-text-secondary)] transition-colors hover:bg-[rgba(60,60,67,0.1)] active:opacity-90 focus-visible:outline-2 focus-visible:outline-[var(--lifeflow-ring)] focus-visible:outline-offset-2 motion-reduce:transition-none">上一步</button>
+          <button type="button" data-dom-id="step2-save" class="h-11 min-w-0 flex-1 rounded-full bg-[var(--lifeflow-primary)] px-3 text-[15px] font-semibold text-[var(--lifeflow-primary-foreground)] transition-colors hover:bg-[var(--lifeflow-primary-hover)] active:opacity-90 focus-visible:outline-2 focus-visible:outline-[var(--lifeflow-ring)] focus-visible:outline-offset-2 motion-reduce:transition-none">保存并生成时间轴</button>
+          <button type="button" class="shrink-0 rounded-full px-1 text-[14px] text-[var(--lifeflow-text-secondary)] transition-colors hover:text-[var(--lifeflow-text-primary)] active:opacity-80 focus-visible:outline-2 focus-visible:outline-[var(--lifeflow-ring)] focus-visible:outline-offset-2 motion-reduce:transition-none">取消</button>
+        </div>
+      </div>
+
+      <!-- 6. 底部导航 -->
+      <nav data-mobile-nav="global" class="lf-tabbar-glass w-full max-w-md mx-auto h-[64px]"><div class="grid grid-cols-4 h-full"><a href="#" data-dom-id="nav-home" data-nav-key="home" data-active="false" class="min-w-0 flex flex-col items-center justify-center gap-0.5 h-full text-[var(--lifeflow-text-tertiary)]"><i data-lucide="home" class="w-5 h-5 shrink-0"></i><span class="text-[11px] leading-none whitespace-nowrap max-w-full truncate">首页</span></a><a href="#" data-dom-id="nav-goals" data-nav-key="goals" data-active="false" class="min-w-0 flex flex-col items-center justify-center gap-0.5 h-full text-[var(--lifeflow-text-tertiary)]"><i data-lucide="target" class="w-5 h-5 shrink-0"></i><span class="text-[11px] leading-none whitespace-nowrap max-w-full truncate">目标</span></a><a href="#" data-dom-id="nav-schedule" data-nav-key="schedule" data-active="false" class="min-w-0 flex flex-col items-center justify-center gap-0.5 h-full text-[var(--lifeflow-text-tertiary)]"><i data-lucide="calendar-days" class="w-5 h-5 shrink-0"></i><span class="text-[11px] leading-none whitespace-nowrap max-w-full truncate">日程</span></a><a href="#" data-dom-id="nav-ideal" data-nav-key="ideal" data-active="true" class="min-w-0 flex flex-col items-center justify-center gap-0.5 h-full text-[var(--lifeflow-primary)]"><i data-lucide="sun" class="w-5 h-5 shrink-0"></i><span class="text-[11px] leading-none whitespace-nowrap max-w-full truncate font-semibold">理想日</span></a></div></nav>
+    </main>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

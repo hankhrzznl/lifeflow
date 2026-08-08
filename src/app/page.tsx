@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState, useMemo, useCallback } from "react";
 import Link from "next/link";
@@ -361,6 +361,15 @@ export default function HomePage() {
                       {act.tag}
                     </span>
                   )}
+                  <button
+                    type="button"
+                    aria-label={`专注：${act.title}`}
+                    onClick={(e) => { e.stopPropagation(); router.push("/more/focus"); }}
+                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full active:scale-90 transition-transform"
+                    style={{ background: "rgba(139,92,246,0.14)", color: "rgba(139,92,246,1)" }}
+                  >
+                    <Timer className="h-3.5 w-3.5" />
+                  </button>
                 </li>
               );
             })}

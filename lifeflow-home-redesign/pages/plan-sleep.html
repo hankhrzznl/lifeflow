@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>睡眠规划 · 夜间睡眠</title>
+    <style id="theme-vars">
+/* LifeFlow 首页 — 日间浅色 / 夜间深色 双模式 */
+
+/* === LIGHT MODE (日间 · iOS 原生浅色) === */
+:root {
+  /* SURFACE & TEXT */
+  --lifeflow-background: #F2F2F7;
+  --lifeflow-foreground: #1C1C1E;
+  --lifeflow-card: #FFFFFF;
+  --lifeflow-card-foreground: #1C1C1E;
+  --lifeflow-popover: #FFFFFF;
+  --lifeflow-popover-foreground: #1C1C1E;
+  --lifeflow-muted: #F2F2F7;
+  --lifeflow-muted-foreground: #6C6C70;
+  --lifeflow-border: rgba(60,60,67,0.29);
+  --lifeflow-border-light: rgba(60,60,67,0.12);
+  --lifeflow-border-dashed: rgba(60,60,67,0.2);
+  --lifeflow-input: rgba(60,60,67,0.12);
+  --lifeflow-ring: #007AFF;
+
+  /* BRAND */
+  --lifeflow-primary: #007AFF;
+  --lifeflow-primary-hover: #0066D6;
+  --lifeflow-primary-light: rgba(0,122,255,0.12);
+  --lifeflow-primary-foreground: #FFFFFF;
+
+  /* PROGRESS */
+  --lifeflow-knit-thread: #007AFF;
+  --lifeflow-knit-thread-completed: #34C759;
+  --lifeflow-knit-thread-partial: #FF9500;
+  --lifeflow-knit-bg: #E9E9EB;
+  --lifeflow-knit-grid: rgba(60,60,67,0.1);
+
+  /* STATE */
+  --state-success: #34C759;
+  --state-success-light: rgba(52,199,89,0.14);
+  --state-warning: #FF3B30;
+  --state-warning-light: rgba(255,59,48,0.12);
+  --state-error: #FF3B30;
+  --state-error-light: rgba(255,59,48,0.12);
+  --state-info: #007AFF;
+  --state-info-light: rgba(0,122,255,0.12);
+
+  /* TEXT */
+  --lifeflow-text-primary: #1C1C1E;
+  --lifeflow-text-secondary: #6C6C70;
+  --lifeflow-text-tertiary: #8E8E93;
+  --lifeflow-text-inverse: #FFFFFF;
+
+  /* SHADOWS */
+  --lifeflow-shadow-1: 0 0 0 1px rgba(0,0,0,0.02), 0 1px 2px rgba(0,0,0,0.03);
+  --lifeflow-shadow-2: 0 2px 8px rgba(0,0,0,0.05);
+  --lifeflow-shadow-3: 0 8px 24px rgba(0,0,0,0.12);
+  --lifeflow-shadow-knit: none;
+
+  /* TAB BAR (light glass) */
+  --lifeflow-tabbar-bg: rgba(255,255,255,0.72);
+  --lifeflow-tabbar-blur: 20px;
+  --lifeflow-tabbar-blur-saturate: 180%;
+
+  /* AI BALL (deep blue) */
+  --lifeflow-ai-ball: #2E5FA3;
+
+  /* TYPOGRAPHY */
+  --lifeflow-font-display: -apple-system, BlinkMacSystemFont, "SF Pro SC", "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif;
+  --lifeflow-font-body: -apple-system, BlinkMacSystemFont, "SF Pro SC", "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif;
+  --lifeflow-font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+
+  --lifeflow-font-size-display: 34px;
+  --lifeflow-font-size-h1: 28px;
+  --lifeflow-font-size-h2: 20px;
+  --lifeflow-font-size-h3: 17px;
+  --lifeflow-font-size-body: 15px;
+  --lifeflow-font-size-sm: 13px;
+  --lifeflow-font-size-caption: 12px;
+
+  /* SPACING */
+  --lifeflow-space-xs: 4px;
+  --lifeflow-space-sm: 8px;
+  --lifeflow-space-md: 12px;
+  --lifeflow-space-lg: 16px;
+  --lifeflow-space-xl: 24px;
+  --lifeflow-space-2xl: 32px;
+
+  /* RADIUS */
+  --lifeflow-radius-sm: 6px;
+  --lifeflow-radius-md: 10px;
+  --lifeflow-radius-lg: 12px;
+  --lifeflow-radius-xl: 16px;
+  --lifeflow-radius-full: 9999px;
+
+  /* PORTABLE ALIASES */
+  --background: var(--lifeflow-background);
+  --foreground: var(--lifeflow-foreground);
+  --card: var(--lifeflow-card);
+  --card-foreground: var(--lifeflow-card-foreground);
+  --popover: var(--lifeflow-popover);
+  --popover-foreground: var(--lifeflow-popover-foreground);
+  --primary: var(--lifeflow-primary);
+  --primary-foreground: var(--lifeflow-primary-foreground);
+  --muted: var(--lifeflow-muted);
+  --muted-foreground: var(--lifeflow-muted-foreground);
+  --border: var(--lifeflow-border);
+  --input: var(--lifeflow-input);
+  --ring: var(--lifeflow-ring);
+  --radius-sm: var(--lifeflow-radius-sm);
+  --radius-md: var(--lifeflow-radius-md);
+  --radius-lg: var(--lifeflow-radius-lg);
+}
+
+/* === DARK MODE (夜间 · 深色沉浸式 Apple Fitness) === */
+.dark {
+  /* SURFACE & TEXT */
+  --lifeflow-background: #0B0F17;
+  --lifeflow-foreground: #F2F5FA;
+  --lifeflow-card: #141B28;
+  --lifeflow-card-foreground: #F2F5FA;
+  --lifeflow-popover: #1A2232;
+  --lifeflow-popover-foreground: #F2F5FA;
+  --lifeflow-muted: #1C2432;
+  --lifeflow-muted-foreground: rgba(242,245,250,0.6);
+  --lifeflow-border: rgba(255,255,255,0.09);
+  --lifeflow-border-light: rgba(255,255,255,0.06);
+  --lifeflow-border-dashed: rgba(255,255,255,0.18);
+  --lifeflow-input: rgba(255,255,255,0.12);
+  --lifeflow-ring: #0A84FF;
+
+  /* BRAND */
+  --lifeflow-primary: #0A84FF;
+  --lifeflow-primary-hover: #3D9BFF;
+  --lifeflow-primary-light: rgba(10,132,255,0.18);
+  --lifeflow-primary-foreground: #FFFFFF;
+
+  /* PROGRESS */
+  --lifeflow-knit-thread: #0A84FF;
+  --lifeflow-knit-thread-completed: #30D158;
+  --lifeflow-knit-thread-partial: #FF9F0A;
+  --lifeflow-knit-bg: rgba(255,255,255,0.1);
+  --lifeflow-knit-grid: rgba(255,255,255,0.08);
+
+  /* STATE */
+  --state-success: #30D158;
+  --state-success-light: rgba(48,209,88,0.16);
+  --state-warning: #FF453A;
+  --state-warning-light: rgba(255,69,58,0.16);
+  --state-error: #FF453A;
+  --state-error-light: rgba(255,69,58,0.16);
+  --state-info: #64D2FF;
+  --state-info-light: rgba(100,210,255,0.14);
+
+  /* TEXT */
+  --lifeflow-text-primary: #F2F5FA;
+  --lifeflow-text-secondary: rgba(242,245,250,0.72);
+  --lifeflow-text-tertiary: rgba(242,245,250,0.45);
+  --lifeflow-text-inverse: #FFFFFF;
+
+  /* SHADOWS */
+  --lifeflow-shadow-1: 0 1px 2px rgba(0,0,0,0.3);
+  --lifeflow-shadow-2: 0 4px 12px rgba(0,0,0,0.4);
+  --lifeflow-shadow-3: 0 8px 28px rgba(0,0,0,0.55), 0 0 18px rgba(10,132,255,0.28);
+  --lifeflow-shadow-knit: none;
+
+  /* TAB BAR (dark glass) */
+  --lifeflow-tabbar-bg: rgba(13,18,28,0.72);
+  --lifeflow-tabbar-blur: 20px;
+  --lifeflow-tabbar-blur-saturate: 180%;
+
+  /* AI BALL (deep blue) */
+  --lifeflow-ai-ball: #2E5FA3;
+}
+
+/* === TYPOGRAPHY UTILITY CLASSES === */
+.lf-display {
+  font-family: var(--lifeflow-font-display);
+  font-size: var(--lifeflow-font-size-display);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.lf-h1 {
+  font-family: var(--lifeflow-font-display);
+  font-size: var(--lifeflow-font-size-h1);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+
+.lf-h2 {
+  font-family: var(--lifeflow-font-display);
+  font-size: var(--lifeflow-font-size-h2);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+}
+
+.lf-h3 {
+  font-family: var(--lifeflow-font-body);
+  font-size: var(--lifeflow-font-size-h3);
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.lf-body {
+  font-family: var(--lifeflow-font-body);
+  font-size: var(--lifeflow-font-size-body);
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.lf-body-sm {
+  font-family: var(--lifeflow-font-body);
+  font-size: var(--lifeflow-font-size-sm);
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.lf-caption {
+  font-family: var(--lifeflow-font-body);
+  font-size: var(--lifeflow-font-size-caption);
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.lf-mono {
+  font-family: var(--lifeflow-font-mono);
+  font-size: var(--lifeflow-font-size-sm);
+  font-weight: 400;
+  line-height: 1.6;
+}
+
+/* === PROGRESS BAR (iOS thin bar) === */
+.knit-track {
+  position: relative;
+  height: 6px;
+  border-radius: var(--lifeflow-radius-full);
+  overflow: hidden;
+  background: var(--lifeflow-knit-bg);
+}
+
+.knit-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  border-radius: var(--lifeflow-radius-full);
+  background: var(--lifeflow-knit-thread);
+  z-index: 2;
+  transition: width 0.5s ease-in-out;
+}
+
+.knit-fill--done { background: var(--lifeflow-knit-thread-completed); }
+.knit-fill--partial { background: var(--lifeflow-knit-thread-partial); }
+
+.knit-yarn {
+  display: none;
+}
+
+.knit-percent {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 4;
+  font-family: var(--lifeflow-font-body);
+  font-size: var(--lifeflow-font-size-sm);
+  font-weight: 600;
+  color: var(--lifeflow-text-primary);
+  line-height: 1;
+}
+
+/* === TAB BAR (glass, follows mode) === */
+.lf-tabbar-glass {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 40;
+  border-top: 1px solid var(--lifeflow-border);
+  background: var(--lifeflow-tabbar-bg);
+  -webkit-backdrop-filter: saturate(var(--lifeflow-tabbar-blur-saturate)) blur(var(--lifeflow-tabbar-blur));
+  backdrop-filter: saturate(var(--lifeflow-tabbar-blur-saturate)) blur(var(--lifeflow-tabbar-blur));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  @theme inline {
+    --color-background: var(--lifeflow-background);
+    --color-foreground: var(--lifeflow-foreground);
+    --color-card: var(--lifeflow-card);
+    --color-card-foreground: var(--lifeflow-card-foreground);
+    --color-popover: var(--lifeflow-popover);
+    --color-popover-foreground: var(--lifeflow-popover-foreground);
+    --color-primary: var(--lifeflow-primary);
+    --color-primary-foreground: var(--lifeflow-primary-foreground);
+    --color-muted: var(--lifeflow-muted);
+    --color-muted-foreground: var(--lifeflow-muted-foreground);
+    --color-border: var(--lifeflow-border);
+    --color-input: var(--lifeflow-input);
+    --color-ring: var(--lifeflow-ring);
+    --radius-sm: var(--lifeflow-radius-sm);
+    --radius-md: var(--lifeflow-radius-md);
+    --radius-lg: var(--lifeflow-radius-lg);
+    --radius-xl: var(--lifeflow-radius-xl);
+  }
+  @layer base {
+    body { background: var(--lifeflow-background); color: var(--lifeflow-foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style id="semantic-token-fallback">
+      .bg-background { background-color: var(--lifeflow-background); }
+      .text-background { color: var(--lifeflow-background); }
+      .border-background { border-color: var(--lifeflow-background); }
+      .ring-background { --tw-ring-color: var(--lifeflow-background); }
+      .bg-foreground { background-color: var(--lifeflow-foreground); }
+      .text-foreground { color: var(--lifeflow-foreground); }
+      .border-foreground { border-color: var(--lifeflow-foreground); }
+      .ring-foreground { --tw-ring-color: var(--lifeflow-foreground); }
+      .bg-card { background-color: var(--lifeflow-card); }
+      .text-card { color: var(--lifeflow-card); }
+      .border-card { border-color: var(--lifeflow-card); }
+      .ring-card { --tw-ring-color: var(--lifeflow-card); }
+      .bg-card-foreground { background-color: var(--lifeflow-card-foreground); }
+      .text-card-foreground { color: var(--lifeflow-card-foreground); }
+      .border-card-foreground { border-color: var(--lifeflow-card-foreground); }
+      .ring-card-foreground { --tw-ring-color: var(--lifeflow-card-foreground); }
+      .bg-popover { background-color: var(--lifeflow-popover); }
+      .text-popover { color: var(--lifeflow-popover); }
+      .border-popover { border-color: var(--lifeflow-popover); }
+      .ring-popover { --tw-ring-color: var(--lifeflow-popover); }
+      .bg-popover-foreground { background-color: var(--lifeflow-popover-foreground); }
+      .text-popover-foreground { color: var(--lifeflow-popover-foreground); }
+      .border-popover-foreground { border-color: var(--lifeflow-popover-foreground); }
+      .ring-popover-foreground { --tw-ring-color: var(--lifeflow-popover-foreground); }
+      .bg-primary { background-color: var(--lifeflow-primary); }
+      .text-primary { color: var(--lifeflow-primary); }
+      .border-primary { border-color: var(--lifeflow-primary); }
+      .ring-primary { --tw-ring-color: var(--lifeflow-primary); }
+      .bg-primary-foreground { background-color: var(--lifeflow-primary-foreground); }
+      .text-primary-foreground { color: var(--lifeflow-primary-foreground); }
+      .border-primary-foreground { border-color: var(--lifeflow-primary-foreground); }
+      .ring-primary-foreground { --tw-ring-color: var(--lifeflow-primary-foreground); }
+      .bg-muted { background-color: var(--lifeflow-muted); }
+      .text-muted { color: var(--lifeflow-muted); }
+      .border-muted { border-color: var(--lifeflow-muted); }
+      .ring-muted { --tw-ring-color: var(--lifeflow-muted); }
+      .bg-muted-foreground { background-color: var(--lifeflow-muted-foreground); }
+      .text-muted-foreground { color: var(--lifeflow-muted-foreground); }
+      .border-muted-foreground { border-color: var(--lifeflow-muted-foreground); }
+      .ring-muted-foreground { --tw-ring-color: var(--lifeflow-muted-foreground); }
+      .bg-border { background-color: var(--lifeflow-border); }
+      .text-border { color: var(--lifeflow-border); }
+      .border-border { border-color: var(--lifeflow-border); }
+      .ring-border { --tw-ring-color: var(--lifeflow-border); }
+      .bg-input { background-color: var(--lifeflow-input); }
+      .text-input { color: var(--lifeflow-input); }
+      .border-input { border-color: var(--lifeflow-input); }
+      .ring-input { --tw-ring-color: var(--lifeflow-input); }
+      .bg-ring { background-color: var(--lifeflow-ring); }
+      .text-ring { color: var(--lifeflow-ring); }
+      .border-ring { border-color: var(--lifeflow-ring); }
+      .ring-ring { --tw-ring-color: var(--lifeflow-ring); }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+</head>
+<body class="min-h-screen font-sans antialiased">
+    <main>
+      <div class="mx-auto w-full max-w-md px-4 pb-[110px] pt-1 font-[var(--lifeflow-font-body)]">
+        <style>
+          @media (prefers-reduced-motion: reduce) {
+            *, ::before, ::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
+          }
+        </style>
+
+        <!-- 顶部导航 -->
+        <header class="flex h-12 items-center justify-between">
+          <button type="button" data-dom-id="back-ideal" aria-label="返回理想日" class="-ml-1.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--lifeflow-border-light)] text-[var(--lifeflow-text-primary)] transition-[background-color] duration-150 hover:bg-[var(--lifeflow-border)] active:bg-[var(--lifeflow-border)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--lifeflow-ring)]">
+            <i data-lucide="chevron-left" class="h-5 w-5 shrink-0"></i>
+          </button>
+          <div class="flex min-w-0 flex-1 items-center justify-center gap-1.5">
+            <span class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-[rgba(88,86,214,0.14)]">
+              <i data-lucide="moon" class="h-3.5 w-3.5 shrink-0 text-[rgba(88,86,214,1)]"></i>
+            </span>
+            <h1 class="truncate text-[17px] font-bold tracking-tight text-[var(--lifeflow-text-primary)]">睡眠规划</h1>
+          </div>
+          <div class="w-8 shrink-0" aria-hidden="true"></div>
+        </header>
+
+        <!-- 卡片区 -->
+        <div class="mt-2 space-y-3">
+          <!-- 时间段信息卡 -->
+          <section class="rounded-xl bg-[var(--lifeflow-card)] p-4 shadow-[var(--lifeflow-shadow-1)]" aria-labelledby="sleep-block-title">
+            <div class="flex items-center justify-between gap-2">
+              <div class="flex min-w-0 items-center gap-3">
+                <span class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[rgba(88,86,214,0.14)]">
+                  <i data-lucide="moon" class="h-5 w-5 shrink-0 text-[rgba(88,86,214,1)]"></i>
+                </span>
+                <div class="min-w-0">
+                  <h2 id="sleep-block-title" class="text-[14px] font-bold leading-snug text-[var(--lifeflow-text-primary)]">夜间睡眠</h2>
+                  <p class="mt-0.5 text-[12px] tabular-nums leading-snug text-[var(--lifeflow-text-tertiary)]">睡眠段 · 23:00 - 07:00</p>
+                </div>
+              </div>
+              <span class="shrink-0 rounded-md bg-[var(--state-success-light)] px-2 py-0.5 text-[11px] font-medium leading-4 text-[var(--state-success)]">已安排</span>
+            </div>
+          </section>
+
+          <!-- 本时段说明卡 -->
+          <section class="rounded-xl bg-[var(--lifeflow-card)] p-4 shadow-[var(--lifeflow-shadow-1)]">
+            <div class="flex items-center gap-2">
+              <i data-lucide="lightbulb" class="h-4 w-4 shrink-0 text-[rgba(88,86,214,1)]"></i>
+              <h3 class="text-[14px] font-bold text-[var(--lifeflow-text-primary)]">本时段说明</h3>
+            </div>
+            <p class="mt-2 text-[13px] leading-relaxed text-[var(--lifeflow-text-secondary)]">为睡眠时段安排睡前仪式与作息，护航深度睡眠</p>
+          </section>
+
+          <!-- 规划步骤卡 -->
+          <section class="rounded-xl bg-[var(--lifeflow-card)] p-4 shadow-[var(--lifeflow-shadow-1)]">
+            <div class="flex items-center gap-2">
+              <i data-lucide="list-checks" class="h-4 w-4 shrink-0 text-[rgba(88,86,214,1)]"></i>
+              <h3 class="text-[14px] font-bold text-[var(--lifeflow-text-primary)]">规划步骤</h3>
+            </div>
+            <ol class="mt-3 space-y-2.5">
+              <li class="flex items-start gap-2.5">
+                <span class="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[rgba(88,86,214,0.14)] text-[11px] font-semibold leading-none text-[rgba(88,86,214,1)]">1</span>
+                <span class="min-w-0 text-[13px] leading-relaxed text-[var(--lifeflow-text-secondary)]">设定本时段目标（就寝/起床/午睡）</span>
+              </li>
+              <li class="flex items-start gap-2.5">
+                <span class="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[rgba(88,86,214,0.14)] text-[11px] font-semibold leading-none text-[rgba(88,86,214,1)]">2</span>
+                <span class="min-w-0 text-[13px] leading-relaxed text-[var(--lifeflow-text-secondary)]">填写睡前仪式或注意事项</span>
+              </li>
+              <li class="flex items-start gap-2.5">
+                <span class="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[rgba(88,86,214,0.14)] text-[11px] font-semibold leading-none text-[rgba(88,86,214,1)]">3</span>
+                <span class="min-w-0 text-[13px] leading-relaxed text-[var(--lifeflow-text-secondary)]">补充备注（闹钟/环境）</span>
+              </li>
+            </ol>
+          </section>
+
+          <!-- 填写卡 -->
+          <section class="rounded-xl bg-[var(--lifeflow-card)] p-4 shadow-[var(--lifeflow-shadow-1)]">
+            <div class="space-y-3">
+              <div class="space-y-1.5">
+                <label for="sleep-content" class="block text-[14px] font-bold text-[var(--lifeflow-text-primary)]">睡眠内容 <span class="text-[var(--state-error)]">*</span></label>
+                <input id="sleep-content" type="text" placeholder="例如：睡前 30 分钟放下手机 · 23:00 上床" class="h-11 w-full rounded-xl bg-[var(--lifeflow-input)] px-3.5 text-[14px] text-[var(--lifeflow-text-primary)] outline-none placeholder:text-[var(--lifeflow-text-tertiary)] transition-[background-color] duration-150 focus-visible:ring-2 focus-visible:ring-[var(--lifeflow-ring)]" />
+              </div>
+              <div class="space-y-1.5">
+                <label for="sleep-note" class="block text-[14px] font-bold text-[var(--lifeflow-text-primary)]">补充说明（可选）</label>
+                <input id="sleep-note" type="text" placeholder="补充备注…" class="h-11 w-full rounded-xl bg-[var(--lifeflow-input)] px-3.5 text-[14px] text-[var(--lifeflow-text-primary)] outline-none placeholder:text-[var(--lifeflow-text-tertiary)] transition-[background-color] duration-150 focus-visible:ring-2 focus-visible:ring-[var(--lifeflow-ring)]" />
+              </div>
+            </div>
+          </section>
+
+          <!-- 示例参考卡 -->
+          <section class="rounded-xl bg-[var(--lifeflow-card)] p-4 shadow-[var(--lifeflow-shadow-1)]">
+            <div class="flex items-center gap-2">
+              <i data-lucide="sparkles" class="h-4 w-4 shrink-0 text-[rgba(88,86,214,1)]"></i>
+              <h3 class="text-[14px] font-bold text-[var(--lifeflow-text-primary)]">示例参考</h3>
+            </div>
+            <div class="mt-3 space-y-2">
+              <button type="button" class="w-full rounded-[10px] bg-[var(--lifeflow-muted)] px-3 py-2.5 text-left text-[12.5px] leading-relaxed text-[var(--lifeflow-text-secondary)] transition-[background-color] duration-150 hover:bg-[var(--lifeflow-border-light)] active:bg-[var(--lifeflow-border-light)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--lifeflow-ring)]">23:00 上床 · 睡前 30 分钟放下手机</button>
+              <button type="button" class="w-full rounded-[10px] bg-[var(--lifeflow-muted)] px-3 py-2.5 text-left text-[12.5px] leading-relaxed text-[var(--lifeflow-text-secondary)] transition-[background-color] duration-150 hover:bg-[var(--lifeflow-border-light)] active:bg-[var(--lifeflow-border-light)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--lifeflow-ring)]">午睡 30 分钟 · 定 13:00 闹钟</button>
+              <button type="button" class="w-full rounded-[10px] bg-[var(--lifeflow-muted)] px-3 py-2.5 text-left text-[12.5px] leading-relaxed text-[var(--lifeflow-text-secondary)] transition-[background-color] duration-150 hover:bg-[var(--lifeflow-border-light)] active:bg-[var(--lifeflow-border-light)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--lifeflow-ring)]">睡前拉伸 10 分钟 · 暖色灯光</button>
+            </div>
+          </section>
+        </div>
+
+        <!-- 操作区 -->
+        <div class="mt-5 flex items-center gap-2.5">
+          <button type="button" class="inline-flex h-11 shrink-0 items-center justify-center gap-1.5 rounded-full bg-[var(--lifeflow-muted)] px-5 text-[13px] font-medium text-[var(--lifeflow-text-secondary)] transition-[background-color] duration-150 hover:bg-[var(--lifeflow-border-light)] active:bg-[var(--lifeflow-border-light)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--lifeflow-ring)]">
+            <i data-lucide="trash-2" class="h-4 w-4 shrink-0 text-[var(--state-error)]"></i>
+            清除
+          </button>
+          <button type="button" class="h-11 min-w-0 flex-1 rounded-full bg-[var(--lifeflow-primary)] text-[15px] font-semibold text-[var(--lifeflow-primary-foreground)] transition-[background-color] duration-150 hover:bg-[var(--lifeflow-primary-hover)] active:bg-[var(--lifeflow-primary-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--lifeflow-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--lifeflow-background)]">保存规划并更新日程</button>
+        </div>
+        <p class="mt-3 text-center text-[11px] leading-relaxed text-[var(--lifeflow-text-tertiary)]">保存后打开「日程」页，该时段自动显示安排的具体内容</p>
+      </div>
+
+      <!-- 底部导航 -->
+      <nav data-mobile-nav="global" class="lf-tabbar-glass w-full max-w-md mx-auto h-[64px]"><div class="grid grid-cols-4 h-full"><a href="#" data-dom-id="nav-home" data-nav-key="home" data-active="false" class="min-w-0 flex flex-col items-center justify-center gap-0.5 h-full text-[var(--lifeflow-text-tertiary)]"><i data-lucide="home" class="w-5 h-5 shrink-0"></i><span class="text-[11px] leading-none whitespace-nowrap max-w-full truncate">首页</span></a><a href="#" data-dom-id="nav-goals" data-nav-key="goals" data-active="false" class="min-w-0 flex flex-col items-center justify-center gap-0.5 h-full text-[var(--lifeflow-text-tertiary)]"><i data-lucide="target" class="w-5 h-5 shrink-0"></i><span class="text-[11px] leading-none whitespace-nowrap max-w-full truncate">目标</span></a><a href="#" data-dom-id="nav-schedule" data-nav-key="schedule" data-active="false" class="min-w-0 flex flex-col items-center justify-center gap-0.5 h-full text-[var(--lifeflow-text-tertiary)]"><i data-lucide="calendar-days" class="w-5 h-5 shrink-0"></i><span class="text-[11px] leading-none whitespace-nowrap max-w-full truncate">日程</span></a><a href="#" data-dom-id="nav-ideal" data-nav-key="ideal" data-active="true" class="min-w-0 flex flex-col items-center justify-center gap-0.5 h-full text-[var(--lifeflow-primary)]"><i data-lucide="sun" class="w-5 h-5 shrink-0"></i><span class="text-[11px] leading-none whitespace-nowrap max-w-full truncate font-semibold">理想日</span></a></div></nav>
+    </main>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

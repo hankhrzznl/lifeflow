@@ -14,8 +14,8 @@
           "version": 1,
           "contentHeight": 928,
           "viewportWidth": 375,
-          "sourceHash": "fnv1a-402ed52f",
-          "measuredAt": 1786111867502
+          "sourceHash": "fnv1a-bff1257c",
+          "measuredAt": 1786169702296
         }
       },
       "devMetadata": {
@@ -49,6 +49,12 @@
             "targetPageId": "page-more",
             "hideEdge": true,
             "transitionLabel": "今日一句话 · 长期主义"
+          },
+          {
+            "domId": "nav-ideal",
+            "targetPageId": "page-ideal-day",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 理想日"
           }
         ]
       }
@@ -67,8 +73,8 @@
           "version": 1,
           "contentHeight": 1206,
           "viewportWidth": 375,
-          "sourceHash": "fnv1a-8cf85f11",
-          "measuredAt": 1786111867502
+          "sourceHash": "fnv1a-22a9fc96",
+          "measuredAt": 1786169702296
         }
       },
       "devMetadata": {
@@ -102,6 +108,12 @@
             "targetPageId": "page-more",
             "hideEdge": true,
             "transitionLabel": "今日一句话 · 长期主义"
+          },
+          {
+            "domId": "nav-ideal",
+            "targetPageId": "page-ideal-day",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 理想日"
           }
         ]
       }
@@ -120,8 +132,8 @@
           "version": 1,
           "contentHeight": 1192,
           "viewportWidth": 375,
-          "sourceHash": "fnv1a-07443155",
-          "measuredAt": 1786111867502
+          "sourceHash": "fnv1a-18d1e4d2",
+          "measuredAt": 1786169702296
         }
       },
       "devMetadata": {
@@ -144,6 +156,12 @@
             "targetPageId": "page-more",
             "hideEdge": true,
             "transitionLabel": "更多功能"
+          },
+          {
+            "domId": "nav-ideal",
+            "targetPageId": "page-ideal-day",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 理想日"
           }
         ]
       }
@@ -162,8 +180,8 @@
           "version": 1,
           "contentHeight": 1277,
           "viewportWidth": 375,
-          "sourceHash": "fnv1a-d640a60c",
-          "measuredAt": 1786111867502
+          "sourceHash": "fnv1a-fcacdb55",
+          "measuredAt": 1786169702296
         }
       },
       "devMetadata": {
@@ -186,6 +204,12 @@
             "targetPageId": "page-more",
             "hideEdge": true,
             "transitionLabel": "更多功能"
+          },
+          {
+            "domId": "nav-ideal",
+            "targetPageId": "page-ideal-day",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 理想日"
           }
         ]
       }
@@ -204,8 +228,8 @@
           "version": 1,
           "contentHeight": 1375,
           "viewportWidth": 375,
-          "sourceHash": "fnv1a-38fe9a9b",
-          "measuredAt": 1786111867502
+          "sourceHash": "fnv1a-aab7ec38",
+          "measuredAt": 1786169702296
         }
       },
       "devMetadata": {
@@ -228,6 +252,371 @@
             "targetPageId": "page-schedule",
             "hideEdge": true,
             "transitionLabel": "底部导航 · 日程"
+          },
+          {
+            "domId": "nav-ideal",
+            "targetPageId": "page-ideal-day",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 理想日"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-ideal-day",
+      "title": "理想日 · 8+8+8 时间轴",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786169000000,
+      "canvasData": {
+        "x": 1400,
+        "y": 0,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 1757,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-f921e1ab",
+          "measuredAt": 1786189071871
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/ideal-day.html",
+        "interactions": [
+          {
+            "domId": "nav-home",
+            "targetPageId": "page-home-day",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 首页"
+          },
+          {
+            "domId": "nav-goals",
+            "targetPageId": "page-goals",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 目标"
+          },
+          {
+            "domId": "nav-schedule",
+            "targetPageId": "page-schedule",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 日程"
+          },
+          {
+            "domId": "plan-study",
+            "targetPageId": "page-ideal-day",
+            "hideEdge": true,
+            "transitionLabel": "学习规划（占位）"
+          },
+          {
+            "domId": "plan-workout",
+            "targetPageId": "page-ideal-day",
+            "hideEdge": true,
+            "transitionLabel": "训练规划（占位）"
+          },
+          {
+            "domId": "plan-sleep",
+            "targetPageId": "page-plan-sleep",
+            "hideEdge": true,
+            "transitionLabel": "睡眠规划"
+          },
+          {
+            "domId": "plan-posture",
+            "targetPageId": "page-plan-posture",
+            "hideEdge": true,
+            "transitionLabel": "体态拉伸规划"
+          },
+          {
+            "domId": "plan-wellness",
+            "targetPageId": "page-plan-wellness",
+            "hideEdge": true,
+            "transitionLabel": "功法养生规划"
+          },
+          {
+            "domId": "plan-routine",
+            "targetPageId": "page-plan-routine",
+            "hideEdge": true,
+            "transitionLabel": "作息规划"
+          },
+          {
+            "domId": "edit-ideal",
+            "targetPageId": "page-ideal-day-edit-step1",
+            "hideEdge": true,
+            "transitionLabel": "编辑模板 · 第一步"
+          },
+          {
+            "domId": "plan-medication",
+            "targetPageId": "page-plan-medication",
+            "hideEdge": true,
+            "transitionLabel": "吃药规划"
+          },
+          {
+            "domId": "plan-diet",
+            "targetPageId": "page-plan-diet",
+            "hideEdge": true,
+            "transitionLabel": "饮食规划"
+          },
+          {
+            "domId": "plan-water",
+            "targetPageId": "page-plan-water",
+            "hideEdge": true,
+            "transitionLabel": "饮水规划"
+          },
+          {
+            "domId": "plan-focus",
+            "targetPageId": "page-plan-focus",
+            "hideEdge": true,
+            "transitionLabel": "专注规划"
+          },
+          {
+            "domId": "plan-leisure",
+            "targetPageId": "page-plan-leisure",
+            "hideEdge": true,
+            "transitionLabel": "留白规划"
+          },
+          {
+            "domId": "plan-notes",
+            "targetPageId": "page-plan-notes",
+            "hideEdge": true,
+            "transitionLabel": "备忘规划"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-ideal-day-sheet",
+      "title": "理想日 · 底部表单（训练/功法养生/作息/体态拉伸 结构化清单）",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786203000000,
+      "canvasData": {
+        "x": 1400,
+        "y": 1560,
+        "group": 0
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/ideal-day-sheet.html",
+        "interactions": [
+          {
+            "domId": "back-ideal",
+            "targetPageId": "page-ideal-day",
+            "hideEdge": true,
+            "transitionLabel": "关闭表单返回理想日"
+          },
+          {
+            "domId": "sheet-save",
+            "targetPageId": "page-ideal-day",
+            "hideEdge": true,
+            "transitionLabel": "保存并更新日程"
+          },
+          {
+            "domId": "nav-ideal",
+            "targetPageId": "page-ideal-day",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 理想日"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-ideal-day-edit-step1",
+      "title": "理想日编辑 · 第 1 步 选择大段与功能",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786173000000,
+      "canvasData": {
+        "x": 1400,
+        "y": 840,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 1461,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-3f8ad62b",
+          "measuredAt": 1786178847797
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/ideal-day-edit-step1.html",
+        "interactions": [
+          {
+            "domId": "step1-next",
+            "targetPageId": "page-ideal-day-edit-step2",
+            "hideEdge": true,
+            "transitionLabel": "下一步 · 配置时间与次数"
+          },
+          {
+            "domId": "edit-cancel",
+            "targetPageId": "page-ideal-day",
+            "hideEdge": true,
+            "transitionLabel": "取消编辑"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-ideal-day-edit-step2",
+      "title": "理想日编辑 · 第 2 步 配置时间与次数",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786173001000,
+      "canvasData": {
+        "x": 1830,
+        "y": 840,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 1529,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-75659da1",
+          "measuredAt": 1786189071871
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/ideal-day-edit-step2.html",
+        "interactions": [
+          {
+            "domId": "step2-back",
+            "targetPageId": "page-ideal-day-edit-step1",
+            "hideEdge": true,
+            "transitionLabel": "上一步 · 选择大段与功能"
+          },
+          {
+            "domId": "step2-save",
+            "targetPageId": "page-ideal-day",
+            "hideEdge": true,
+            "transitionLabel": "保存并生成时间轴"
+          },
+          {
+            "domId": "edit-cancel",
+            "targetPageId": "page-ideal-day",
+            "hideEdge": true,
+            "transitionLabel": "取消编辑"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-plan-study",
+      "title": "学习规划 · 安排学习内容",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786170001000,
+      "canvasData": {
+        "x": 1776,
+        "y": 36,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 1003,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-eb11330b",
+          "measuredAt": 1786178847797
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/plan-study.html",
+        "interactions": [
+          {
+            "domId": "back-ideal",
+            "targetPageId": "page-ideal-day",
+            "hideEdge": true,
+            "transitionLabel": "返回理想日"
+          },
+          {
+            "domId": "nav-home",
+            "targetPageId": "page-home-day",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 首页"
+          },
+          {
+            "domId": "nav-ideal",
+            "targetPageId": "page-ideal-day",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 理想日"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-plan-sleep",
+      "title": "睡眠规划 · 安排睡眠安排",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786171000000,
+      "canvasData": {
+        "x": 1932,
+        "y": 36,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 1005,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-0f169485",
+          "measuredAt": 1786178847797
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/plan-sleep.html",
+        "interactions": [
+          {
+            "domId": "back-ideal",
+            "targetPageId": "page-ideal-day",
+            "hideEdge": true,
+            "transitionLabel": "返回理想日"
+          },
+          {
+            "domId": "nav-home",
+            "targetPageId": "page-home-day",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 首页"
+          },
+          {
+            "domId": "nav-ideal",
+            "targetPageId": "page-ideal-day",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 理想日"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-plan-medication",
+      "title": "吃药规划 · 晨间服药",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786174005000,
+      "canvasData": {
+        "x": 2152,
+        "y": 42.5,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 984,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-015da599",
+          "measuredAt": 1786178847797
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/plan-medication.html",
+        "interactions": [
+          {
+            "domId": "back-ideal",
+            "targetPageId": "page-ideal-day",
+            "hideEdge": true,
+            "transitionLabel": "返回理想日"
+          },
+          {
+            "domId": "nav-home",
+            "targetPageId": "page-home-day",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 首页"
+          },
+          {
+            "domId": "nav-ideal",
+            "targetPageId": "page-ideal-day",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 理想日"
           }
         ]
       }

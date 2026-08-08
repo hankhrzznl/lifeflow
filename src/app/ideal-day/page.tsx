@@ -534,21 +534,30 @@ export default function IdealDayHomePage() {
   const templates = derived.templates;
   const displayTemplate = editing ?? activeTemplate;
 
-  // T22.2：日程页 ?block= 定位——滚动到目标段并短暂高亮
+  // T22.2/T22.4：日程页 ?block= / 效率页 ?goal= 定位——滚动到目标段并短暂高亮
   useEffect(() => {
-    const target = searchParams?.get("block");
-    if (!target || editMode) return;
-    setFocusBlockId(target);
+    const targetBlock = searchParams?.get("block");
+    const targetGoal = searchParams?.get("goal");
+    if ((!targetBlock && !targetGoal) || editMode) return;
+    let firstId: string | null = null;
+    if (targetBlock) {
+      firstId = targetBlock;
+    } else if (targetGoal && plans.length > 0) {
+      const ids = plans.filter((p) => p.goalId === targetGoal && p.feature === 'study').map((p) => p.blockId);
+      if (ids.length > 0) firstId = ids[0];
+    }
+    if (!firstId) return;
+    setFocusBlockId(firstId);
     setFocusFlash(true);
     const timer = setTimeout(() => {
-      const el = document.getElementById(`ideal-block-${target}`);
+      const el = document.getElementById(`ideal-block-${firstId}`);
       el?.scrollIntoView({ behavior: "smooth", block: "center" });
       setFocusFlash(false);
       const clear = setTimeout(() => setFocusBlockId(null), 1600);
       return () => clearTimeout(clear);
     }, 250);
     return () => clearTimeout(timer);
-  }, [searchParams, editMode, displayTemplate?.id, loaded]);
+  }, [searchParams, editMode, displayTemplate?.id, loaded, plans]);
 
   // 执行区按 5 段分组
   const blocksBySegment = (tpl: IdealDayTemplate): Map<IdealDayBlockGroup, typeof tpl.blocks> => {

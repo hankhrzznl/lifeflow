@@ -565,3 +565,9 @@ LifeFlow v1.0，一个讲道理的生活助手。
 - **目标页反向**：目标详情页新增「今日理想日推进」卡片——聚合今日 `goalId` 匹配的 study 规划（含完成态），点击跳 `/ideal-day?block=<blockId>` 定位，右上角「去理想日 →」
 - **闭环语义**：理想日学习时段完成（勾选）→ 日程同步 → 目标页推进卡片显示已完成；不自动标记 DailyAction，避免破坏目标系统完成语义
 
+### 目标页 KR 更新入口 + 效率页联动（T22.4）
+
+- **KR 手动更新入口升级**：目标详情页 KR 卡片编辑态升级为 `-` / 输入框 / `+` stepper（步进 1），新增「一键达标」（currentValue 直接置为 targetValue，`handleSaveKRValue(krId, presetVal?)` 支持传值避免 state 异步）；非编辑态显示百分比徽标（达标变绿）；保存后自动 `recalculateGoalProgress`
+- **效率页 × 理想日联动**：目标卡片新增「今日学习 done/total」紫色 Sparkles 徽标（`useLiveQuery` 读今日 idealDayPlans 按 goalId 聚合 study 规划，Dexie 响应式），点击跳 `/ideal-day?goal=<id>`
+- **理想日 ?goal= 定位**：`?goal=<goalId>` 从 plans 筛出该目标全部 study 规划块，滚动定位第一个并紫框高亮（与 ?block= 共用 focus 逻辑）
+

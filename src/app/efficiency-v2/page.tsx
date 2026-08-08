@@ -3,7 +3,7 @@
 import { useMemo, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Plus, Target, Copy, Download, Trash2, Check } from "lucide-react";
+import { Plus, Target, Copy, Download, Trash2, Check, Sparkles } from "lucide-react";
 import { useLiveQuery } from "dexie-react-hooks";
 import {
   type GoalV2,
@@ -84,6 +84,31 @@ export default function EfficiencyV2Page() {
     }
     return map;
   }, [allKeyResults]);
+
+  // T22.4：今日理想日学习推进（效率页 ← 理想日联动）
+  const idealTodayPlans = useLiveQuery(
+    async () => {
+      try {
+        const { getIdealDayPlans } = await import("@/lib/ideal-day-templates");
+        const d = new Date();
+        const todayKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+        return await getIdealDayPlans(todayKey);
+      } catch { return []; }
+    },
+    [],
+    [],
+  );
+  const idealTodayMap = useMemo(() => {
+    const map = new Map<string, { total: number; done: number }>();
+    for (const p of idealTodayPlans ?? []) {
+      if (p.feature !== 'study' || !p.goalId) continue;
+      const st = map.get(p.goalId) ?? { total: 0, done: 0 };
+      st.total += 1;
+      if (p.isCompleted) st.done += 1;
+      map.set(p.goalId, st);
+    }
+    return map;
+  }, [idealTodayPlans]);
 
   const goalList = goals ?? [];
 
@@ -457,6 +482,22 @@ export default function EfficiencyV2Page() {
                     </span>
                   )}
                 </div>
+
+                {/* T22.4：今日理想日学习推进（点击跳理想日定位该目标） */}
+                {idealTodayMap.get(goal.id) && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      router.push(`/ideal-day?goal=${goal.id}`);
+                    }}
+                    className="flex items-center gap-1 px-2 h-6 rounded-full text-[10.5px] font-medium active:opacity-70 w-fit"
+                    style={{ background: "rgba(99,102,241,0.12)", color: "#6366F1" }}
+                  >
+                    <Sparkles className="w-3 h-3" />
+                    今日学习 {idealTodayMap.get(goal.id)!.done}/{idealTodayMap.get(goal.id)!.total}
+                  </button>
+                )}
               </div>
             </motion.div>
           );

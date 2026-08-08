@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Plus, X, Check, ChevronDown, ChevronRight, Settings, Trash2 } from "lucide-react";
+import { ArrowLeft, Plus, Minus, X, Check, ChevronDown, ChevronRight, Settings, Trash2 } from "lucide-react";
 import type { GoalV2, KeyResultV2, StrategyV2, WeeklyTaskV2, DailyActionV2 } from "@/lib/db/goal-v2.db";
 import {
   getGoalV2, updateGoalV2, deleteGoalV2,
@@ -151,8 +151,8 @@ export default function GoalDetailV2Page() {
     setEditingKRValue(String(kr.currentValue));
   }, []);
 
-  const handleSaveKRValue = useCallback(async (krId: string) => {
-    const val = parseFloat(editingKRValue);
+  const handleSaveKRValue = useCallback(async (krId: string, presetVal?: number) => {
+    const val = presetVal ?? parseFloat(editingKRValue);
     if (isNaN(val) || val < 0) {
       showToast({ type: "warning", message: "请输入有效数值" });
       return;
@@ -453,23 +453,53 @@ export default function GoalDetailV2Page() {
                 </div>
                 <div className="flex items-end gap-2 mb-2">
                   {isEditingThis ? (
-                    <div className="flex items-center gap-1.5">
-                      <input
-                        type="number"
-                        value={editingKRValue}
-                        onChange={(e) => setEditingKRValue(e.target.value)}
-                        className="w-20 h-9 rounded-lg px-2 text-[15px] font-semibold tabular-nums outline-none text-center"
-                        style={cs}
-                        autoFocus
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") handleSaveKRValue(kr.id);
-                          if (e.key === "Escape") setEditingKR(null);
-                        }}
-                      />
-                      <span className="text-[13px]" style={{ color: "var(--color-text-secondary)" }}>{kr.unit}</span>
-                      <button onClick={() => handleSaveKRValue(kr.id)} className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: `${GREEN}20` }}>
-                        <Check className="w-3.5 h-3.5" style={{ color: GREEN }} />
-                      </button>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => setEditingKRValue(String(Math.max(0, (parseFloat(editingKRValue) || 0) - 1)))}
+                          className="w-8 h-9 rounded-lg flex items-center justify-center active:opacity-60"
+                          style={{ background: "var(--lifeflow-background)", color: "var(--color-text-secondary)" }}
+                          aria-label="减少 1"
+                        >
+                          <Minus className="w-3.5 h-3.5" />
+                        </button>
+                        <input
+                          type="number"
+                          value={editingKRValue}
+                          onChange={(e) => setEditingKRValue(e.target.value)}
+                          className="w-20 h-9 rounded-lg px-2 text-[15px] font-semibold tabular-nums outline-none text-center"
+                          style={cs}
+                          autoFocus
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") handleSaveKRValue(kr.id);
+                            if (e.key === "Escape") setEditingKR(null);
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setEditingKRValue(String((parseFloat(editingKRValue) || 0) + 1))}
+                          className="w-8 h-9 rounded-lg flex items-center justify-center active:opacity-60"
+                          style={{ background: "var(--lifeflow-background)", color: "var(--color-text-secondary)" }}
+                          aria-label="增加 1"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                        </button>
+                        <span className="text-[13px]" style={{ color: "var(--color-text-secondary)" }}>{kr.unit}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <button onClick={() => handleSaveKRValue(kr.id)} className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: `${GREEN}20` }}>
+                          <Check className="w-3.5 h-3.5" style={{ color: GREEN }} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleSaveKRValue(kr.id, kr.targetValue)}
+                          className="h-7 px-2.5 rounded-lg text-[11px] font-semibold"
+                          style={{ background: `${goalColor}18`, color: goalColor }}
+                        >
+                          一键达标
+                        </button>
+                      </div>
                     </div>
                   ) : (
                     <button
@@ -482,6 +512,10 @@ export default function GoalDetailV2Page() {
                       <span className="text-[13px]" style={{ color: "var(--color-text-secondary)" }}>{kr.unit}</span>
                       <span className="text-[13px] mx-1" style={{ color: "var(--color-text-disabled)" }}>/</span>
                       <span className="text-[15px]" style={{ color: "var(--color-text-disabled)" }}>{kr.targetValue}{kr.unit}</span>
+                      <span className="ml-1 px-1.5 py-0.5 rounded-md text-[10.5px] font-semibold tabular-nums"
+                        style={{ background: `${goalColor}14`, color: kr.currentValue >= kr.targetValue ? GREEN : goalColor }}>
+                        {Math.min(100, Math.round((kr.currentValue / kr.targetValue) * 100))}%
+                      </span>
                     </button>
                   )}
                 </div>

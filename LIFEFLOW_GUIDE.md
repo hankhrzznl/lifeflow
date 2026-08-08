@@ -593,3 +593,10 @@ LifeFlow v1.0，一个讲道理的生活助手。
 - **策略添加入口补齐**：目标详情页策略区新增「+ 添加策略」（名称/描述/周期类型 每日固定|周循环 内联表单），空策略时显示「添加第一个策略」按钮（此前 import 了 `addStrategyV2` 却无 UI）
 - **策略头进度小结**：未展开即可见「本周 x/y · 今日 x/y」；周任务项展示 `deliverable` 交付物副行
 
+### 冥想模块 + 周报汇总（T23.1）
+
+- **冥想放松模块**（`/more/meditation`）：4 种方式（正念/呼吸/身体扫描/引导，各配专属色），时长 5/10/15/20/30 分钟，圆形计时环（SVG stroke-dashoffset），完成后写 `life.db` 新增 `MeditationSession` 表（v8，`&id, date, startedAt` 索引）+ CRUD（`addMeditationSession`/`getTodayMeditationSessions`/`getRecentMeditationSessions`/`getTotalMeditationMinutes`）；今日记录按时间倒序展示，含方式图标与时长
+- **周报汇总页**（`/more/review/weekly`）：近 7 天聚合 6 项统计（专注分钟/次数、冥想分钟/次数、按时入睡、日均饮水、理想日学习完成率、日程完成率）+ 每日专注柱状图（7 根渐变柱，标注分钟）+ 自动洞察文案（5 条封顶，按数据生成如"专注 385 分钟…"）+ 目标进度列表（可点击进详情）；数据源并行 `Promise.all` 聚合 focus/meditation/sleep/water/idealPlans/daylog items/goals/habits
+- **更多页入口**：身体养护组新增「冥想放松」，计划与复盘组新增「周报汇总」
+- **画布**：新增 `meditation.html` + `weekly-report.html` 两页（.design 14 节点 + 头契约 + 交互 back-more 注册），manifest/summary 重建为 14 条目；注意画布宿主会回写 .design 交互快照，验证前需重新应用交互修复
+

@@ -3,6 +3,7 @@ const path = 'd:/hankkk/lifeflow/lifeflow-home-redesign/lifeflow-home-redesign.d
 const d = JSON.parse(fs.readFileSync(path, 'utf8'));
 const valid = new Set(d.data.map((n) => n.id));
 const node = d.data.find((n) => n.id === 'page-ideal-day');
+if (!node) throw new Error('page-ideal-day missing');
 node.devMetadata.interactions = [
   { domId: 'nav-home', targetPageId: 'page-home-day', hideEdge: true, transitionLabel: '底部导航 · 首页' },
   { domId: 'nav-goals', targetPageId: 'page-goals', hideEdge: true, transitionLabel: '底部导航 · 目标' },

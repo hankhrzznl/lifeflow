@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+/* 深色模式策略：跟随 <html class="dark">（由首页右上角日间/夜间切换按钮控制），
+   而非仅跟随系统 prefers-color-scheme，确保全站深色统一受全局开关控制 */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* ============================================================ */
 /* LifeFlow — Warm Gray + Blue Professional Design System       */
 /* Primary: #2563EB (Blue — trust, focus, efficiency)           */
@@ -34,6 +38,7 @@
   --lifeflow-border: #E8E8EA;
   --lifeflow-input: #F0F0ED;
   --lifeflow-ring: #2563EB;
+  --lifeflow-knit-bg: #E9E9EB;
 
   /* ---- Surface Colors ---- */
   --color-surface-primary: #F8F8F7;

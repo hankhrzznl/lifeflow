@@ -12,10 +12,10 @@
         "group": 0,
         "layoutSnapshot": {
           "version": 1,
-          "contentHeight": 928,
+          "contentHeight": 988,
           "viewportWidth": 375,
-          "sourceHash": "fnv1a-bff1257c",
-          "measuredAt": 1786169702296
+          "sourceHash": "fnv1a-c58366ae",
+          "measuredAt": 1786207003252
         }
       },
       "devMetadata": {
@@ -130,10 +130,10 @@
         "group": 0,
         "layoutSnapshot": {
           "version": 1,
-          "contentHeight": 1192,
+          "contentHeight": 1268,
           "viewportWidth": 375,
-          "sourceHash": "fnv1a-18d1e4d2",
-          "measuredAt": 1786169702296
+          "sourceHash": "fnv1a-367760cc",
+          "measuredAt": 1786207003252
         }
       },
       "devMetadata": {
@@ -274,10 +274,10 @@
         "group": 0,
         "layoutSnapshot": {
           "version": 1,
-          "contentHeight": 1757,
+          "contentHeight": 1806,
           "viewportWidth": 375,
-          "sourceHash": "fnv1a-f921e1ab",
-          "measuredAt": 1786189071871
+          "sourceHash": "fnv1a-235edd38",
+          "measuredAt": 1786207003252
         }
       },
       "devMetadata": {
@@ -303,15 +303,15 @@
           },
           {
             "domId": "plan-study",
-            "targetPageId": "page-plan-study",
+            "targetPageId": "page-ideal-day",
             "hideEdge": true,
-            "transitionLabel": "目标规划"
+            "transitionLabel": "学习规划（占位）"
           },
           {
             "domId": "plan-workout",
-            "targetPageId": "page-ideal-day-sheet",
+            "targetPageId": "page-ideal-day",
             "hideEdge": true,
-            "transitionLabel": "训练规划 · 底部表单"
+            "transitionLabel": "训练规划（占位）"
           },
           {
             "domId": "plan-sleep",
@@ -321,27 +321,63 @@
           },
           {
             "domId": "plan-posture",
-            "targetPageId": "page-ideal-day-sheet",
+            "targetPageId": "page-plan-posture",
             "hideEdge": true,
-            "transitionLabel": "体态拉伸规划 · 底部表单"
+            "transitionLabel": "体态拉伸规划"
           },
           {
             "domId": "plan-wellness",
-            "targetPageId": "page-ideal-day-sheet",
+            "targetPageId": "page-plan-wellness",
             "hideEdge": true,
-            "transitionLabel": "功法养生规划 · 底部表单"
+            "transitionLabel": "功法养生规划"
           },
           {
             "domId": "plan-routine",
-            "targetPageId": "page-ideal-day-sheet",
+            "targetPageId": "page-plan-routine",
             "hideEdge": true,
-            "transitionLabel": "作息规划 · 底部表单"
+            "transitionLabel": "作息规划"
           },
           {
             "domId": "edit-ideal",
             "targetPageId": "page-ideal-day-edit-step1",
             "hideEdge": true,
             "transitionLabel": "编辑模板 · 第一步"
+          },
+          {
+            "domId": "plan-medication",
+            "targetPageId": "page-plan-medication",
+            "hideEdge": true,
+            "transitionLabel": "吃药规划"
+          },
+          {
+            "domId": "plan-diet",
+            "targetPageId": "page-plan-diet",
+            "hideEdge": true,
+            "transitionLabel": "饮食规划"
+          },
+          {
+            "domId": "plan-water",
+            "targetPageId": "page-plan-water",
+            "hideEdge": true,
+            "transitionLabel": "饮水规划"
+          },
+          {
+            "domId": "plan-focus",
+            "targetPageId": "page-plan-focus",
+            "hideEdge": true,
+            "transitionLabel": "专注规划"
+          },
+          {
+            "domId": "plan-leisure",
+            "targetPageId": "page-plan-leisure",
+            "hideEdge": true,
+            "transitionLabel": "留白规划"
+          },
+          {
+            "domId": "plan-notes",
+            "targetPageId": "page-plan-notes",
+            "hideEdge": true,
+            "transitionLabel": "备忘规划"
           }
         ]
       }
@@ -355,7 +391,14 @@
       "canvasData": {
         "x": 1400,
         "y": 1560,
-        "group": 0
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 900,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-7d472d8a",
+          "measuredAt": 1786207003252
+        }
       },
       "devMetadata": {
         "htmlSrc": "pages/ideal-day-sheet.html",
@@ -471,10 +514,10 @@
         "group": 0,
         "layoutSnapshot": {
           "version": 1,
-          "contentHeight": 1003,
+          "contentHeight": 1448,
           "viewportWidth": 375,
-          "sourceHash": "fnv1a-eb11330b",
-          "measuredAt": 1786178847797
+          "sourceHash": "fnv1a-00347a4c",
+          "measuredAt": 1786207003252
         }
       },
       "devMetadata": {
@@ -593,14 +636,14 @@
       "createdAt": 1786300000000,
       "canvasData": {
         "x": 1016,
-        "y": 1450,
+        "y": 1452,
         "group": 0,
         "layoutSnapshot": {
           "version": 1,
-          "contentHeight": 1290,
+          "contentHeight": 954,
           "viewportWidth": 375,
-          "sourceHash": "fnv1a-meditation1",
-          "measuredAt": 1786300000000
+          "sourceHash": "fnv1a-768d253c",
+          "measuredAt": 1786207003252
         }
       },
       "devMetadata": {
@@ -627,10 +670,10 @@
         "group": 0,
         "layoutSnapshot": {
           "version": 1,
-          "contentHeight": 1290,
+          "contentHeight": 1050,
           "viewportWidth": 375,
-          "sourceHash": "fnv1a-weekly1",
-          "measuredAt": 1786300000000
+          "sourceHash": "fnv1a-475589ab",
+          "measuredAt": 1786207003252
         }
       },
       "devMetadata": {

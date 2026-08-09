@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import * as Icons from "lucide-react";
 import {
-  ChevronDown, ChevronUp, Plus, Minus, Copy, Pencil, Check, X, Sparkles,
+  ChevronDown, ChevronUp, Plus, Minus, Copy, Pencil, Check, X, Sparkles, Lock, RotateCcw,
 } from "lucide-react";
 import { getIdealDayConfig, saveIdealDayConfig, applyIdealDayBlueprint } from "@/lib/ideal-day";
 import {
@@ -67,7 +67,8 @@ function FeaturePicker({ value, onChange, locked, medicineActive }: {
         const meta = getFeatureMeta(f);
         const IconComp = ICON_REGISTRY[meta.icon] ?? Icons.Circle;
         const selected = value.includes(f);
-        const isLocked = locked || f === 'sleep' && locked;
+        // 睡眠段锁定只读（locked 由调用方传入；清理旧恒失效条件 `f === 'sleep' && locked`）
+        const isLocked = !!locked;
         return (
           <button
             key={f}
@@ -386,6 +387,34 @@ export default function IdealDayHomePage() {
   };
 
   // ── 模板管理 ──
+  // 手动锁定：点击模板芯片 = 切换并持久化 activeTemplateId（无条件优先，不检查日期范围）
+  const activateTemplate = async (id: string) => {
+    if (!config) return;
+    setEditMode(false);
+    setEditing(null);
+    const next: IdealDayConfig = { ...config, activeTemplateId: id };
+    setConfig(next);
+    await saveIdealDayConfig(next);
+    showToast({ type: "success", message: `已切换至「${derived?.templates.find((t) => t.id === id)?.name ?? "该模板"}」` });
+  };
+  // 恢复自动：清除手动锁定（activeTemplateId），回自动模式按日期范围/星期自动匹配
+  const handleRestoreAuto = async () => {
+    if (!config) return;
+    const next: IdealDayConfig = { ...config, activeTemplateId: undefined };
+    setConfig(next);
+    await saveIdealDayConfig(next);
+    showToast({ type: "success", message: "已恢复自动模式，将按使用日期自动选择模板" });
+  };
+  // 模板使用日期范围（startDate/endDate，可单边清空=不限）
+  const updateTemplateDates = async (id: string, patch: { startDate?: string; endDate?: string }) => {
+    if (!config || !derived) return;
+    const next: IdealDayConfig = {
+      ...config,
+      templates: derived.templates.map((t) => (t.id === id ? { ...t, ...patch } : t)),
+    };
+    setConfig(next);
+    await saveIdealDayConfig(next);
+  };
   const handleNewTemplate = () => {
     const t: IdealDayTemplate = {
       id: `custom-${Date.now()}`,
@@ -397,17 +426,6 @@ export default function IdealDayHomePage() {
   const handleDuplicate = (tpl: IdealDayTemplate) => {
     const dup: IdealDayTemplate = { ...tpl, id: `${tpl.id}-copy-${Date.now()}`, name: `${tpl.name} 副本`, daysOfWeek: undefined };
     startEdit(dup);
-  };
-  const handleDelete = (id: string) => {
-    if (!derived || !config) return;
-    if (derived.templates.length <= 1) { showToast({ type: "error", message: "至少保留一个模板" }); return; }
-    const next: IdealDayConfig = {
-      ...config,
-      templates: derived.templates.filter((t) => t.id !== id),
-      activeTemplateId: derived.templates.find((t) => t.id !== id)?.id,
-    };
-    setConfig(next);
-    showToast({ type: "success", message: "模板已删除" });
   };
 
   // ── 执行区 ──
@@ -648,23 +666,28 @@ export default function IdealDayHomePage() {
       {/* 模板切换条 */}
       <div className="px-4 mb-3">
         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar" style={{ scrollbarWidth: "none" }}>
-          {templates.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => setEditMode(false)}
-              className="flex items-center gap-1.5 shrink-0 px-3.5 h-9 rounded-full text-[13px] font-medium transition-all"
-              style={{
-                background: !editMode && t.id === activeTemplate.id ? "var(--lifeflow-primary)" : "var(--color-surface-card)",
-                color: !editMode && t.id === activeTemplate.id ? "#fff" : "var(--color-text-primary)",
-                boxShadow: "var(--shadow-card)",
-              }}
-            >
-              {!editMode && t.id === activeTemplate.id && <Check className="w-3.5 h-3.5" />}
-              {t.name}
-              {t.daysOfWeek?.length ? <span className="text-[10px] opacity-70">{t.daysOfWeek.length} 天</span> : null}
-            </button>
-          ))}
+          {templates.map((t) => {
+            const isActive = !editMode && t.id === activeTemplate.id;
+            const isLocked = !editMode && t.id === config.activeTemplateId;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => activateTemplate(t.id)}
+                className="flex items-center gap-1.5 shrink-0 px-3.5 h-9 rounded-full text-[13px] font-medium transition-all"
+                style={{
+                  background: isActive ? "var(--lifeflow-primary)" : "var(--color-surface-card)",
+                  color: isActive ? "#fff" : "var(--color-text-primary)",
+                  boxShadow: "var(--shadow-card)",
+                }}
+              >
+                {isActive && <Check className="w-3.5 h-3.5" />}
+                {t.name}
+                {t.daysOfWeek?.length ? <span className="text-[10px] opacity-70">{t.daysOfWeek.length} 天</span> : null}
+                {isLocked && <Lock className="w-3 h-3" style={{ color: isActive ? "#fff" : "var(--lifeflow-primary)" }} aria-label="已手动锁定" />}
+              </button>
+            );
+          })}
           <button type="button" onClick={handleNewTemplate} aria-label="新建模板"
             className="flex items-center justify-center h-9 w-9 shrink-0 rounded-full" style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}>
             <Plus className="w-4 h-4" style={{ color: "var(--lifeflow-primary)" }} />
@@ -672,21 +695,78 @@ export default function IdealDayHomePage() {
         </div>
       </div>
 
-      {/* 模板操作（非编辑态） */}
+      {/* 模板管理区（非编辑态）：模式指示 + 使用日期 + 操作 */}
       {!editMode && (
-        <div className="px-4 mb-3 flex items-center justify-between">
-          <span className="text-[13px] font-medium" style={{ color: "var(--color-text-secondary)" }}>
-            当前模板：{activeTemplate.name}
-          </span>
-          <div className="flex items-center gap-2">
-            <button type="button" onClick={() => startEdit({ ...activeTemplate })}
-              className="flex items-center gap-1 px-3 h-8 rounded-lg text-[12px] font-medium" style={{ background: "var(--lifeflow-brand-50)", color: "var(--lifeflow-primary)" }}>
-              <Pencil className="w-3.5 h-3.5" /> 编辑模板
-            </button>
-            <button type="button" onClick={() => handleDuplicate(activeTemplate)}
-              className="flex items-center gap-1 px-3 h-8 rounded-lg text-[12px] font-medium" style={{ background: "var(--lifeflow-muted)", color: "var(--color-text-secondary)" }}>
-              <Copy className="w-3.5 h-3.5" /> 复制
-            </button>
+        <div className="px-4 mb-3 space-y-2">
+          {/* 模式指示 + 恢复自动 */}
+          <div className="flex items-center justify-between gap-2">
+            <span className="flex items-center gap-1.5 text-[12px] font-medium min-w-0" style={{ color: "var(--color-text-secondary)" }}>
+              {config.activeTemplateId ? (
+                <>
+                  <Lock className="w-3.5 h-3.5 shrink-0" style={{ color: "var(--lifeflow-primary)" }} />
+                  <span className="truncate">已手动锁定「{activeTemplate.name}」· 不随日期自动切换</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-3.5 h-3.5 shrink-0" style={{ color: "var(--state-success)" }} />
+                  <span className="truncate">自动模式 · 按下方使用日期自动选择模板</span>
+                </>
+              )}
+            </span>
+            {config.activeTemplateId && (
+              <button type="button" onClick={handleRestoreAuto}
+                className="flex items-center gap-1 px-3 h-8 rounded-lg text-[12px] font-medium shrink-0"
+                style={{ background: "var(--lifeflow-brand-50)", color: "var(--lifeflow-primary)" }}>
+                <RotateCcw className="w-3.5 h-3.5" /> 恢复自动
+              </button>
+            )}
+          </div>
+
+          {/* 模板使用日期范围（自动模式匹配依据） */}
+          <div className="rounded-[16px] overflow-hidden" style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}>
+            <div className="flex items-center justify-between px-4 pt-3 pb-1">
+              <p className="text-[13px] font-semibold" style={{ color: "var(--color-text-primary)" }}>模板使用日期</p>
+              <span className="text-[11px]" style={{ color: "var(--color-text-tertiary)" }}>单边留空 = 不限</span>
+            </div>
+            {templates.map((t) => (
+              <div key={t.id} className="flex items-center gap-2 px-4 py-2.5" style={{ borderTop: "1px solid var(--lifeflow-border-light)" }}>
+                <span className="min-w-0 flex-1 text-[13px] truncate" style={{ color: "var(--color-text-primary)" }}>{t.name}</span>
+                <input
+                  type="date"
+                  value={t.startDate ?? ""}
+                  onChange={(e) => updateTemplateDates(t.id, { startDate: e.target.value || undefined })}
+                  aria-label={`${t.name} 开始日期`}
+                  className="outline-none rounded-lg px-2 h-8 text-[12px] tabular-nums"
+                  style={{ background: "var(--lifeflow-background)", color: "var(--color-text-primary)" }}
+                />
+                <span className="text-[12px]" style={{ color: "var(--color-text-tertiary)" }}>—</span>
+                <input
+                  type="date"
+                  value={t.endDate ?? ""}
+                  onChange={(e) => updateTemplateDates(t.id, { endDate: e.target.value || undefined })}
+                  aria-label={`${t.name} 结束日期`}
+                  className="outline-none rounded-lg px-2 h-8 text-[12px] tabular-nums"
+                  style={{ background: "var(--lifeflow-background)", color: "var(--color-text-primary)" }}
+                />
+              </div>
+            ))}
+          </div>
+
+          {/* 操作 */}
+          <div className="flex items-center justify-between">
+            <span className="text-[13px] font-medium" style={{ color: "var(--color-text-secondary)" }}>
+              当前模板：{activeTemplate.name}
+            </span>
+            <div className="flex items-center gap-2">
+              <button type="button" onClick={() => startEdit({ ...activeTemplate })}
+                className="flex items-center gap-1 px-3 h-8 rounded-lg text-[12px] font-medium" style={{ background: "var(--lifeflow-brand-50)", color: "var(--lifeflow-primary)" }}>
+                <Pencil className="w-3.5 h-3.5" /> 编辑模板
+              </button>
+              <button type="button" onClick={() => handleDuplicate(activeTemplate)}
+                className="flex items-center gap-1 px-3 h-8 rounded-lg text-[12px] font-medium" style={{ background: "var(--lifeflow-muted)", color: "var(--color-text-secondary)" }}>
+                <Copy className="w-3.5 h-3.5" /> 复制
+              </button>
+            </div>
           </div>
         </div>
       )}

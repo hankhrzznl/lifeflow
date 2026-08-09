@@ -113,8 +113,21 @@ export default function HomePage() {
   const { mergedActions, total, done, uncorrected, toggle, isDone } = useTodayExecution();
 
   // ── 今日三件事 ──
-  const { store: threeThings, toggle: toggleThree } = useThreeThings();
+  const { store: threeThings, toggle: toggleThree, updateText: updateThreeText } = useThreeThings();
   const threeItems = threeThings?.items ?? [];
+  // 三件事编辑（T22.8 修复：占位行「点击 ✎」接入编辑入口）
+  const [editingThree, setEditingThree] = useState<string | null>(null);
+  const [draftThree, setDraftThree] = useState("");
+  const startEditThree = (id: string, text: string) => {
+    setEditingThree(id);
+    setDraftThree(text);
+  };
+  const commitThree = (id: string) => {
+    const text = draftThree.trim();
+    if (text) updateThreeText(id, text);
+    setEditingThree(null);
+    setDraftThree("");
+  };
 
   // ── 健康概览条：睡眠 ──
   const yesterday = useMemo(() => {
@@ -312,15 +325,36 @@ export default function HomePage() {
                       className="mt-[7px] h-[6px] w-[6px] shrink-0 rounded-full active:scale-125 transition-transform"
                       style={{ background: item.done ? "#34C759" : "var(--lifeflow-primary)" }}
                     />
-                    <span
-                      className="text-[14px] font-semibold leading-snug truncate"
-                      style={{
-                        color: item.done ? "var(--color-text-disabled)" : "var(--color-text-primary)",
-                        textDecoration: item.done ? "line-through" : "none",
-                      }}
-                    >
-                      {item.text || "点击 ✎ 添加最重要的一件事…"}
-                    </span>
+                    {editingThree === item.id ? (
+                      <input
+                        value={draftThree}
+                        onChange={(e) => setDraftThree(e.target.value)}
+                        onBlur={() => commitThree(item.id)}
+                        onKeyDown={(e) => { if (e.key === "Enter") commitThree(item.id); }}
+                        placeholder="输入今天最重要的一件事…"
+                        aria-label="编辑最重要的一件事"
+                        autoFocus
+                        className="min-w-0 flex-1 bg-transparent outline-none text-[14px] font-semibold"
+                        style={{ color: "var(--color-text-primary)" }}
+                      />
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => startEditThree(item.id, item.text || "")}
+                        className="min-w-0 flex-1 text-left active:opacity-60"
+                        aria-label={item.text ? `编辑：${item.text}` : "添加最重要的一件事"}
+                      >
+                        <span
+                          className="block text-[14px] font-semibold leading-snug truncate"
+                          style={{
+                            color: item.done ? "var(--color-text-disabled)" : item.text ? "var(--color-text-primary)" : "var(--color-text-tertiary)",
+                            textDecoration: item.done ? "line-through" : "none",
+                          }}
+                        >
+                          {item.text || "点击 ✎ 添加最重要的一件事…"}
+                        </span>
+                      </button>
+                    )}
                   </li>
                 ))}
               </ul>

@@ -1167,10 +1167,8 @@ function ItemCard({
       return;
     }
     if (isPastDate) {
-      // 历史未完成：点击跳备注
-      if (!item.isCompleted) {
-        onNote();
-      }
+      // 历史事项（含已完成）：点击打开备注查看/补充（修复已完成项此前点击空操作）
+      onNote();
     } else {
       // 当天/未来：勾选
       onToggle();

@@ -9,34 +9,25 @@ import { getCountdowns, addCountdown, updateCountdown, deleteCountdown } from "@
 import type { Countdown } from "@/lib/db/life.db";
 import { showToast } from "@/components/ui/Toast";
 
-/** 卡片主题色（对齐画布：蓝 / 橙 / 紫），写入 countdowns 的 icon 字段 */
+/** 卡片主题色（对齐画布：蓝 #3B82F6 / 橙 #F59E0B / 紫 #8B5CF6），写入 countdowns 的 icon 字段 */
 const COLOR_KEYS = ["study", "training", "ideal"] as const;
 type ColorKey = (typeof COLOR_KEYS)[number];
 
-const COLOR_STYLE: Record<ColorKey, { label: string; dot: string; border: string; light: string; text: string; fill: string }> = {
+const COLOR_STYLE: Record<ColorKey, { label: string; color: string; light: string }> = {
   study: {
     label: "蓝",
-    dot: "bg-blue-500",
-    border: "border-blue-500",
-    light: "bg-blue-50 dark:bg-blue-900/30",
-    text: "text-blue-600 dark:text-blue-400",
-    fill: "bg-blue-500",
+    color: "#3B82F6",
+    light: "color-mix(in srgb, #3B82F6 12%, transparent)",
   },
   training: {
     label: "橙",
-    dot: "bg-orange-500",
-    border: "border-orange-500",
-    light: "bg-orange-50 dark:bg-orange-900/30",
-    text: "text-orange-600 dark:text-orange-400",
-    fill: "bg-orange-500",
+    color: "#F59E0B",
+    light: "color-mix(in srgb, #F59E0B 12%, transparent)",
   },
   ideal: {
     label: "紫",
-    dot: "bg-purple-500",
-    border: "border-purple-500",
-    light: "bg-purple-50 dark:bg-purple-900/30",
-    text: "text-purple-600 dark:text-purple-400",
-    fill: "bg-purple-500",
+    color: "#8B5CF6",
+    light: "color-mix(in srgb, #8B5CF6 12%, transparent)",
   },
 };
 
@@ -131,28 +122,51 @@ export default function CountdownPage() {
   }, [sorted, filter, today]);
 
   return (
-    <div className="min-h-dvh max-w-md mx-auto px-4 pt-[var(--safe-area-top)] pb-[104px]">
+    <div
+      className="min-h-dvh max-w-md mx-auto px-4 pt-[var(--safe-area-top)] pb-[104px]"
+      style={{ background: "var(--lifeflow-background)" }}
+    >
       {/* 顶部：返回 + 标题 + 数量 */}
       <header className="flex items-center gap-2 py-2">
         <button
           type="button"
           onClick={() => router.push("/more")}
           aria-label="返回"
-          className="w-9 h-9 shrink-0 flex items-center justify-center rounded-full bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm text-gray-500 dark:text-gray-400 hover:opacity-85 active:scale-90 transition"
+          className="w-9 h-9 shrink-0 flex items-center justify-center rounded-full hover:opacity-85 active:scale-90 transition"
+          style={{
+            background: "var(--color-surface-card)",
+            border: "1px solid var(--lifeflow-border)",
+            boxShadow: "var(--shadow-card)",
+            color: "var(--color-text-secondary)",
+          }}
         >
           <ChevronLeft className="w-5 h-5" />
         </button>
-        <span className="w-8 h-8 shrink-0 rounded-[10px] bg-purple-50 dark:bg-purple-900/30 text-purple-500 dark:text-purple-400 flex items-center justify-center">
+        <span
+          className="w-8 h-8 shrink-0 rounded-[10px] flex items-center justify-center"
+          style={{ background: "color-mix(in srgb, #8B5CF6 12%, transparent)", color: "#8B5CF6" }}
+        >
           <CalendarHeart className="w-[18px] h-[18px]" />
         </span>
-        <h1 className="flex-1 min-w-0 text-[24px] font-bold text-gray-900 dark:text-white truncate">倒数日</h1>
-        <span className="shrink-0 px-2.5 py-1 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 text-xs font-semibold font-mono">
+        <h1
+          className="flex-1 min-w-0 text-[24px] font-bold truncate"
+          style={{ color: "var(--color-text-primary)" }}
+        >
+          倒数日
+        </h1>
+        <span
+          className="shrink-0 px-2.5 py-1 rounded-full text-xs font-semibold font-mono"
+          style={{ background: "var(--lifeflow-muted)", color: "var(--color-text-secondary)" }}
+        >
           {(countdowns ?? []).length} 个
         </span>
       </header>
 
       {/* 快捷筛选 */}
-      <div className="flex gap-0.5 p-1 bg-gray-100 dark:bg-gray-800 rounded-[10px] mt-2">
+      <div
+        className="flex gap-0.5 p-1 rounded-[10px] mt-2"
+        style={{ background: "var(--lifeflow-muted)" }}
+      >
         {(
           [
             { key: "all", label: "全部" },
@@ -166,10 +180,13 @@ export default function CountdownPage() {
             onClick={() => setFilter(s.key)}
             aria-pressed={filter === s.key}
             className={`flex-1 h-8 rounded-md text-[13px] transition active:scale-95 ${
-              filter === s.key
-                ? "bg-white dark:bg-gray-900 text-gray-900 dark:text-white font-semibold shadow-sm"
-                : "text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+              filter === s.key ? "font-semibold" : ""
             }`}
+            style={
+              filter === s.key
+                ? { background: "var(--lifeflow-primary)", color: "var(--lifeflow-primary-foreground)" }
+                : { color: "var(--color-text-secondary)" }
+            }
           >
             {s.label}
           </button>
@@ -180,16 +197,23 @@ export default function CountdownPage() {
       {(countdowns ?? []).length === 0 ? (
         /* 空态 */
         <section className="flex flex-col items-center justify-center pt-16">
-          <div className="flex w-full max-w-sm flex-col items-center gap-6 p-10 rounded-[20px] bg-white dark:bg-gray-900 shadow-[var(--shadow-card)]">
-            <div className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-blue-50 dark:bg-blue-900/30">
-              <Clock9 className="h-8 w-8 text-[var(--lifeflow-primary)]" />
+          <div
+            className="flex w-full max-w-sm flex-col items-center gap-6 p-10 rounded-[20px]"
+            style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}
+          >
+            <div
+              className="inline-flex h-16 w-16 items-center justify-center rounded-full"
+              style={{ background: "color-mix(in srgb, #3B82F6 12%, transparent)" }}
+            >
+              <Clock9 className="h-8 w-8" style={{ color: "var(--lifeflow-primary)" }} />
             </div>
-            <p className="text-[17px] text-center text-gray-500 dark:text-gray-400">
+            <p className="text-[17px] text-center" style={{ color: "var(--color-text-secondary)" }}>
               还没有倒数日。添加一个值得期待的日子。
             </p>
             <button
               onClick={openNew}
-              className="inline-flex items-center justify-center rounded-full px-6 py-2.5 text-[15px] font-semibold whitespace-nowrap text-white bg-[var(--lifeflow-primary)] hover:opacity-90 active:opacity-80 transition"
+              className="inline-flex items-center justify-center rounded-full px-6 py-2.5 text-[15px] font-semibold whitespace-nowrap hover:opacity-90 active:opacity-80 transition"
+              style={{ background: "var(--lifeflow-primary)", color: "var(--lifeflow-primary-foreground)" }}
             >
               添加一个日子
             </button>
@@ -210,49 +234,84 @@ export default function CountdownPage() {
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: Math.min(i * 0.05, 0.3) }}
-                  className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-[var(--shadow-card)] px-4 pt-3.5 pb-2.5"
+                  className="rounded-2xl px-4 pt-3.5 pb-2.5"
+                  style={{
+                    background: "var(--color-surface-card)",
+                    border: "1px solid var(--lifeflow-border)",
+                    boxShadow: "var(--shadow-card)",
+                  }}
                 >
                   <div className="flex items-center gap-2 min-w-0">
-                    <span className={`w-2 h-2 rounded-full flex-shrink-0 ${style.dot}`} aria-hidden="true" />
-                    <h2 className="flex-1 min-w-0 text-[15px] font-semibold text-gray-900 dark:text-white truncate">{c.name}</h2>
-                    <span className="shrink-0 font-mono text-[11px] text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 rounded px-2 py-0.5">
+                    <span
+                      className="w-2 h-2 rounded-full flex-shrink-0"
+                      style={{ background: style.color }}
+                      aria-hidden="true"
+                    />
+                    <h2
+                      className="flex-1 min-w-0 text-[15px] font-semibold truncate"
+                      style={{ color: "var(--color-text-primary)" }}
+                    >
+                      {c.name}
+                    </h2>
+                    <span
+                      className="shrink-0 font-mono text-[11px] rounded px-2 py-0.5"
+                      style={{ color: "var(--color-text-secondary)", background: "var(--lifeflow-muted)" }}
+                    >
                       目标 {c.date}
                     </span>
                   </div>
 
                   <div className="flex items-center justify-between gap-3 mt-3">
                     <div className="flex items-baseline gap-1.5 min-w-0">
-                      <span className="text-[11px] text-gray-400 shrink-0">
+                      <span className="text-[11px] shrink-0" style={{ color: "var(--color-text-disabled)" }}>
                         {isPast ? "已过" : isToday ? "今天" : "剩余"}
                       </span>
                       {isToday ? (
-                        <span className="text-[26px] font-bold text-[var(--lifeflow-primary)] leading-none">今天</span>
+                        <span
+                          className="text-[26px] font-bold leading-none"
+                          style={{ color: "var(--lifeflow-primary)" }}
+                        >
+                          今天
+                        </span>
                       ) : (
                         <>
-                          <span className={`font-mono text-[30px] font-bold leading-none ${isPast ? "text-gray-400 dark:text-gray-500" : "text-gray-900 dark:text-white"}`}>
+                          <span
+                            className="font-mono text-[30px] font-bold leading-none"
+                            style={{ color: isPast ? "var(--color-text-disabled)" : "var(--color-text-primary)" }}
+                          >
                             {Math.abs(days)}
                           </span>
-                          <span className="text-xs text-gray-400">天</span>
+                          <span className="text-xs" style={{ color: "var(--color-text-disabled)" }}>
+                            天
+                          </span>
                         </>
                       )}
                     </div>
-                    <p className={`text-[11px] ${isPast ? "text-gray-400" : "text-gray-500 dark:text-gray-400"} truncate`}>
+                    <p
+                      className="text-[11px] truncate"
+                      style={{ color: isPast ? "var(--color-text-disabled)" : "var(--color-text-secondary)" }}
+                    >
                       {isPast ? `目标已过去 ${Math.abs(days)} 天` : isToday ? "目标日就在今天" : `距离目标还有 ${days} 天`}
                     </p>
                   </div>
 
-                  <div className="flex items-center justify-end gap-1 mt-3 pt-2.5 border-t border-gray-100 dark:border-gray-800">
+                  <div
+                    className="flex items-center justify-end gap-1 mt-3 pt-2.5"
+                    style={{ borderTop: "1px solid var(--lifeflow-border)" }}
+                  >
                     <button
                       type="button"
                       onClick={() => openEdit(c)}
-                      className="h-7 px-2.5 rounded-md text-xs font-semibold text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+                      className="h-7 px-2.5 rounded-md text-xs font-semibold transition active:scale-95"
+                      style={{ color: "var(--color-text-secondary)" }}
                     >
                       编辑
                     </button>
                     <button
                       type="button"
                       onClick={() => handleDelete(c.id)}
-                      className="h-7 px-2.5 rounded-md text-xs font-semibold text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 transition"
+                      className="h-7 px-2.5 rounded-md text-xs font-semibold transition active:scale-95"
+                      style={{ color: "var(--state-error)" }}
                     >
                       <span className="inline-flex items-center gap-1">
                         <Trash2 className="w-3.5 h-3.5" />
@@ -265,7 +324,9 @@ export default function CountdownPage() {
             })}
           </div>
           {shown.length === 0 && (
-            <p className="text-center text-[13px] text-gray-400 mt-8">该范围内暂无倒数日</p>
+            <p className="text-center text-[13px] mt-8" style={{ color: "var(--color-text-disabled)" }}>
+              该范围内暂无倒数日
+            </p>
           )}
         </>
       )}
@@ -275,7 +336,12 @@ export default function CountdownPage() {
         type="button"
         onClick={openNew}
         aria-label="新建倒数日"
-        className="fixed right-4 bottom-[180px] z-40 w-14 h-14 rounded-full bg-[var(--lifeflow-primary)] text-white shadow-[var(--shadow-modal)] flex items-center justify-center active:scale-90 transition"
+        className="fixed right-4 bottom-[180px] z-40 w-14 h-14 rounded-full flex items-center justify-center active:scale-90 transition"
+        style={{
+          background: "var(--lifeflow-primary)",
+          color: "var(--lifeflow-primary-foreground)",
+          boxShadow: "var(--shadow-modal)",
+        }}
       >
         <Plus className="w-6 h-6" />
       </button>
@@ -296,13 +362,16 @@ export default function CountdownPage() {
               exit={{ y: "100%" }}
               transition={{ type: "spring", stiffness: 380, damping: 40 }}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-md bg-white dark:bg-gray-900 rounded-t-3xl px-5 pt-3 pb-[calc(18px+env(safe-area-inset-bottom))]"
+              className="w-full max-w-md rounded-t-3xl px-5 pt-3 pb-[calc(18px+env(safe-area-inset-bottom))]"
+              style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-modal)" }}
             >
-              <div className="w-9 h-1 mx-auto rounded-full bg-gray-200 dark:bg-gray-700 mb-4" />
-              <h3 className="text-center text-[17px] font-bold text-gray-900 dark:text-white">
+              <div className="w-9 h-1 mx-auto rounded-full mb-4" style={{ background: "var(--lifeflow-border)" }} />
+              <h3 className="text-center text-[17px] font-bold" style={{ color: "var(--color-text-primary)" }}>
                 {editingId ? "编辑倒数日" : "新建倒数日"}
               </h3>
-              <p className="text-center text-xs text-gray-400 mt-1">记下一个重要日子，慢慢倒计时</p>
+              <p className="text-center text-xs mt-1" style={{ color: "var(--color-text-disabled)" }}>
+                记下一个重要日子，慢慢倒计时
+              </p>
               <input
                 type="text"
                 value={newName}
@@ -311,14 +380,24 @@ export default function CountdownPage() {
                 autoFocus
                 autoComplete="off"
                 aria-label="事件名称"
-                className="block w-full mt-3.5 rounded-[10px] border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-3 text-[15px] text-gray-900 dark:text-white outline-none focus:border-blue-400 placeholder:text-gray-400"
+                className="block w-full mt-3.5 rounded-[10px] px-3 py-3 text-[15px] outline-none"
+                style={{
+                  background: "var(--lifeflow-muted)",
+                  border: "1px solid var(--lifeflow-border)",
+                  color: "var(--color-text-primary)",
+                }}
               />
               <input
                 type="date"
                 value={newDate}
                 onChange={(e) => setNewDate(e.target.value)}
                 aria-label="目标日期"
-                className="block w-full mt-3 rounded-[10px] border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-3 text-[15px] text-gray-900 dark:text-white outline-none focus:border-blue-400"
+                className="block w-full mt-3 rounded-[10px] px-3 py-3 text-[15px] outline-none"
+                style={{
+                  background: "var(--lifeflow-muted)",
+                  border: "1px solid var(--lifeflow-border)",
+                  color: "var(--color-text-primary)",
+                }}
               />
               {/* 颜色选择 */}
               <div className="flex gap-2 mt-3">
@@ -330,13 +409,20 @@ export default function CountdownPage() {
                       type="button"
                       onClick={() => setSelectedColor(k)}
                       aria-pressed={selectedColor === k}
-                      className={`flex-1 h-10 rounded-[10px] border text-[13px] font-semibold flex items-center justify-center gap-1.5 transition active:scale-95 ${
-                        selectedColor === k
-                          ? `${s.border} ${s.light} ${s.text}`
-                          : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400"
+                      className={`flex-1 h-10 rounded-[10px] text-[13px] font-semibold flex items-center justify-center gap-1.5 transition active:scale-95 ${
+                        selectedColor === k ? "" : "font-normal"
                       }`}
+                      style={
+                        selectedColor === k
+                          ? { border: `1.5px solid ${s.color}`, background: s.light, color: s.color }
+                          : {
+                              border: "1.5px solid var(--lifeflow-border)",
+                              background: "var(--color-surface-card)",
+                              color: "var(--color-text-secondary)",
+                            }
+                      }
                     >
-                      <span className={`w-2.5 h-2.5 rounded-full ${s.dot}`} aria-hidden="true" />
+                      <span className="w-2.5 h-2.5 rounded-full" style={{ background: s.color }} aria-hidden="true" />
                       {s.label}
                     </button>
                   );
@@ -346,7 +432,8 @@ export default function CountdownPage() {
                 <button
                   type="button"
                   onClick={closeSheet}
-                  className="flex-1 h-11 rounded-[10px] text-[15px] font-semibold text-gray-900 dark:text-white bg-gray-100 dark:bg-gray-800 hover:opacity-85 transition"
+                  className="flex-1 h-11 rounded-[10px] text-[15px] font-semibold hover:opacity-85 transition"
+                  style={{ color: "var(--color-text-primary)", background: "var(--lifeflow-muted)" }}
                 >
                   取消
                 </button>
@@ -354,7 +441,8 @@ export default function CountdownPage() {
                   type="button"
                   onClick={handleSave}
                   disabled={!newName.trim() || !newDate}
-                  className="flex-1 h-11 rounded-[10px] text-[15px] font-semibold text-white bg-[var(--lifeflow-primary)] transition hover:opacity-90 disabled:opacity-40"
+                  className="flex-1 h-11 rounded-[10px] text-[15px] font-semibold transition hover:opacity-90 disabled:opacity-40"
+                  style={{ color: "var(--lifeflow-primary-foreground)", background: "var(--lifeflow-primary)" }}
                 >
                   {editingId ? "保存" : "添加"}
                 </button>

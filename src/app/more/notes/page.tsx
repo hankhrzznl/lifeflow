@@ -25,7 +25,14 @@ export default function NotesPage() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"all" | "pinned">("all");
-  const [pinnedIds, setPinnedIds] = useState<string[]>([]);
+  const [pinnedIds, setPinnedIds] = useState<string[]>(() => {
+    try {
+      const raw = localStorage.getItem(PIN_STORAGE_KEY);
+      return raw ? (JSON.parse(raw) as string[]) : [];
+    } catch {
+      return [];
+    }
+  });
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [title, setTitle] = useState("");
@@ -40,15 +47,6 @@ export default function NotesPage() {
   useEffect(() => {
     refresh();
   }, [refresh]);
-
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(PIN_STORAGE_KEY);
-      if (raw) setPinnedIds(JSON.parse(raw));
-    } catch {
-      /* ignore */
-    }
-  }, []);
 
   const togglePin = useCallback((id: string) => {
     setPinnedIds((prev) => {

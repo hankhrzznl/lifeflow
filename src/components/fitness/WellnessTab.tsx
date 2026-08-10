@@ -125,43 +125,46 @@ export default function WellnessTab() {
   const [isSaving, setIsSaving] = useState(false);
 
   /* ─── 今日功法清单（草稿，画布交互模型） ─── */
-  const [draftRows, setDraftRows] = useState<DraftRow[]>(() =>
-    GONGFA_PRESETS.map((p) => ({ name: p.name, minutes: p.duration, done: false })),
-  );
-  const [savedAt, setSavedAt] = useState<number | null>(null);
-  const [adding, setAdding] = useState(false);
-  const [addName, setAddName] = useState("");
-  const [addMinutes, setAddMinutes] = useState(10);
-  const [touchTick, setTouchTick] = useState<Record<number, number>>({});
-  const [draftReady, setDraftReady] = useState(false);
-
-  /* delete confirm */
-  const [deleteTarget, setDeleteTarget] = useState<number | null>(null);
-
-  /* ─── 草稿持久化（本地草稿，不影响线上数据读写） ─── */
-  useEffect(() => {
+  const [draftRows, setDraftRows] = useState<DraftRow[]>(() => {
     try {
       const raw = localStorage.getItem(DRAFT_KEY);
       if (raw) {
         const d = JSON.parse(raw) as WellnessDraft;
         if (d && d.date === todayStr() && Array.isArray(d.rows)) {
-          setDraftRows(
-            d.rows.map((r) => ({
-              name: String(r.name || ""),
-              minutes: clampMin(r.minutes),
-              done: !!r.done,
-            })),
-          );
-          if (d.savedAt) setSavedAt(d.savedAt);
+          return d.rows.map((r) => ({
+            name: String(r.name || ""),
+            minutes: clampMin(r.minutes),
+            done: !!r.done,
+          }));
         }
       }
     } catch {
       // ignore
-    } finally {
-      setDraftReady(true);
     }
-  }, []);
+    return GONGFA_PRESETS.map((p) => ({ name: p.name, minutes: p.duration, done: false }));
+  });
+  const [savedAt, setSavedAt] = useState<number | null>(() => {
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY);
+      if (raw) {
+        const d = JSON.parse(raw) as WellnessDraft;
+        if (d && d.date === todayStr() && d.savedAt) return d.savedAt;
+      }
+    } catch {
+      // ignore
+    }
+    return null;
+  });
+  const [adding, setAdding] = useState(false);
+  const [addName, setAddName] = useState("");
+  const [addMinutes, setAddMinutes] = useState(10);
+  const [touchTick, setTouchTick] = useState<Record<number, number>>({});
+  const [draftReady, setDraftReady] = useState(true);
 
+  /* delete confirm */
+  const [deleteTarget, setDeleteTarget] = useState<number | null>(null);
+
+  /* ─── 草稿持久化（本地草稿，不影响线上数据读写） ─── */
   useEffect(() => {
     try {
       const payload: WellnessDraft = { date: todayStr(), rows: draftRows };

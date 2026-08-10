@@ -27,6 +27,14 @@ export default function WishesPage() {
   const [status, setStatus] = useState<"active" | "done">("active");
   const [saving, setSaving] = useState(false);
 
+  const closeSheet = () => {
+    setSheetOpen(false);
+    setEditingId(null);
+    setNewName("");
+    setNewDesc("");
+    setSaving(false);
+  };
+
   const handleAdd = useCallback(async () => {
     if (!newName.trim() || saving) return;
     setSaving(true);
@@ -84,14 +92,6 @@ export default function WishesPage() {
     setNewColor(w.color);
     setStatus(w.completed ? "done" : "active");
     setSheetOpen(true);
-  };
-
-  const closeSheet = () => {
-    setSheetOpen(false);
-    setEditingId(null);
-    setNewName("");
-    setNewDesc("");
-    setSaving(false);
   };
 
   const list = useMemo(() => wishes ?? [], [wishes]);

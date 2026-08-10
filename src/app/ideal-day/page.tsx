@@ -670,17 +670,18 @@ export default function IdealDayHomePage() {
       {(() => {
         const dist = computeDayDistribution(activeTemplate);
         const C = 2 * Math.PI * 50;
-        let acc = 0;
-        const arcs = dist.mins.map((min, i) => {
+        const arcs = dist.mins.reduce<{ color: string; dash: string; offset: number }[]>((accArr, min, i) => {
           const frac = dist.totalMin > 0 ? Math.max(0, min / dist.totalMin) : 0;
-          const arc = {
-            color: dist.labels[i].color,
-            dash: `${(frac * C).toFixed(2)} ${(C - frac * C).toFixed(2)}`,
-            offset: -acc * C,
-          };
-          acc += frac;
-          return arc;
-        });
+          const acc = accArr.reduce((s, a) => s + parseFloat(a.dash.split(" ")[0]) / C, 0);
+          return [
+            ...accArr,
+            {
+              color: dist.labels[i].color,
+              dash: `${(frac * C).toFixed(2)} ${(C - frac * C).toFixed(2)}`,
+              offset: -acc * C,
+            },
+          ];
+        }, []);
         return (
           <div className="px-4 mb-3">
             <div className="flex items-center gap-4 rounded-[20px] px-4 py-4" style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}>

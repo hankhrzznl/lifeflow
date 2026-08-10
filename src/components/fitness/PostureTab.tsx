@@ -133,15 +133,42 @@ export default function PostureTab() {
   const [submitting, setSubmitting] = useState(false);
 
   /* ─── 今日拉伸清单（草稿，画布交互模型） ─── */
-  const [draftRows, setDraftRows] = useState<DraftRow[]>(() =>
-    QUICK_STRETCHES.map((s) => ({ name: s.name, seconds: 30, done: false, desc: s.desc })),
-  );
-  const [savedAt, setSavedAt] = useState<number | null>(null);
+  const [draftRows, setDraftRows] = useState<DraftRow[]>(() => {
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY);
+      if (raw) {
+        const d = JSON.parse(raw) as PostureDraft;
+        if (d && d.date === localToday() && Array.isArray(d.rows)) {
+          return d.rows.map((r) => ({
+            name: String(r.name || ""),
+            seconds: clampSec(r.seconds),
+            done: !!r.done,
+            desc: typeof r.desc === "string" ? r.desc : undefined,
+          }));
+        }
+      }
+    } catch {
+      // ignore
+    }
+    return QUICK_STRETCHES.map((s) => ({ name: s.name, seconds: 30, done: false, desc: s.desc }));
+  });
+  const [savedAt, setSavedAt] = useState<number | null>(() => {
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY);
+      if (raw) {
+        const d = JSON.parse(raw) as PostureDraft;
+        if (d && d.date === localToday() && d.savedAt) return d.savedAt;
+      }
+    } catch {
+      // ignore
+    }
+    return null;
+  });
   const [adding, setAdding] = useState(false);
   const [addName, setAddName] = useState("");
   const [addSeconds, setAddSeconds] = useState(30);
   const [touchTick, setTouchTick] = useState<Record<number, number>>({});
-  const [draftReady, setDraftReady] = useState(false);
+  const [draftReady, setDraftReady] = useState(true);
 
   const loadLogs = useCallback(async () => {
     const all = await healthDB.stretchLogs.orderBy("date").reverse().limit(50).toArray();
@@ -162,30 +189,6 @@ export default function PostureTab() {
   }, []);
 
   /* ─── 草稿持久化（本地草稿，不影响线上数据读写） ─── */
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(DRAFT_KEY);
-      if (raw) {
-        const d = JSON.parse(raw) as PostureDraft;
-        if (d && d.date === localToday() && Array.isArray(d.rows)) {
-          setDraftRows(
-            d.rows.map((r) => ({
-              name: String(r.name || ""),
-              seconds: clampSec(r.seconds),
-              done: !!r.done,
-              desc: typeof r.desc === "string" ? r.desc : undefined,
-            })),
-          );
-          if (d.savedAt) setSavedAt(d.savedAt);
-        }
-      }
-    } catch {
-      // ignore
-    } finally {
-      setDraftReady(true);
-    }
-  }, []);
-
   useEffect(() => {
     try {
       const payload: PostureDraft = { date: localToday(), rows: draftRows };

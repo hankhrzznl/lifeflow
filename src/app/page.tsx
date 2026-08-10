@@ -59,29 +59,52 @@ function formatMinutes(min: number): string {
 const PRESET_COLORS = ["#6366F1", "#FF9500", "#34C759", "#FF3B30", "#007AFF", "#5856D6", "#FF2D55", "#00C7BE"];
 
 // ============================================================
-// 进度环
+// 进度环（8+8+8 三色分段环：睡眠紫 / 学习蓝 / 休息绿）
+// 三色常量对齐画布 token：--lifeflow-ring-sleep/study/rest，
+// 双主题共用；各段 1/3 弧，按总体达成率填充，中心显示达成率
 // ============================================================
+const RING_SLEEP = "#5856D6";
+const RING_STUDY = "#0A84FF";
+const RING_REST = "#34C759";
+
 function ProgressRing({ percent }: { percent: number }) {
   const pct = Math.min(100, Math.max(0, percent));
   const R = 38;
   const CIRC = 2 * Math.PI * R;
-  const offset = CIRC - (pct / 100) * CIRC;
+  const SEG = CIRC / 3; // 每段 1/3 弧长
+  const fillOffset = SEG * (1 - pct / 100); // 每段按达成率填充
+  const segments = [
+    { color: RING_SLEEP, rotate: -90 }, // 顶部起 0°~120°
+    { color: RING_STUDY, rotate: 30 },  // 120°~240°
+    { color: RING_REST, rotate: 150 },  // 240°~360°
+  ];
   return (
-    <div className="relative h-[84px] w-[84px] shrink-0" aria-hidden="true">
-      <svg className="h-full w-full -rotate-90" viewBox="0 0 84 84">
+    <div className="relative h-[92px] w-[92px] shrink-0" aria-hidden="true">
+      <svg className="h-full w-full" viewBox="0 0 84 84">
         <circle cx="42" cy="42" r={R} fill="none" stroke="var(--lifeflow-knit-bg)" strokeWidth="8" />
-        <circle
-          cx="42" cy="42" r={R} fill="none"
-          stroke="var(--lifeflow-primary)" strokeWidth="8" strokeLinecap="round"
-          strokeDasharray={CIRC} strokeDashoffset={offset}
-          style={{ transition: "stroke-dashoffset 0.5s ease-in-out" }}
-        />
+        {segments.map((seg) => (
+          <circle
+            key={seg.color}
+            cx="42" cy="42" r={R} fill="none"
+            stroke={seg.color} strokeWidth="8" strokeLinecap="round"
+            strokeDasharray={`${SEG} ${CIRC - SEG}`}
+            strokeDashoffset={fillOffset}
+            transform={`rotate(${seg.rotate} 42 42)`}
+            className="motion-reduce:transition-none"
+            style={{ transition: "stroke-dashoffset 0.5s ease-in-out" }}
+          />
+        ))}
       </svg>
-      <span
-        className="absolute inset-0 flex items-center justify-center text-[26px] leading-none tabular-nums"
-        style={{ color: "var(--color-text-primary)", fontWeight: 700 }}
-      >
-        {Math.round(pct)}%
+      <span className="absolute inset-0 flex flex-col items-center justify-center gap-[3px]">
+        <span
+          className="text-[21px] leading-none tabular-nums"
+          style={{ color: "var(--color-text-primary)", fontWeight: 700 }}
+        >
+          {Math.round(pct)}%
+        </span>
+        <span className="text-[11px] leading-none font-semibold" style={{ color: "var(--color-text-disabled)" }}>
+          8+8+8
+        </span>
       </span>
     </div>
   );
@@ -264,7 +287,7 @@ export default function HomePage() {
             href="/more"
             aria-label="更多功能"
             className="mt-0.5 h-10 w-10 shrink-0 flex items-center justify-center rounded-full active:opacity-60"
-            style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}
+            style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)", border: "1px solid var(--lifeflow-border)" }}
           >
             <Ellipsis className="w-5 h-5" style={{ color: "var(--color-text-secondary)" }} />
           </Link>
@@ -291,7 +314,7 @@ export default function HomePage() {
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, ease: "easeOut" }}
-          className="rounded-[20px] px-4 pt-4 pb-3"
+          className="rounded-[16px] px-4 pt-4 pb-3"
           style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}
         >
           {/* 卡头 */}
@@ -300,7 +323,7 @@ export default function HomePage() {
               今日待办
             </h2>
             <span
-              className="shrink-0 rounded-md px-2.5 py-1 text-[12px] font-semibold tabular-nums"
+              className="shrink-0 rounded-[6px] px-2.5 py-1 text-[12px] font-semibold tabular-nums"
               style={{ background: "var(--lifeflow-brand-50)", color: "var(--lifeflow-primary)" }}
             >
               {done}/{total} 已完成
@@ -491,12 +514,17 @@ export default function HomePage() {
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.04, duration: 0.3, ease: "easeOut" }}
-          className="rounded-[20px] px-1 py-3.5 flex items-stretch"
+          className="rounded-[16px] px-1.5 py-3 flex items-stretch"
           style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}
         >
           <button type="button" onClick={() => router.push("/more/sleep")} aria-label="打卡：查看睡眠"
             className="flex min-w-0 flex-1 flex-col items-center gap-1.5 px-1 active:opacity-70">
-            <Moon className="h-5 w-5" style={{ color: "#3B82F6" }} />
+            <span
+              className="flex h-[34px] w-[34px] items-center justify-center rounded-full"
+              style={{ background: "rgba(99,102,241,0.14)", color: "#6366F1" }}
+            >
+              <Moon className="h-4 w-4" />
+            </span>
             <span className="text-[13px] font-semibold leading-none tabular-nums" style={{ color: "var(--color-text-primary)" }}>
               {lastSleep ? lastSleep.actualTime.slice(0, 5) : "--:--"}
             </span>
@@ -507,7 +535,12 @@ export default function HomePage() {
           <span className="w-px shrink-0" style={{ background: "var(--lifeflow-border)" }} />
           <button type="button" onClick={() => router.push("/more/water")} aria-label="打卡：记录饮水"
             className="flex min-w-0 flex-1 flex-col items-center gap-1.5 px-1 active:opacity-70">
-            <Droplets className="h-5 w-5" style={{ color: "#3B82F6" }} />
+            <span
+              className="flex h-[34px] w-[34px] items-center justify-center rounded-full"
+              style={{ background: "rgba(59,130,246,0.14)", color: "#3B82F6" }}
+            >
+              <Droplets className="h-4 w-4" />
+            </span>
             <span className="text-[13px] font-semibold leading-none tabular-nums" style={{ color: "var(--color-text-primary)" }}>
               {todayWaterMl}/{waterSettings.dailyTarget}
             </span>
@@ -516,7 +549,12 @@ export default function HomePage() {
           <span className="w-px shrink-0" style={{ background: "var(--lifeflow-border)" }} />
           <button type="button" onClick={() => router.push("/more/habits")} aria-label="打卡：习惯进度"
             className="flex min-w-0 flex-1 flex-col items-center gap-1.5 px-1 active:opacity-70">
-            <Repeat className="h-5 w-5" style={{ color: "#34C759" }} />
+            <span
+              className="flex h-[34px] w-[34px] items-center justify-center rounded-full"
+              style={{ background: "rgba(16,185,129,0.14)", color: "#10B981" }}
+            >
+              <Repeat className="h-4 w-4" />
+            </span>
             <span className="text-[13px] font-semibold leading-none tabular-nums" style={{ color: "var(--color-text-primary)" }}>
               {habitDone}/{habitTotal}
             </span>
@@ -525,7 +563,12 @@ export default function HomePage() {
           <span className="w-px shrink-0" style={{ background: "var(--lifeflow-border)" }} />
           <button type="button" onClick={() => router.push("/more/focus")} aria-label="打卡：查看专注"
             className="flex min-w-0 flex-1 flex-col items-center gap-1.5 px-1 active:opacity-70">
-            <Timer className="h-5 w-5" style={{ color: "var(--lifeflow-primary)" }} />
+            <span
+              className="flex h-[34px] w-[34px] items-center justify-center rounded-full"
+              style={{ background: "rgba(139,92,246,0.14)", color: "#8B5CF6" }}
+            >
+              <Timer className="h-4 w-4" />
+            </span>
             <span className="text-[13px] font-semibold leading-none tabular-nums" style={{ color: "var(--color-text-primary)" }}>
               {formatMinutes(focusMinutes ?? 0)}
             </span>
@@ -546,7 +589,7 @@ export default function HomePage() {
         >
           <Link
             href="/longtermism"
-            className="flex items-center gap-2.5 rounded-[20px] px-4 py-3.5 active:opacity-70"
+            className="flex items-center gap-2.5 rounded-[16px] px-4 py-3.5 active:opacity-70"
             style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}
           >
             <TrendingUp className="h-4 w-4 shrink-0" style={{ color: "var(--lifeflow-primary)" }} />

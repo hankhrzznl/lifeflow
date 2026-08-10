@@ -1,12 +1,11 @@
 "use client";
 
 import { useState, useMemo, useCallback } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLiveQuery } from "dexie-react-hooks";
 import {
-  ChevronLeft, Pill, Plus, X, Circle, Check, Trash2, Pencil,
+  ChevronLeft, Pill, PillBottle, Check, Plus, Minus,
 } from "lucide-react";
 import {
   getMedicines, addMedicine, updateMedicine, deleteMedicine,
@@ -21,15 +20,23 @@ import { showToast } from "@/components/ui/Toast";
 // ============================================================
 
 const TIME_SLOTS = [
-  { key: "morning", label: "早晨", time: "08:00", icon: "🌅" },
-  { key: "noon", label: "中午", time: "12:00", icon: "☀️" },
-  { key: "evening", label: "晚上", time: "18:00", icon: "🌆" },
-  { key: "bedtime", label: "睡前", time: "22:00", icon: "🌙" },
+  { key: "morning", label: "早晨", time: "08:00", hint: "随餐服用" },
+  { key: "noon", label: "中午", time: "12:00", hint: "餐后服用" },
+  { key: "evening", label: "晚上", time: "18:00", hint: "晚餐后服用" },
+  { key: "bedtime", label: "睡前", time: "22:00", hint: "睡前服用" },
 ] as const;
 
 type TimeSlotKey = (typeof TIME_SLOTS)[number]["key"];
 
 const COLORS = ["#DC2626", "#FF9500", "#34C759", "#007AFF", "#5856D6", "#FF2D55", "#AF52DE", "#00C7BE"];
+
+const MAX_STEPPER_COUNT = 4;
+
+// 画布语义色兜底：模块色 token 可能尚未注入全站，用琥珀色保证可用性
+const MED_COLOR = "var(--lifeflow-module-medication, #F59E0B)";
+const MED_LIGHT = "var(--lifeflow-module-medication-light, rgba(245,158,11,0.14))";
+const SUCCESS_LIGHT = "var(--state-success-light, rgba(52,199,89,0.14))";
+const ERROR_LIGHT = "var(--state-error-light, rgba(255,59,48,0.12))";
 
 function todayStr(): string {
   const d = new Date();
@@ -80,6 +87,21 @@ function slotListSummary(slots: TimeSlotKey[]): string {
   return `每天${n}次`;
 }
 
+// ─── 用量 stepper 本地展示解析（仅本地 UI，不落库） ─────
+// 画布演示语义：从 dosage 文本中尝试提取「数字 + 中文单位」，
+// 例如 "2片" → { count: 2, unit: "片" }；无法解析时回退 { 1, "粒" }。
+function parseDosage(dosage: string): { count: number; unit: string } {
+  if (!dosage) return { count: 1, unit: "粒" };
+  const m = dosage.trim().match(/^(\d+)\s*([粒片包颗袋丸支瓶])/);
+  if (m) {
+    return {
+      count: Math.max(1, Math.min(MAX_STEPPER_COUNT, Number(m[1]))),
+      unit: m[2],
+    };
+  }
+  return { count: 1, unit: "粒" };
+}
+
 // ============================================================
 // 主组件
 // ============================================================
@@ -92,6 +114,16 @@ export default function MedicationPage() {
   const todayLogs = useLiveQuery(() => getMedicineLogsByDate(today), [today], [] as MedicineLog[]);
 
   const activeMedicines = useMemo(() => medicines.filter(m => m.active), [medicines]);
+
+  // ── 当前时段 Tab ──
+  const [activeSlot, setActiveSlot] = useState<TimeSlotKey>("morning");
+
+  // ── 用量 stepper 本地状态（key: medicineId_slotKey，仅 UI，不新增 Dexie 字段）──
+  const [stepperCounts, setStepperCounts] = useState<Record<string, number>>({});
+
+  const setStepperCount = useCallback((key: string, n: number) => {
+    setStepperCounts(c => ({ ...c, [key]: Math.max(1, Math.min(MAX_STEPPER_COUNT, n)) }));
+  }, []);
 
   // ── 日志映射 (medicineId_timeSlot → log) ──
   const logMap = useMemo(() => {
@@ -108,6 +140,20 @@ export default function MedicationPage() {
     }
     return map;
   }, [medicines]);
+
+  // ── 各时段面板的药品（仅启用中的） ──
+  const slotMeds = useMemo(() => {
+    const map: Record<TimeSlotKey, MedicineDefinition[]> = {
+      morning: [], noon: [], evening: [], bedtime: [],
+    };
+    for (const m of activeMedicines) {
+      const slots = medicineSlots.get(m.id) || [];
+      for (const s of slots) {
+        if (map[s]) map[s].push(m);
+      }
+    }
+    return map;
+  }, [activeMedicines, medicineSlots]);
 
   // ── 勾选切换 ──
   const handleToggle = useCallback(async (medicineId: string, timeSlot: string) => {
@@ -218,7 +264,7 @@ export default function MedicationPage() {
     await updateMedicine(m.id, { active: !m.active });
   }, []);
 
-  // ── 今日统计（按实际已选时段计算） ──
+  // ── 今日统计（按今日 logs 实际统计：每次 = 每药每时段一次） ──
   const todayStats = useMemo(() => {
     if (activeMedicines.length === 0) return { total: 0, taken: 0 };
     let total = 0, taken = 0;
@@ -233,190 +279,369 @@ export default function MedicationPage() {
     return { total, taken };
   }, [activeMedicines, medicineSlots, logMap]);
 
+  const { total, taken } = todayStats;
+  const missed = Math.max(0, total - taken);
+  const allDone = total > 0 && taken >= total;
+  const progressPct = total > 0 ? Math.round((taken / total) * 100) : 0;
+
+  // ── 今日已选药品（按时段面板已选统计：取今日有 taken 日志的去重药品） ──
+  const selectedMedicines = useMemo(() => {
+    const picked = new Map<string, MedicineDefinition>();
+    for (const l of todayLogs) {
+      if (l.taken) {
+        const med = medicines.find(m => m.id === l.medicineId);
+        if (med) picked.set(med.id, med);
+      }
+    }
+    return [...picked.values()];
+  }, [todayLogs, medicines]);
+
+  // ── 打卡按钮：按真实统计反馈，不伪造日志 ──
+  const handleCheckin = useCallback(() => {
+    if (total === 0) {
+      showToast({ type: "info", message: "今天还没有需要服药的药品" });
+      return;
+    }
+    if (allDone) {
+      showToast({ type: "success", message: "今日服药已全部完成" });
+      return;
+    }
+    showToast({ type: "warning", message: `还有 ${missed} 次未服，去对应时段勾选吧` });
+  }, [total, allDone, missed]);
+
   return (
-    <div className="mx-auto pb-[100px]" style={{ maxWidth: 430, minHeight: "100vh", background: "var(--lifeflow-background)" }}>
-      {/* Header */}
-      <div className="px-5 pt-[var(--safe-area-top)] pb-2 flex items-center justify-between">
-        <div>
-          <h1 className="text-[34px] font-bold font-['SF_Pro_Display',_-apple-system] leading-tight" style={{ color: "var(--color-text-primary)", letterSpacing: "-0.022em" }}>
-            吃药
-          </h1>
-          <p className="text-[13px] font-medium mt-1" style={{ color: "var(--color-text-secondary)", letterSpacing: "-0.01em" }}>
-            用药提醒
-          </p>
-        </div>
+    <div className="mx-auto px-4 pt-[calc(var(--safe-area-top,0px)+12px)] pb-[100px] space-y-3" style={{ maxWidth: 430, minHeight: "100vh", background: "var(--lifeflow-background)" }}>
+      {/* ===== 顶部导航 ===== */}
+      <header className="flex items-center gap-3">
         <button
-          onClick={openCreate}
-          className="w-9 h-9 rounded-xl flex items-center justify-center"
-          style={{ background: "var(--lifeflow-primary)" }}
+          onClick={() => router.back()}
+          aria-label="返回理想日"
+          className="w-9 h-9 rounded-full bg-[var(--lifeflow-muted)] flex items-center justify-center text-[var(--color-text-primary)] transition-colors hover:bg-[var(--lifeflow-border)] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--lifeflow-ring)]"
         >
-          <Plus className="w-5 h-5 text-white" strokeWidth={2.5} />
+          <ChevronLeft className="w-5 h-5 shrink-0" />
         </button>
+        <div className="min-w-0 flex-1">
+          <h1 className="text-[17px] font-bold tracking-tight text-[var(--color-text-primary)] leading-tight truncate">吃药规划</h1>
+          <p className="text-[12px] text-[var(--color-text-secondary)] leading-normal">按时段服药</p>
+        </div>
+        <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: MED_LIGHT }}>
+          <Pill className="w-4 h-4 shrink-0" style={{ color: MED_COLOR }} />
+        </div>
+      </header>
+
+      {/* ===== 按时段 segmented tab ===== */}
+      <div role="tablist" aria-label="选择服药时段" className="p-1 bg-[var(--lifeflow-muted)] rounded-[16px] grid grid-cols-4 gap-1">
+        {TIME_SLOTS.map(slot => {
+          const active = activeSlot === slot.key;
+          return (
+            <button
+              key={slot.key}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              onClick={() => setActiveSlot(slot.key)}
+              className={`h-9 text-[13px] font-medium rounded-[10px] transition-colors cursor-pointer [-webkit-tap-highlight-color:transparent] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--lifeflow-ring)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--lifeflow-muted)] ${
+                active
+                  ? "font-semibold"
+                  : "text-[var(--color-text-secondary)] hover:opacity-80"
+              }`}
+              style={active ? { background: MED_LIGHT, color: MED_COLOR } : undefined}
+            >
+              {slot.label}
+            </button>
+          );
+        })}
       </div>
 
-      <div className="px-4">
-        {/* 今日用药 */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-          className="p-5 mb-4"
-          style={{ background: "var(--color-surface-card)", borderRadius: 20, boxShadow: "var(--shadow-card)" }}
-        >
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Pill className="w-5 h-5" style={{ color: "var(--lifeflow-primary)" }} />
-              <h2 className="text-[16px] font-semibold" style={{ color: "var(--color-text-primary)" }}>
-                今日用药
-              </h2>
+      {/* ===== 时段面板（早晨 / 中午 / 晚上 / 睡前） ===== */}
+      {TIME_SLOTS.map(slot => {
+        const meds = slotMeds[slot.key];
+        return (
+          <section
+            key={slot.key}
+            role="tabpanel"
+            aria-label={`${slot.label}用药`}
+            style={{ display: slot.key === activeSlot ? undefined : "none" }}
+            className="space-y-2.5"
+          >
+            <div className="flex items-center gap-2 px-1 pt-1">
+              <p className="text-[13px] font-semibold text-[var(--color-text-primary)]">{slot.label} · {slot.time}</p>
+              <span className="text-[12px] text-[var(--color-text-secondary)]">{slot.hint}</span>
             </div>
-            {activeMedicines.length > 0 && (
-              <span className="text-[12px] font-medium px-2 py-0.5 rounded-full" style={{ background: "var(--lifeflow-brand-50)", color: "var(--lifeflow-primary)" }}>
-                {todayStats.taken}/{todayStats.total}
-              </span>
-            )}
-          </div>
 
-          {activeMedicines.length === 0 ? (
-            <div className="py-6 flex flex-col items-center">
-              <Pill className="w-10 h-10 mb-3" style={{ color: "var(--color-text-disabled)" }} />
-              <p className="text-[14px]" style={{ color: "var(--color-text-secondary)" }}>还没有添加药品。点这里添加第一个。</p>
-              <button onClick={openCreate} className="mt-3 text-[13px] font-medium" style={{ color: "var(--lifeflow-primary)" }}>
-                新建药品
-              </button>
-            </div>
-          ) : (
-            <div>
-              {activeMedicines.map((med, mi) => {
-                const slots = medicineSlots.get(med.id) || [];
-                return (
-                <div key={med.id}>
-                  {mi > 0 && <div className="my-3 h-px" style={{ background: "var(--lifeflow-border)" }} />}
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="w-2.5 h-2.5 rounded-full" style={{ background: med.color }} />
-                      <span className="text-[15px] font-semibold" style={{ color: "var(--color-text-primary)" }}>
-                        {med.name}
-                      </span>
-                      {med.dosage && (
-                        <span className="text-[12px] px-2 py-0.5 rounded-full" style={{ background: "var(--lifeflow-muted)", color: "var(--color-text-secondary)" }}>
-                          {med.dosage}
-                        </span>
-                      )}
-                      <span className="text-[11px] ml-auto" style={{ color: "var(--color-text-disabled)" }}>
-                        {slotListSummary(slots)}
-                      </span>
+            <AnimatePresence mode="wait" initial={false}>
+              {slot.key === activeSlot && (
+                <motion.div
+                  key={activeSlot}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2, ease: "easeOut" }}
+                  className="space-y-2.5"
+                >
+                  {meds.length === 0 ? (
+                    <div className="bg-[var(--lifeflow-card)] rounded-[12px] shadow-[var(--shadow-card)] py-8 flex flex-col items-center gap-2">
+                      <PillBottle className="w-9 h-9 shrink-0 text-[var(--color-text-disabled)]" />
+                      <p className="text-[13px] text-[var(--color-text-secondary)]">该时段还没有需要服用的药品</p>
+                      <button
+                        onClick={openCreate}
+                        className="text-[13px] font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--lifeflow-ring)] rounded-full"
+                        style={{ color: MED_COLOR }}
+                      >
+                        新建药品
+                      </button>
                     </div>
-                    {/* 只显示已选时段按钮 */}
-                    <div className="flex gap-2">
-                      {slots.map((slotKey) => {
-                        const slot = TIME_SLOTS.find(s => s.key === slotKey)!;
-                        const key = `${med.id}_${slotKey}`;
-                        const log = logMap.get(key);
-                        const isTaken = log?.taken ?? false;
-                        return (
+                  ) : (
+                    meds.map(med => {
+                      const slots = medicineSlots.get(med.id) || [];
+                      const slotKey = slot.key;
+                      const key = `${med.id}_${slotKey}`;
+                      const isTaken = logMap.get(key)?.taken ?? false;
+                      const base = parseDosage(med.dosage);
+                      const count = stepperCounts[key] ?? base.count;
+                      const unit = base.unit;
+                      return (
+                        <div
+                          key={med.id}
+                          className="bg-[var(--lifeflow-card)] rounded-[12px] shadow-[var(--shadow-card)] p-3 flex items-center gap-3"
+                        >
+                          {/* 勾选圆钮 */}
                           <button
-                            key={slotKey}
+                            type="button"
+                            role="checkbox"
+                            aria-checked={isTaken}
+                            aria-label={`选择${med.name}`}
                             onClick={() => handleToggle(med.id, slotKey)}
-                            className="flex-1 flex flex-col items-center gap-1 py-2.5 rounded-xl transition-all active:scale-95"
+                            className="w-6 h-6 rounded-full border-[1.5px] flex items-center justify-center text-[var(--color-text-inverse)] shrink-0 cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--lifeflow-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--lifeflow-card)]"
                             style={{
-                              background: isTaken ? `${med.color}15` : "var(--lifeflow-background)",
-                              border: `1.5px solid ${isTaken ? med.color : "var(--lifeflow-border)"}`,
+                              background: isTaken ? MED_COLOR : "transparent",
+                              borderColor: isTaken ? MED_COLOR : "var(--lifeflow-border)",
                             }}
                           >
-                            <div
-                              className="w-5 h-5 rounded-full flex items-center justify-center"
+                            <Check
+                              className="w-3.5 h-3.5 shrink-0"
+                              strokeWidth={3}
                               style={{
-                                background: isTaken ? med.color : "transparent",
-                                border: isTaken ? "none" : "1.5px solid var(--color-text-disabled)",
+                                opacity: isTaken ? 1 : 0,
+                                transform: isTaken ? "scale(1)" : "scale(.5)",
+                                transition: "opacity .18s ease, transform .18s ease",
+                              }}
+                            />
+                          </button>
+
+                          {/* 药品图标 + 名称 */}
+                          <div className="min-w-0 flex-1 flex items-center gap-2.5">
+                            <div className="w-9 h-9 rounded-[10px] flex items-center justify-center shrink-0" style={{ background: MED_LIGHT }}>
+                              <PillBottle className="w-4 h-4 shrink-0" style={{ color: MED_COLOR }} />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-[14px] font-semibold text-[var(--color-text-primary)] leading-tight truncate">{med.name}</p>
+                              <p className="text-[12px] text-[var(--color-text-secondary)] leading-normal truncate">
+                                {slotListSummary(slots)}{med.dosage ? ` · ${med.dosage}` : ""}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* 用量 stepper（本地 UI 状态） */}
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              type="button"
+                              aria-label={`减少${med.name}用量`}
+                              disabled={!isTaken || count <= 1}
+                              onClick={() => setStepperCount(key, count - 1)}
+                              className="w-7 h-7 rounded-full flex items-center justify-center cursor-pointer transition-all active:scale-90 disabled:cursor-default disabled:opacity-35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--lifeflow-ring)]"
+                              style={{
+                                background: isTaken ? MED_LIGHT : "var(--lifeflow-muted)",
+                                color: isTaken ? MED_COLOR : "var(--color-text-disabled)",
                               }}
                             >
-                              {isTaken && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
-                            </div>
-                            <span className="text-[11px] font-medium" style={{ color: isTaken ? med.color : "var(--color-text-disabled)" }}>
-                              {slot.label}
-                            </span>
-                            <span className="text-[10px]" style={{ color: "var(--color-text-disabled)" }}>
-                              {slot.time}
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-                );
-              })}
-            </div>
-          )}
-        </motion.div>
+                              <Minus className="w-3.5 h-3.5 shrink-0" strokeWidth={2.5} />
+                            </button>
+                            <span className="w-7 text-center text-[13px] font-semibold text-[var(--color-text-primary)]">{count}</span>
+                            <button
+                              type="button"
+                              aria-label={`增加${med.name}用量`}
+                              disabled={!isTaken || count >= MAX_STEPPER_COUNT}
+                              onClick={() => setStepperCount(key, count + 1)}
+                              className="w-7 h-7 rounded-full flex items-center justify-center cursor-pointer transition-all active:scale-90 disabled:cursor-default disabled:opacity-35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--lifeflow-ring)]"
+                              style={{
+                                background: isTaken ? MED_LIGHT : "var(--lifeflow-muted)",
+                                color: isTaken ? MED_COLOR : "var(--color-text-disabled)",
+                              }}
+                            >
+                              <Plus className="w-3.5 h-3.5 shrink-0" strokeWidth={2.5} />
+                            </button>
+                            <span className="text-[12px] text-[var(--color-text-secondary)] ml-0.5">{unit}</span>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </section>
+        );
+      })}
 
-        {/* 药品管理 */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.05 }}
+      {/* ===== 今日服药打卡进度条卡 ===== */}
+      <motion.section
+        initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+        className="bg-[var(--lifeflow-card)] rounded-[16px] shadow-[var(--shadow-card)] p-4"
+      >
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[14px] font-semibold text-[var(--color-text-primary)] leading-tight">今日按时服药</p>
+            <p className="mt-0.5 text-[12px] text-[var(--color-text-secondary)] leading-normal">
+              已完成 <span className="font-semibold" style={{ color: MED_COLOR }}>{taken}</span>
+              <span className="text-[var(--color-text-disabled)]">/{total}</span> 次
+              {missed > 0 && (
+                <>
+                  <span className="text-[var(--color-text-disabled)]"> · </span>
+                  <span className="text-[var(--state-error)]">漏服 {missed} 次</span>
+                </>
+              )}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleCheckin}
+            disabled={allDone}
+            className="shrink-0 h-9 px-4 rounded-full flex items-center gap-1.5 text-[13px] font-semibold transition-colors active:scale-95 disabled:cursor-default focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--lifeflow-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--lifeflow-card)]"
+            style={{
+              background: allDone ? SUCCESS_LIGHT : MED_LIGHT,
+              color: allDone ? "var(--state-success)" : MED_COLOR,
+            }}
+          >
+            <Check className="w-4 h-4 shrink-0" strokeWidth={2.5} />
+            <span>打卡</span>
+          </button>
+        </div>
+        {/* knit-track / knit-fill 进度条 */}
+        <div
+          className="relative h-[6px] rounded-full overflow-hidden mt-3"
+          role="progressbar"
+          aria-label="今日服药完成度"
+          aria-valuemin={0}
+          aria-valuemax={total}
+          aria-valuenow={taken}
+          style={{ background: "var(--lifeflow-knit-bg)" }}
         >
-          <p className="text-[12px] font-medium mb-2.5 px-1" style={{ color: "var(--color-text-disabled)" }}>
-            药品管理
-          </p>
+          <div
+            className="absolute left-0 top-0 h-full rounded-full transition-[width] duration-500 ease-in-out"
+            style={{
+              width: `${progressPct}%`,
+              background: allDone ? "var(--state-success)" : MED_COLOR,
+            }}
+          />
+        </div>
+      </motion.section>
 
-          {medicines.length === 0 ? (
-            <div
-              className="py-10 flex flex-col items-center rounded-[20px]"
-              style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}
-            >
-              <Pill className="w-10 h-10 mb-3" style={{ color: "var(--color-text-disabled)" }} />
-              <p className="text-[14px]" style={{ color: "var(--color-text-secondary)" }}>暂无药品记录</p>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-2">
-              {medicines.map((med, i) => {
-                const slots = medicineSlots.get(med.id) || [];
-                return (
+      {/* ===== 今日用药计划摘要卡 ===== */}
+      <motion.section
+        initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.05 }}
+        className="bg-[var(--lifeflow-card)] rounded-[16px] shadow-[var(--shadow-card)] px-4 py-3.5"
+      >
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[14px] font-semibold text-[var(--color-text-primary)] leading-tight">今日用药计划</p>
+            <p className="mt-0.5 text-[12px] text-[var(--color-text-secondary)] leading-normal">
+              今日已选 <span className="font-semibold" style={{ color: MED_COLOR }}>{selectedMedicines.length}</span> 种药
+            </p>
+          </div>
+          <span className="text-[12px] text-[var(--color-text-disabled)] leading-normal text-right max-w-[50%] truncate">
+            {selectedMedicines.length ? `已选：${selectedMedicines.map(m => m.name).join("、")}` : "还没有选择药品"}
+          </span>
+        </div>
+        <p className="mt-2 text-[11px] text-center text-[var(--color-text-secondary)] leading-normal">勾选即自动同步到「日程」，按时段提醒用药</p>
+      </motion.section>
+
+      {/* ===== 药品管理（增删改，功能不变） ===== */}
+      <motion.section
+        initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+      >
+        <div className="flex items-center justify-between px-1 pt-1 pb-2">
+          <p className="text-[12px] font-medium text-[var(--color-text-disabled)]">药品管理</p>
+          <button
+            onClick={openCreate}
+            className="h-8 px-3 rounded-full flex items-center gap-1 text-[13px] font-semibold transition-colors active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--lifeflow-ring)]"
+            style={{ background: MED_LIGHT, color: MED_COLOR }}
+          >
+            <Plus className="w-4 h-4 shrink-0" strokeWidth={2.5} />
+            <span>新建</span>
+          </button>
+        </div>
+
+        {medicines.length === 0 ? (
+          <div
+            className="py-10 flex flex-col items-center rounded-[16px]"
+            style={{ background: "var(--lifeflow-card)", boxShadow: "var(--shadow-card)" }}
+          >
+            <Pill className="w-10 h-10 mb-3 text-[var(--color-text-disabled)]" />
+            <p className="text-[14px] text-[var(--color-text-secondary)]">暂无药品记录</p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {medicines.map((med, i) => {
+              const slots = medicineSlots.get(med.id) || [];
+              return (
                 <motion.div
                   key={med.id}
                   initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.03 }}
-                  className="p-3.5 rounded-[16px] flex items-center gap-3"
+                  className="p-3.5 rounded-[12px] flex items-center gap-3"
                   style={{
-                    background: "var(--color-surface-card)",
+                    background: "var(--lifeflow-card)",
                     boxShadow: "var(--shadow-card)",
-                    opacity: med.active ? 1 : 0.5,
+                    opacity: med.active ? 1 : 0.55,
                   }}
                 >
                   <div
-                    className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+                    className="w-9 h-9 rounded-[10px] flex items-center justify-center shrink-0"
                     style={{ background: `${med.color}20` }}
                   >
-                    <Pill className="w-5 h-5" style={{ color: med.color }} />
+                    <Pill className="w-5 h-5 shrink-0" style={{ color: med.color }} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="text-[14px] font-semibold truncate" style={{ color: "var(--color-text-primary)" }}>
                       {med.name}
                     </div>
-                    <div className="text-[11px]" style={{ color: "var(--color-text-disabled)" }}>
+                    <div className="text-[11px] text-[var(--color-text-disabled)]">
                       {med.dosage && `${med.dosage} · `}{slotListLabel(slots)}
                       {!med.active && " · 已停用"}
                     </div>
                   </div>
-                  <div className="flex items-center gap-1 flex-shrink-0">
-                    <button onClick={() => handleToggleActive(med)} className="w-8 h-8 flex items-center justify-center rounded-lg"
-                      title={med.active ? "停用" : "启用"}>
-                      <Circle className="w-4 h-4" style={{ color: med.active ? med.color : "var(--color-text-disabled)" }}
-                        fill={med.active ? med.color : "none"} />
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      onClick={() => handleToggleActive(med)}
+                      className="h-8 px-2.5 rounded-full text-[12px] font-medium transition-colors active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--lifeflow-ring)]"
+                      style={{ background: "var(--lifeflow-muted)", color: med.active ? med.color : "var(--color-text-disabled)" }}
+                    >
+                      {med.active ? "停用" : "启用"}
                     </button>
-                    <button onClick={() => openEdit(med)} className="w-8 h-8 flex items-center justify-center rounded-lg">
-                      <Pencil className="w-4 h-4" style={{ color: "var(--color-text-secondary)" }} />
+                    <button
+                      onClick={() => openEdit(med)}
+                      className="h-8 px-2.5 rounded-full text-[12px] font-medium transition-colors active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--lifeflow-ring)]"
+                      style={{ background: "var(--lifeflow-muted)", color: "var(--color-text-secondary)" }}
+                    >
+                      编辑
                     </button>
-                    <button onClick={() => handleDelete(med)} className="w-8 h-8 flex items-center justify-center rounded-lg">
-                      <Trash2 className="w-4 h-4" style={{ color: "var(--color-text-disabled)" }} />
+                    <button
+                      onClick={() => handleDelete(med)}
+                      className="h-8 px-2.5 rounded-full text-[12px] font-medium transition-colors active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--lifeflow-ring)]"
+                      style={{ background: ERROR_LIGHT, color: "var(--state-error)" }}
+                    >
+                      删除
                     </button>
                   </div>
                 </motion.div>
-                );
-              })}
-            </div>
-          )}
-        </motion.div>
-      </div>
+              );
+            })}
+          </div>
+        )}
+      </motion.section>
 
       {/* ===== 新增/编辑弹窗 ===== */}
       <AnimatePresence>
@@ -445,9 +670,12 @@ export default function MedicationPage() {
                   <h3 className="text-[20px] font-bold" style={{ color: "var(--color-text-primary)" }}>
                     {editingMed ? "编辑药品" : "新建药品"}
                   </h3>
-                  <button onClick={() => setShowForm(false)}
-                    className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: "var(--lifeflow-muted)" }}>
-                    <X className="w-4 h-4" style={{ color: "var(--color-text-secondary)" }} />
+                  <button
+                    onClick={() => setShowForm(false)}
+                    className="h-8 px-3 rounded-full text-[13px] font-medium transition-colors active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--lifeflow-ring)]"
+                    style={{ background: "var(--lifeflow-muted)", color: "var(--color-text-secondary)" }}
+                  >
+                    关闭
                   </button>
                 </div>
 
@@ -460,7 +688,7 @@ export default function MedicationPage() {
                     type="text" placeholder="例如：维生素C"
                     value={form.name}
                     onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))}
-                    className="w-full px-4 py-3 rounded-xl text-[15px] outline-none"
+                    className="w-full px-4 py-3 rounded-[12px] text-[15px] outline-none"
                     style={{ background: "var(--lifeflow-background)", color: "var(--color-text-primary)" }}
                     autoFocus
                   />
@@ -475,7 +703,7 @@ export default function MedicationPage() {
                     type="text" placeholder="例如：1片 / 500mg"
                     value={form.dosage}
                     onChange={(e) => setForm(f => ({ ...f, dosage: e.target.value }))}
-                    className="w-full px-4 py-3 rounded-xl text-[15px] outline-none"
+                    className="w-full px-4 py-3 rounded-[12px] text-[15px] outline-none"
                     style={{ background: "var(--lifeflow-background)", color: "var(--color-text-primary)" }}
                   />
                 </div>
@@ -485,24 +713,23 @@ export default function MedicationPage() {
                   <label className="text-[13px] font-medium mb-2 block" style={{ color: "var(--color-text-secondary)" }}>
                     服用时段 · {slotListSummary(form.selectedSlots)}
                   </label>
-                  <div className="flex gap-2">
+                  <div className="grid grid-cols-4 gap-2">
                     {TIME_SLOTS.map((slot) => {
                       const active = form.selectedSlots.includes(slot.key);
                       return (
                         <button
                           key={slot.key}
                           onClick={() => toggleFormSlot(slot.key)}
-                          className="flex-1 flex flex-col items-center gap-1 py-3 rounded-xl transition-all active:scale-95"
+                          className="flex flex-col items-center gap-1 py-3 rounded-[12px] transition-all active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--lifeflow-ring)]"
                           style={{
                             background: active ? `${form.color}15` : "var(--lifeflow-background)",
                             border: `1.5px solid ${active ? form.color : "var(--lifeflow-border)"}`,
                           }}
                         >
-                          <span className="text-[18px]">{slot.icon}</span>
                           <span className="text-[12px] font-medium" style={{ color: active ? form.color : "var(--color-text-disabled)" }}>
                             {slot.label}
                           </span>
-                          <span className="text-[10px]" style={{ color: "var(--color-text-disabled)" }}>
+                          <span className="text-[10px] text-[var(--color-text-disabled)]">
                             {slot.time}
                           </span>
                           {active && (
@@ -523,7 +750,7 @@ export default function MedicationPage() {
                     type="date"
                     value={form.deadline}
                     onChange={(e) => setForm(f => ({ ...f, deadline: e.target.value }))}
-                    className="w-full px-4 py-3 rounded-xl text-[15px] outline-none"
+                    className="w-full px-4 py-3 rounded-[12px] text-[15px] outline-none"
                     style={{ background: "var(--lifeflow-background)", color: "var(--color-text-primary)" }}
                   />
                 </div>
@@ -536,7 +763,7 @@ export default function MedicationPage() {
                   <div className="flex gap-3">
                     {COLORS.map(c => (
                       <button key={c} onClick={() => setForm(f => ({ ...f, color: c }))}
-                        className="w-8 h-8 rounded-full flex items-center justify-center transition-transform active:scale-90"
+                        className="w-8 h-8 rounded-full flex items-center justify-center transition-transform active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--lifeflow-ring)]"
                         style={{ background: c, transform: form.color === c ? "scale(1.15)" : "scale(1)" }}>
                         {form.color === c && <Check className="w-4 h-4 text-white" strokeWidth={3} />}
                       </button>
@@ -545,7 +772,7 @@ export default function MedicationPage() {
                 </div>
 
                 <button onClick={handleSave}
-                  className="w-full py-3.5 rounded-full text-white text-[16px] font-semibold active:opacity-90"
+                  className="w-full py-3.5 rounded-full text-white text-[16px] font-semibold active:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--lifeflow-ring)]"
                   style={{ background: "var(--lifeflow-primary)" }}>
                   {editingMed ? "保存修改" : "新建药品"}
                 </button>

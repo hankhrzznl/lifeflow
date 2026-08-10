@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Check, Plus, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, CalendarDays, Clock,
+  Check, Plus, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, CalendarDays, Clock, BookOpen,
   X, Target, AlertCircle, Pencil, Moon, Ellipsis, Wallet, Droplets, Timer, StickyNote,
   Bell, Sparkles, Dumbbell,
 } from "lucide-react";
@@ -69,6 +69,32 @@ function itemDurationInSlot(item: Item, hourLabel: string): number {
 
 function formatTimeHM(t: string): string {
   return t.slice(0, 5);
+}
+
+// 等宽字体（对齐画布 .lf-mono：时间轴刻度 / 事项时间）
+const MONO_FONT = "ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace";
+
+// 模块色兜底（对齐画布模块语义色；items 自带 color 时以 color 为准）
+const SOURCE_TYPE_COLOR: Record<string, string> = {
+  ideal: "#8B5CF6",
+  course: "#3B82F6",
+  routine: "#FF9500",
+  manual: "#6366F1",
+  task: "#2563EB",
+  habit: "#10B981",
+  medication: "#F59E0B",
+  fitness: "#F97316",
+  wellness: "#F97316",
+  posture: "#F97316",
+  diet: "#34C759",
+  water: "#0EA5E9",
+  goal: "#8B5CF6",
+};
+
+/** 事项模块色：优先 item.color（各来源模块写入），缺失时按 sourceType 兜底 */
+function moduleColor(item: Item): string {
+  if (item.color) return item.color;
+  return SOURCE_TYPE_COLOR[item.sourceType] ?? "#6366F1";
 }
 
 // ============================================================
@@ -226,12 +252,13 @@ export default function SchedulePage() {
   }, [items, isSelectedToday, nowTime]);
 
   const nowMinutes = nowTime ? timeToMinutes(nowTime) : 0;
+  const currentHourLabel = nowTime ? `${nowTime.slice(0, 2)}:00` : "";
   const axisStart = 6 * 60;
   const axisEnd = 26 * 60;
   const showNowLine = isSelectedToday && nowMinutes >= axisStart && nowMinutes <= axisEnd;
 
-  // ── 时间冲突检测 ──
-  const conflictItemIds = useMemo(() => {
+  // ── 时间冲突检测（保留 detectTimeConflicts 逻辑，附加冲突对方标题供视觉提示） ──
+  const conflictMap = useMemo(() => {
     const conflictItems: ConflictItem[] = (items || []).map(i => ({
       id: i.id,
       date: selectedDate!,
@@ -240,12 +267,12 @@ export default function SchedulePage() {
       title: i.title,
     }));
     const conflicts = detectTimeConflicts(conflictItems);
-    const ids = new Set<string>();
+    const map = new Map<string, string>();
     for (const c of conflicts) {
-      ids.add(c.a.id);
-      ids.add(c.b.id);
+      if (!map.has(c.a.id)) map.set(c.a.id, c.b.title ?? "待办事项");
+      if (!map.has(c.b.id)) map.set(c.b.id, c.a.title ?? "待办事项");
     }
-    return ids;
+    return map;
   }, [items, selectedDate]);
 
   // ── 小时块分组 ──
@@ -395,35 +422,69 @@ export default function SchedulePage() {
 
   return (
     <div className="mx-auto" style={{ maxWidth: 430, minHeight: "100vh", backgroundColor: "var(--lifeflow-background)", paddingBottom: 100 }}>
-      {/* ===== Header ===== */}
-      <div className="px-5 pt-[var(--safe-area-top)] pb-2 flex items-center justify-between">
-        <div>
-          <h1 className="text-[34px] font-bold" style={{ color: "var(--color-text-primary)", letterSpacing: "-0.022em", lineHeight: 1.2 }}>
-            日程
-          </h1>
-          <p className="text-[13px] font-medium mt-1" style={{ color: "var(--color-text-secondary)", letterSpacing: "-0.01em" }}>
-            时间轴
-          </p>
+      {/* ===== Header：日期标题 + 作息表/课程表入口（对齐画布 routines-entry / courses-entry） ===== */}
+      <header className="px-5 pt-[var(--safe-area-top)] pb-2">
+        <h1 className="sr-only">日程 · 时间轴</h1>
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-2">
+            <span
+              className="whitespace-nowrap text-[13px] font-medium tabular-nums"
+              style={{ fontFamily: MONO_FONT, color: "var(--color-text-primary)" }}
+            >
+              {formatDateChinese(selectedDateObj)}
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                setWeekOffset(0);
+                setSelectedDate(todayStr);
+              }}
+              className="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium active:opacity-80 transition-opacity"
+              style={{ background: "var(--lifeflow-brand-50)", color: "var(--lifeflow-primary)" }}
+            >
+              今天
+            </button>
+          </div>
+          <div className="flex shrink-0 items-center gap-1.5">
+            <Link
+              href="/more/schedule/routines"
+              aria-label="打开作息表"
+              title="作息表"
+              className="flex flex-col items-center gap-1 rounded-xl px-2.5 py-1.5 active:opacity-80 transition-opacity"
+              style={{ background: "var(--color-surface-card)", color: "var(--color-text-secondary)", boxShadow: "var(--shadow-card)" }}
+            >
+              <Clock className="h-4 w-4" />
+              <span className="text-[10px] leading-none">作息表</span>
+            </Link>
+            <Link
+              href="/more/schedule/courses"
+              aria-label="打开课程表"
+              title="课程表"
+              className="flex flex-col items-center gap-1 rounded-xl px-2.5 py-1.5 active:opacity-80 transition-opacity"
+              style={{ background: "var(--color-surface-card)", color: "var(--color-text-secondary)", boxShadow: "var(--shadow-card)" }}
+            >
+              <BookOpen className="h-4 w-4" />
+              <span className="text-[10px] leading-none">课程表</span>
+            </Link>
+            <Link
+              href="/more/calendar"
+              className="px-3 py-2 rounded-xl text-[11px] font-medium flex items-center gap-1 active:opacity-80 transition-opacity"
+              style={{ background: "var(--lifeflow-brand-50)", color: "var(--lifeflow-primary)" }}
+            >
+              <CalendarDays className="w-3.5 h-3.5" />
+              月视图
+            </Link>
+            <Link
+              href="/more"
+              aria-label="更多功能"
+              className="flex h-9 w-9 items-center justify-center rounded-full active:opacity-80 transition-opacity"
+              style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}
+            >
+              <Ellipsis className="w-5 h-5" style={{ color: "var(--color-text-secondary)" }} />
+            </Link>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Link
-            href="/more/calendar"
-            className="px-3 py-1.5 rounded-full text-[12px] font-medium flex items-center gap-1"
-            style={{ background: "var(--lifeflow-brand-50)", color: "var(--lifeflow-primary)" }}
-          >
-            <CalendarDays className="w-3.5 h-3.5" />
-            月视图
-          </Link>
-          <Link
-            href="/more"
-            aria-label="更多功能"
-            className="flex h-9 w-9 items-center justify-center rounded-full"
-            style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}
-          >
-            <Ellipsis className="w-5 h-5" style={{ color: "var(--color-text-secondary)" }} />
-          </Link>
-        </div>
-      </div>
+      </header>
 
       {/* ===== 今日焦点（T18-5：高优先级事项优先呈现） ===== */}
       {isSelectedToday && (
@@ -626,59 +687,62 @@ export default function SchedulePage() {
         </div>
       )}
 
-      {/* ===== 时间轴 ===== */}
+      {/* ===== 时间轴（对齐画布：左时间列 + 轨道圆点 + 右侧事项块） ===== */}
       <div
         ref={timelineRef}
         className="px-4 overflow-y-auto"
         style={{ maxHeight: "calc(100vh - 280px)", scrollBehavior: "smooth" }}
       >
         <div className="relative">
-          {/* 时间轴竖线 */}
-          <div
-            className="absolute left-[52px] top-0 bottom-0 w-px z-0"
-            style={{ background: "var(--lifeflow-border)" }}
-          />
-
-          {/* 现在线（仅当天） */}
+          {/* 现在线（仅当天，当前时间高亮） */}
           {showNowLine && (
             <div
-              className="absolute left-0 right-3 z-10 pointer-events-none"
-              style={{ top: `${Math.max(0, Math.min((nowMinutes - axisStart) / 60 * 72, HOURS.length * 72))}px` }}
+              className="absolute z-10 pointer-events-none"
+              style={{ left: 86, right: 8, top: `${Math.max(0, Math.min(((nowMinutes - axisStart) / 60) * 72, HOURS.length * 72))}px` }}
             >
               <div className="flex items-center gap-1">
-                <div className="w-2 h-2 rounded-full bg-[#FF3B30] flex-shrink-0" />
-                <div className="flex-1 h-px" style={{ background: "#FF3B30" }} />
+                <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: "var(--lifeflow-primary)" }} />
+                <div className="flex-1 h-px" style={{ background: "var(--lifeflow-primary)" }} />
               </div>
             </div>
           )}
 
           {/* 小时块 */}
-          {hourBlocks.map((block, bi) => {
+          {hourBlocks.map((block) => {
+            const hasItems = block.slotItems.length > 0;
+            const allDone = hasItems && block.slotItems.every((i) => i.isCompleted);
             return (
               <div
                 key={block.hour}
-                className="flex relative"
-                style={{ minHeight: 72 }}
+                className="relative"
+                style={{ display: "grid", gridTemplateColumns: "46px 20px minmax(0, 1fr)", columnGap: 10, minHeight: 72 }}
               >
-                {/* 时间刻度 */}
-                <div
-                  className="w-12 shrink-0 pt-0.5 text-[12px] font-medium"
-                  style={{ color: "var(--color-text-disabled)" }}
+                {/* 时间刻度（lf-mono） */}
+                <span
+                  className="text-right pt-3 text-[12px] tabular-nums leading-none"
+                  style={{ fontFamily: MONO_FONT, color: "var(--color-text-secondary)" }}
                 >
                   {block.hour}
-                </div>
+                </span>
+
+                {/* 轨道 + 圆点（对齐画布 hour-dot：全完成=绿 / 有待办=主色 / 空=灰） */}
+                <span className="relative">
+                  <span
+                    className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-px"
+                    style={{ background: "var(--lifeflow-border)" }}
+                  />
+                  <span
+                    className="absolute top-3 left-1/2 -translate-x-1/2 w-[9px] h-[9px] rounded-full"
+                    style={{
+                      background: allDone ? "var(--state-success)" : hasItems ? "var(--lifeflow-primary)" : "var(--color-text-secondary)",
+                      opacity: hasItems ? 1 : 0.35,
+                    }}
+                  />
+                </span>
 
                 {/* 内容区 */}
-                <div className="flex-1 ml-3 pb-1 relative">
-                  {block.carryOver && (
-                    <div className="h-5" />
-                  )}
-
-                  {block.slotItems.length === 0 && !block.carryOver && (
-                    <div className="h-full flex items-start pt-1">
-                      <span className="text-[11px]" style={{ color: "var(--color-text-disabled)" }} />
-                    </div>
-                  )}
+                <div className="relative min-w-0 pb-1">
+                  {block.carryOver && <div className="h-5" />}
 
                   {block.carryOver && (
                     <div className="flex items-center gap-2 px-2 py-0.5 mb-1 opacity-40 pointer-events-none">
@@ -687,10 +751,11 @@ export default function SchedulePage() {
                     </div>
                   )}
 
+                  {block.slotItems.length === 0 && !block.carryOver && <div className="h-full" />}
+
                   {/* 事项卡片（含饮水，折叠只显示第一个，展开显示全部） */}
                   {renderSlotItems({
                     items: block.slotItems,
-                    hourLabel: block.hour,
                     isPastDate,
                     expanded: expandedHours.has(block.hour),
                     onToggleExpand: () => toggleHourExpand(block.hour),
@@ -703,8 +768,9 @@ export default function SchedulePage() {
                     onWater: handleQuickWater,
                     onFocus: handleQuickFocus,
                     onAccounting: handleQuickAccounting,
-                    conflictItemIds,
+                    conflictMap,
                     overdueIds,
+                    isNowHour: isSelectedToday && block.hour === currentHourLabel,
                   })}
                 </div>
               </div>
@@ -1015,7 +1081,6 @@ export default function SchedulePage() {
 // ============================================================
 function renderSlotItems(args: {
   items: Item[];
-  hourLabel: string;
   isPastDate: boolean;
   expanded: boolean;
   onToggleExpand: () => void;
@@ -1028,11 +1093,12 @@ function renderSlotItems(args: {
   onWater: (item: Item) => void;
   onFocus: (item: Item) => void;
   onAccounting: (item: Item) => void;
-  conflictItemIds: Set<string>;
+  conflictMap: Map<string, string>;
   overdueIds: Set<string>;
+  isNowHour: boolean;
 }) {
-  const { items, hourLabel, isPastDate, expanded, onToggleExpand, onToggle, onDelete, onCalibrate, onNote,
-    expandedItemId, setExpandedItemId, onWater, onFocus, onAccounting, conflictItemIds, overdueIds } = args;
+  const { items, isPastDate, expanded, onToggleExpand, onToggle, onDelete, onCalibrate, onNote,
+    expandedItemId, setExpandedItemId, onWater, onFocus, onAccounting, conflictMap, overdueIds, isNowHour } = args;
   if (items.length === 0) return null;
 
   const sorted = [...items].sort((a, b) => a.plannedStart.localeCompare(b.plannedStart));
@@ -1047,7 +1113,6 @@ function renderSlotItems(args: {
           <ItemCard
             key={item.id}
             item={item}
-            hourLabel={hourLabel}
             isPastDate={isPastDate}
             onToggle={() => onToggle(item)}
             onLongPress={() => { if (!isPastDate) onDelete(item.id); }}
@@ -1058,8 +1123,10 @@ function renderSlotItems(args: {
             onWater={() => onWater(item)}
             onFocus={() => onFocus(item)}
             onAccounting={() => onAccounting(item)}
-            hasConflict={conflictItemIds.has(item.id)}
+            hasConflict={conflictMap.has(item.id)}
+            conflictWith={conflictMap.get(item.id)}
             overdue={overdueIds.has(item.id)}
+            isNow={isNowHour}
           />
         );
       })}
@@ -1097,7 +1164,6 @@ function renderSlotItems(args: {
 // ============================================================
 function ItemCard({
   item,
-  hourLabel,
   isPastDate,
   onToggle,
   onLongPress,
@@ -1109,10 +1175,11 @@ function ItemCard({
   onFocus,
   onAccounting,
   hasConflict,
+  conflictWith,
   overdue,
+  isNow,
 }: {
   item: Item;
-  hourLabel: string;
   isPastDate: boolean;
   onToggle: () => void;
   onLongPress: () => void;
@@ -1124,7 +1191,9 @@ function ItemCard({
   onFocus: () => void;
   onAccounting: () => void;
   hasConflict?: boolean;
+  conflictWith?: string;
   overdue?: boolean;
+  isNow?: boolean;
 }) {
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -1137,10 +1206,10 @@ function ItemCard({
   };
 
   const isMultiHour = timeToMinutes(item.plannedEnd) - timeToMinutes(item.plannedStart) > 60;
-  const isWater = item.sourceType === "water";
-  const isRoutine = item.sourceType === "routine";
   // T22：训练类事项只显示占位/提醒，打卡归「训练中心」
   const isTraining = item.sourceType === "fitness" || item.sourceType === "wellness";
+  // 模块色（对齐画布 mod-strip / 勾选钮）
+  const color = moduleColor(item);
 
   // 历史模式卡片行为
   const handleCardClick = () => {
@@ -1167,10 +1236,8 @@ function ItemCard({
       return;
     }
     if (isPastDate) {
-      // 历史未完成：点击跳备注
-      if (!item.isCompleted) {
-        onNote();
-      }
+      // 历史事项（含已完成）：点击打开备注查看/补充（修复已完成项此前点击空操作）
+      onNote();
     } else {
       // 当天/未来：勾选
       onToggle();
@@ -1207,18 +1274,12 @@ function ItemCard({
     <motion.div
       initial={{ opacity: 0, y: 4 }}
       animate={{ opacity: 1, y: 0 }}
-      className="rounded-[12px] px-3 py-2 flex items-center gap-2 active:scale-[0.97] transition-transform cursor-pointer"
+      className="flex gap-2.5 rounded-[12px] px-3 py-2.5 cursor-pointer active:scale-[0.985] transition-transform select-none"
       style={{
-        background: item.isCompleted
-          ? "var(--color-surface-secondary)"
-          : isWater
-            ? "#E0F2FE"
-            : isRoutine
-              ? `${item.color}10`
-              : `${item.color}15`,
-        opacity: isHistoryUncompleted ? 0.85 : item.isCompleted ? 0.55 : 1,
-        borderLeft: `3px solid ${isHistoryUncompleted ? "#FF3B30" : isWater ? "#0EA5E9" : item.color}`,
-        boxShadow: hasConflict ? '0 0 0 1.5px #FF3B30' : undefined,
+        background: "var(--color-surface-card)",
+        border: `1px solid ${hasConflict ? "var(--state-error)" : "var(--lifeflow-border)"}`,
+        boxShadow: "var(--shadow-card)",
+        opacity: item.isCompleted ? 0.72 : isHistoryUncompleted ? 0.85 : 1,
       }}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
@@ -1226,122 +1287,158 @@ function ItemCard({
       onContextMenu={(e) => { if (!isPastDate) { e.preventDefault(); onLongPress(); } }}
       onClick={handleCardClick}
     >
-      {/* 状态指示器（训练类显示占位图标，打卡归训练中心） */}
-      {isTraining && !isPastDate ? (
-        <span
-          className="w-5 h-5 rounded-full flex items-center justify-center shrink-0"
-          style={{ background: "rgba(249,115,22,0.14)" }}
-        >
-          <Dumbbell className="w-3 h-3" style={{ color: "#F97316" }} />
-        </span>
-      ) : (
-        <div
-          className="w-5 h-5 rounded-full flex items-center justify-center shrink-0"
-          style={{
-            background: item.isCompleted ? item.color : isHistoryUncompleted ? "#FF3B3040" : "transparent",
-            border: item.isCompleted ? "none" : isHistoryUncompleted ? "1.5px solid #FF3B30" : `2px solid ${item.color}40`,
-          }}
-        >
-          {item.isCompleted && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
-          {isHistoryUncompleted && <X className="w-2.5 h-2.5" style={{ color: "#FF3B30" }} strokeWidth={3} />}
-        </div>
-      )}
+      {/* 模块色条（对齐画布 mod-strip） */}
+      <span
+        className="w-[3px] rounded-full flex-shrink-0 self-stretch"
+        style={{ background: isHistoryUncompleted ? "#FF3B30" : color }}
+      />
 
-      {/* 内容 */}
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5">
-          <p
-            className="text-[14px] font-medium truncate"
-            style={{
-              color: item.isCompleted ? "var(--color-text-disabled)" : "var(--color-text-primary)",
-              textDecoration: item.isCompleted ? "line-through" : "none",
-            }}
-          >
-            {isWater && <span className="mr-1">💧</span>}
-            {isRoutine && <span className="mr-1">⏰</span>}
-            {item.title}
-          </p>
-          {isTraining && !isPastDate && (
+        <div className="flex items-start gap-2">
+          {/* 状态指示器（训练类显示占位图标，打卡归训练中心） */}
+          {isTraining && !isPastDate ? (
             <span
-              className="text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0"
-              style={{ background: "rgba(249,115,22,0.14)", color: "#F97316" }}
+              className="w-[22px] h-[22px] rounded-full flex items-center justify-center shrink-0 mt-[1px]"
+              style={{ background: "rgba(249,115,22,0.14)" }}
             >
-              打卡归训练中心
+              <Dumbbell className="w-3 h-3" style={{ color: "#F97316" }} />
             </span>
+          ) : (
+            <div
+              className="w-[22px] h-[22px] rounded-full flex items-center justify-center shrink-0 mt-[1px] transition-colors"
+              style={{
+                background: item.isCompleted ? "var(--state-success)" : isHistoryUncompleted ? "#FF3B3040" : "transparent",
+                border: item.isCompleted ? "none" : isHistoryUncompleted ? "1.5px solid #FF3B30" : `2px solid ${color}55`,
+              }}
+            >
+              {item.isCompleted && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
+              {isHistoryUncompleted && <X className="w-2.5 h-2.5" style={{ color: "#FF3B30" }} strokeWidth={3} />}
+            </div>
           )}
-          {isHistoryUncompleted && (
-            <span className="text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0" style={{ background: "#FF3B3020", color: "#FF3B30" }}>
-              未完成
-            </span>
-          )}
-          {overdue && !item.isCompleted && (
-            <span className="text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0" style={{ background: "#FF3B3020", color: "#FF3B30" }}>
-              配额已超时
-            </span>
-          )}
-        </div>
-        <div className="flex items-center gap-1.5 mt-0.5">
-          <Clock className="w-3 h-3 flex-shrink-0" style={{ color: "var(--color-text-disabled)" }} />
-          <span className="text-[11px]" style={{ color: item.isCorrected ? "#FF9500" : "var(--color-text-disabled)" }}>
-            {displayTime() as React.ReactNode}
-          </span>
-          {item.isCorrected && (
-            <span className="text-[11px] font-medium" style={{ color: "#FF9500" }}>已校准</span>
-          )}
-          {/* T22.2：理想日来源徽标 */}
-          {item.sourceType === "ideal" && (
-            <span className="text-[11px] font-medium flex items-center gap-0.5" style={{ color: "#6366F1" }}>
-              <Sparkles className="w-3 h-3" /> 理想日
-            </span>
-          )}
-        </div>
-        {/* 备注预览（历史日期） */}
-        {isPastDate && item.note && (
-          <p className="text-[11px] truncate mt-0.5" style={{ color: "var(--color-text-disabled)" }}>
-            {item.note}
-          </p>
-        )}
-      </div>
 
-      {/* 操作按钮（训练类隐藏，打卡入口在卡片点击） */}
-      {!(isTraining && !isPastDate) && (
-        <div className="flex items-center gap-0.5 flex-shrink-0">
-          {/* T22.2：目标事项行内常驻专注按钮 */}
-          {item.sourceType === "goal" && !item.isCompleted && (
-            <button
-              onClick={(e) => { e.stopPropagation(); onFocus(); }}
-              className="w-7 h-7 rounded-full flex items-center justify-center active:scale-90 transition-transform"
-              aria-label={`专注：${item.title}`}
-              style={{ background: "rgba(139,92,246,0.14)", color: "rgba(139,92,246,1)" }}
-            >
-              <Timer className="w-3.5 h-3.5" />
-            </button>
-          )}
-          <button
-            onClick={(e) => { e.stopPropagation(); onCalibrate(); }}
-            className="w-6 h-6 rounded-full flex items-center justify-center active:opacity-70"
-            aria-label="校准时间"
-          >
-            <Target className="w-3.5 h-3.5" style={{ color: "var(--color-text-disabled)" }} />
-          </button>
-          {isHistoryUncompleted && (
-            <button
-              onClick={(e) => { e.stopPropagation(); onNote(); }}
-              className="w-6 h-6 rounded-full flex items-center justify-center active:opacity-70"
-              aria-label="备注"
-            >
-              <Pencil className="w-3.5 h-3.5" style={{ color: "#FF3B30" }} />
-            </button>
-          )}
-          <button
-            onClick={(e) => { e.stopPropagation(); onExpandToggle(); }}
-            className="w-6 h-6 rounded-full flex items-center justify-center active:opacity-70"
-            aria-label="更多操作"
-          >
-            <Ellipsis className="w-3.5 h-3.5" style={{ color: expanded ? "var(--lifeflow-primary)" : "var(--color-text-disabled)" }} />
-          </button>
+          <div className="min-w-0 flex-1">
+            {/* 标题 + 徽标 */}
+            <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
+              <p
+                className="text-[14px] font-semibold leading-[20px] truncate"
+                style={{
+                  color: item.isCompleted ? "var(--color-text-disabled)" : "var(--color-text-primary)",
+                  textDecoration: item.isCompleted ? "line-through" : "none",
+                }}
+              >
+                {item.title}
+              </p>
+              {/* 对齐画布「现在」徽标（当前小时） */}
+              {isNow && !item.isCompleted && (
+                <span
+                  className="inline-flex h-[16px] items-center rounded-full px-1.5 text-[10px] font-semibold leading-none flex-shrink-0"
+                  style={{ background: "var(--lifeflow-primary)", color: "#fff" }}
+                >
+                  现在
+                </span>
+              )}
+              {/* T22.2：理想日来源徽标（对齐画布 ideal-badge） */}
+              {item.sourceType === "ideal" && (
+                <span
+                  className="inline-flex h-[16px] items-center gap-0.5 rounded-full px-1.5 text-[10px] font-semibold leading-none flex-shrink-0"
+                  style={{ background: "rgba(139,92,246,0.14)", color: "#8B5CF6" }}
+                >
+                  <Sparkles className="w-3 h-3" /> 理想日
+                </span>
+              )}
+              {isTraining && !isPastDate && (
+                <span
+                  className="text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0"
+                  style={{ background: "rgba(249,115,22,0.14)", color: "#F97316" }}
+                >
+                  打卡归训练中心
+                </span>
+              )}
+              {isHistoryUncompleted && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0" style={{ background: "#FF3B3020", color: "#FF3B30" }}>
+                  未完成
+                </span>
+              )}
+              {overdue && !item.isCompleted && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0" style={{ background: "#FF3B3020", color: "#FF3B30" }}>
+                  配额已超时
+                </span>
+              )}
+            </div>
+
+            {/* 时间（lf-mono，对齐画布 item-meta） */}
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <Clock className="w-3 h-3 flex-shrink-0" style={{ color: "var(--color-text-disabled)" }} />
+              <span
+                className="text-[11px] tabular-nums leading-none"
+                style={{ fontFamily: MONO_FONT, color: item.isCorrected ? "#FF9500" : "var(--color-text-disabled)" }}
+              >
+                {displayTime() as React.ReactNode}
+              </span>
+              {item.isCorrected && (
+                <span className="text-[11px] font-medium" style={{ color: "#FF9500" }}>已校准</span>
+              )}
+            </div>
+
+            {/* 冲突提示（对齐画布 conflict-hint） */}
+            {hasConflict && conflictWith && (
+              <p className="text-[11px] mt-1 leading-normal" style={{ color: "var(--state-error)" }}>
+                与「{conflictWith}」时间重叠
+              </p>
+            )}
+
+            {/* 备注预览（历史日期） */}
+            {isPastDate && item.note && (
+              <p className="text-[11px] truncate mt-0.5" style={{ color: "var(--color-text-disabled)" }}>
+                {item.note}
+              </p>
+            )}
+
+            {/* 操作行（对齐画布 act-btn / timer-btn） */}
+            {!(isTraining && !isPastDate) && (
+              <div className="mt-2 flex items-center gap-1">
+                {/* T22.2：目标事项行内常驻专注按钮 */}
+                {item.sourceType === "goal" && !item.isCompleted && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onFocus(); }}
+                    className="w-7 h-7 rounded-full flex items-center justify-center active:scale-90 transition-transform"
+                    aria-label={`专注：${item.title}`}
+                    style={{ background: "rgba(139,92,246,0.14)", color: "rgba(139,92,246,1)" }}
+                  >
+                    <Timer className="w-3.5 h-3.5" />
+                  </button>
+                )}
+                <button
+                  onClick={(e) => { e.stopPropagation(); onCalibrate(); }}
+                  className="w-7 h-7 rounded-full flex items-center justify-center active:opacity-70 transition-colors"
+                  aria-label="校准时间"
+                  style={{ color: "var(--color-text-disabled)" }}
+                >
+                  <Target className="w-3.5 h-3.5" />
+                </button>
+                {isHistoryUncompleted && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onNote(); }}
+                    className="w-7 h-7 rounded-full flex items-center justify-center active:opacity-70 transition-colors"
+                    aria-label="备注"
+                    style={{ color: "#FF3B30" }}
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
+                )}
+                <button
+                  onClick={(e) => { e.stopPropagation(); onExpandToggle(); }}
+                  className="w-7 h-7 rounded-full flex items-center justify-center active:opacity-70 transition-colors"
+                  aria-label="更多操作"
+                  style={{ color: expanded ? "var(--lifeflow-primary)" : "var(--color-text-disabled)" }}
+                >
+                  <Ellipsis className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+          </div>
         </div>
-      )}
+      </div>
     </motion.div>
     {/* 操作栏 */}
     <AnimatePresence>

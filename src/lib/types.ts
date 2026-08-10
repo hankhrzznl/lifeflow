@@ -1085,11 +1085,14 @@ export interface IdealDayTemplateBlock {
   features: IdealDayFeature[]; // 该时间段要使用的功能集合
 }
 
-/** T22：理想日模板（多模板 · 手动切换 + 可选按星期自动匹配） */
+/** T22：理想日模板（多模板 · 手动切换 + 可选按星期/日期范围自动匹配） */
 export interface IdealDayTemplate {
   id: string;
   name: string;                // 模板名（工作日 / 周末 / 自定义副本…）
   daysOfWeek?: number[];       // 可选自动匹配（0=周日~6=周六）；缺省 = 仅手动
+  /** 可选使用日期范围（YYYY-MM-DD，可清空=不限）：自动模式按此匹配，优先于 daysOfWeek */
+  startDate?: string;
+  endDate?: string;
   blocks: IdealDayTemplateBlock[];
 }
 

@@ -152,7 +152,9 @@ function migrateBlock(b: IdealDayTemplateBlock): IdealDayTemplateBlock {
 }
 
 /**
- * 确保配置含模板（旧配置缺省时派生并回填；旧 3 组模板自动迁移到 5 段；不改 enabled）
+ * 确保配置含模板（旧配置缺省时派生并回填；旧 3 组模板自动迁移到 5 段；不改 enabled）。
+ * 不强制填充 activeTemplateId：无值 = 自动模式（按日期范围/星期自动匹配）；
+ * 存量配置的 activeTemplateId 保留（手动锁定优先），仅当指向的模板不存在时视为自动模式。
  */
 export function ensureTemplates(config: IdealDayConfig): { config: IdealDayConfig; templates: IdealDayTemplate[] } {
   if (config.templates && config.templates.length > 0) {
@@ -163,11 +165,11 @@ export function ensureTemplates(config: IdealDayConfig): { config: IdealDayConfi
       : config.templates;
     const activeId = config.activeTemplateId && templates.some((t) => t.id === config.activeTemplateId)
       ? config.activeTemplateId
-      : templates[0].id;
+      : undefined; // 失效/无值 → 自动模式
     return { config: { ...config, activeTemplateId: activeId }, templates };
   }
   const templates = deriveDefaultTemplates(config);
-  return { config: { ...config, templates, activeTemplateId: 'workday' }, templates };
+  return { config: { ...config, templates }, templates };
 }
 
 /** 从旧字段派生默认模板集（向后兼容：旧配置无 templates 时使用） */
@@ -183,16 +185,33 @@ export function deriveDefaultTemplates(config: IdealDayConfig): IdealDayTemplate
   return [workday, weekend];
 }
 
-/** 按日期选择模板：优先手动激活模板；若激活模板无自动匹配，则匹配该星期的模板；否则回退手动 */
+/**
+ * 按日期选择模板（手动激活无条件优先，不检查日期范围）：
+ * ① config.activeTemplateId 存在 → 无条件返回该模板（手动锁定）；
+ * ② 自动模式 → 找使用日期范围覆盖当天的模板（startDate/endDate 可单边清空=不限）；
+ * ③ 其次按星期（daysOfWeek）匹配；
+ * ④ 兜底返回模板列表首个。
+ */
 export function selectTemplate(config: IdealDayConfig, dateStr: string): IdealDayTemplate {
   const { templates } = ensureTemplates(config);
-  const active = templates.find((t) => t.id === config.activeTemplateId) ?? templates[0];
-  if (!active?.daysOfWeek?.length) return active;
+  // ① 手动锁定：无条件优先
+  if (config.activeTemplateId) {
+    const active = templates.find((t) => t.id === config.activeTemplateId);
+    if (active) return active;
+  }
+  // ② 自动模式：日期范围匹配（字符串比较，YYYY-MM-DD）
+  const byRange = templates.find((t) => {
+    if (!t.startDate && !t.endDate) return false;
+    if (t.startDate && t.startDate > dateStr) return false;
+    if (t.endDate && dateStr > t.endDate) return false;
+    return true;
+  });
+  if (byRange) return byRange;
+  // ③ 星期匹配
   const dow = new Date(dateStr + 'T00:00:00').getDay();
-  if (active.daysOfWeek.includes(dow)) return active;
-  // 激活模板不匹配当天 → 找自动匹配的模板；无则回退激活模板
-  const matched = templates.find((t) => t.daysOfWeek?.includes(dow));
-  return matched ?? active;
+  const byDow = templates.find((t) => t.daysOfWeek?.includes(dow));
+  // ④ 兜底首个
+  return byDow ?? templates[0];
 }
 
 // ─── L2 规划层（userSettings.idealDayPlans，不新建表） ───

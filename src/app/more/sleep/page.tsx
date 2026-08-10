@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ChevronRight, Minus, Plus, Moon, BarChart3, Sunset } from "lucide-react";
+import { ChevronLeft, ChevronRight, Minus, Plus, Moon, BarChart3, Sunset, Check, BedDouble, Clock } from "lucide-react";
 import { useHealthStore } from "@/lib/store/healthStore";
 import {
   getSleepLogs,
@@ -199,6 +199,12 @@ export default function SleepPage() {
     return result;
   }, [sleepLogs]);
 
+  /* 本周按时入睡天数（用于打卡卡进度） */
+  const weekOnTime = useMemo(
+    () => weekDots.filter((d) => d.type === "on-time").length,
+    [weekDots],
+  );
+
   /* ─── Stepper ─── */
 
   const handleStepTarget = useCallback(
@@ -390,7 +396,7 @@ export default function SleepPage() {
 
           {/* Time scale track */}
           <div className="mt-5">
-            <div className="relative h-[6px] rounded-full" style={{ background: "var(--lifeflow-muted)" }}>
+            <div className="relative h-[6px] rounded-full" style={{ background: "var(--lifeflow-knit-bg)" }}>
               {/* target dashed line */}
               {(() => {
                 const targetPct = ((targetNorm - windowStart) / (windowEnd - windowStart)) * 100;
@@ -418,10 +424,10 @@ export default function SleepPage() {
 
             {/* Labels */}
             <div className="mt-2 flex justify-between">
-              <span className="text-[13px]" style={{ color: "var(--color-text-disabled)" }}>
+              <span className="text-[12px] tabular-nums" style={{ color: "var(--color-text-disabled)" }}>
                 {minutesToTime(windowStart)}
               </span>
-              <span className="text-[13px]" style={{ color: "var(--color-text-disabled)" }}>
+              <span className="text-[12px] tabular-nums" style={{ color: "var(--color-text-disabled)" }}>
                 {minutesToTime(windowEnd)}
               </span>
             </div>
@@ -439,21 +445,69 @@ export default function SleepPage() {
           ) : null}
         </motion.div>
 
-        {/* ─── Record Sleep Button ─── */}
+        {/* ─── 入睡打卡卡（画布对齐：呼吸圆钮 + 状态徽章 + 本周进度） ─── */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.05, duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
+          className="p-4"
+          style={{ background: "var(--color-surface-card)", borderRadius: "20px", boxShadow: "var(--shadow-card)" }}
         >
-          <button
-            type="button"
-            onClick={handleLogSleep}
-            disabled={isSaving}
-            className="w-full py-3.5 rounded-full text-white text-base font-semibold tracking-[-0.018em] active:opacity-90 transition-opacity disabled:opacity-50"
-            style={{ background: "var(--lifeflow-primary)" }}
-          >
-            {isSaving ? "记录中…" : actualTime ? "更新入睡时间" : "记录睡眠"}
-          </button>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <BedDouble className="w-4 h-4" style={{ color: "var(--lifeflow-primary)" }} />
+              <h3 className="text-[14px] font-bold" style={{ color: "var(--color-text-primary)" }}>入睡打卡</h3>
+            </div>
+            <span
+              className="px-2 py-0.5 rounded-md text-[11px] font-medium leading-4"
+              style={{ background: "var(--lifeflow-brand-50)", color: "var(--lifeflow-primary)" }}
+            >
+              {actualTime ? "已打卡" : "未打卡"}
+            </span>
+          </div>
+
+          {/* 打卡圆钮（呼吸动画；已打卡态实心 + 对勾） */}
+          <div className="flex justify-center pt-4 pb-1">
+            <button
+              type="button"
+              onClick={handleLogSleep}
+              disabled={isSaving}
+              aria-pressed={!!actualTime}
+              className="relative h-32 w-32 rounded-full border-2 flex flex-col items-center justify-center transition-colors disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+              style={
+                actualTime
+                  ? { background: "var(--lifeflow-primary)", borderColor: "var(--lifeflow-primary)", color: "#fff", outlineColor: "var(--lifeflow-primary)" }
+                  : { background: "var(--lifeflow-brand-50)", borderColor: "var(--lifeflow-primary)", color: "var(--lifeflow-primary)", outlineColor: "var(--lifeflow-primary)" }
+              }
+            >
+              {!actualTime && (
+                <motion.span
+                  className="absolute inset-0 rounded-full pointer-events-none"
+                  style={{ background: "var(--lifeflow-brand-100)" }}
+                  animate={{ scale: [1, 1.28], opacity: [0.45, 0] }}
+                  transition={{ repeat: Infinity, duration: 2.4, ease: "easeOut" }}
+                />
+              )}
+              <span className="relative flex flex-col items-center gap-1.5">
+                {actualTime ? <Check className="h-9 w-9" strokeWidth={2.5} /> : <Moon className="h-9 w-9" />}
+                <span className="text-[14px] font-semibold leading-none">{isSaving ? "记录中…" : actualTime ? "已打卡" : "打卡入睡"}</span>
+              </span>
+            </button>
+          </div>
+
+          {/* 本周按时入睡 */}
+          <div className="mt-3 rounded-[10px] px-3 py-2.5" style={{ background: "var(--lifeflow-muted)" }}>
+            <div className="flex items-center justify-between">
+              <span className="text-[12.5px]" style={{ color: "var(--color-text-secondary)" }}>本周按时入睡</span>
+              <span className="text-[12.5px] font-medium tabular-nums" style={{ color: "var(--color-text-primary)" }}>{weekOnTime}/7 天</span>
+            </div>
+            <div className="mt-2 h-[6px] rounded-full overflow-hidden" style={{ background: "var(--lifeflow-knit-bg)" }}>
+              <div
+                className="h-full rounded-full"
+                style={{ width: `${(weekOnTime / 7) * 100}%`, background: "var(--lifeflow-primary)", transition: "width 0.5s cubic-bezier(0.22, 0.61, 0.36, 1)" }}
+              />
+            </div>
+          </div>
         </motion.div>
 
         {/* ─── 早睡分析 Card ─── */}
@@ -462,7 +516,7 @@ export default function SleepPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1, duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
         >
-          <h2 className="text-base font-semibold mb-3 px-0.5" style={{ color: "var(--color-text-primary)" }}>早睡分析</h2>
+          <h2 className="text-[15px] font-bold mb-3 px-0.5" style={{ color: "var(--color-text-primary)" }}>早睡分析</h2>
           <div className="p-6 flex flex-col items-center justify-center" style={{ background: "var(--color-surface-card)", borderRadius: "20px", boxShadow: "var(--shadow-card)", minHeight: "160px" }}>
             {trendChart.points.length > 1 ? (
               <div className="w-full">
@@ -529,7 +583,7 @@ export default function SleepPage() {
           </div>
         </motion.div>
 
-        {/* ─── Consecutive Days Card ─── */}
+        {/* ─── 连续早睡统计 Card ─── */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
@@ -544,27 +598,22 @@ export default function SleepPage() {
             {consecutiveDays > 0 ? "保持好习惯" : "从今天开始吧"}
           </p>
 
-          {/* Week dots */}
+          {/* Week dots（画布热力点样式） */}
           <div className="mt-5 flex justify-center gap-2">
             {weekDots.map((dot, i) => (
-              <div key={i} className="flex flex-col items-center gap-1">
+              <div key={i} className="flex flex-col items-center gap-1.5">
                 <div
-                  className={`w-6 h-6 rounded-full flex items-center justify-center text-[12px] font-medium ${
-                    dot.type === "on-time"
-                      ? ""
-                      : dot.type === "today-no-record"
-                        ? ""
-                        : ""
-                  }`}
+                  className="w-7 h-7 rounded-full flex items-center justify-center"
                   style={
                     dot.type === "on-time"
                       ? { background: "var(--lifeflow-primary)", color: "#fff" }
                       : dot.type === "today-no-record"
-                        ? { background: "#fff", border: "2px solid var(--lifeflow-primary)", color: "var(--lifeflow-primary)" }
+                        ? { background: "var(--color-surface-card)", border: "2px solid var(--lifeflow-primary)", color: "var(--lifeflow-primary)" }
                         : { background: "var(--lifeflow-muted)", color: "var(--color-text-disabled)" }
                   }
                 >
-                  {dot.type === "on-time" ? "✓" : ""}
+                  {dot.type === "on-time" && <Check className="w-4 h-4" strokeWidth={3} />}
+                  {dot.type === "today-no-record" && <span className="text-[12px] font-medium">今</span>}
                 </div>
                 <span className="text-[11px]" style={{ color: "var(--color-text-disabled)" }}>{dot.label}</span>
               </div>
@@ -572,7 +621,7 @@ export default function SleepPage() {
           </div>
         </motion.div>
 
-        {/* ─── Sleep Target Card ─── */}
+        {/* ─── 入睡目标 Card（画布时间设置样式） ─── */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
@@ -580,33 +629,46 @@ export default function SleepPage() {
           className="p-5"
           style={{ background: "var(--color-surface-card)", borderRadius: "20px", boxShadow: "var(--shadow-card)" }}
         >
-          <h2 className="text-[17px] font-semibold" style={{ color: "var(--color-text-primary)" }}>入睡目标</h2>
+          <div className="flex items-center gap-2">
+            <Moon className="w-4 h-4" style={{ color: "var(--lifeflow-primary)" }} />
+            <h2 className="text-[15px] font-bold" style={{ color: "var(--color-text-primary)" }}>入睡目标</h2>
+          </div>
 
-          {/* Stepper */}
-          <div className="mt-5 flex items-center justify-center gap-6">
-            <button
-              type="button"
-              onClick={() => handleStepTarget(-5)}
-              className="w-8 h-8 rounded-full border-2 flex items-center justify-center"
-              style={{ borderColor: "var(--lifeflow-primary)", background: "var(--color-surface-card)" }}
-            >
-              <Minus className="w-4 h-4" style={{ color: "var(--lifeflow-primary)" }} />
-            </button>
-            <span className="text-[34px] font-bold leading-none tabular-nums" style={{ color: "var(--color-text-primary)" }}>
-              {targetTime}
-            </span>
-            <button
-              type="button"
-              onClick={() => handleStepTarget(5)}
-              className="w-8 h-8 rounded-full border-2 flex items-center justify-center"
-              style={{ borderColor: "var(--lifeflow-primary)", background: "var(--color-surface-card)" }}
-            >
-              <Plus className="w-4 h-4" style={{ color: "var(--lifeflow-primary)" }} />
-            </button>
+          {/* Stepper row */}
+          <div className="mt-3 flex items-center justify-between rounded-xl px-3 py-2.5" style={{ background: "var(--lifeflow-muted)" }}>
+            <div className="flex items-center gap-2.5 min-w-0">
+              <span className="w-8 h-8 flex-none rounded-full flex items-center justify-center" style={{ background: "var(--lifeflow-brand-50)", color: "var(--lifeflow-primary)" }}>
+                <BedDouble className="w-4 h-4" />
+              </span>
+              <span className="text-[13px] font-medium truncate" style={{ color: "var(--color-text-primary)" }}>入睡目标</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => handleStepTarget(-5)}
+                className="w-7 h-7 rounded-full border-[1.5px] flex items-center justify-center"
+                style={{ borderColor: "var(--lifeflow-primary)", background: "var(--color-surface-card)" }}
+                aria-label="提前 5 分钟"
+              >
+                <Minus className="w-3.5 h-3.5" style={{ color: "var(--lifeflow-primary)" }} />
+              </button>
+              <span className="text-[20px] font-bold leading-none tabular-nums" style={{ color: "var(--color-text-primary)" }}>
+                {targetTime}
+              </span>
+              <button
+                type="button"
+                onClick={() => handleStepTarget(5)}
+                className="w-7 h-7 rounded-full border-[1.5px] flex items-center justify-center"
+                style={{ borderColor: "var(--lifeflow-primary)", background: "var(--color-surface-card)" }}
+                aria-label="延后 5 分钟"
+              >
+                <Plus className="w-3.5 h-3.5" style={{ color: "var(--lifeflow-primary)" }} />
+              </button>
+            </div>
           </div>
 
           {/* Reminder advance */}
-          <div className="mt-6">
+          <div className="mt-5">
             <div className="flex items-center justify-between">
               <span className="text-[13px]" style={{ color: "var(--color-text-secondary)" }}>提醒提前量</span>
               {/* iOS-style toggle switch */}
@@ -617,6 +679,8 @@ export default function SleepPage() {
                     reminderEnabled: !sleepGoalV2.reminderEnabled,
                   })
                 }
+                role="switch"
+                aria-checked={sleepGoalV2.reminderEnabled}
                 className="relative w-[51px] h-[31px] rounded-full transition-colors"
                 style={{ background: sleepGoalV2.reminderEnabled ? "var(--lifeflow-primary)" : "var(--color-text-disabled)" }}
               >
@@ -659,13 +723,15 @@ export default function SleepPage() {
         >
           <div className="flex items-center justify-between mb-1">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "#F9731618" }}>
-                <Sunset className="w-4 h-4" style={{ color: "#F97316" }} />
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "var(--lifeflow-brand-50)" }}>
+                <Sunset className="w-4 h-4" style={{ color: "var(--lifeflow-primary)" }} />
               </div>
               <span className="text-[15px] font-semibold" style={{ color: "var(--color-text-primary)" }}>早睡渐进</span>
             </div>
             <button
               onClick={() => updateSleepGoalV2({ earlySleepEnabled: !earlySleepEnabled, ...(sleepGoalV2?.earlySleepStepMinutes ? {} : { earlySleepStepMinutes: 15 }) })}
+              role="switch"
+              aria-checked={earlySleepEnabled}
               className="h-7 w-12 rounded-full transition-colors relative"
               style={{ background: earlySleepEnabled ? "var(--lifeflow-primary)" : "var(--lifeflow-border)" }}
             >
@@ -733,7 +799,10 @@ export default function SleepPage() {
             }}
             className="w-full flex items-center justify-between py-2"
           >
-            <span className="text-[17px]" style={{ color: "var(--color-text-disabled)" }}>手动校准</span>
+            <span className="flex items-center gap-2 text-[15px]" style={{ color: "var(--color-text-secondary)" }}>
+              <Clock className="w-4 h-4" style={{ color: "var(--color-text-disabled)" }} />
+              手动校准
+            </span>
             <ChevronRight className="w-5 h-5" style={{ color: "var(--color-text-disabled)" }} />
           </button>
         </motion.div>

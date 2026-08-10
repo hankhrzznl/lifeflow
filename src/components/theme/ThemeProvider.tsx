@@ -48,6 +48,7 @@ function applyDarkTokens() {
   root.style.setProperty("--foreground", "#FFFFFF");
   root.style.setProperty("--lifeflow-muted", "#1C1C1E");
   root.style.setProperty("--lifeflow-brand-50", "#1E3A5F");
+  root.style.setProperty("--lifeflow-knit-bg", "rgba(255,255,255,0.1)");
   root.classList.add("dark");
   root.classList.remove("light");
 }
@@ -76,6 +77,7 @@ function applyLightTokens() {
   root.style.setProperty("--foreground", "#000000");
   root.style.setProperty("--lifeflow-muted", "#F3F4F6");
   root.style.setProperty("--lifeflow-brand-50", "#EFF6FF");
+  root.style.setProperty("--lifeflow-knit-bg", "#E9E9EB");
   root.classList.add("light");
   root.classList.remove("dark");
 }
@@ -86,8 +88,8 @@ function applyLightTokens() {
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(() => {
-    if (typeof window === "undefined") return "system";
-    return (localStorage.getItem("lf-theme") as Theme) || "system";
+    if (typeof window === "undefined") return "light";
+    return (localStorage.getItem("lf-theme") as Theme) || "light";
   });
 
   const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">("light");

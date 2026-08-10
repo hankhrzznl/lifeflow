@@ -3,13 +3,34 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Plus, Trash2, StickyNote, Pin, Search } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, StickyNote, Pin, Search, Check } from "lucide-react";
 import { getNotes, addNote, updateNote, deleteNote } from "@/lib/db/life.db";
 import type { Note } from "@/lib/db/life.db";
 import { showToast } from "@/components/ui/Toast";
 
 /** 置顶标记的本地持久化键（仅前端 UI 状态，不写 life.db） */
 const PIN_STORAGE_KEY = "lifeflow.notes.pinned";
+
+type NoteCategory = "work" | "life" | "study";
+type NoteFilter = "all" | "pinned" | NoteCategory;
+
+/** T24 画布对齐：分类语义色（工作=主蓝 primary / 生活=状态绿 state-success / 学习=画布 module-ideal 紫） */
+const CATEGORY_META: Record<NoteCategory, { label: string; color: string }> = {
+  work: { label: "工作", color: "var(--lifeflow-primary)" },
+  life: { label: "生活", color: "#34C759" },
+  study: { label: "学习", color: "#8B5CF6" },
+};
+
+/** 分类语义浅底（color-mix 自动适配明暗主题） */
+const catTint = (color: string) => `color-mix(in srgb, ${color} 12%, transparent)`;
+
+const FILTER_CHIPS: { key: NoteFilter; label: string }[] = [
+  { key: "all", label: "全部" },
+  { key: "pinned", label: "置顶" },
+  { key: "work", label: "工作" },
+  { key: "life", label: "生活" },
+  { key: "study", label: "学习" },
+];
 
 function todayStr(): string {
   const d = new Date();
@@ -24,7 +45,8 @@ export default function NotesPage() {
   const [loading, setLoading] = useState(true);
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState<"all" | "pinned">("all");
+  const [filter, setFilter] = useState<NoteFilter>("all");
+  const [category, setCategory] = useState<NoteCategory | undefined>(undefined);
   const [pinnedIds, setPinnedIds] = useState<string[]>(() => {
     try {
       const raw = localStorage.getItem(PIN_STORAGE_KEY);
@@ -63,7 +85,12 @@ export default function NotesPage() {
   // 置顶优先，其次按创建时间倒序（getNotes 已按 createdAt 倒序，这里再叠加置顶）
   const displayed = useMemo(() => {
     let list = [...notes];
-    if (filter === "pinned") list = list.filter((n) => pinnedIds.includes(n.id));
+    if (filter === "pinned") {
+      list = list.filter((n) => pinnedIds.includes(n.id));
+    } else if (filter === "work" || filter === "life" || filter === "study") {
+      // 存量笔记无 category 时在分类筛选下不可见（不迁移数据）
+      list = list.filter((n) => n.category === filter);
+    }
     if (query.trim()) {
       const q = query.trim().toLowerCase();
       list = list.filter((n) => n.title.toLowerCase().includes(q) || n.content.toLowerCase().includes(q));
@@ -87,23 +114,30 @@ export default function NotesPage() {
     setEditingId(null);
     setTitle("");
     setContent("");
+    setCategory(undefined);
   };
 
   const handleAdd = useCallback(async () => {
     if (!title.trim() || !content.trim()) return;
-    await addNote({ title: title.trim(), content: content.trim(), date: today });
+    await addNote({
+      title: title.trim(),
+      content: content.trim(),
+      date: today,
+      ...(category ? { category } : {}),
+    });
     showToast({ type: "success", message: "已保存" });
     closeSheet();
     refresh();
-  }, [title, content, today, refresh]);
+  }, [title, content, category, today, refresh]);
 
   const handleUpdate = useCallback(async () => {
     if (!editingId || !title.trim() || !content.trim()) return;
-    await updateNote(editingId, { title: title.trim(), content: content.trim() });
+    // category 为 undefined 时 Dexie 会删除该字段（即清除分类）
+    await updateNote(editingId, { title: title.trim(), content: content.trim(), category });
     showToast({ type: "success", message: "已更新" });
     closeSheet();
     refresh();
-  }, [editingId, title, content, refresh]);
+  }, [editingId, title, content, category, refresh]);
 
   const handleDelete = useCallback(async (id: string) => {
     await deleteNote(id);
@@ -116,6 +150,7 @@ export default function NotesPage() {
     setEditingId(null);
     setTitle("");
     setContent("");
+    setCategory(undefined);
     setSheetOpen(true);
   };
 
@@ -123,6 +158,7 @@ export default function NotesPage() {
     setEditingId(n.id);
     setTitle(n.title);
     setContent(n.content);
+    setCategory(n.category);
     setSheetOpen(true);
   };
 
@@ -203,28 +239,27 @@ export default function NotesPage() {
         <span className="text-[11px] text-gray-400">点击笔记编辑</span>
       </div>
 
-      {/* 筛选 chips */}
-      <div className="flex gap-2 mt-2.5 px-0.5">
-        {(
-          [
-            { key: "all", label: "全部" },
-            { key: "pinned", label: "置顶" },
-          ] as const
-        ).map((c) => (
-          <button
-            key={c.key}
-            type="button"
-            onClick={() => setFilter(c.key)}
-            aria-pressed={filter === c.key}
-            className={`h-8 px-4 rounded-md text-[13px] font-semibold border transition active:scale-95 ${
-              filter === c.key
-                ? "bg-purple-500 border-purple-500 text-white"
-                : "bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-800 text-gray-500 dark:text-gray-400 shadow-[var(--shadow-card)]"
-            }`}
-          >
-            {c.label}
-          </button>
-        ))}
+      {/* 筛选 chips：全部 / 置顶 / 工作 / 生活 / 学习（画布 lf-chip 形态，激活主色浅底） */}
+      <div className="flex gap-2 mt-2.5 px-0.5 overflow-x-auto no-scrollbar">
+        {FILTER_CHIPS.map((c) => {
+          const active = filter === c.key;
+          return (
+            <button
+              key={c.key}
+              type="button"
+              onClick={() => setFilter(c.key)}
+              aria-pressed={active}
+              className={`shrink-0 h-8 px-4 rounded-md text-[13px] font-semibold border transition active:scale-95 ${
+                active
+                  ? "border-[var(--lifeflow-primary)] text-[var(--lifeflow-primary)]"
+                  : "bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-800 text-gray-500 dark:text-gray-400 shadow-[var(--shadow-card)]"
+              }`}
+              style={active ? { background: catTint("var(--lifeflow-primary)") } : undefined}
+            >
+              {c.label}
+            </button>
+          );
+        })}
       </div>
 
       {loading ? null : notes.length === 0 ? (
@@ -274,6 +309,17 @@ export default function NotesPage() {
                       <button type="button" onClick={() => openEdit(n)} className="flex-1 min-w-0 text-left">
                         <span className="flex items-center gap-1.5 min-w-0">
                           <span className="text-[15px] font-semibold text-gray-900 dark:text-white truncate">{n.title}</span>
+                          {n.category ? (
+                            <span
+                              className="flex-shrink-0 rounded-[6px] px-2.5 py-[3px] text-[12px] font-semibold leading-none"
+                              style={{
+                                background: catTint(CATEGORY_META[n.category].color),
+                                color: CATEGORY_META[n.category].color,
+                              }}
+                            >
+                              {CATEGORY_META[n.category].label}
+                            </span>
+                          ) : null}
                           {pinned && <Pin className="w-3 h-3 text-amber-500 flex-shrink-0" />}
                         </span>
                         <span className="block text-[13px] text-gray-400 truncate mt-0.5">{n.content}</span>
@@ -350,6 +396,34 @@ export default function NotesPage() {
                 aria-label="笔记正文"
                 className="block w-full mt-3 rounded-[10px] border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-3 text-[15px] text-gray-900 dark:text-white outline-none resize-none focus:border-purple-400 placeholder:text-gray-400 leading-relaxed"
               />
+              {/* 分类选择（画布 lf-cat-chip：工作/生活/学习，单选，再次点击取消=无分类） */}
+              <div className="flex gap-2 mt-3" role="group" aria-label="选择分类">
+                {(Object.keys(CATEGORY_META) as NoteCategory[]).map((key) => {
+                  const meta = CATEGORY_META[key];
+                  const active = category === key;
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setCategory(active ? undefined : key)}
+                      aria-pressed={active}
+                      className={`shrink-0 flex items-center gap-1 h-8 px-3.5 rounded-md text-[13px] font-semibold border transition active:scale-95 ${
+                        active
+                          ? ""
+                          : "bg-gray-100 dark:bg-gray-800 border-transparent text-gray-500 dark:text-gray-400"
+                      }`}
+                      style={
+                        active
+                          ? { background: catTint(meta.color), borderColor: meta.color, color: meta.color }
+                          : undefined
+                      }
+                    >
+                      {meta.label}
+                      <Check className="w-3 h-3" style={{ opacity: active ? 1 : 0 }} />
+                    </button>
+                  );
+                })}
+              </div>
               <div className="flex gap-2.5 mt-4">
                 {editingId ? (
                   <button

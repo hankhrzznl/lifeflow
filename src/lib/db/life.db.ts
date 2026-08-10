@@ -28,6 +28,8 @@ export interface Note {
   date: string;          // YYYY-MM-DD
   createdAt: number;
   updatedAt: number;
+  /** T24 画布对齐：分类（work 工作 / life 生活 / study 学习） */
+  category?: 'work' | 'life' | 'study';
 }
 
 export interface FocusSession {
@@ -85,6 +87,10 @@ export interface Wish {
   completed: boolean;
   createdAt: number;
   completedAt?: number;
+  /** T24 画布对齐：已封存（非进行中/已完成，独立状态） */
+  archived?: boolean;
+  /** T24 画布对齐：金额（元，可空） */
+  amount?: number;
 }
 
 // ─── Database ────────────────────────────────────────────────

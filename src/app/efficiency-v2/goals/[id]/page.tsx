@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Plus, Minus, X, Check, ChevronDown, ChevronRight, Settings, Trash2 } from "lucide-react";
+import { ArrowLeft, Plus, Minus, X, Check, ChevronDown, ChevronRight, Settings, Trash2, Pause, Play } from "lucide-react";
 import type { GoalV2, KeyResultV2, StrategyV2, WeeklyTaskV2, DailyActionV2 } from "@/lib/db/goal-v2.db";
 import {
   getGoalV2, updateGoalV2, deleteGoalV2,
@@ -22,6 +22,7 @@ import { showToast } from "@/components/ui/Toast";
 const ACCENT = "#6366F1";
 const DANGER = "#FF3B30";
 const GREEN = "#34C759";
+const WARNING = "#FF9500";
 
 // ─── 工具函数 ────────────────────────────────────────────────
 const today = todayStr();
@@ -145,6 +146,14 @@ export default function GoalDetailV2Page() {
     setVisionDraft(goal?.vision || "");
     setVisionEditing(true);
   }, [goal?.vision]);
+
+  // 暂停 / 恢复目标（status: active ↔ paused；暂停目标在列表页已被过滤，属现有逻辑）
+  const handleTogglePause = useCallback(async () => {
+    if (!goal) return;
+    const nextStatus = goal.status === "paused" ? "active" : "paused";
+    await updateGoalV2(id, { status: nextStatus });
+    showToast({ type: "success", message: nextStatus === "paused" ? "目标已暂停" : "目标已恢复" });
+  }, [id, goal?.status]);
 
   const handleToggleKR = useCallback((kr: KeyResultV2) => {
     setEditingKR(kr.id);
@@ -348,20 +357,45 @@ export default function GoalDetailV2Page() {
     <div className="min-h-screen pb-[100px]" style={{ maxWidth: 430, margin: "0 auto", background: "var(--lifeflow-background)" }}>
       {/* ─── Header ─────────────────────────────────────────── */}
       <div className="px-5 pt-[var(--safe-area-top)] pb-2 flex items-center justify-between">
-        <button onClick={() => router.push("/efficiency-v2")} className="w-8 h-8 -ml-1 flex items-center justify-center">
+        <button onClick={() => router.push("/efficiency-v2")} className="w-8 h-8 -ml-1 flex items-center justify-center shrink-0">
           <ArrowLeft className="w-6 h-6" style={{ color: "var(--color-text-primary)" }} />
         </button>
-        <h1 className="text-[17px] font-semibold truncate mx-2" style={{ color: "var(--color-text-primary)" }}>
-          {goal.title}
-        </h1>
-        <button onClick={async () => {
-          if (!window.confirm("确定删除该目标？所有数据将被永久删除。")) return;
-          await deleteGoalV2(id);
-          showToast({ type: "success", message: "目标已删除" });
-          router.push("/efficiency-v2");
-        }} className="w-8 h-8 flex items-center justify-center active:opacity-60">
-          <Trash2 className="w-4 h-4" style={{ color: DANGER }} />
-        </button>
+        <div className="flex items-center justify-center min-w-0 mx-2">
+          <h1 className="text-[17px] font-semibold truncate" style={{ color: "var(--color-text-primary)" }}>
+            {goal.title}
+          </h1>
+          {goal.status === "paused" && (
+            <span className="ml-1.5 shrink-0 rounded-md px-1.5 py-0.5 text-[10.5px] font-semibold" style={{ background: `${WARNING}1F`, color: WARNING }}>
+              已暂停
+            </span>
+          )}
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          {(goal.status === "active" || goal.status === "paused") && (
+            <button
+              type="button"
+              onClick={handleTogglePause}
+              aria-label={goal.status === "paused" ? "恢复目标" : "暂停目标"}
+              className="flex h-8 items-center gap-1 rounded-full px-3 text-[12.5px] font-semibold active:opacity-60"
+              style={{
+                background: goal.status === "paused" ? `${WARNING}1F` : "var(--color-surface-card)",
+                color: goal.status === "paused" ? WARNING : "var(--color-text-secondary)",
+                border: `1px solid ${goal.status === "paused" ? `${WARNING}4D` : "var(--lifeflow-border)"}`,
+              }}
+            >
+              {goal.status === "paused" ? <Play className="w-3.5 h-3.5" /> : <Pause className="w-3.5 h-3.5" />}
+              {goal.status === "paused" ? "已暂停" : "暂停"}
+            </button>
+          )}
+          <button onClick={async () => {
+            if (!window.confirm("确定删除该目标？所有数据将被永久删除。")) return;
+            await deleteGoalV2(id);
+            showToast({ type: "success", message: "目标已删除" });
+            router.push("/efficiency-v2");
+          }} className="w-8 h-8 flex items-center justify-center active:opacity-60">
+            <Trash2 className="w-4 h-4" style={{ color: DANGER }} />
+          </button>
+        </div>
       </div>
 
       {/* ─── 愿景卡片 ───────────────────────────────────────── */}

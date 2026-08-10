@@ -3,7 +3,7 @@
 import { useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, Plus, Trash2, Gift, Check, Star, Sparkles } from "lucide-react";
+import { ChevronLeft, Plus, Trash2, Gift, Check, Star, Sparkles, Archive } from "lucide-react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { getWishes, addWish, updateWish, deleteWish, toggleWishCompletion } from "@/lib/db/life.db";
 import type { Wish } from "@/lib/db/life.db";
@@ -11,7 +11,26 @@ import { showToast } from "@/components/ui/Toast";
 
 const WISH_COLORS = ["#FF2D55", "#FF9500", "#FFCC00", "#34C759", "#007AFF", "#AF52DE"];
 
-type SegKey = "active" | "done" | "all";
+type SegKey = "active" | "done" | "archived" | "all";
+type StatusKey = "active" | "done" | "archived";
+
+/** 画布 wl-seg / wl-status-chip：封存为独立状态（archived=true 独立于 completed，封存 ≠ 完成） */
+const STATUS_FIELDS: Record<StatusKey, { completed: boolean; archived: boolean }> = {
+  active: { completed: false, archived: false },
+  done: { completed: true, archived: false },
+  archived: { completed: false, archived: true },
+};
+
+/** 画布 fmtMoney：¥ + zh-CN 千分位 */
+const fmtMoney = (n: number) => `¥${n.toLocaleString("zh-CN")}`;
+
+/** 金额输入解析：空串 → undefined；非法/负数 → undefined */
+const parseAmount = (v: string): number | undefined => {
+  const t = v.trim();
+  if (t === "") return undefined;
+  const n = Number(t);
+  return Number.isFinite(n) && n >= 0 ? n : undefined;
+};
 
 export default function WishesPage() {
   const router = useRouter();
@@ -22,15 +41,17 @@ export default function WishesPage() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [newName, setNewName] = useState("");
+  const [newAmount, setNewAmount] = useState("");
   const [newDesc, setNewDesc] = useState("");
   const [newColor, setNewColor] = useState(WISH_COLORS[0]);
-  const [status, setStatus] = useState<"active" | "done">("active");
+  const [status, setStatus] = useState<StatusKey>("active");
   const [saving, setSaving] = useState(false);
 
   const closeSheet = () => {
     setSheetOpen(false);
     setEditingId(null);
     setNewName("");
+    setNewAmount("");
     setNewDesc("");
     setSaving(false);
   };
@@ -41,31 +62,38 @@ export default function WishesPage() {
     const currentWishes = wishes || [];
     const maxOrder =
       currentWishes.length > 0 ? Math.max(...currentWishes.map((w) => w.sortOrder)) : -1;
+    const amount = parseAmount(newAmount);
     await addWish({
       name: newName.trim(),
       desc: newDesc.trim() || undefined,
       color: newColor,
       sortOrder: maxOrder + 1,
-      completed: status === "done",
+      completed: STATUS_FIELDS[status].completed,
+      archived: STATUS_FIELDS[status].archived,
+      ...(amount !== undefined ? { amount } : {}),
     });
     showToast({ type: "success", message: "心愿已添加" });
     closeSheet();
     setSaving(false);
-  }, [newName, newDesc, newColor, status, wishes, saving]);
+  }, [newName, newDesc, newAmount, newColor, status, wishes, saving]);
 
   const handleUpdate = useCallback(async () => {
     if (!editingId || !newName.trim() || saving) return;
     setSaving(true);
+    const amount = parseAmount(newAmount);
     await updateWish(editingId, {
       name: newName.trim(),
       desc: newDesc.trim() || undefined,
       color: newColor,
-      completed: status === "done",
+      completed: STATUS_FIELDS[status].completed,
+      archived: STATUS_FIELDS[status].archived,
+      // Dexie update 语义：amount 传 undefined 即删除该字段（清空已存金额）
+      amount,
     });
     showToast({ type: "success", message: "已更新" });
     closeSheet();
     setSaving(false);
-  }, [editingId, newName, newDesc, newColor, status, saving]);
+  }, [editingId, newName, newDesc, newAmount, newColor, status, saving]);
 
   const handleDelete = useCallback(async (id: string) => {
     await deleteWish(id);
@@ -79,6 +107,7 @@ export default function WishesPage() {
   const openNew = () => {
     setEditingId(null);
     setNewName("");
+    setNewAmount("");
     setNewDesc("");
     setNewColor(WISH_COLORS[0]);
     setStatus("active");
@@ -88,18 +117,22 @@ export default function WishesPage() {
   const openEdit = (w: Wish) => {
     setEditingId(w.id);
     setNewName(w.name);
+    setNewAmount(w.amount != null ? String(w.amount) : "");
     setNewDesc(w.desc || "");
     setNewColor(w.color);
-    setStatus(w.completed ? "done" : "active");
+    setStatus(w.archived ? "archived" : w.completed ? "done" : "active");
     setSheetOpen(true);
   };
 
   const list = useMemo(() => wishes ?? [], [wishes]);
-  const activeCount = useMemo(() => list.filter((w) => !w.completed).length, [list]);
+  const activeCount = useMemo(() => list.filter((w) => !w.completed && !w.archived).length, [list]);
   const doneCount = useMemo(() => list.filter((w) => w.completed).length, [list]);
+  const archivedCount = useMemo(() => list.filter((w) => w.archived).length, [list]);
   const shown = useMemo(() => {
     if (seg === "all") return list;
-    return list.filter((w) => (seg === "active" ? !w.completed : w.completed));
+    if (seg === "active") return list.filter((w) => !w.completed && !w.archived);
+    if (seg === "done") return list.filter((w) => w.completed);
+    return list.filter((w) => w.archived);
   }, [list, seg]);
 
   return (
@@ -120,7 +153,7 @@ export default function WishesPage() {
         <span className="w-10 shrink-0" aria-hidden="true" />
       </header>
 
-      {/* 统计头行 */}
+      {/* 统计头行（画布 wl-stat：进行中 / 已完成 / 已封存） */}
       <section className="flex items-stretch bg-white dark:bg-gray-900 rounded-2xl shadow-[var(--shadow-card)] px-2 py-3 mt-1" aria-label="愿望统计">
         <div className="flex-1 flex flex-col items-center gap-1.5 py-1 rounded-[10px]">
           <span className="font-mono text-[20px] font-bold text-gray-900 dark:text-white leading-none">{activeCount}</span>
@@ -131,14 +164,20 @@ export default function WishesPage() {
           <span className="font-mono text-[20px] font-bold text-green-500 leading-none">{doneCount}</span>
           <span className="text-[11px] text-gray-400 leading-none">已完成</span>
         </div>
+        <div className="w-px bg-gray-100 dark:bg-gray-800 my-1.5" aria-hidden="true" />
+        <div className="flex-1 flex flex-col items-center gap-1.5 py-1 rounded-[10px]">
+          <span className="font-mono text-[20px] font-bold text-gray-400 leading-none">{archivedCount}</span>
+          <span className="text-[11px] text-gray-400 leading-none">已封存</span>
+        </div>
       </section>
 
-      {/* 分类 segmented */}
+      {/* 分类 segmented（画布 wl-seg：进行中 / 已完成 / 已封存 / 全部） */}
       <div className="flex gap-1 p-1 bg-gray-100 dark:bg-gray-800 rounded-[10px] mt-2.5">
         {(
           [
             { key: "active", label: "进行中" },
             { key: "done", label: "已完成" },
+            { key: "archived", label: "已封存" },
             { key: "all", label: "全部" },
           ] as const
         ).map((s) => (
@@ -171,6 +210,8 @@ export default function WishesPage() {
           <div className="flex flex-col gap-2.5 mt-3">
             {shown.map((wish, i) => {
               const done = wish.completed;
+              const archived = wish.archived;
+              const percentLabel = done ? "达成" : archived ? "封存" : "0%";
               return (
                 <motion.div
                   key={wish.id}
@@ -180,7 +221,7 @@ export default function WishesPage() {
                   onClick={() => handleToggle(wish.id)}
                   role="button"
                   aria-pressed={done}
-                  aria-label={done ? `愿望「${wish.name}」，点击取消完成` : `愿望「${wish.name}」，点击标记完成`}
+                  aria-label={archived ? `愿望「${wish.name}」，已封存` : done ? `愿望「${wish.name}」，点击取消完成` : `愿望「${wish.name}」，点击标记完成`}
                   className="flex items-start gap-3 bg-white dark:bg-gray-900 rounded-2xl border border-transparent shadow-[var(--shadow-card)] px-3.5 py-3.5 cursor-pointer hover:border-gray-100 dark:hover:border-gray-800 active:scale-[0.995] transition"
                 >
                   <span
@@ -196,7 +237,12 @@ export default function WishesPage() {
                       <h3 className="flex-1 min-w-0 text-[15px] font-semibold text-gray-900 dark:text-white truncate">
                         {wish.name}
                       </h3>
-                      {done ? (
+                      {archived ? (
+                        <span className="shrink-0 inline-flex items-center gap-1 rounded px-2 py-0.5 text-[11px] font-semibold bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400">
+                          <Archive className="w-2.5 h-2.5" />
+                          已封存
+                        </span>
+                      ) : done ? (
                         <span className="shrink-0 inline-flex items-center gap-1 rounded px-2 py-0.5 text-[11px] font-semibold bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400">
                           <Check className="w-2.5 h-2.5" />
                           已完成
@@ -209,20 +255,31 @@ export default function WishesPage() {
                       )}
                     </div>
 
-                    {/* 完成进度（进行中 0% / 已完成 100%） */}
-                    <div className="mt-2.5">
-                      <div className="h-1.5 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
-                        <div
-                          className={`h-full rounded-full transition-all duration-500 ${done ? "bg-green-500" : "bg-blue-500"}`}
-                          style={{ width: done ? "100%" : "0%" }}
-                        />
+                    {/* 完成进度（进行中 0% / 已完成 100%，封存卡不显示进度条，对齐画布） */}
+                    {!archived && (
+                      <div className="mt-2.5">
+                        <div className="h-1.5 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all duration-500 ${done ? "bg-green-500" : "bg-blue-500"}`}
+                            style={{ width: done ? "100%" : "0%" }}
+                          />
+                        </div>
                       </div>
-                      <div className="flex items-center justify-between gap-2 mt-1.5">
-                        <span className={`text-[12px] truncate ${done ? "text-gray-500 dark:text-gray-400" : "text-gray-400"}`}>
-                          {wish.desc || (done ? "已达成目标" : "正在努力实现")}
-                        </span>
+                    )}
+
+                    {/* 描述 + 金额（画布 wl-amount-num）+ 状态百分比 */}
+                    <div className={`flex items-center justify-between gap-2 ${archived ? "mt-2.5" : "mt-1.5"}`}>
+                      <span className={`text-[12px] truncate ${done ? "text-gray-500 dark:text-gray-400" : "text-gray-400"}`}>
+                        {wish.desc || (done ? "已达成目标" : archived ? "已封存，暂缓实现" : "正在努力实现")}
+                      </span>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {wish.amount != null && (
+                          <span className="font-mono text-[12px] font-semibold text-gray-900 dark:text-white whitespace-nowrap">
+                            {fmtMoney(wish.amount)}
+                          </span>
+                        )}
                         <span className={`font-mono text-[11px] font-semibold shrink-0 ${done ? "text-green-500" : "text-gray-400"}`}>
-                          {done ? "达成" : "0%"}
+                          {percentLabel}
                         </span>
                       </div>
                     </div>
@@ -304,6 +361,18 @@ export default function WishesPage() {
                 aria-label="愿望名称"
                 className="block w-full mt-3.5 rounded-[10px] border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-3 text-[15px] text-gray-900 dark:text-white outline-none focus:border-blue-400 placeholder:text-gray-400"
               />
+              {/* 目标金额（画布 input-wish-amount，数字输入，可空） */}
+              <input
+                type="number"
+                inputMode="decimal"
+                min={0}
+                step="any"
+                value={newAmount}
+                onChange={(e) => setNewAmount(e.target.value)}
+                placeholder="目标金额（¥），如 20000"
+                aria-label="目标金额"
+                className="block w-full mt-3 rounded-[10px] border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-3 text-[15px] text-gray-900 dark:text-white outline-none focus:border-blue-400 placeholder:text-gray-400"
+              />
               <textarea
                 value={newDesc}
                 onChange={(e) => setNewDesc(e.target.value)}
@@ -333,7 +402,7 @@ export default function WishesPage() {
                   ))}
                 </div>
               </div>
-              {/* 状态选择 */}
+              {/* 状态选择（画布 wl-status-chip：进行中 / 已完成 / 已封存） */}
               <div className="flex gap-2 mt-3.5" role="group" aria-label="愿望状态">
                 <button
                   type="button"
@@ -360,6 +429,19 @@ export default function WishesPage() {
                 >
                   <Check className="w-3.5 h-3.5" />
                   已完成
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStatus("archived")}
+                  aria-pressed={status === "archived"}
+                  className={`flex-1 h-10 rounded-[10px] border text-[13px] font-semibold flex items-center justify-center gap-1.5 transition active:scale-95 ${
+                    status === "archived"
+                      ? "border-gray-400 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
+                      : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400"
+                  }`}
+                >
+                  <Archive className="w-3.5 h-3.5" />
+                  已封存
                 </button>
               </div>
               <div className="flex gap-2.5 mt-4">

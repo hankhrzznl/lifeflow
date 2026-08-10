@@ -256,3 +256,66 @@ export function upsertIdealDayPlan(existing: IdealDayPlanItem[], item: IdealDayP
 }
 
 export { todayStr };
+
+// ─── T24 画布模板模型 v2：按天模板（daily）/ 多模板日历（multi） ───
+
+/** 周一~周日 名称（索引 0=周一，与画布一致） */
+export const DAY_LABELS = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+
+/** 旧模板模型 → v2 迁移：确保 dayTemplates[7] 存在（旧 templates/activeTemplateId 无损迁移） */
+export function ensureDayTemplates(config: IdealDayConfig): IdealDayTemplate[] {
+  const { templates } = ensureTemplates(config);
+  if (config.dayTemplates && config.dayTemplates.length === 7) return config.dayTemplates;
+  // 按旧模板 daysOfWeek 分派到对应星期；无匹配的星期用默认工作日/周末
+  const byDow = (t: IdealDayTemplate) => t.daysOfWeek ?? [];
+  const days: IdealDayTemplate[] = [];
+  for (let i = 0; i < 7; i++) {
+    const dow = (i + 1) % 7; // 索引 0=周一 → Date.getDay() 语义（1=周一…6=周六,0=周日）
+    const hit = templates.find((t) => byDow(t).includes(dow));
+    if (hit) {
+      days.push({ ...hit, id: `day-${i}`, name: hit.name });
+    } else {
+      const def = dow === 0 || dow === 6 ? defaultWeekendTemplate() : defaultWorkdayTemplate();
+      days.push({ ...def, id: `day-${i}`, name: DAY_LABELS[i] });
+    }
+  }
+  return days;
+}
+
+/**
+ * T24 画布 v2 模板选择（替代 selectTemplate）：
+ * ① 手动锁定（locked + currentTplId）→ 无条件返回锁定模板
+ * ② templateMode==='multi' → 找 dates 覆盖当天；无则兜底首个
+ * ③ 缺省/daily → 按星期取 dayTemplates[dow]
+ * ④ 兜底：旧 selectTemplate 逻辑（范围/星期/首个）
+ */
+export function selectTemplateV2(config: IdealDayConfig, dateStr: string, templates?: IdealDayTemplate[]): IdealDayTemplate {
+  // ① 手动锁定
+  if (config.locked && config.currentTplId) {
+    const list = templates ?? ensureTemplates(config).templates;
+    const locked = list.find((t) => t.id === config.currentTplId);
+    if (locked) return locked;
+  }
+  // ② 多模板日历：日期集合匹配
+  if (config.templateMode === 'multi' && config.templates && config.templates.length > 0) {
+    const hit = config.templates.find((t) => t.dates?.includes(dateStr));
+    if (hit) return hit;
+    return config.templates[0];
+  }
+  // ③ 按天模板
+  if (config.dayTemplates && config.dayTemplates.length === 7) {
+    const dow = new Date(dateStr + 'T00:00:00').getDay(); // 0=周日
+    const idx = dow === 0 ? 6 : dow - 1; // 索引 0=周一
+    const dayTpl = config.dayTemplates[idx];
+    if (dayTpl) return dayTpl;
+  }
+  // ④ 兜底：旧逻辑
+  return selectTemplate(config, dateStr);
+}
+
+/** 保存 dayTemplates（按天模板）到当前生效模式配置 */
+export async function saveDayTemplates(dayTemplates: IdealDayTemplate[]): Promise<void> {
+  const { saveIdealDayConfig } = await import("@/lib/ideal-day");
+  const config = await import("@/lib/ideal-day").then((m) => m.getIdealDayConfig());
+  await saveIdealDayConfig({ ...config, dayTemplates });
+}

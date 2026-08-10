@@ -1093,6 +1093,8 @@ export interface IdealDayTemplate {
   /** 可选使用日期范围（YYYY-MM-DD，可清空=不限）：自动模式按此匹配，优先于 daysOfWeek */
   startDate?: string;
   endDate?: string;
+  /** T24 画布多模板日历：该模板的执行日期集合（YYYY-MM-DD） */
+  dates?: string[];
   blocks: IdealDayTemplateBlock[];
 }
 
@@ -1128,6 +1130,11 @@ export interface IdealDayConfig {
   // T22：多模板 + 时间段多功能（可选字段，向后兼容旧配置；缺省时从旧字段派生默认模板）
   templates?: IdealDayTemplate[];
   activeTemplateId?: string;
+  // T24 画布模板模型：按天模板（daily）/ 多模板日历（multi）
+  templateMode?: "daily" | "multi";
+  dayTemplates?: IdealDayTemplate[];   // daily：7 个（索引 0=周一 ~ 6=周日，独立模板）
+  locked?: boolean;                    // 手动锁定：true = 固定当前模板，不随日期切换
+  currentTplId?: string;               // 手动锁定的模板 id（多模板模式）
 }
 
 /** 默认理想日蓝图（与用户确认的基线一致） */

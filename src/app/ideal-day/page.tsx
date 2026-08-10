@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import * as Icons from "lucide-react";
 import {
@@ -32,10 +32,13 @@ function ToggleSwitch({ checked, onChange, label }: { checked: boolean; onChange
 type IconCompType = React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
 const ICON_REGISTRY = Icons as unknown as Record<string, IconCompType>;
 
-// ─── 功能图标行（执行区：点击跳规划/模块页） ────────────────
-function FeatureIconRow({ features, onFeatureClick }: { features: IdealDayFeature[]; onFeatureClick: (f: IdealDayFeature) => void }) {
+// ─── 功能行（执行区：对齐画布 lf-fn-row —— 模块色圆 chip + 名称，点击跳规划/模块页） ──
+function FeatureIconRow({ features, onFeatureClick, caption }: { features: IdealDayFeature[]; onFeatureClick: (f: IdealDayFeature) => void; caption?: string }) {
   return (
-    <div className="flex items-center gap-1.5 flex-wrap">
+    <div className="flex items-center gap-2.5 flex-wrap">
+      {caption && (
+        <span className="flex-shrink-0 text-[10px]" style={{ color: "var(--color-text-secondary)" }}>{caption}</span>
+      )}
       {features.map((f) => {
         const meta = getFeatureMeta(f);
         const IconComp = ICON_REGISTRY[meta.icon] ?? Icons.Circle;
@@ -45,10 +48,12 @@ function FeatureIconRow({ features, onFeatureClick }: { features: IdealDayFeatur
             type="button"
             onClick={(e) => { e.stopPropagation(); onFeatureClick(f); }}
             aria-label={`进入${meta.label}`}
-            className="flex h-7 w-7 items-center justify-center rounded-full active:scale-90 transition-transform"
-            style={{ background: `${meta.color}1A`, color: meta.color }}
+            className="flex flex-col items-center gap-1 flex-shrink-0 active:scale-90 transition-transform"
           >
-            <IconComp className="h-3.5 w-3.5" />
+            <span className="flex h-7 w-7 items-center justify-center rounded-full" style={{ background: `${meta.color}1A`, color: meta.color }}>
+              <IconComp className="h-3.5 w-3.5" />
+            </span>
+            <span className="text-[10px] leading-none" style={{ color: "var(--color-text-secondary)" }}>{meta.label}</span>
           </button>
         );
       })}
@@ -279,8 +284,15 @@ function computeDayDistribution(tpl: IdealDayTemplate) {
     labels[key].blocks.push(b.label);
   }
   const gradient = `conic-gradient(${labels[0].color} 0deg ${seg(sleepMin)}, ${labels[1].color} ${seg(sleepMin)} ${seg(sleepMin + goalMin)}, ${labels[2].color} ${seg(sleepMin + goalMin)} 360deg)`;
-  return { gradient, labels, totalH: Math.round(total / 60) };
+  return { gradient, labels, totalH: Math.round(total / 60), mins: [sleepMin, goalMin, lifeMin], totalMin: total };
 }
+
+/** 时长展示（画布 slot-dur 形态：0.5h / 1h / 1.5h） */
+const fmtDur = (min: number) => {
+  if (min <= 0) return "0h";
+  const h = min / 60;
+  return `${Number.isInteger(h) ? h : h.toFixed(1).replace(/\.0$/, "")}h`;
+};
 
 // ─── 主页面 ─────────────────────────────────────────────────
 export default function IdealDayHomePage() {
@@ -302,6 +314,15 @@ export default function IdealDayHomePage() {
   const [plans, setPlans] = useState<Awaited<ReturnType<typeof getIdealDayPlans>>>([]);
   const [sheet, setSheet] = useState<{ open: boolean; feature: IdealDayFeature; blockId: string; content: string; detail: string; actions: PlanAction[]; wellness: PlanWellnessItem[]; routine: PlanRoutineItem[]; posture: PlanPostureItem[] }>({ open: false, feature: 'workout', blockId: '', content: '', detail: '', actions: [], wellness: [], routine: [], posture: [] });
   const [sheetSaving, setSheetSaving] = useState(false);
+  // 画布 resched-toast：模板切换/恢复自动后的 success 提示条（自动隐藏）
+  const [resched, setResched] = useState<{ visible: boolean; text: string }>({ visible: false, text: "" });
+  const reschedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const showResched = useCallback((text: string) => {
+    setResched({ visible: true, text });
+    if (reschedTimer.current) clearTimeout(reschedTimer.current);
+    reschedTimer.current = setTimeout(() => setResched({ visible: false, text: "" }), 3200);
+  }, []);
+  useEffect(() => () => { if (reschedTimer.current) clearTimeout(reschedTimer.current); }, []);
 
   const today = todayStr();
   const reload = useCallback(async () => {
@@ -396,6 +417,7 @@ export default function IdealDayHomePage() {
     setConfig(next);
     await saveIdealDayConfig(next);
     showToast({ type: "success", message: `已切换至「${derived?.templates.find((t) => t.id === id)?.name ?? "该模板"}」` });
+    showResched("已按新模板重排今日时间轴 · 规划内容不变");
   };
   // 恢复自动：清除手动锁定（activeTemplateId），回自动模式按日期范围/星期自动匹配
   const handleRestoreAuto = async () => {
@@ -404,6 +426,7 @@ export default function IdealDayHomePage() {
     setConfig(next);
     await saveIdealDayConfig(next);
     showToast({ type: "success", message: "已恢复自动模式，将按使用日期自动选择模板" });
+    showResched("已恢复自动模式 · 时间轴将按使用日期自动重排");
   };
   // 模板使用日期范围（startDate/endDate，可单边清空=不限）
   const updateTemplateDates = async (id: string, patch: { startDate?: string; endDate?: string }) => {
@@ -426,6 +449,15 @@ export default function IdealDayHomePage() {
   const handleDuplicate = (tpl: IdealDayTemplate) => {
     const dup: IdealDayTemplate = { ...tpl, id: `${tpl.id}-copy-${Date.now()}`, name: `${tpl.name} 副本`, daysOfWeek: undefined };
     startEdit(dup);
+  };
+  // 画布 tpl-controls 手动锁定 switch：开 = 锁定当前模板，关 = 恢复自动（复用既有持久化逻辑）
+  const toggleLock = async () => {
+    if (!config || !activeTemplate) return;
+    if (config.activeTemplateId) {
+      await handleRestoreAuto();
+    } else {
+      await activateTemplate(activeTemplate.id);
+    }
   };
 
   // ── 执行区 ──
@@ -585,6 +617,8 @@ export default function IdealDayHomePage() {
 
   const templates = derived.templates;
   const displayTemplate = editing ?? activeTemplate;
+  // 目标事项跟随排布（画布 goal-card）：仅展示真实绑定目标（goalId）的今日规划项；无数据则不渲染（不伪造）
+  const goalPlans = plans.filter((p) => p.goalId);
 
   // 执行区按 5 段分组
   const blocksBySegment = (tpl: IdealDayTemplate): Map<IdealDayBlockGroup, typeof tpl.blocks> => {
@@ -632,104 +666,141 @@ export default function IdealDayHomePage() {
         </div>
       </div>
 
-      {/* 三色环形表（T22.2：随当前模板安排动态变化） */}
+      {/* 8+8+8 三色环形（画布形态：三色弧 sleep 紫/study 蓝/rest 绿 + 中心数字 + 图例；数据计算保留） */}
       {(() => {
         const dist = computeDayDistribution(activeTemplate);
+        const C = 2 * Math.PI * 50;
+        let acc = 0;
+        const arcs = dist.mins.map((min, i) => {
+          const frac = dist.totalMin > 0 ? Math.max(0, min / dist.totalMin) : 0;
+          const arc = {
+            color: dist.labels[i].color,
+            dash: `${(frac * C).toFixed(2)} ${(C - frac * C).toFixed(2)}`,
+            offset: -acc * C,
+          };
+          acc += frac;
+          return arc;
+        });
         return (
           <div className="px-4 mb-3">
-            <div className="flex items-center gap-3 rounded-[20px] px-4 py-3.5" style={{ background: "var(--lifeflow-brand-50)" }}>
-              <div className="relative h-16 w-16 shrink-0 rounded-full" style={{ background: dist.gradient }}>
-                <div className="absolute left-1/2 top-1/2 h-10 w-10 -translate-x-1/2 -translate-y-1/2 rounded-full"
-                  style={{ background: "var(--lifeflow-brand-50)" }} />
-                <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-[11px] font-bold tabular-nums" style={{ color: "var(--color-text-primary)" }}>
-                  {dist.totalH}h
-                </span>
+            <div className="flex items-center gap-4 rounded-[20px] px-4 py-4" style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}>
+              <div className="relative h-[124px] w-[124px] shrink-0">
+                <svg className="block h-full w-full" viewBox="0 0 120 120" style={{ transform: "rotate(-90deg)" }} aria-hidden="true">
+                  {arcs.map((a, i) => (
+                    <circle key={i} cx="60" cy="60" r="50" fill="none" stroke={a.color} strokeWidth="11" strokeLinecap="round"
+                      strokeDasharray={a.dash} strokeDashoffset={a.offset} />
+                  ))}
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-1">
+                  <div className="flex items-baseline gap-0.5 text-[20px] font-bold tabular-nums leading-none" style={{ color: "var(--color-text-primary)" }}>
+                    {dist.totalH}<span className="text-[11px] font-semibold">h</span>
+                  </div>
+                  <div className="text-[10px] leading-none" style={{ color: "var(--color-text-secondary)" }}>已安排 / 24h</div>
+                </div>
               </div>
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-3 text-[12px] font-medium">
+                <div className="flex items-center gap-1.5 pb-1">
+                  <Sparkles className="h-3.5 w-3.5 shrink-0" style={{ color: "var(--lifeflow-primary)" }} />
+                  <span className="text-[13px] font-bold" style={{ color: "var(--color-text-primary)" }}>8+8+8 理想分布</span>
+                </div>
+                <div className="flex flex-col gap-[7px]">
                   {dist.labels.map((l) => (
-                    <span key={l.name} className="flex items-center gap-1">
-                      <i className="h-2.5 w-2.5 rounded-full" style={{ background: l.color }} />
-                      {l.name} {l.text}
-                    </span>
+                    <div key={l.name} className="flex items-center gap-2 min-w-0">
+                      <span className="h-2 w-2 rounded-full shrink-0" style={{ background: l.color }} />
+                      <span className="min-w-0 truncate text-[12px] font-medium" style={{ color: "var(--color-text-primary)" }}>{l.name}</span>
+                      <span className="ml-auto text-[11px] font-semibold tabular-nums" style={{ color: "var(--color-text-secondary)" }}>{l.text}</span>
+                    </div>
                   ))}
                 </div>
-                <p className="text-[11px] leading-relaxed mt-1.5" style={{ color: "var(--color-text-secondary)" }}>
-                  {dist.labels.map((l) => `${l.name} ${l.blocks.join(" + ") || "—"}`).join(" · ")}
-                </p>
+                <p className="pt-1 text-[10px] leading-relaxed" style={{ color: "var(--color-text-secondary)" }}>三色环形随模板安排实时计算</p>
               </div>
             </div>
           </div>
         );
       })()}
 
-      {/* 模板切换条 */}
+      {/* 模板切换与管理（画布形态：tpl-chips + tpl-controls 手动锁定 + 使用日期 + 操作；数据模型与锁定逻辑保留） */}
       <div className="px-4 mb-3">
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar" style={{ scrollbarWidth: "none" }}>
-          {templates.map((t) => {
-            const isActive = !editMode && t.id === activeTemplate.id;
-            const isLocked = !editMode && t.id === config.activeTemplateId;
-            return (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => activateTemplate(t.id)}
-                className="flex items-center gap-1.5 shrink-0 px-3.5 h-9 rounded-full text-[13px] font-medium transition-all"
-                style={{
-                  background: isActive ? "var(--lifeflow-primary)" : "var(--color-surface-card)",
-                  color: isActive ? "#fff" : "var(--color-text-primary)",
-                  boxShadow: "var(--shadow-card)",
-                }}
-              >
-                {isActive && <Check className="w-3.5 h-3.5" />}
-                {t.name}
-                {t.daysOfWeek?.length ? <span className="text-[10px] opacity-70">{t.daysOfWeek.length} 天</span> : null}
-                {isLocked && <Lock className="w-3 h-3" style={{ color: isActive ? "#fff" : "var(--lifeflow-primary)" }} aria-label="已手动锁定" />}
-              </button>
-            );
-          })}
-          <button type="button" onClick={handleNewTemplate} aria-label="新建模板"
-            className="flex items-center justify-center h-9 w-9 shrink-0 rounded-full" style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}>
-            <Plus className="w-4 h-4" style={{ color: "var(--lifeflow-primary)" }} />
-          </button>
-        </div>
-      </div>
+        <div className="rounded-[20px] px-4 py-3" style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}>
+          {/* 模板 chips（画布 tpl-chip：胶囊 + 边框；激活 = 主色浅底 + 主色边/字；锁定 chip 带锁标） */}
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar" style={{ scrollbarWidth: "none", padding: "10px 1px 2px" }}>
+            {templates.map((t) => {
+              const isActive = !editMode && t.id === activeTemplate.id;
+              const isLocked = !editMode && t.id === config.activeTemplateId;
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => activateTemplate(t.id)}
+                  aria-pressed={isActive}
+                  className="flex items-center gap-1.5 shrink-0 h-8 px-3.5 rounded-full text-[13px] transition-all active:scale-95"
+                  style={{
+                    border: `1px solid ${isActive ? "var(--lifeflow-primary)" : "var(--lifeflow-border)"}`,
+                    background: isActive ? "var(--lifeflow-brand-50)" : "var(--color-surface-card)",
+                    color: isActive ? "var(--lifeflow-primary)" : "var(--color-text-primary)",
+                    fontWeight: isActive ? 600 : 500,
+                  }}
+                >
+                  {t.name}
+                  {t.daysOfWeek?.length ? <span className="text-[10px] opacity-70">{t.daysOfWeek.length} 天</span> : null}
+                  {isLocked && <Lock className="w-3 h-3" aria-label="已手动锁定" />}
+                </button>
+              );
+            })}
+            <button type="button" onClick={handleNewTemplate} aria-label="新建模板"
+              className="flex items-center justify-center gap-1 shrink-0 h-8 px-3 rounded-full text-[13px] font-medium border border-dashed active:scale-95 transition-all"
+              style={{ borderColor: "var(--lifeflow-border)", color: "var(--color-text-secondary)" }}>
+              <Plus className="w-3.5 h-3.5" /> 新增
+            </button>
+          </div>
 
-      {/* 模板管理区（非编辑态）：模式指示 + 使用日期 + 操作 */}
-      {!editMode && (
-        <div className="px-4 mb-3 space-y-2">
-          {/* 模式指示 + 恢复自动 */}
-          <div className="flex items-center justify-between gap-2">
-            <span className="flex items-center gap-1.5 text-[12px] font-medium min-w-0" style={{ color: "var(--color-text-secondary)" }}>
-              {config.activeTemplateId ? (
-                <>
-                  <Lock className="w-3.5 h-3.5 shrink-0" style={{ color: "var(--lifeflow-primary)" }} />
-                  <span className="truncate">已手动锁定「{activeTemplate.name}」· 不随日期自动切换</span>
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-3.5 h-3.5 shrink-0" style={{ color: "var(--state-success)" }} />
-                  <span className="truncate">自动模式 · 按下方使用日期自动选择模板</span>
-                </>
-              )}
+          {/* 非编辑态：手动锁定 / 状态提示 / 重排条 / 使用日期 / 操作（保持线上编辑态仅显示 chips 的行为） */}
+          {!editMode && (
+            <>
+          {/* 手动锁定 + 恢复自动（画布 tpl-controls） */}
+          <div className="flex items-center justify-between gap-2 mt-3 pt-3" style={{ borderTop: "1px solid var(--lifeflow-border)" }}>
+            <span className="flex items-center gap-2 min-w-0">
+              <Lock className="w-3.5 h-3.5 shrink-0" style={{ color: config.activeTemplateId ? "var(--lifeflow-primary)" : "var(--color-text-secondary)" }} />
+              <span className="text-[12px] font-medium" style={{ color: "var(--color-text-secondary)" }}>手动锁定</span>
+              <ToggleSwitch checked={!!config.activeTemplateId} onChange={toggleLock} label="手动锁定模板" />
             </span>
             {config.activeTemplateId && (
               <button type="button" onClick={handleRestoreAuto}
-                className="flex items-center gap-1 px-3 h-8 rounded-lg text-[12px] font-medium shrink-0"
-                style={{ background: "var(--lifeflow-brand-50)", color: "var(--lifeflow-primary)" }}>
+                className="flex items-center gap-1 px-3 h-8 rounded-full text-[12px] font-medium shrink-0 transition-colors"
+                style={{ background: "var(--lifeflow-muted)", color: "var(--color-text-primary)" }}>
                 <RotateCcw className="w-3.5 h-3.5" /> 恢复自动
               </button>
             )}
           </div>
 
-          {/* 模板使用日期范围（自动模式匹配依据） */}
-          <div className="rounded-[16px] overflow-hidden" style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}>
-            <div className="flex items-center justify-between px-4 pt-3 pb-1">
+          {/* 状态提示行（画布 template-hint） */}
+          <p className="mt-2 text-[12px] leading-relaxed" style={{ color: "var(--color-text-secondary)" }}>
+            {config.activeTemplateId
+              ? `已手动锁定「${activeTemplate.name}」· 不随日期自动切换`
+              : "自动模式 · 按下方使用日期自动选择模板"}
+          </p>
+
+          {/* 重排反馈条（画布 resched-toast：切换模板 / 恢复自动时出现） */}
+          {resched.visible && (
+            <div role="status" className="flex items-center gap-2 mt-2 px-3 py-2 rounded-full" style={{ background: "rgba(52,199,89,0.14)", border: "1px solid var(--state-success)", color: "var(--state-success)" }}>
+              <RotateCcw className="w-3.5 h-3.5 shrink-0" />
+              <span className="min-w-0 flex-1 text-[12px] font-medium leading-snug">{resched.text}</span>
+              <button type="button" onClick={() => setResched((s) => ({ ...s, visible: false }))} aria-label="关闭重排提示"
+                className="flex items-center justify-center h-6 px-2 rounded-full text-[11px] font-semibold shrink-0 active:opacity-80"
+                style={{ background: "var(--state-success)", color: "var(--lifeflow-primary-foreground)" }}>
+                关闭
+              </button>
+            </div>
+          )}
+
+          {/* 模板使用日期范围（T22 数据模型：startDate/endDate，可单边清空=不限；自动模式匹配依据） */}
+          <div className="mt-3 pt-3" style={{ borderTop: "1px solid var(--lifeflow-border)" }}>
+            <div className="flex items-center justify-between pb-1.5">
               <p className="text-[13px] font-semibold" style={{ color: "var(--color-text-primary)" }}>模板使用日期</p>
-              <span className="text-[11px]" style={{ color: "var(--color-text-tertiary)" }}>单边留空 = 不限</span>
+              <span className="text-[11px]" style={{ color: "var(--color-text-secondary)" }}>单边留空 = 不限</span>
             </div>
             {templates.map((t) => (
-              <div key={t.id} className="flex items-center gap-2 px-4 py-2.5" style={{ borderTop: "1px solid var(--lifeflow-border-light)" }}>
+              <div key={t.id} className="flex items-center gap-2 py-2.5" style={{ borderTop: "1px solid var(--lifeflow-border)" }}>
                 <span className="min-w-0 flex-1 text-[13px] truncate" style={{ color: "var(--color-text-primary)" }}>{t.name}</span>
                 <input
                   type="date"
@@ -739,7 +810,7 @@ export default function IdealDayHomePage() {
                   className="outline-none rounded-lg px-2 h-8 text-[12px] tabular-nums"
                   style={{ background: "var(--lifeflow-background)", color: "var(--color-text-primary)" }}
                 />
-                <span className="text-[12px]" style={{ color: "var(--color-text-tertiary)" }}>—</span>
+                <span className="text-[12px]" style={{ color: "var(--color-text-secondary)" }}>—</span>
                 <input
                   type="date"
                   value={t.endDate ?? ""}
@@ -752,12 +823,12 @@ export default function IdealDayHomePage() {
             ))}
           </div>
 
-          {/* 操作 */}
-          <div className="flex items-center justify-between">
-            <span className="text-[13px] font-medium" style={{ color: "var(--color-text-secondary)" }}>
+          {/* 操作（编辑 / 复制当前模板） */}
+          <div className="flex items-center justify-between mt-3 pt-3" style={{ borderTop: "1px solid var(--lifeflow-border)" }}>
+            <span className="text-[13px] font-medium min-w-0 truncate" style={{ color: "var(--color-text-secondary)" }}>
               当前模板：{activeTemplate.name}
             </span>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 shrink-0">
               <button type="button" onClick={() => startEdit({ ...activeTemplate })}
                 className="flex items-center gap-1 px-3 h-8 rounded-lg text-[12px] font-medium" style={{ background: "var(--lifeflow-brand-50)", color: "var(--lifeflow-primary)" }}>
                 <Pencil className="w-3.5 h-3.5" /> 编辑模板
@@ -768,8 +839,10 @@ export default function IdealDayHomePage() {
               </button>
             </div>
           </div>
+            </>
+          )}
         </div>
-      )}
+      </div>
 
       {/* ── 编辑模式：两步向导 ── */}
       {editMode && editing && (
@@ -939,88 +1012,124 @@ export default function IdealDayHomePage() {
         </div>
       )}
 
-      {/* ── 今日执行时间轴（5 段分组） ── */}
-      <div className="px-4">
-        <div className="rounded-[20px] overflow-hidden" style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}>
-          <div className="flex items-center gap-2 px-4 pt-4 pb-2">
-            <Sparkles className="w-4 h-4" style={{ color: "var(--lifeflow-primary)" }} />
-            <h2 className="text-[16px] font-bold" style={{ color: "var(--color-text-primary)" }}>今日执行 · {activeTemplate.name}</h2>
-            <span className="ml-auto text-[11px]" style={{ color: "var(--color-text-tertiary)" }}>
-              {new Date().getMonth() + 1}月{new Date().getDate()}日
-            </span>
-          </div>
-          <div className="px-4 pb-4">
-            {displayTemplate.blocks.length === 0 ? (
-              <p className="text-[13px] py-6 text-center" style={{ color: "var(--color-text-disabled)" }}>模板为空，去编辑添加时间段</p>
-            ) : (
-              <div className="flex flex-col">
-                {[...blocksBySegment(displayTemplate).entries()].map(([g, blocks]) => {
-                  const meta = SEGMENT_META[g];
-                  const IconComp = ICON_REGISTRY[meta.icon] ?? Icons.Circle;
-                  const collapsed = collapsedGroups.has(g);
-                  return (
-                    <div key={g}>
-                      <button type="button" onClick={() => setCollapsedGroups((prev) => { const n = new Set(prev); if (n.has(g)) n.delete(g); else n.add(g); return n; })}
-                        className="w-full flex items-center gap-2 py-2 text-left">
-                        <span className="flex h-6 w-6 items-center justify-center rounded-lg" style={{ background: `${meta.color}14`, color: meta.color }}>
-                          <IconComp className="h-3.5 w-3.5" />
-                        </span>
-                        <span className="text-[13px] font-semibold" style={{ color: "var(--color-text-primary)" }}>{meta.label}</span>
-                        <span className="text-[11px]" style={{ color: "var(--color-text-tertiary)" }}>{blocks.length} 时段</span>
-                        <span className="ml-auto">{collapsed ? <ChevronDown className="w-4 h-4" style={{ color: "var(--color-text-tertiary)" }} /> : <ChevronUp className="w-4 h-4" style={{ color: "var(--color-text-tertiary)" }} />}</span>
-                      </button>
-                      {!collapsed && (
-                        <div className="flex flex-col">
-                          {blocks.map((b, i) => {
-                            const blockPlans = plans.filter((p) => p.blockId === b.id);
-                            const allDone = blockPlans.length > 0 && blockPlans.every((p) => p.isCompleted);
-                            return (
-                              <div key={b.id} id={`ideal-block-${b.id}`}
-                                className="rounded-xl transition-colors duration-500"
-                                style={{ background: focusBlockId === b.id && focusFlash ? "var(--lifeflow-brand-50)" : "transparent", boxShadow: focusBlockId === b.id && focusFlash ? "0 0 0 2px rgba(99,102,241,0.35)" : "none" }}>
-                                <button
-                                  type="button"
-                                  onClick={() => handleToggleBlock(b.id)}
-                                  className="w-full flex items-center gap-3 py-3 text-left active:opacity-70"
-                                  style={{ borderTop: i > 0 ? "1px solid var(--lifeflow-border-light)" : "none", opacity: allDone ? 0.6 : 1 }}
-                                >
-                                  <div className="w-[64px] shrink-0">
-                                    <p className="text-[12px] font-semibold tabular-nums leading-none" style={{ color: allDone ? "var(--color-text-tertiary)" : "var(--color-text-primary)" }}>{b.start}</p>
-                                    <p className="text-[11px] tabular-nums leading-none mt-1" style={{ color: "var(--color-text-tertiary)" }}>{b.end}</p>
-                                  </div>
-                                  <div className="min-w-0 flex-1">
-                                    <p className="text-[14px] font-semibold truncate" style={{ color: "var(--color-text-primary)", textDecoration: allDone ? "line-through" : "none" }}>{b.label}</p>
-                                    <div className="mt-1 flex items-center gap-2">
-                                      <FeatureIconRow features={b.features} onFeatureClick={(f) => handleFeatureClick(b.id, f)} />
-                                      {blockPlans.length > 0 && (
-                                        <span className="text-[11px] truncate" style={{ color: "var(--color-text-tertiary)" }}>
-                                          {blockPlans.filter((p) => !p.isCompleted).length}/{blockPlans.length} 已安排
-                                        </span>
-                                      )}
-                                    </div>
-                                  </div>
-                                  <span className="shrink-0 flex h-5 w-5 items-center justify-center rounded-full" style={{
-                                    background: allDone ? "var(--state-success)" : "transparent",
-                                    border: allDone ? "none" : "2px solid var(--lifeflow-border)",
-                                  }}>
-                                    {allDone && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
-                                  </span>
-                                </button>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+      {/* 目标事项跟随排布（画布 goal-card：Sparkles + 时间 + 来源徽标；仅真实 goalId 数据，无则不渲染） */}
+      {goalPlans.length > 0 && (
+        <div className="px-4 mb-3">
+          <div className="rounded-[20px] px-3.5 py-3" style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)", borderTop: "3px solid #8B5CF6" }}>
+            <div className="flex items-center gap-2">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full" style={{ background: "rgba(139,92,246,0.14)", color: "#8B5CF6" }}>
+                <Sparkles className="w-3.5 h-3.5" />
+              </span>
+              <div className="min-w-0">
+                <h2 className="text-[14px] font-bold leading-tight" style={{ color: "var(--color-text-primary)" }}>目标事项跟随排布</h2>
+                <p className="text-[11px] leading-snug" style={{ color: "var(--color-text-secondary)" }}>来自「目标」模块 · 已绑定今日理想日时段</p>
               </div>
-            )}
-            <p className="text-[11px] mt-2" style={{ color: "var(--color-text-tertiary)" }}>
-              点击功能图标安排该时段的具体内容 · 点击时间段整段标记完成
-            </p>
+            </div>
+            <div className="flex flex-col gap-1.5 mt-2.5">
+              {goalPlans.map((p) => (
+                <div key={`${p.blockId}-${p.feature}`} className="flex items-center gap-2 px-2.5 py-2 rounded-[10px]" style={{ background: "rgba(139,92,246,0.14)" }}>
+                  <Sparkles className="w-3.5 h-3.5 shrink-0" style={{ color: "#8B5CF6" }} />
+                  <span className="min-w-0 flex-1 text-[13px] font-semibold truncate" style={{ color: "var(--color-text-primary)" }}>{p.content}</span>
+                  <span className="shrink-0 text-[12px] tabular-nums" style={{ color: "var(--color-text-primary)" }}>{p.start}-{p.end}</span>
+                  <span className="shrink-0 flex items-center h-[18px] px-1.5 rounded-md text-[10px] font-semibold" style={{ background: "#8B5CF6", color: "#fff" }}>来源 目标</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
+      )}
+
+      {/* ── 5 大段列表（画布 block-card：模块色 chip + 时间 + 功能行 + 完成勾选；编辑/完成逻辑保留） ── */}
+      <div className="px-4">
+        <div className="flex items-center justify-between gap-2 pb-2 pt-1">
+          <h2 className="text-[13px] font-semibold" style={{ color: "var(--color-text-secondary)" }}>5 大段 · 点击整段标记完成</h2>
+          <span className="text-[11px] tabular-nums" style={{ color: "var(--color-text-secondary)" }}>
+            已排 {computeDayDistribution(activeTemplate).totalH}h · {new Date().getMonth() + 1}月{new Date().getDate()}日
+          </span>
+        </div>
+        {displayTemplate.blocks.length === 0 ? (
+          <p className="text-[13px] py-6 text-center" style={{ color: "var(--color-text-disabled)" }}>模板为空，去编辑添加时间段</p>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {[...blocksBySegment(displayTemplate).entries()].map(([g, blocks]) => {
+              const meta = SEGMENT_META[g];
+              const IconComp = ICON_REGISTRY[meta.icon] ?? Icons.Circle;
+              const collapsed = collapsedGroups.has(g);
+              const segMins = blocks.reduce((sum, b) => sum + Math.max(0, toMin(b.end) - toMin(b.start)), 0);
+              const rangeStart = blocks.length > 0 ? blocks.reduce((min, b) => (b.start < min ? b.start : min), blocks[0].start) : meta.defaultStart;
+              const rangeEnd = blocks.length > 0 ? blocks.reduce((max, b) => (b.end > max ? b.end : max), blocks[0].end) : meta.defaultEnd;
+              return (
+                <div key={g} className="rounded-[20px] overflow-hidden" style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}>
+                  {/* 段头（画布 block-hd：模块色圆 chip + 标题 + 时间/时段数 + 折叠） */}
+                  <button type="button" onClick={() => setCollapsedGroups((prev) => { const n = new Set(prev); if (n.has(g)) n.delete(g); else n.add(g); return n; })}
+                    className="w-full flex items-center gap-3 px-4 pt-3.5 pb-2 text-left">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full" style={{ background: `${meta.color}1A`, color: meta.color }}>
+                      <IconComp className="h-[18px] w-[18px]" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[15px] font-bold leading-tight" style={{ color: "var(--color-text-primary)" }}>{meta.label}</span>
+                        {g === 'sleep' && (
+                          <span className="flex items-center gap-1 h-5 px-2 rounded-md text-[10px] font-semibold" style={{ background: `${meta.color}1A`, color: meta.color }}>
+                            <Lock className="w-3 h-3" /> 仅 sleep 功能锁定
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[12px] mt-0.5 truncate tabular-nums" style={{ color: "var(--color-text-secondary)" }}>
+                        {rangeStart}-{rangeEnd} · {blocks.length} 时段{g === 'sleep' ? ` · 共 ${fmtDur(segMins)}` : ""}
+                      </p>
+                    </div>
+                    <span className="shrink-0">{collapsed ? <ChevronDown className="w-4 h-4" style={{ color: "var(--color-text-secondary)" }} /> : <ChevronUp className="w-4 h-4" style={{ color: "var(--color-text-secondary)" }} />}</span>
+                  </button>
+
+                  {!collapsed && (
+                    <div className="pb-2">
+                      {blocks.map((b) => {
+                        const blockPlans = plans.filter((p) => p.blockId === b.id);
+                        const allDone = blockPlans.length > 0 && blockPlans.every((p) => p.isCompleted);
+                        const durMin = Math.max(0, toMin(b.end) - toMin(b.start));
+                        return (
+                          <div key={b.id} id={`ideal-block-${b.id}`}
+                            className="transition-colors duration-500"
+                            style={{ background: focusBlockId === b.id && focusFlash ? "var(--lifeflow-brand-50)" : "transparent", boxShadow: focusBlockId === b.id && focusFlash ? "0 0 0 2px rgba(99,102,241,0.35)" : "none" }}>
+                            {/* 时段行（画布 slot-row：名称 + 时间 → 时长 + 完成勾选） */}
+                            <button type="button" onClick={() => handleToggleBlock(b.id)}
+                              className="w-full flex items-center gap-3 px-4 py-2.5 text-left active:opacity-70"
+                              style={{ borderTop: "1px solid var(--lifeflow-border)", opacity: allDone ? 0.6 : 1 }}>
+                              <span className="min-w-0 flex-1 text-[14px] font-semibold truncate" style={{ color: allDone ? "var(--color-text-secondary)" : "var(--color-text-primary)", textDecoration: allDone ? "line-through" : "none" }}>{b.label}</span>
+                              <span className="flex items-center gap-2 shrink-0">
+                                <span className="text-[12px] tabular-nums" style={{ color: "var(--color-text-primary)" }}>{b.start} → {b.end}</span>
+                                <span className="flex items-center h-[18px] px-1.5 rounded-md text-[10px] tabular-nums" style={{ background: "var(--lifeflow-muted)", color: "var(--color-text-secondary)" }}>{fmtDur(durMin)}</span>
+                              </span>
+                              <span className="shrink-0 flex h-5 w-5 items-center justify-center rounded-full" style={{
+                                background: allDone ? "var(--state-success)" : "transparent",
+                                border: allDone ? "none" : "2px solid var(--lifeflow-border)",
+                              }}>
+                                {allDone && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
+                              </span>
+                            </button>
+                            {/* 功能行（画布 lf-fn-row：绑定功能 caption + 模块色 chip + 名称） */}
+                            <div className="flex items-center gap-2.5 px-4 pb-2.5 pt-1 flex-wrap">
+                              <FeatureIconRow features={b.features} onFeatureClick={(f) => handleFeatureClick(b.id, f)} caption={g === 'sleep' ? "锁定功能" : "绑定功能"} />
+                              {blockPlans.length > 0 && (
+                                <span className="ml-auto text-[11px] shrink-0" style={{ color: "var(--color-text-secondary)" }}>
+                                  {blockPlans.filter((p) => !p.isCompleted).length}/{blockPlans.length} 已安排
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+        <p className="text-[11px] mt-2 pb-1" style={{ color: "var(--color-text-secondary)" }}>
+          点击功能图标安排该时段的具体内容 · 点击时间段整段标记完成
+        </p>
       </div>
 
       {/* ── 内嵌底部表单（作息/训练/功法养生/体态拉伸，样式同功能模块） ── */}

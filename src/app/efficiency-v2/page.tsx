@@ -15,6 +15,22 @@ import { GOAL_V2_AI_PROMPT, parseImportedGoal, validateImportedGoal } from "@/li
 import { showToast } from "@/components/ui/Toast";
 import { useTodayExecution } from "@/lib/today-execution";
 
+// ─── 画布对齐：模块语义色（与 lifeflow-home-redesign-v2 / goals-quick-create 一致，组件局部常量） ──
+const MODULE = {
+  ideal: "#8B5CF6",
+  idealLight: "rgba(139,92,246,0.14)",
+  study: "#3B82F6",
+  studyLight: "rgba(59,130,246,0.14)",
+  focus: "#8B5CF6",
+  focusLight: "rgba(139,92,246,0.14)",
+} as const;
+
+// ─── 画布对齐：卡片圆角（rounded-xl） ──
+const RADIUS_CARD = 16;
+
+// ─── 判断 6 位 hex（目标色），用于生成 12% 透明度底 ═════════
+const isHexColor = (v: string) => /^#[0-9a-fA-F]{6}$/.test(v);
+
 // ─── 状态徽章 ──────────────────────────────────────────────
 function StatusBadge({ status }: { status: GoalV2["status"] }) {
   const label: Record<GoalV2["status"], string> = {
@@ -31,7 +47,7 @@ function StatusBadge({ status }: { status: GoalV2["status"] }) {
 
   return (
     <span
-      className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium"
+      className="inline-flex items-center rounded-full px-2 h-6 text-[10.5px] font-medium leading-none"
       style={{ backgroundColor: c.bg, color: c.fg }}
     >
       {label[status]}
@@ -39,23 +55,34 @@ function StatusBadge({ status }: { status: GoalV2["status"] }) {
   );
 }
 
-// ─── 进度条 ──────────────────────────────────────────────
-function ProgressBar({ value }: { value: number }) {
+// ─── 进度环（画布 52px SVG 圆环） ─────────────────────────
+function ProgressRing({ value, color }: { value: number; color: string }) {
   const clamped = Math.min(100, Math.max(0, value));
+  const C = 2 * Math.PI * 24; // r=24 周长 ≈ 150.8
+  const offset = C * (1 - clamped / 100);
 
   return (
-    <div
-      className="w-full h-[6px] rounded-full overflow-hidden"
-      style={{ backgroundColor: "var(--lifeflow-background)" }}
-    >
-      <motion.div
-        className="h-full rounded-full"
-        initial={{ width: 0 }}
-        animate={{ width: `${clamped}%` }}
-        transition={{ duration: 0.6, ease: "easeOut" }}
-        style={{ backgroundColor: "var(--lifeflow-primary)" }}
-      />
-    </div>
+    <span className="relative block w-[52px] h-[52px] flex-none">
+      <svg viewBox="0 0 56 56" className="block w-full h-full -rotate-90" aria-hidden="true">
+        <circle cx="28" cy="28" r="24" fill="none" stroke="var(--lifeflow-knit-bg)" strokeWidth={5} />
+        <circle
+          cx="28"
+          cy="28"
+          r="24"
+          fill="none"
+          stroke={color}
+          strokeWidth={5}
+          strokeLinecap="round"
+          strokeDasharray={C}
+          strokeDashoffset={offset}
+        />
+      </svg>
+      <span className="absolute inset-0 flex items-center justify-center">
+        <span className="font-mono text-[12px] font-bold leading-none" style={{ color: "var(--color-text-primary)" }}>
+          {clamped}%
+        </span>
+      </span>
+    </span>
   );
 }
 
@@ -75,6 +102,17 @@ export default function EfficiencyV2Page() {
   const [importText, setImportText] = useState("");
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState("");
+
+  // ── ISO 周标题 + 日期（对齐画布 header） ──
+  const now = new Date();
+  // ISO 周数（周四归属周，与 T22.6 原算法一致）
+  const thursday = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 3 - ((now.getDay() + 6) % 7));
+  const jan1 = new Date(thursday.getFullYear(), 0, 1);
+  const isoWeek = Math.ceil(((thursday.getTime() - jan1.getTime()) / 86400000 + 1) / 7);
+  const isoYear = thursday.getFullYear();
+  const weekLabel = `${isoYear}-W${String(isoWeek).padStart(2, "0")}`;
+  const dateLabel = `${now.getMonth() + 1}/${now.getDate()}`;
+  const weekdayLabel = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"][now.getDay()];
 
   // 按 goalId 统计关键结果数量
   const krCountMap = useMemo(() => {
@@ -118,6 +156,13 @@ export default function EfficiencyV2Page() {
     () => (goalFilter === 'all' ? goalList : goalList.filter((g) => g.status === goalFilter)),
     [goalList, goalFilter],
   );
+
+  // 各状态计数（纯展示派生，供过滤 tabs 计数徽标使用）
+  const countByStatus = useMemo(() => {
+    const c: Record<GoalV2["status"], number> = { active: 0, paused: 0, completed: 0 };
+    for (const g of goalList) c[g.status] += 1;
+    return c;
+  }, [goalList]);
 
   // ── 今日焦点（T18-5：与首页「今日待办」共用同一数据源） ──
   const { mergedActions, total: focusTotal, done: focusDone, toggle: toggleFocus, isDone: isFocusDone } = useTodayExecution();
@@ -193,7 +238,7 @@ export default function EfficiencyV2Page() {
           className="flex flex-col items-center text-center gap-6 w-full"
           style={{
             backgroundColor: "var(--color-surface-card)",
-            borderRadius: "var(--lifeflow-radius-medium)",
+            borderRadius: RADIUS_CARD,
             boxShadow: "var(--shadow-card)",
             padding: "48px 24px",
           }}
@@ -271,27 +316,22 @@ export default function EfficiencyV2Page() {
       className="mx-auto relative"
       style={{ maxWidth: 430, minHeight: "100vh", paddingBottom: 100 }}
     >
-      {/* ===== Header ===== */}
+      {/* ===== Header（对齐画布：ISO 周标题 + 日期） ===== */}
       <div
-        className="px-5 pt-[var(--safe-area-top)] pb-4 flex items-start justify-between"
+        className="px-5 pt-[var(--safe-area-top)] pb-4 flex items-end justify-between gap-3"
         style={{ paddingTop: "max(var(--safe-area-top), 16px)" }}
       >
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <h1
-            className="text-[28px] font-bold leading-tight"
+            className="flex flex-wrap items-baseline gap-x-2 leading-tight"
             style={{ color: "var(--color-text-primary)", letterSpacing: "-0.02em" }}
           >
-            目标
+            <span className="font-mono text-[24px] font-bold tracking-tight">{weekLabel}</span>
+            <span style={{ color: MODULE.ideal }}>·</span>
+            <span className="text-[28px] font-bold">第 {isoWeek} 周</span>
           </h1>
           <p className="text-[13px] mt-1" style={{ color: "var(--color-text-secondary)" }}>
-            {(() => {
-              // T22.6：ISO 周数修正（原 Math.ceil(日/7) 不准确）
-              const now = new Date();
-              const thursday = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 3 - ((now.getDay() + 6) % 7));
-              const jan1 = new Date(thursday.getFullYear(), 0, 1);
-              const week = Math.ceil(((thursday.getTime() - jan1.getTime()) / 86400000 + 1) / 7);
-              return `${now.getFullYear()} 年第 ${week} 周`;
-            })()} · 稳步推进中
+            <span className="font-mono text-[12.5px]">{dateLabel}</span> {weekdayLabel} · 稳步推进中
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0 mt-0.5">
@@ -316,43 +356,32 @@ export default function EfficiencyV2Page() {
         </div>
       </div>
 
-      {/* ===== 今日焦点（与首页待办共用单一数据源） ===== */}
+      {/* ===== 今日焦点（对齐画布：焦点卡 + 专注入口，保留线上 focus 逻辑） ===== */}
       <div className="px-4 mb-4">
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="rounded-[20px] p-4"
-          style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)", borderLeft: "3px solid #6366F1" }}
+          className="px-4 pt-4 pb-3"
+          style={{ borderRadius: RADIUS_CARD, background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}
         >
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: "#EEF2FF" }}>
-              <Target className="w-4 h-4" style={{ color: "#6366F1" }} />
-            </div>
-            <span className="text-[13px] font-semibold" style={{ color: "#6366F1" }}>今日焦点</span>
-            <span className="shrink-0 rounded-md px-2 py-0.5 text-[12px] font-semibold tabular-nums ml-auto" style={{ background: "var(--lifeflow-brand-50)", color: "var(--lifeflow-primary)" }}>
+          <div className="flex items-center justify-between gap-3">
+            <h2
+              className="text-[20px] font-semibold leading-tight"
+              style={{ color: "var(--color-text-primary)", letterSpacing: "-0.01em" }}
+            >
+              今日焦点
+            </h2>
+            <span
+              className="shrink-0 rounded-md px-2.5 py-1 text-[12px] font-semibold leading-none tabular-nums"
+              style={{ background: MODULE.focusLight, color: MODULE.focus }}
+            >
               {focusDone}/{focusTotal} 完成
-            </span>
-          </div>
-
-          {/* 焦点进度 */}
-          <div className="mt-3 flex items-center gap-3">
-            <div className="w-full h-[6px] rounded-full overflow-hidden" style={{ background: "var(--lifeflow-background)" }}>
-              <motion.div
-                className="h-full rounded-full"
-                initial={{ width: 0 }}
-                animate={{ width: `${focusPercent}%` }}
-                transition={{ duration: 0.6, ease: "easeOut" }}
-                style={{ backgroundColor: "#6366F1" }}
-              />
-            </div>
-            <span className="shrink-0 text-[13px] font-semibold leading-none tabular-nums" style={{ color: "var(--color-text-primary)" }}>
-              {focusPercent}%
             </span>
           </div>
 
           {/* 今日日行动（可勾选，与首页联动） */}
           {focusActions.length > 0 ? (
-            <div className="mt-2 flex flex-col">
+            <div className="mt-3 flex flex-col rounded-lg px-3 py-1" style={{ background: "var(--lifeflow-muted)" }}>
               {focusActions.map((a, i) => {
                 const done = isFocusDone(a);
                 return (
@@ -374,7 +403,7 @@ export default function EfficiencyV2Page() {
                     </span>
                     <span className="flex-1 min-w-0">
                       <span
-                        className="block text-[14px] font-medium truncate"
+                        className="block text-[14.5px] font-semibold leading-snug truncate"
                         style={{
                           color: done ? "var(--color-text-secondary)" : "var(--color-text-primary)",
                           textDecoration: done ? "line-through" : "none",
@@ -382,15 +411,15 @@ export default function EfficiencyV2Page() {
                       >
                         {a.title}
                       </span>
-                      <span className="block text-[11px] mt-0.5" style={{ color: "var(--color-text-secondary)" }}>
-                        {a.time || "--"}
+                      <span className="block text-[12px] mt-0.5" style={{ color: "var(--color-text-secondary)" }}>
+                        <span className="font-mono text-[11.5px]">{a.time || "--"}</span>
                         {a.sourceType === "ideal" && (
-                          <span className="ml-1.5 rounded-[5px] px-1 py-0.5 text-[10px] font-medium" style={{ background: "rgba(99,102,241,0.14)", color: "#6366F1" }}>
+                          <span className="ml-1.5 rounded-[6px] px-1.5 py-0.5 text-[11px] font-medium leading-none" style={{ background: MODULE.idealLight, color: MODULE.ideal }}>
                             理想日
                           </span>
                         )}
                         {a.tag && a.sourceType !== "ideal" && (
-                          <span className="ml-1.5 rounded-[5px] px-1 py-0.5 text-[10px] font-medium" style={{ background: "var(--lifeflow-brand-50)", color: "var(--lifeflow-primary)" }}>
+                          <span className="ml-1.5 rounded-[6px] px-1.5 py-0.5 text-[11px] font-medium leading-none" style={{ background: "var(--lifeflow-brand-50)", color: "var(--lifeflow-primary)" }}>
                             {a.tag}
                           </span>
                         )}
@@ -403,7 +432,7 @@ export default function EfficiencyV2Page() {
                         aria-label={`理想日：${a.title}`}
                         onClick={(e) => { e.stopPropagation(); router.push(`/ideal-day?block=${a.blockId}`); }}
                         className="w-7 h-7 shrink-0 rounded-full flex items-center justify-center active:scale-90 transition-transform"
-                        style={{ background: "rgba(99,102,241,0.1)", color: "#6366F1" }}
+                        style={{ background: MODULE.idealLight, color: MODULE.ideal }}
                       >
                         <Sun className="w-3.5 h-3.5" />
                       </button>
@@ -414,7 +443,7 @@ export default function EfficiencyV2Page() {
                       aria-label={`专注：${a.title}`}
                       onClick={(e) => { e.stopPropagation(); router.push("/more/focus"); }}
                       className="w-7 h-7 shrink-0 rounded-full flex items-center justify-center active:scale-90 transition-transform"
-                      style={{ background: "rgba(139,92,246,0.14)", color: "rgba(139,92,246,1)" }}
+                      style={{ background: MODULE.focusLight, color: MODULE.focus }}
                     >
                       <Timer className="w-3.5 h-3.5" />
                     </button>
@@ -423,42 +452,77 @@ export default function EfficiencyV2Page() {
               })}
             </div>
           ) : (
-            <div className="mt-3 rounded-xl py-5 text-center" style={{ background: "var(--lifeflow-background)" }}>
+            <div className="mt-3 rounded-lg py-5 text-center" style={{ background: "var(--lifeflow-muted)" }}>
               <p className="text-[13px]" style={{ color: "var(--color-text-secondary)" }}>
                 今天还没有安排，去「目标」拆解或「日程」新建事项
               </p>
             </div>
           )}
-          <p className="text-[11px] mt-2" style={{ color: "var(--color-text-disabled)" }}>
+
+          {/* 焦点进度（knit-track + mono 数字） */}
+          <div className="mt-3 flex items-center gap-3">
+            <div className="w-full h-[6px] rounded-full overflow-hidden" style={{ background: "var(--lifeflow-knit-bg)" }}>
+              <motion.div
+                className="h-full rounded-full"
+                initial={{ width: 0 }}
+                animate={{ width: `${focusPercent}%` }}
+                transition={{ duration: 0.6, ease: "easeOut" }}
+                style={{ backgroundColor: MODULE.focus }}
+              />
+            </div>
+            <span className="shrink-0 font-mono text-[12px] font-semibold leading-none tabular-nums" style={{ color: "var(--color-text-primary)" }}>
+              {focusDone}/{focusTotal}
+            </span>
+          </div>
+
+          <p
+            className="mt-2.5 border-t pt-2 text-[12px]"
+            style={{ borderColor: "var(--lifeflow-border)", color: "var(--color-text-secondary)" }}
+          >
             今日焦点来自目标日行动 · 与首页待办同步勾选
           </p>
         </motion.div>
       </div>
 
-      {/* ===== Goal Grid（活跃目标优先 · 状态过滤） ===== */}
+      {/* ===== 目标网格（对齐画布：标题行 + 状态过滤 tabs + 进度环卡） ===== */}
       <div className="px-4">
-        {/* T22.6：状态过滤 tabs */}
-        <div className="flex items-center gap-1.5 mb-3 overflow-x-auto no-scrollbar">
+        {/* 标题行 */}
+        <div className="flex items-center justify-between gap-3 px-1">
+          <h2
+            className="text-[20px] font-semibold leading-tight"
+            style={{ color: "var(--color-text-primary)", letterSpacing: "-0.01em" }}
+          >
+            目标
+          </h2>
+          <span className="shrink-0 text-[13px]" style={{ color: "var(--color-text-secondary)" }}>
+            共 <span className="font-mono">{goalList.length}</span> 个
+          </span>
+        </div>
+
+        {/* T22.6：状态过滤 tabs（对齐画布：全部 / 进行中 / 已暂停 / 已完成 + 计数） */}
+        <div className="flex items-center gap-1.5 mt-2.5 mb-3 overflow-x-auto no-scrollbar">
           {([
-            { key: 'all', label: `全部 ${goalList.length}` },
-            { key: 'active', label: '进行中' },
-            { key: 'paused', label: '已暂停' },
-            { key: 'completed', label: '已完成' },
-          ] as { key: 'all' | GoalV2["status"]; label: string }[]).map((t) => {
+            { key: 'all', label: '全部', count: goalList.length },
+            { key: 'active', label: '进行中', count: countByStatus.active },
+            { key: 'paused', label: '已暂停', count: countByStatus.paused },
+            { key: 'completed', label: '已完成', count: countByStatus.completed },
+          ] as { key: 'all' | GoalV2["status"]; label: string; count: number }[]).map((t) => {
             const active = goalFilter === t.key;
             return (
               <button
                 key={t.key}
                 type="button"
                 onClick={() => setGoalFilter(t.key)}
-                className="shrink-0 px-3.5 h-8 rounded-full text-[12.5px] font-medium transition-all active:opacity-80"
+                className="shrink-0 flex items-center gap-1 px-3.5 h-8 rounded-full text-[12.5px] leading-none transition-all active:opacity-80"
                 style={{
-                  background: active ? "#6366F1" : "var(--color-surface-card)",
-                  color: active ? "#fff" : "var(--color-text-secondary)",
+                  background: active ? "var(--lifeflow-brand-50)" : "var(--color-surface-card)",
+                  color: active ? "var(--lifeflow-primary)" : "var(--color-text-secondary)",
+                  fontWeight: active ? 600 : 500,
                   boxShadow: "var(--shadow-card)",
                 }}
               >
                 {t.label}
+                <span className="font-mono tabular-nums">{t.count}</span>
               </button>
             );
           })}
@@ -473,6 +537,12 @@ export default function EfficiencyV2Page() {
           .map((goal, i) => {
           const krCount = krCountMap.get(goal.id) ?? 0;
           const krStats = krStatsMap.get(goal.id);
+          const krSummary = krStats && krStats.total > 0
+            ? `KR ${krStats.done}/${krStats.total} · ${krStats.avg}%`
+            : `${krCount} 个关键结果`;
+          const hasHexColor = goal.color && isHexColor(goal.color);
+          const accent = hasHexColor ? goal.color : MODULE.study;
+          const accentLight = hasHexColor ? `${goal.color}1F` : MODULE.studyLight;
 
           return (
             <motion.div
@@ -484,21 +554,15 @@ export default function EfficiencyV2Page() {
                 duration: 0.35,
                 ease: "easeOut",
               }}
-              className="rounded-[20px] overflow-hidden flex flex-col cursor-pointer active:scale-[0.97] transition-transform relative group"
+              className="relative flex flex-col p-3.5 pb-3 cursor-pointer active:scale-[0.97] transition-transform"
               style={{
+                borderRadius: RADIUS_CARD,
                 backgroundColor: "var(--color-surface-card)",
-                border: "1px solid var(--lifeflow-border)",
                 boxShadow: "var(--shadow-card)",
               }}
               onClick={() => router.push(`/efficiency-v2/goals/${goal.id}`)}
             >
-              {/* 彩色顶条 */}
-              <div
-                className="h-[4px] shrink-0"
-                style={{ backgroundColor: goal.color || "var(--lifeflow-primary)" }}
-              />
-
-              {/* 删除按钮 — 始终可见 */}
+              {/* 删除按钮 — 始终可见（线上功能保留） */}
               <button
                 type="button"
                 onClick={(e) => {
@@ -506,57 +570,44 @@ export default function EfficiencyV2Page() {
                   handleDeleteGoal(goal.id, goal.title);
                 }}
                 className="absolute top-2 right-2 w-7 h-7 rounded-full flex items-center justify-center z-10 active:scale-90 transition-transform"
-                style={{ background: "rgba(0,0,0,0.3)" }}
+                style={{ background: "rgba(0,0,0,0.28)" }}
                 aria-label="删除目标"
               >
                 <Trash2 className="w-3.5 h-3.5 text-white" />
               </button>
 
-              {/* 卡片内容 */}
-              <div className="flex flex-col gap-2.5 p-3.5 flex-1">
-                {/* 标题 */}
-                <h3
-                  className="text-[15px] font-semibold leading-tight line-clamp-2"
-                  style={{ color: "var(--color-text-primary)" }}
-                >
-                  {goal.title}
-                </h3>
+              {/* 进度环（画布 52px 圆环，环色 = 目标色） */}
+              <div className="mt-1 flex-none">
+                <ProgressRing value={goal.progress} color={accent} />
+              </div>
 
-                {/* 愿景（截断） */}
-                {goal.vision && (
-                  <p
-                    className="text-[12px] leading-relaxed line-clamp-2"
-                    style={{ color: "var(--color-text-secondary)" }}
-                  >
-                    {goal.vision}
-                  </p>
-                )}
+              {/* 标题 */}
+              <h3
+                className="mt-3 truncate text-[15px] font-bold leading-snug"
+                style={{ color: "var(--color-text-primary)" }}
+              >
+                {goal.title}
+              </h3>
 
-                {/* 进度条 */}
-                <div className="mt-auto flex flex-col gap-1.5">
-                  <ProgressBar value={goal.progress} />
+              {/* 描述行（对齐画布：两行摘要） */}
+              <p
+                className="mt-1 text-[12px] leading-snug line-clamp-2"
+                style={{ color: "var(--color-text-secondary)", minHeight: 34 }}
+              >
+                {goal.vision || krSummary}
+              </p>
+
+              {/* 底部 chips：状态徽章 + KR 摘要 + 今日学习入口 */}
+              <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+                <StatusBadge status={goal.status} />
+                {goal.vision && krStats && krStats.total > 0 && (
                   <span
-                    className="text-[11px] font-medium"
-                    style={{ color: "var(--color-text-disabled)" }}
+                    className="inline-flex items-center rounded-full px-2 h-6 text-[10.5px] font-medium leading-none"
+                    style={{ background: "var(--lifeflow-muted)", color: "var(--color-text-secondary)" }}
                   >
-                    {goal.progress}%
+                    KR {krStats.done}/{krStats.total} · {krStats.avg}%
                   </span>
-                </div>
-
-                {/* 底部 row：状态徽章 + KR 进度 */}
-                <div className="flex items-center justify-between mt-1">
-                  <StatusBadge status={goal.status} />
-                  {krStats && krStats.total > 0 ? (
-                    <span className="text-[11px] tabular-nums" style={{ color: "var(--color-text-disabled)" }}>
-                      KR {krStats.done}/{krStats.total} · {krStats.avg}%
-                    </span>
-                  ) : (
-                    <span className="text-[11px]" style={{ color: "var(--color-text-disabled)" }}>
-                      {krCount} 个关键结果
-                    </span>
-                  )}
-                </div>
-
+                )}
                 {/* T22.4：今日理想日学习推进（点击跳理想日定位该目标） */}
                 {idealTodayMap.get(goal.id) && (
                   <button
@@ -565,11 +616,11 @@ export default function EfficiencyV2Page() {
                       e.stopPropagation();
                       router.push(`/ideal-day?goal=${goal.id}`);
                     }}
-                    className="flex items-center gap-1 px-2 h-6 rounded-full text-[10.5px] font-medium active:opacity-70 w-fit"
-                    style={{ background: "rgba(99,102,241,0.12)", color: "#6366F1" }}
+                    className="inline-flex items-center gap-1 rounded-full px-2 h-6 text-[10.5px] font-medium leading-none active:opacity-70"
+                    style={{ background: accentLight, color: accent }}
                   >
-                    <Sparkles className="w-3 h-3" />
-                    今日学习 {idealTodayMap.get(goal.id)!.done}/{idealTodayMap.get(goal.id)!.total}
+                    <Sparkles className="w-3 h-3 shrink-0" />
+                    今日学习 <span className="font-mono font-semibold">{idealTodayMap.get(goal.id)!.done}/{idealTodayMap.get(goal.id)!.total}</span>
                   </button>
                 )}
               </div>
@@ -579,7 +630,7 @@ export default function EfficiencyV2Page() {
         </div>
       </div>
 
-      {/* ===== FAB 新建目标 ===== */}
+      {/* ===== FAB 新建目标（对齐画布：56px 圆钮 + shadow-modal） ===== */}
       <button
         type="button"
         onClick={() => router.push("/efficiency-v2/new")}
@@ -589,7 +640,7 @@ export default function EfficiencyV2Page() {
           height: 56,
           borderRadius: "50%",
           backgroundColor: "var(--lifeflow-primary)",
-          boxShadow: "0 2px 8px rgba(37, 99, 235, 0.3)",
+          boxShadow: "var(--shadow-modal)",
         }}
       >
         <Plus className="w-6 h-6 text-white" strokeWidth={2} />
@@ -610,7 +661,7 @@ export default function EfficiencyV2Page() {
   );
 }
 
-// ─── 导入对话框组件 ──────────────────────────────────────────
+// ─── 导入对话框组件（token 对齐画布） ─────────────────────
 function ImportDialog({
   open, importText, setImportText, importError, setImportError, importing, onClose, onImport,
 }: {
@@ -645,13 +696,13 @@ function ImportDialog({
           value={importText}
           onChange={(e) => { setImportText(e.target.value); setImportError(""); }}
           placeholder="请粘贴 AI 返回的 JSON 内容..."
-          className="w-full rounded-[10px] p-3 text-[13px] outline-none resize-none"
+          className="w-full rounded-[8px] p-3 text-[13px] outline-none resize-none"
           style={{
             color: "var(--color-text-primary)",
             background: "var(--lifeflow-muted)",
             border: importError ? "1px solid #FF3B30" : "1px solid var(--lifeflow-border)",
             minHeight: 200,
-            fontFamily: "monospace",
+            fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
           }}
         />
         {importError && (
@@ -661,7 +712,7 @@ function ImportDialog({
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 h-10 rounded-[10px] text-[14px] font-medium"
+            className="flex-1 h-10 rounded-[8px] text-[14px] font-medium"
             style={{ background: "var(--lifeflow-muted)", color: "var(--color-text-secondary)" }}
           >
             取消
@@ -670,7 +721,7 @@ function ImportDialog({
             type="button"
             onClick={onImport}
             disabled={!importText.trim() || importing}
-            className="flex-1 h-10 rounded-[10px] text-[14px] font-semibold text-white disabled:opacity-40"
+            className="flex-1 h-10 rounded-[8px] text-[14px] font-semibold text-white disabled:opacity-40"
             style={{ background: "var(--lifeflow-primary)" }}
           >
             {importing ? "解析中..." : "导入并创建"}

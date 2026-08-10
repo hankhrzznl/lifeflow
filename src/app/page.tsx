@@ -7,9 +7,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useLiveQuery } from "dexie-react-hooks";
 import {
   Check, Plus, X, Moon, Droplets, Repeat, Timer, Wallet, Sun,
-  Ellipsis, ArrowRight, TrendingUp,
+  Ellipsis, ArrowRight, TrendingUp, Pencil, AlertCircle,
 } from "lucide-react";
-import { addManualItem } from "@/lib/db/daylog.db";
+import { addManualItem, getItemsByDate } from "@/lib/db/daylog.db";
 import { getTotalFocusMinutes, getHabits } from "@/lib/db/life.db";
 
 import { showToast } from "@/components/ui/Toast";
@@ -20,6 +20,7 @@ import { useThreeThings } from "@/lib/three-things";
 import { getWaterGoal, healthDB, getSleepLogByDate } from "@/lib/db/health.db";
 import { reviewerBrain } from "@/lib/brains/reviewer";
 import { useTodayExecution } from "@/lib/today-execution";
+import { getIdealDayPlans, getFeatureMeta } from "@/lib/ideal-day-templates";
 
 // ============================================================
 // 工具函数
@@ -55,6 +56,19 @@ function formatMinutes(min: number): string {
   const m = Math.round(min % 60);
   return h > 0 ? `${h}h${String(m).padStart(2, "0")}m` : `${m}m`;
 }
+
+/** 时间加法（HH:mm + 分钟，跨天取模 24h），用于时长 chips 自动计算结束时间 */
+function addMinutesTime(time: string, mins: number): string {
+  const [h, m] = time.split(":").map(Number);
+  const total = h * 60 + m + mins;
+  const nh = Math.floor(total / 60) % 24;
+  const nm = total % 60;
+  return `${String(nh).padStart(2, "0")}:${String(nm).padStart(2, "0")}`;
+}
+
+/** 画布 lf-dur-chip / lf-remind-offsets 的时长与提前量选项 */
+const DURATION_CHIPS = [15, 30, 45, 60, 90] as const;
+const REMIND_OFFSETS = [0, 5, 10, 15] as const;
 
 const PRESET_COLORS = ["#6366F1", "#FF9500", "#34C759", "#FF3B30", "#007AFF", "#5856D6", "#FF2D55", "#00C7BE"];
 
@@ -113,6 +127,40 @@ function ProgressRing({ percent }: { percent: number }) {
 // ============================================================
 // 首页
 // ============================================================
+
+// ── 画布 lf-switch（iOS 风格，走项目 token）──
+function LfSwitch({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      onClick={() => onChange(!checked)}
+      className="relative h-[30px] w-[50px] shrink-0 rounded-full transition-colors active:opacity-80"
+      style={{ background: checked ? "var(--lifeflow-primary)" : "var(--lifeflow-border)" }}
+    >
+      <span
+        className="absolute top-[2px] left-[2px] h-[26px] w-[26px] rounded-full transition-transform"
+        style={{
+          background: "var(--color-surface-card)",
+          boxShadow: "var(--shadow-card)",
+          transform: checked ? "translateX(20px)" : "translateX(0)",
+        }}
+      />
+    </button>
+  );
+}
+
+/** 画布 lf-chip-opt 单选态样式（时长 / 提前量共用） */
+function chipStyle(active: boolean): React.CSSProperties {
+  return {
+    background: active ? "var(--lifeflow-primary)" : "var(--lifeflow-muted)",
+    border: `1px solid ${active ? "var(--lifeflow-primary)" : "var(--lifeflow-border)"}`,
+    color: active ? "var(--lifeflow-primary-foreground)" : "var(--color-text-secondary)",
+  };
+}
+
 export default function HomePage() {
   const router = useRouter();
   const today = todayStr();
@@ -198,6 +246,16 @@ export default function HomePage() {
     return () => { cancelled = true; };
   }, []);
 
+  // ── 明日预告（晚间态卡片）：真实明日数据源 ──
+  // 明日三件事：明日日程 Item；明日理想日：L2 规划（getIdealDayPlans 无则空态）
+  const tomorrow = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  }, []);
+  const tomorrowItems = useLiveQuery(() => getItemsByDate(tomorrow), [tomorrow], []);
+  const tomorrowPlans = useLiveQuery(() => getIdealDayPlans(tomorrow), [tomorrow], []);
+
   // ── 都矫正完了 ──
   const [correctingAll, setCorrectingAll] = useState(false);
   const handleMarkAllCorrected = useCallback(async () => {
@@ -216,7 +274,7 @@ export default function HomePage() {
     }
   }, [uncorrected, correctingAll]);
 
-  // ── 创建弹窗 ──
+  // ── 创建弹窗（对齐画布 home-day-create-sheet：时长 chips + 按理想日安排 + 到时提醒） ──
   const [showCreate, setShowCreate] = useState(false);
   const [createForm, setCreateForm] = useState({
     title: "",
@@ -225,12 +283,51 @@ export default function HomePage() {
     note: "",
     color: PRESET_COLORS[0],
   });
+  // 画布 lf-dur-chip：时长单选（15/30/45/60/90/全天），默认 30
+  const [createDur, setCreateDur] = useState<string>("30");
+  // 画布 task-ideal-toggle：按理想日安排（开启后若有理想日模板则取模板时段）
+  const [idealByPlan, setIdealByPlan] = useState(false);
+  // 画布 task-remind-toggle + lf-remind-offsets：到时提醒 + 提前量（默认 10 分钟）
+  const [remindEnabled, setRemindEnabled] = useState(false);
+  const [remindOffset, setRemindOffset] = useState(10);
   const resetForm = () => {
     const n = new Date();
     const start = `${String(n.getHours()).padStart(2, "0")}:${String(n.getMinutes()).padStart(2, "0")}`;
     const later = new Date(n.getTime() + 30 * 60000);
     const end = `${String(later.getHours()).padStart(2, "0")}:${String(later.getMinutes()).padStart(2, "0")}`;
     setCreateForm({ title: "", plannedStart: start, plannedEnd: end, note: "", color: PRESET_COLORS[0] });
+    setCreateDur("30");
+    setIdealByPlan(false);
+    setRemindEnabled(false);
+    setRemindOffset(10);
+  };
+  /** 时长 chips 单选：结束时间 = 开始 + 时长；「全天」= 00:00-23:59 */
+  const handlePickDuration = (dur: string) => {
+    setCreateDur(dur);
+    setCreateForm((f) => {
+      if (dur === "all") return { ...f, plannedStart: "00:00", plannedEnd: "23:59" };
+      return { ...f, plannedEnd: addMinutesTime(f.plannedStart, Number(dur)) };
+    });
+  };
+  /** 按理想日安排：真实逻辑 = getIdealDayConfig 取模板对应时段；无模板（系统关闭）保持手动 */
+  const handleIdealToggle = async (on: boolean) => {
+    setIdealByPlan(on);
+    if (!on) return;
+    try {
+      const { getIdealDayConfig } = await import("@/lib/ideal-day");
+      const { selectTemplateV2 } = await import("@/lib/ideal-day-templates");
+      const config = await getIdealDayConfig();
+      if (!config.enabled) return; // 无理想日模板 → 保持手动
+      const tpl = selectTemplateV2(config, today);
+      const blocks = tpl?.blocks ?? [];
+      const nowT = nowTimeStr();
+      const block = blocks.find((b) => b.start <= nowT && nowT < b.end)
+        ?? blocks.find((b) => b.start >= nowT)
+        ?? blocks[0];
+      if (block) {
+        setCreateForm((f) => ({ ...f, plannedStart: block.start, plannedEnd: block.end }));
+      }
+    } catch { /* 读取失败保持手动 */ }
   };
   const [submitting, setSubmitting] = useState(false);
   const handleCreate = useCallback(async () => {
@@ -240,12 +337,17 @@ export default function HomePage() {
     if (!createForm.plannedStart || !createForm.plannedEnd) { showToast({ type: "error", message: "请选择时间" }); return; }
     setSubmitting(true);
     try {
+      // 到时提醒：addManualItem 不支持提醒字段 → 按规则存到 note 后缀「⏰提前N分钟」，不新增 Dexie 字段
+      const rawNote = createForm.note.trim();
+      const note = remindEnabled
+        ? rawNote ? `${rawNote} ⏰提前${remindOffset}分钟` : `⏰提前${remindOffset}分钟`
+        : (rawNote || undefined);
       await addManualItem({
         date: today,
         plannedStart: createForm.plannedStart,
         plannedEnd: createForm.plannedEnd,
         title,
-        note: createForm.note || undefined,
+        note,
         color: createForm.color,
       });
       showToast({ type: "success", message: "已添加" });
@@ -256,7 +358,7 @@ export default function HomePage() {
     } finally {
       setSubmitting(false);
     }
-  }, [createForm, today, submitting]);
+  }, [createForm, today, submitting, remindEnabled, remindOffset]);
 
   // ── 晚间睡前仪式显示时机：21:00 之后 ──
   const showNightRitual = nowTime >= "21:00";
@@ -276,10 +378,10 @@ export default function HomePage() {
       >
         <div className="min-w-0 flex-1">
           <h1 className="text-[28px] font-bold leading-tight" style={{ color: "var(--color-text-primary)", letterSpacing: "-0.02em" }}>
-            {greeting()}
+            {showNightRitual ? "晚安，今天辛苦了" : greeting()}
           </h1>
           <p className="mt-1 text-[13px]" style={{ color: "var(--color-text-secondary)" }}>
-            {formatDateChinese(now)} · 今天也一起织
+            {showNightRitual ? formatDateChinese(now) : `${formatDateChinese(now)} · 今天也一起织`}
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
@@ -508,6 +610,102 @@ export default function HomePage() {
         </motion.div>
       </div>
 
+      {/* ===== ①b 晚间态 · 明日三件事草稿 + 明日理想日要点（21:00 后显示，对齐画布 4a/4b） ===== */}
+      {showNightRitual && (
+        <>
+          {/* 明日三件事草稿（tomorrow-draft：编辑按钮 + 圆点/标题/mono 时间，真实明日 items） */}
+          <div className="px-4 mb-3">
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.06, duration: 0.3, ease: "easeOut" }}
+              className="rounded-[16px] px-4 pt-4 pb-3"
+              style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}
+            >
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="text-[20px] font-bold leading-tight min-w-0 flex-1 truncate" style={{ color: "var(--color-text-primary)" }}>
+                  明日三件事
+                </h2>
+                <button
+                  type="button"
+                  aria-label="编辑明日三件事"
+                  onClick={() => router.push("/ideal-day")}
+                  className="flex shrink-0 items-center gap-1 rounded-md px-2.5 py-1 text-[12px] font-semibold active:opacity-70"
+                  style={{ background: "rgba(99,102,241,0.14)", color: "#6366F1" }}
+                >
+                  <Pencil className="h-3.5 w-3.5" />编辑
+                </button>
+              </div>
+              {tomorrowItems.length === 0 ? (
+                <p className="mt-3 text-[13px] leading-relaxed" style={{ color: "var(--color-text-tertiary)" }}>
+                  睡前记下明早最重要的事
+                </p>
+              ) : (
+                <ul className="mt-3 space-y-2.5">
+                  {tomorrowItems.slice(0, 3).map((item) => (
+                    <li key={item.id} className="flex items-center gap-2">
+                      <span className="h-[6px] w-[6px] shrink-0 rounded-full" style={{ background: "#6366F1" }} />
+                      <span
+                        className="min-w-0 flex-1 truncate text-[14px] font-medium"
+                        style={{ color: item.isCompleted ? "var(--color-text-disabled)" : "var(--color-text-primary)" }}
+                      >
+                        {item.title}
+                      </span>
+                      <span className="shrink-0 text-[11px] tabular-nums" style={{ color: "var(--color-text-tertiary)" }}>
+                        {item.plannedStart}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <p className="mt-3 text-[12px]" style={{ borderTop: "1px solid var(--lifeflow-border)", paddingTop: 10, color: "var(--color-text-tertiary)" }}>
+                草稿 · 睡前再过一遍，明早直接开始
+              </p>
+            </motion.div>
+          </div>
+
+          {/* 明日理想日要点（tomorrow-ideal：时间要点 chips + 一句提示，真实明日理想日规划） */}
+          <div className="px-4 mb-3">
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.08, duration: 0.3, ease: "easeOut" }}
+              className="rounded-[16px] px-4 pt-4 pb-3"
+              style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}
+            >
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="text-[20px] font-bold leading-tight min-w-0 flex-1 truncate" style={{ color: "var(--color-text-primary)" }}>
+                  明日理想日
+                </h2>
+                <Sun className="h-4 w-4 shrink-0" style={{ color: "#6366F1" }} />
+              </div>
+              {tomorrowPlans.length === 0 ? (
+                <p className="mt-3 text-[13px] leading-relaxed" style={{ color: "var(--color-text-tertiary)" }}>
+                  明早到理想日页安排
+                </p>
+              ) : (
+                <>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {tomorrowPlans.slice(0, 4).map((p) => (
+                      <span
+                        key={`${p.blockId}-${p.feature}`}
+                        className="inline-flex items-center rounded-md px-2.5 py-1.5 text-[12px] font-medium tabular-nums"
+                        style={{ background: "rgba(99,102,241,0.14)", color: "#6366F1" }}
+                      >
+                        {p.start} {getFeatureMeta(p.feature).label}
+                      </span>
+                    ))}
+                  </div>
+                  <p className="mt-3 text-[12px]" style={{ color: "var(--color-text-secondary)" }}>
+                    节奏比今天更从容，留 30 分钟缓冲
+                  </p>
+                </>
+              )}
+            </motion.div>
+          </div>
+        </>
+      )}
+
       {/* ===== ② 健康概览条（睡眠/饮水/习惯/专注） ===== */}
       <div className="px-4 mb-3">
         <motion.div
@@ -579,6 +777,69 @@ export default function HomePage() {
 
       {/* ===== ③ 晚间睡前仪式（21:00 后显示） ===== */}
       {showNightRitual && <SleepRitualCard />}
+
+      {/* ===== ③b 晚间态 · 今日复盘总结（review-night：完成率大数字 + knit 进度条 + 一句话；点卡跳长期主义） ===== */}
+      {showNightRitual && (
+        <div className="px-4 mb-3">
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.06, duration: 0.3, ease: "easeOut" }}
+          >
+            <Link
+              href="/longtermism"
+              className="block rounded-[16px] px-4 pt-4 pb-3 active:opacity-70"
+              style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}
+            >
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="text-[20px] font-bold leading-tight min-w-0 flex-1 truncate" style={{ color: "var(--color-text-primary)" }}>
+                  今日复盘
+                </h2>
+                <span className="flex shrink-0 items-center whitespace-nowrap text-[12px] font-semibold" style={{ color: "var(--lifeflow-primary)" }}>
+                  长期主义<ArrowRight className="ml-0.5 inline h-3 w-3" />
+                </span>
+              </div>
+              {total > 0 ? (
+                <>
+                  <div className="mt-4 flex items-end gap-2">
+                    <span className="text-[34px] font-semibold leading-none tabular-nums" style={{ color: "var(--color-text-primary)" }}>
+                      {Math.round((done / total) * 100)}%
+                    </span>
+                    <span className="mb-1 text-[12px]" style={{ color: "var(--color-text-tertiary)" }}>
+                      今日完成率
+                    </span>
+                  </div>
+                  <div
+                    className="mt-3 h-[6px] overflow-hidden rounded-full"
+                    role="progressbar"
+                    aria-valuenow={Math.round((done / total) * 100)}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-label={`今日完成率 ${Math.round((done / total) * 100)}%`}
+                    style={{ background: "var(--lifeflow-knit-bg)" }}
+                  >
+                    <div
+                      className="h-full rounded-full"
+                      style={{
+                        width: `${Math.round((done / total) * 100)}%`,
+                        background: "var(--lifeflow-primary)",
+                        transition: "width 0.5s ease-in-out",
+                      }}
+                    />
+                  </div>
+                  <p className="mt-2 text-[13px] leading-relaxed" style={{ color: "var(--color-text-secondary)" }}>
+                    {reviewSnippet || "三件事按时完成，专注再久一点"}
+                  </p>
+                </>
+              ) : (
+                <p className="mt-3 text-[13px] leading-relaxed" style={{ color: "var(--color-text-tertiary)" }}>
+                  今天还没有安排事项，睡前记下几件最重要的事吧
+                </p>
+              )}
+            </Link>
+          </motion.div>
+        </div>
+      )}
 
       {/* ===== ④ 复盘一句话入口（长期主义唯一复盘入口） ===== */}
       <div className="px-4 mb-3">
@@ -696,7 +957,15 @@ export default function HomePage() {
                     <input
                       type="time"
                       value={createForm.plannedStart}
-                      onChange={(e) => setCreateForm((f) => ({ ...f, plannedStart: e.target.value }))}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setCreateForm((f) => ({
+                          ...f,
+                          plannedStart: v,
+                          // 已选时长（非全天）→ 结束时间跟随 = 开始 + 时长
+                          plannedEnd: createDur && createDur !== "all" ? addMinutesTime(v, Number(createDur)) : f.plannedEnd,
+                        }));
+                      }}
                       className="w-full px-4 py-3 rounded-xl text-[15px] outline-none"
                       style={{ backgroundColor: "var(--lifeflow-background)", color: "var(--color-text-primary)" }}
                     />
@@ -713,6 +982,80 @@ export default function HomePage() {
                       style={{ backgroundColor: "var(--lifeflow-background)", color: "var(--color-text-primary)" }}
                     />
                   </div>
+                </div>
+
+                {/* 时长 chips（画布 lf-dur-chip：15/30/45/60/90/全天 单选；选中自动算结束时间） */}
+                <div className="mb-4">
+                  <label className="flex items-center gap-1.5 text-[13px] font-medium mb-2 block" style={{ color: "var(--color-text-secondary)" }}>
+                    <Timer className="h-3.5 w-3.5" />时长（分钟）
+                  </label>
+                  <div className="flex flex-wrap gap-2" role="group" aria-label="时长选择">
+                    {DURATION_CHIPS.map((d) => (
+                      <button
+                        key={d}
+                        type="button"
+                        onClick={() => handlePickDuration(String(d))}
+                        aria-pressed={createDur === String(d)}
+                        className="inline-flex min-w-[50px] h-[34px] items-center justify-center rounded-full px-3 text-[13px] font-semibold tabular-nums active:scale-95 transition-transform"
+                        style={chipStyle(createDur === String(d))}
+                      >
+                        {d}
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => handlePickDuration("all")}
+                      aria-pressed={createDur === "all"}
+                      className="inline-flex min-w-[50px] h-[34px] items-center justify-center rounded-full px-3 text-[13px] font-semibold active:scale-95 transition-transform"
+                      style={chipStyle(createDur === "all")}
+                    >
+                      全天
+                    </button>
+                  </div>
+                </div>
+
+                {/* 按理想日安排 switch（画布 task-ideal-toggle；开启且有模板则取模板时段） */}
+                <div className="flex items-center justify-between gap-3 mb-4">
+                  <div className="flex min-w-0 flex-col gap-1">
+                    <span className="flex items-center gap-1.5 text-[13px] font-medium" style={{ color: "var(--color-text-secondary)" }}>
+                      <Sun className="h-3.5 w-3.5" />按理想日安排
+                    </span>
+                    {idealByPlan && (
+                      <p className="text-[11px] leading-snug" style={{ color: "var(--color-text-tertiary)" }}>
+                        将按理想日模板自动安排到对应时段
+                      </p>
+                    )}
+                  </div>
+                  <LfSwitch checked={idealByPlan} onChange={handleIdealToggle} label="按理想日安排" />
+                </div>
+
+                {/* 到时提醒 switch + 偏移 chips（画布 task-remind-toggle + lf-remind-offsets：0/5/10/15） */}
+                <div className="mb-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="flex items-center gap-1.5 text-[13px] font-medium" style={{ color: "var(--color-text-secondary)" }}>
+                      <AlertCircle className="h-3.5 w-3.5" />到时提醒
+                    </span>
+                    <LfSwitch checked={remindEnabled} onChange={setRemindEnabled} label="到时提醒" />
+                  </div>
+                  {remindEnabled && (
+                    <div className="mt-3 flex flex-col items-start gap-2">
+                      <span className="text-[12px]" style={{ color: "var(--color-text-secondary)" }}>提前提醒（分钟）</span>
+                      <div className="flex flex-wrap gap-2" role="group" aria-label="提醒提前量">
+                        {REMIND_OFFSETS.map((o) => (
+                          <button
+                            key={o}
+                            type="button"
+                            onClick={() => setRemindOffset(o)}
+                            aria-pressed={remindOffset === o}
+                            className="inline-flex min-w-[50px] h-[34px] items-center justify-center rounded-full px-3 text-[13px] font-semibold tabular-nums active:scale-95 transition-transform"
+                            style={chipStyle(remindOffset === o)}
+                          >
+                            {o}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="mb-6">

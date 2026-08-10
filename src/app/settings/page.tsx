@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useEffect, useCallback } from "react";
-import { Moon, Download, Trash2, Info, MessageSquare, ChevronRight, Droplets, Target, Database, Pill } from "lucide-react";
+import { Moon, Sun, Monitor, Download, Trash2, Info, MessageSquare, ChevronRight, Droplets, Target, Database, Pill } from "lucide-react";
 import { useTheme } from "@/components/theme/ThemeProvider";
 import Dialog from "@/components/ui/Dialog";
 import { showToast } from "@/components/ui/Toast";
@@ -20,7 +20,7 @@ function ToggleSwitch({
       className="relative shrink-0 rounded-full cursor-pointer border-none outline-none"
       style={{
         width: 51, height: 31,
-        background: checked ? "var(--lifeflow-primary)" : "var(--lifeflow-border)",
+        background: checked ? "var(--state-success)" : "var(--lifeflow-border)",
         transition: "background 0.2s",
       }}>
       <div className="absolute rounded-full bg-white"
@@ -34,9 +34,28 @@ function ToggleSwitch({
   );
 }
 
+// ─── 行内图标章（圆底图标，对齐画布设置视觉） ─────────────────
+function IconChip({
+  icon, color, bg,
+}: { icon: React.ReactNode; color: string; bg: string }) {
+  return (
+    <span
+      className="w-9 h-9 shrink-0 rounded-[11px] inline-flex items-center justify-center"
+      style={{ background: bg, color }}
+    >
+      {icon}
+    </span>
+  );
+}
+
+const THEME_OPTIONS = [
+  { key: "light", label: "日间", icon: <Sun className="w-4 h-4" /> },
+  { key: "dark", label: "夜间", icon: <Moon className="w-4 h-4" /> },
+  { key: "system", label: "跟随系统", icon: <Monitor className="w-4 h-4" /> },
+] as const;
+
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
-  const isDark = theme === "dark";
   const [showClearDialog, setShowClearDialog] = useState(false);
   const [showResetGoalsDialog, setShowResetGoalsDialog] = useState(false);
   const [resettingGoals, setResettingGoals] = useState(false);
@@ -55,10 +74,6 @@ export default function SettingsPage() {
       setMedicineEnabled(s?.medicineEnabled === true);
     }).catch(() => {});
   }, []);
-
-  const toggleDark = () => {
-    setTheme(isDark ? "light" : "dark");
-  };
 
   const toggleWaterReminder = useCallback(async () => {
     const newState = !waterReminderEnabled;
@@ -137,37 +152,73 @@ export default function SettingsPage() {
         <h1 className="text-title-nav" style={{ color: "var(--color-text-primary)" }}>设置</h1>
       </div>
 
-      {/* 外观 */}
+      {/* 系统 */}
       <div className="px-4 pt-6 pb-2">
-        <p className="text-[13px] font-medium px-5 pt-4 pb-2" style={{ color: "var(--color-text-secondary)" }}>外观</p>
+        <p className="text-[13px] font-medium px-5 pt-4 pb-2" style={{ color: "var(--color-text-secondary)" }}>系统</p>
         <div className="rounded-[20px] overflow-hidden" style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}>
-          <div className="flex items-center justify-between w-full px-5 py-3.5">
+          {/* 主题：日间 / 夜间 / 跟随系统 */}
+          <div className="flex items-center justify-between w-full px-5 py-3">
             <div className="flex items-center gap-3 min-w-0">
-              <Moon className="w-5 h-5 shrink-0" style={{ color: "var(--color-text-primary)" }} />
-              <span className="text-[17px] truncate" style={{ color: "var(--color-text-primary)" }}>深色模式</span>
+              <IconChip icon={<Sun className="w-4.5 h-4.5" />} color="var(--lifeflow-primary)" bg="var(--lifeflow-brand-50)" />
+              <div className="min-w-0">
+                <p className="text-[15px] truncate" style={{ color: "var(--color-text-primary)" }}>主题</p>
+                <p className="text-[12px] truncate" style={{ color: "var(--color-text-secondary)" }}>日间 · 夜间 · 跟随系统</p>
+              </div>
             </div>
-            <ToggleSwitch checked={isDark} onChange={toggleDark} label="深色模式" />
+            <div
+              role="radiogroup"
+              aria-label="主题模式"
+              className="inline-flex items-center gap-0.5 p-0.5 rounded-[10px] shrink-0"
+              style={{ background: "var(--lifeflow-muted)" }}
+            >
+              {THEME_OPTIONS.map((opt) => {
+                const selected = theme === opt.key;
+                return (
+                  <button
+                    key={opt.key}
+                    type="button"
+                    role="radio"
+                    aria-checked={selected}
+                    onClick={() => setTheme(opt.key)}
+                    className="inline-flex items-center gap-1 h-[30px] px-2.5 rounded-lg text-[12px] font-medium transition-all active:scale-95"
+                    style={{
+                      background: selected ? "var(--color-surface-card)" : "transparent",
+                      color: selected ? "var(--lifeflow-primary)" : "var(--color-text-secondary)",
+                      boxShadow: selected ? "var(--shadow-card)" : "none",
+                    }}
+                  >
+                    {opt.icon}
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        </div>
-      </div>
 
-      {/* 饮水提醒 */}
-      <div className="px-4 pt-4 pb-2">
-        <p className="text-[13px] font-medium px-5 pt-4 pb-2" style={{ color: "var(--color-text-secondary)" }}>习惯</p>
-        <div className="rounded-[20px] overflow-hidden" style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}>
-          <div className="flex items-center justify-between w-full px-5 py-3.5">
+          <div className="h-px" style={{ background: "var(--lifeflow-border)", marginLeft: "60px" }} />
+
+          {/* 饮水提醒 */}
+          <div className="flex items-center justify-between w-full px-5 py-3">
             <div className="flex items-center gap-3 min-w-0">
-              <Droplets className="w-5 h-5 shrink-0" style={{ color: "var(--lifeflow-primary)" }} />
-              <span className="text-[17px] truncate" style={{ color: "var(--color-text-primary)" }}>饮水提醒</span>
+              <IconChip icon={<Droplets className="w-4.5 h-4.5" />} color="var(--lifeflow-primary)" bg="var(--lifeflow-brand-50)" />
+              <div className="min-w-0">
+                <p className="text-[15px] truncate" style={{ color: "var(--color-text-primary)" }}>饮水提醒</p>
+                <p className="text-[12px] truncate" style={{ color: "var(--color-text-secondary)" }}>定时提醒喝水</p>
+              </div>
             </div>
             <ToggleSwitch checked={waterReminderEnabled} onChange={toggleWaterReminder} label="饮水提醒" />
           </div>
+
+          <div className="h-px" style={{ background: "var(--lifeflow-border)", marginLeft: "60px" }} />
+
           {/* T18-6：吃药维修模式开关（无条件时全站隐藏吃药入口，此开关作为兜底） */}
-          <div className="h-px" style={{ background: "var(--lifeflow-border)", marginLeft: "52px" }} />
-          <div className="flex items-center justify-between w-full px-5 py-3.5">
+          <div className="flex items-center justify-between w-full px-5 py-3">
             <div className="flex items-center gap-3 min-w-0">
-              <Pill className="w-5 h-5 shrink-0" style={{ color: "#0EA5E9" }} />
-              <span className="text-[17px] truncate" style={{ color: "var(--color-text-primary)" }}>吃药提醒</span>
+              <IconChip icon={<Pill className="w-4.5 h-4.5" />} color="#0EA5E9" bg="var(--lifeflow-brand-50)" />
+              <div className="min-w-0">
+                <p className="text-[15px] truncate" style={{ color: "var(--color-text-primary)" }}>吃药提醒</p>
+                <p className="text-[12px] truncate" style={{ color: "var(--color-text-secondary)" }}>药物服用提醒</p>
+              </div>
             </div>
             <ToggleSwitch checked={medicineEnabled} onChange={toggleMedicine} label="吃药提醒" />
           </div>
@@ -178,26 +229,42 @@ export default function SettingsPage() {
       <div className="px-4 pt-4 pb-2">
         <p className="text-[13px] font-medium px-5 pt-4 pb-2" style={{ color: "var(--color-text-secondary)" }}>数据</p>
         <div className="rounded-[20px] overflow-hidden" style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}>
-          <button type="button" onClick={handleExport} className="flex items-center justify-between w-full px-5 py-3.5 active:opacity-50">
+          {/* 导出数据：本地 JSON 备份（对齐画布 export 备份语义，不新建路由） */}
+          <button type="button" onClick={handleExport} className="flex items-center justify-between w-full px-5 py-3 active:opacity-50">
             <div className="flex items-center gap-3 min-w-0">
-              <Download className="w-5 h-5 shrink-0" style={{ color: "var(--color-text-primary)" }} />
-              <span className="text-[17px] truncate" style={{ color: "var(--color-text-primary)" }}>导出数据</span>
+              <IconChip icon={<Download className="w-4.5 h-4.5" />} color="var(--lifeflow-primary)" bg="var(--lifeflow-brand-50)" />
+              <div className="min-w-0 text-left">
+                <p className="text-[15px] truncate" style={{ color: "var(--color-text-primary)" }}>导出数据</p>
+                <p className="text-[12px] truncate" style={{ color: "var(--color-text-secondary)" }}>本地 JSON 备份</p>
+              </div>
             </div>
             <ChevronRight className="w-5 h-5 shrink-0" style={{ color: "var(--color-text-disabled)" }} />
           </button>
-          <div className="h-px" style={{ background: "var(--lifeflow-border)", marginLeft: "52px" }} />
-          <button type="button" onClick={() => setShowClearDialog(true)} className="flex items-center justify-between w-full px-5 py-3.5 active:opacity-50">
+
+          <div className="h-px" style={{ background: "var(--lifeflow-border)", marginLeft: "60px" }} />
+
+          {/* 重置目标数据 */}
+          <button type="button" onClick={() => setShowResetGoalsDialog(true)} className="flex items-center justify-between w-full px-5 py-3 active:opacity-50">
             <div className="flex items-center gap-3 min-w-0">
-              <Trash2 className="w-5 h-5 shrink-0" style={{ color: "var(--color-text-primary)" }} />
-              <span className="text-[17px] truncate" style={{ color: "var(--color-text-primary)" }}>清除数据</span>
+              <IconChip icon={<Target className="w-4.5 h-4.5" />} color="var(--lifeflow-primary)" bg="var(--lifeflow-brand-50)" />
+              <div className="min-w-0 text-left">
+                <p className="text-[15px] truncate" style={{ color: "var(--color-text-primary)" }}>重置目标数据</p>
+                <p className="text-[12px] truncate" style={{ color: "var(--color-text-secondary)" }}>删除全部目标及其关联数据</p>
+              </div>
             </div>
             <ChevronRight className="w-5 h-5 shrink-0" style={{ color: "var(--color-text-disabled)" }} />
           </button>
-          <div className="h-px" style={{ background: "var(--lifeflow-border)", marginLeft: "52px" }} />
-          <button type="button" onClick={() => setShowResetGoalsDialog(true)} className="flex items-center justify-between w-full px-5 py-3.5 active:opacity-50">
+
+          <div className="h-px" style={{ background: "var(--lifeflow-border)", marginLeft: "60px" }} />
+
+          {/* 清除数据（危险操作） */}
+          <button type="button" onClick={() => setShowClearDialog(true)} className="flex items-center justify-between w-full px-5 py-3 active:opacity-50">
             <div className="flex items-center gap-3 min-w-0">
-              <Target className="w-5 h-5 shrink-0" style={{ color: "var(--color-text-primary)" }} />
-              <span className="text-[17px] truncate" style={{ color: "var(--color-text-primary)" }}>重置目标数据</span>
+              <IconChip icon={<Trash2 className="w-4.5 h-4.5" />} color="var(--color-expense)" bg="var(--lifeflow-muted)" />
+              <div className="min-w-0 text-left">
+                <p className="text-[15px] truncate" style={{ color: "var(--color-expense)" }}>清除数据</p>
+                <p className="text-[12px] truncate" style={{ color: "var(--color-text-secondary)" }}>移除所有本机记录</p>
+              </div>
             </div>
             <ChevronRight className="w-5 h-5 shrink-0" style={{ color: "var(--color-text-disabled)" }} />
           </button>
@@ -208,10 +275,10 @@ export default function SettingsPage() {
       <div className="px-4 pt-4 pb-2">
         <div className="rounded-[20px] p-5" style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}>
           <div className="flex items-center gap-3 mb-1.5">
-            <Database className="w-5 h-5 shrink-0" style={{ color: "var(--lifeflow-primary)" }} />
+            <IconChip icon={<Database className="w-4.5 h-4.5" />} color="var(--lifeflow-primary)" bg="var(--lifeflow-brand-50)" />
             <span className="text-[15px] font-medium" style={{ color: "var(--color-text-primary)" }}>数据归一（T13）</span>
           </div>
-          <p className="text-[13px] leading-relaxed" style={{ color: "var(--color-text-secondary)" }}>
+          <p className="text-[13px] leading-relaxed ml-12" style={{ color: "var(--color-text-secondary)" }}>
             已物理删除 7 张废弃数据表（效率库 tasks/habits，健康库 waterRecords/sleepRecords/fitnessRecords/exercises/muscleGroups），
             效率库 6→4 表、健康库 17→12 表。删除前已逐张核实均为空表，活跃数据完整保留。
           </p>
@@ -222,21 +289,21 @@ export default function SettingsPage() {
       <div className="px-4 pt-4 pb-2">
         <p className="text-[13px] font-medium px-5 pt-4 pb-2" style={{ color: "var(--color-text-secondary)" }}>关于</p>
         <div className="rounded-[20px] overflow-hidden" style={{ background: "var(--color-surface-card)", boxShadow: "var(--shadow-card)" }}>
-          <div className="flex items-center justify-between w-full px-5 py-3.5">
+          <div className="flex items-center justify-between w-full px-5 py-3">
             <div className="flex items-center gap-3 min-w-0">
-              <Info className="w-5 h-5 shrink-0" style={{ color: "var(--color-text-primary)" }} />
-              <span className="text-[17px] truncate" style={{ color: "var(--color-text-primary)" }}>版本</span>
+              <IconChip icon={<Info className="w-4.5 h-4.5" />} color="var(--color-text-secondary)" bg="var(--lifeflow-muted)" />
+              <span className="text-[15px] truncate" style={{ color: "var(--color-text-primary)" }}>版本</span>
             </div>
-            <span className="text-[17px] shrink-0" style={{ color: "var(--color-text-secondary)" }}>v2.6</span>
+            <span className="text-[15px] shrink-0" style={{ color: "var(--color-text-secondary)" }}>v2.6</span>
           </div>
-          <div className="h-px" style={{ background: "var(--lifeflow-border)", marginLeft: "52px" }} />
-          <div className="flex items-center justify-between w-full px-5 py-3.5">
-            <div className="flex items-center gap-3 min-w-0 flex-1">
-              <MessageSquare className="w-5 h-5 shrink-0" style={{ color: "var(--color-text-primary)" }} />
-              <span className="text-[17px] truncate" style={{ color: "var(--color-text-primary)" }}>反馈</span>
+          <div className="h-px" style={{ background: "var(--lifeflow-border)", marginLeft: "60px" }} />
+          <button type="button" className="flex items-center justify-between w-full px-5 py-3 active:opacity-50">
+            <div className="flex items-center gap-3 min-w-0">
+              <IconChip icon={<MessageSquare className="w-4.5 h-4.5" />} color="var(--color-text-secondary)" bg="var(--lifeflow-muted)" />
+              <span className="text-[15px] truncate" style={{ color: "var(--color-text-primary)" }}>反馈</span>
             </div>
             <ChevronRight className="w-5 h-5 shrink-0" style={{ color: "var(--color-text-disabled)" }} />
-          </div>
+          </button>
         </div>
       </div>
 
@@ -249,7 +316,7 @@ export default function SettingsPage() {
         </button>
       </div>
 
-      {/* 隐藏的文件选择器 */}
+      {/* 隐藏的文件选择器（导入逻辑保留） */}
       <input ref={fileInputRef} type="file" accept=".json" onChange={handleImport} className="hidden" disabled={importing} />
 
       {/* 清除确认弹窗 */}
@@ -258,8 +325,8 @@ export default function SettingsPage() {
         onClose={() => setShowClearDialog(false)}
         type="confirm"
         variant="danger"
-        title="清除所有数据"
-        description="将删除本地全部数据，此操作无法恢复。"
+        title="清除全部数据"
+        description="将移除所有本机记录，此操作不可撤销。"
         confirmLabel="确认清除"
         onConfirm={async () => {
           try {

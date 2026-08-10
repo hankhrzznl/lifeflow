@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, Plus, Trash2, Clock, ChevronDown, ChevronRight, Pencil, Check, X } from "lucide-react";
+import { ChevronLeft, Plus, Trash2, Clock, Pencil, Check, X, Sunrise, BedDouble, RefreshCw } from "lucide-react";
 import { useLiveQuery } from "dexie-react-hooks";
 import {
   getRoutines,
@@ -24,6 +24,7 @@ import { showToast } from "@/components/ui/Toast";
 import { syncRoutineToSchedule } from "@/lib/routineSync";
 
 const WEEKDAY_LABELS = ["日", "一", "二", "三", "四", "五", "六"]; // 0=周日
+const WEEK_DAYS = [1, 2, 3, 4, 5, 6, 0]; // 周视图列顺序：周一~周日
 
 const COLORS = ["#5856D6", "#007AFF", "#34C759", "#FF9500", "#FF3B30", "#AF52DE", "#5AC8FA", "#FF2D55"];
 
@@ -115,6 +116,43 @@ export default function RoutinesPage() {
     const d = new Date(ts);
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   }, []);
+
+  // ─── Weekly view derived data (只读，不改写 DB) ────────────
+
+  const enabledGroups = useMemo(() => groups.filter((g) => g.enabled), [groups]);
+
+  const activeRoutines = useMemo(
+    () => allRoutines.filter((r) => r.isActive && enabledGroups.some((g) => g.id === r.templateId)),
+    [allRoutines, enabledGroups],
+  );
+
+  /** 起床时间：优先 type='wake'，否则最早开始时间 */
+  const wakeRoutine = useMemo(
+    () =>
+      activeRoutines.find((r) => r.type === "wake") ??
+      [...activeRoutines].sort((a, b) => a.startTime.localeCompare(b.startTime))[0],
+    [activeRoutines],
+  );
+
+  /** 就寝时间：优先 type='sleep'，否则最晚结束时间 */
+  const sleepRoutine = useMemo(
+    () =>
+      activeRoutines.find((r) => r.type === "sleep") ??
+      [...activeRoutines].sort((a, b) => b.endTime.localeCompare(a.endTime))[0],
+    [activeRoutines],
+  );
+
+  const groupColor = useCallback(
+    (g: RoutineTemplateGroup): string => {
+      const first = getRoutinesForGroupMemo(g.id)[0];
+      if (first?.color) return first.color;
+      const idx = groups.findIndex((x) => x.id === g.id);
+      return COLORS[(idx >= 0 ? idx : 0) % COLORS.length];
+    },
+    [getRoutinesForGroupMemo, groups],
+  );
+
+  const todayIdx = new Date().getDay();
 
   // ─── Group-level Actions ──────────────────────────────────
 
@@ -330,7 +368,7 @@ export default function RoutinesPage() {
           <ChevronLeft className="w-5 h-5" style={{ color: "var(--color-text-primary)" }} />
         </button>
         <h1 className="text-title-nav" style={{ color: "var(--color-text-primary)" }}>
-          作息
+          作息表
         </h1>
         {!expandedGroupId ? (
           <button
@@ -425,58 +463,151 @@ export default function RoutinesPage() {
         {/* ============================================================ */}
         {!expandedGroupId && (
           <div className="flex flex-col gap-3">
-            {groups.map((group, i) => (
-              <motion.div
-                key={group.id}
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.05 }}
-                className="card-standard p-4"
-                style={{ opacity: group.enabled ? 1 : 0.55 }}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="flex-1 min-w-0" onClick={() => setExpandedGroupId(group.id)} style={{ cursor: "pointer" }}>
-                    <h3
-                      className="text-[16px] font-semibold truncate"
+            {/* 每周作息：周视图网格 + 起床/就寝时间卡 + 与日程联动提示 */}
+            <div className="card-standard p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-[16px] font-semibold" style={{ color: "var(--color-text-primary)" }}>
+                  每周作息
+                </h2>
+                <span className="text-[12px]" style={{ color: "var(--color-text-secondary)" }}>
+                  {enabledGroups.length} 个模板生效
+                </span>
+              </div>
+
+              {/* 起床 / 就寝 时间卡 */}
+              <div className="grid grid-cols-2 gap-2.5 mb-4">
+                <div
+                  className="flex items-center gap-3 rounded-[16px] px-3 py-3 min-w-0"
+                  style={{ background: "var(--color-surface-secondary)" }}
+                >
+                  <span
+                    className="w-9 h-9 shrink-0 rounded-[10px] inline-flex items-center justify-center"
+                    style={{ background: "var(--lifeflow-brand-50)", color: "var(--lifeflow-primary)" }}
+                  >
+                    <Sunrise className="w-5 h-5" />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-[11px]" style={{ color: "var(--color-text-secondary)" }}>起床</p>
+                    <p
+                      className="text-[17px] font-semibold tabular-nums leading-tight truncate"
                       style={{ color: "var(--color-text-primary)" }}
                     >
-                      {group.name}
-                    </h3>
-                    <p className="text-[13px] mt-0.5" style={{ color: "var(--color-text-secondary)" }}>
-                      {getActiveCount(group.id)}/{getTotalCount(group.id)} 项启用 · {formatDaysOfWeek(group.daysOfWeek ?? [])} · 创建于 {formatCreateDate(group.createdAt)}
+                      {wakeRoutine?.startTime ?? "--:--"}
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleToggleGroup(group);
-                    }}
-                    className="relative inline-flex h-7 w-12 items-center rounded-full transition-colors flex-shrink-0"
-                    style={{
-                      background: group.enabled
-                        ? "var(--state-success)"
-                        : "var(--lifeflow-border)",
-                    }}
-                  >
-                    <span
-                      className="inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform"
-                      style={{
-                        transform: group.enabled
-                          ? "translateX(26px)"
-                          : "translateX(2px)",
-                      }}
-                    />
-                  </button>
-                  <button
-                    onClick={() => setExpandedGroupId(group.id)}
-                    className="w-8 h-8 flex items-center justify-center flex-shrink-0"
-                  >
-                    <ChevronRight className="w-5 h-5" style={{ color: "var(--color-text-secondary)" }} />
-                  </button>
                 </div>
-              </motion.div>
-            ))}
+                <div
+                  className="flex items-center gap-3 rounded-[16px] px-3 py-3 min-w-0"
+                  style={{ background: "var(--color-surface-secondary)" }}
+                >
+                  <span
+                    className="w-9 h-9 shrink-0 rounded-[10px] inline-flex items-center justify-center"
+                    style={{ background: "var(--lifeflow-brand-50)", color: "#5856D6" }}
+                  >
+                    <BedDouble className="w-5 h-5" />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-[11px]" style={{ color: "var(--color-text-secondary)" }}>就寝</p>
+                    <p
+                      className="text-[17px] font-semibold tabular-nums leading-tight truncate"
+                      style={{ color: "var(--color-text-primary)" }}
+                    >
+                      {sleepRoutine?.endTime ?? "--:--"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* 周视图网格：周一~周日 + 作息色块 */}
+              <div className="grid grid-cols-7 gap-1.5">
+                {WEEK_DAYS.map((d) => {
+                  const covering = enabledGroups.filter((g) => (g.daysOfWeek ?? []).includes(d));
+                  const isToday = d === todayIdx;
+                  return (
+                    <div
+                      key={d}
+                      className="flex flex-col items-center gap-1.5 rounded-[12px] px-0.5 py-2 min-w-0"
+                      style={{
+                        background: isToday ? "var(--lifeflow-brand-50)" : "var(--color-surface-secondary)",
+                      }}
+                    >
+                      <span
+                        className="text-[11px] font-medium"
+                        style={{ color: isToday ? "var(--lifeflow-primary)" : "var(--color-text-secondary)" }}
+                      >
+                        {d === 0 ? "日" : WEEKDAY_LABELS[d]}
+                      </span>
+                      <div className="flex flex-col items-center gap-1 w-full px-1">
+                        {covering.slice(0, 3).map((g) => (
+                          <span
+                            key={g.id}
+                            className="block w-full h-1.5 rounded-full"
+                            style={{ background: groupColor(g) }}
+                          />
+                        ))}
+                        {covering.length > 3 && (
+                          <span className="text-[10px] leading-none" style={{ color: "var(--color-text-secondary)" }}>
+                            +{covering.length - 3}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* 与日程联动提示 */}
+              <div
+                className="mt-3.5 flex items-center gap-2 rounded-[12px] px-3 py-2.5"
+                style={{ background: "var(--lifeflow-brand-50)" }}
+              >
+                <RefreshCw className="w-3.5 h-3.5 shrink-0" style={{ color: "var(--lifeflow-primary)" }} />
+                <p className="text-[12px] leading-snug" style={{ color: "var(--lifeflow-primary)" }}>
+                  与日程联动：启用模板后自动生成未来 7 天作息事项并同步至日程
+                </p>
+              </div>
+            </div>
+
+            {/* 作息模板 chips */}
+            <div className="mt-1">
+              <div className="flex items-center justify-between px-1 mb-2.5">
+                <h2 className="text-[16px] font-semibold" style={{ color: "var(--color-text-primary)" }}>
+                  作息模板
+                </h2>
+                {groups.length > 0 && (
+                  <span className="text-[12px]" style={{ color: "var(--color-text-secondary)" }}>
+                    {groups.length} 个模板
+                  </span>
+                )}
+              </div>
+              {groups.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {groups.map((group) => {
+                    const active = group.enabled;
+                    return (
+                      <button
+                        key={group.id}
+                        type="button"
+                        onClick={() => setExpandedGroupId(group.id)}
+                        className="inline-flex items-center gap-2 h-9 px-3.5 rounded-full text-[13px] font-medium transition-all active:scale-95"
+                        style={{
+                          background: active ? "var(--lifeflow-primary)" : "var(--color-surface-card)",
+                          color: active ? "#FFFFFF" : "var(--color-text-secondary)",
+                          border: active ? "1px solid transparent" : "1px solid var(--lifeflow-border)",
+                          boxShadow: active ? "var(--shadow-card)" : "none",
+                        }}
+                      >
+                        <span
+                          className="w-2 h-2 rounded-full shrink-0"
+                          style={{ background: active ? "rgba(255,255,255,0.9)" : groupColor(group) }}
+                        />
+                        <span className="truncate max-w-[140px]">{group.name}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
 
             {/* Empty state */}
             {groups.length === 0 && (
@@ -613,9 +744,9 @@ export default function RoutinesPage() {
               )}
             </div>
 
-            {/* Create time */}
+            {/* Create time + 生效日期 */}
             <p className="text-[12px] mb-3 px-1" style={{ color: "var(--color-text-disabled)" }}>
-              创建于 {formatCreateDate(selectedGroup.createdAt)}
+              创建于 {formatCreateDate(selectedGroup.createdAt)} · {formatDaysOfWeek(selectedGroup.daysOfWeek ?? [])}
             </p>
 
             {/* Weekday selector + group toggle */}
@@ -624,9 +755,14 @@ export default function RoutinesPage() {
               style={{ opacity: selectedGroup.enabled ? 1 : 0.55 }}
             >
               <div className="flex items-center justify-between mb-3">
-                <span className="text-[14px] font-medium" style={{ color: "var(--color-text-primary)" }}>
-                  模板开关
-                </span>
+                <div>
+                  <span className="text-[14px] font-medium" style={{ color: "var(--color-text-primary)" }}>
+                    模板开关
+                  </span>
+                  <p className="text-[11px] mt-0.5" style={{ color: "var(--color-text-secondary)" }}>
+                    {getActiveCount(expandedGroupId)}/{getTotalCount(expandedGroupId)} 项启用
+                  </p>
+                </div>
                 <button
                   type="button"
                   onClick={() => handleToggleGroup(selectedGroup)}

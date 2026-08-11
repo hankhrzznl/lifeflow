@@ -1,0 +1,1496 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>目标 · 快速创建</title>
+    <style id="theme-vars">
+/* LifeFlow 首页 — 日间浅色 / 夜间深色 双模式 */
+
+/* === LIGHT MODE (日间 · iOS 原生浅色) === */
+:root {
+  /* SURFACE & TEXT */
+  --lifeflow-background: #F2F2F7;
+  --lifeflow-foreground: #1C1C1E;
+  --lifeflow-card: #FFFFFF;
+  --lifeflow-card-foreground: #1C1C1E;
+  --lifeflow-popover: #FFFFFF;
+  --lifeflow-popover-foreground: #1C1C1E;
+  --lifeflow-muted: #F2F2F7;
+  --lifeflow-muted-foreground: #6C6C70;
+  --lifeflow-border: rgba(60,60,67,0.29);
+  --lifeflow-border-light: rgba(60,60,67,0.12);
+  --lifeflow-border-dashed: rgba(60,60,67,0.2);
+  --lifeflow-input: rgba(60,60,67,0.12);
+  --lifeflow-ring: #007AFF;
+
+  /* BRAND */
+  --lifeflow-primary: #007AFF;
+  --lifeflow-primary-hover: #0066D6;
+  --lifeflow-primary-light: rgba(0,122,255,0.12);
+  --lifeflow-primary-foreground: #FFFFFF;
+
+  /* PROGRESS */
+  --lifeflow-knit-thread: #007AFF;
+  --lifeflow-knit-thread-completed: #34C759;
+  --lifeflow-knit-thread-partial: #FF9500;
+  --lifeflow-knit-bg: #E9E9EB;
+  --lifeflow-knit-grid: rgba(60,60,67,0.1);
+
+  /* STATE */
+  --state-success: #34C759;
+  --state-success-light: rgba(52,199,89,0.14);
+  --state-warning: #FF3B30;
+  --state-warning-light: rgba(255,59,48,0.12);
+  --state-error: #FF3B30;
+  --state-error-light: rgba(255,59,48,0.12);
+  --state-info: #007AFF;
+  --state-info-light: rgba(0,122,255,0.12);
+
+  /* TEXT */
+  --lifeflow-text-primary: #1C1C1E;
+  --lifeflow-text-secondary: #6C6C70;
+  --lifeflow-text-tertiary: #8E8E93;
+  --lifeflow-text-inverse: #FFFFFF;
+
+  /* SHADOWS */
+  --lifeflow-shadow-1: 0 0 0 1px rgba(0,0,0,0.02), 0 1px 2px rgba(0,0,0,0.03);
+  --lifeflow-shadow-2: 0 2px 8px rgba(0,0,0,0.05);
+  --lifeflow-shadow-3: 0 8px 24px rgba(0,0,0,0.12);
+  --lifeflow-shadow-knit: none;
+
+  /* TAB BAR (light glass) */
+  --lifeflow-tabbar-bg: rgba(255,255,255,0.72);
+  --lifeflow-tabbar-blur: 20px;
+  --lifeflow-tabbar-blur-saturate: 180%;
+
+  /* AI BALL (deep blue) */
+  --lifeflow-ai-ball: #2E5FA3;
+
+  /* TYPOGRAPHY */
+  --lifeflow-font-display: -apple-system, BlinkMacSystemFont, "SF Pro SC", "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif;
+  --lifeflow-font-body: -apple-system, BlinkMacSystemFont, "SF Pro SC", "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif;
+  --lifeflow-font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+
+  --lifeflow-font-size-display: 34px;
+  --lifeflow-font-size-h1: 28px;
+  --lifeflow-font-size-h2: 20px;
+  --lifeflow-font-size-h3: 17px;
+  --lifeflow-font-size-body: 15px;
+  --lifeflow-font-size-sm: 13px;
+  --lifeflow-font-size-caption: 12px;
+
+  /* SPACING */
+  --lifeflow-space-xs: 4px;
+  --lifeflow-space-sm: 8px;
+  --lifeflow-space-md: 12px;
+  --lifeflow-space-lg: 16px;
+  --lifeflow-space-xl: 24px;
+  --lifeflow-space-2xl: 32px;
+
+  /* RADIUS */
+  --lifeflow-radius-sm: 6px;
+  --lifeflow-radius-md: 10px;
+  --lifeflow-radius-lg: 12px;
+  --lifeflow-radius-xl: 16px;
+  --lifeflow-radius-full: 9999px;
+
+  /* PORTABLE ALIASES */
+  --background: var(--lifeflow-background);
+  --foreground: var(--lifeflow-foreground);
+  --card: var(--lifeflow-card);
+  --card-foreground: var(--lifeflow-card-foreground);
+  --popover: var(--lifeflow-popover);
+  --popover-foreground: var(--lifeflow-popover-foreground);
+  --primary: var(--lifeflow-primary);
+  --primary-foreground: var(--lifeflow-primary-foreground);
+  --muted: var(--lifeflow-muted);
+  --muted-foreground: var(--lifeflow-muted-foreground);
+  --border: var(--lifeflow-border);
+  --input: var(--lifeflow-input);
+  --ring: var(--lifeflow-ring);
+  --radius-sm: var(--lifeflow-radius-sm);
+  --radius-md: var(--lifeflow-radius-md);
+  --radius-lg: var(--lifeflow-radius-lg);
+}
+
+/* === DARK MODE (夜间 · 深色沉浸式 Apple Fitness) === */
+.dark {
+  /* SURFACE & TEXT */
+  --lifeflow-background: #0B0F17;
+  --lifeflow-foreground: #F2F5FA;
+  --lifeflow-card: #141B28;
+  --lifeflow-card-foreground: #F2F5FA;
+  --lifeflow-popover: #1A2232;
+  --lifeflow-popover-foreground: #F2F5FA;
+  --lifeflow-muted: #1C2432;
+  --lifeflow-muted-foreground: rgba(242,245,250,0.6);
+  --lifeflow-border: rgba(255,255,255,0.09);
+  --lifeflow-border-light: rgba(255,255,255,0.06);
+  --lifeflow-border-dashed: rgba(255,255,255,0.18);
+  --lifeflow-input: rgba(255,255,255,0.12);
+  --lifeflow-ring: #0A84FF;
+
+  /* BRAND */
+  --lifeflow-primary: #0A84FF;
+  --lifeflow-primary-hover: #3D9BFF;
+  --lifeflow-primary-light: rgba(10,132,255,0.18);
+  --lifeflow-primary-foreground: #FFFFFF;
+
+  /* PROGRESS */
+  --lifeflow-knit-thread: #0A84FF;
+  --lifeflow-knit-thread-completed: #30D158;
+  --lifeflow-knit-thread-partial: #FF9F0A;
+  --lifeflow-knit-bg: rgba(255,255,255,0.1);
+  --lifeflow-knit-grid: rgba(255,255,255,0.08);
+
+  /* STATE */
+  --state-success: #30D158;
+  --state-success-light: rgba(48,209,88,0.16);
+  --state-warning: #FF453A;
+  --state-warning-light: rgba(255,69,58,0.16);
+  --state-error: #FF453A;
+  --state-error-light: rgba(255,69,58,0.16);
+  --state-info: #64D2FF;
+  --state-info-light: rgba(100,210,255,0.14);
+
+  /* TEXT */
+  --lifeflow-text-primary: #F2F5FA;
+  --lifeflow-text-secondary: rgba(242,245,250,0.72);
+  --lifeflow-text-tertiary: rgba(242,245,250,0.45);
+  --lifeflow-text-inverse: #FFFFFF;
+
+  /* SHADOWS */
+  --lifeflow-shadow-1: 0 1px 2px rgba(0,0,0,0.3);
+  --lifeflow-shadow-2: 0 4px 12px rgba(0,0,0,0.4);
+  --lifeflow-shadow-3: 0 8px 28px rgba(0,0,0,0.55), 0 0 18px rgba(10,132,255,0.28);
+  --lifeflow-shadow-knit: none;
+
+  /* TAB BAR (dark glass) */
+  --lifeflow-tabbar-bg: rgba(13,18,28,0.72);
+  --lifeflow-tabbar-blur: 20px;
+  --lifeflow-tabbar-blur-saturate: 180%;
+
+  /* AI BALL (deep blue) */
+  --lifeflow-ai-ball: #2E5FA3;
+}
+
+/* === MODULE COLORS (v2 · 模块语义色, 双主题共用) === */
+:root {
+  /* 睡眠 / 冥想 */
+  --lifeflow-module-sleep: #6366F1;
+  --lifeflow-module-sleep-light: rgba(99,102,241,0.14);
+  /* 理想日 / 专注 */
+  --lifeflow-module-ideal: #8B5CF6;
+  --lifeflow-module-ideal-light: rgba(139,92,246,0.14);
+  --lifeflow-module-focus: #8B5CF6;
+  --lifeflow-module-focus-light: rgba(139,92,246,0.14);
+  /* 学习 / 饮水 */
+  --lifeflow-module-study: #3B82F6;
+  --lifeflow-module-study-light: rgba(59,130,246,0.14);
+  --lifeflow-module-water: #3B82F6;
+  --lifeflow-module-water-light: rgba(59,130,246,0.14);
+  /* 训练 / 功法 / 体态 */
+  --lifeflow-module-training: #F97316;
+  --lifeflow-module-training-light: rgba(249,115,22,0.14);
+  /* 习惯 */
+  --lifeflow-module-habit: #10B981;
+  --lifeflow-module-habit-light: rgba(16,185,129,0.14);
+  /* 记账 */
+  --lifeflow-module-expense: #FF3B30;
+  --lifeflow-module-expense-light: rgba(255,59,48,0.14);
+  --lifeflow-module-income: #34C759;
+  --lifeflow-module-income-light: rgba(52,199,89,0.14);
+  /* 提醒 */
+  --lifeflow-module-reminder: #F59E0B;
+  --lifeflow-module-reminder-light: rgba(245,158,11,0.14);
+  /* 8+8+8 环形三色 */
+  --lifeflow-ring-sleep: #5856D6;
+  --lifeflow-ring-study: #0A84FF;
+  --lifeflow-ring-rest: #34C759;
+}
+
+/* === TYPOGRAPHY UTILITY CLASSES === */
+.lf-display {
+  font-family: var(--lifeflow-font-display);
+  font-size: var(--lifeflow-font-size-display);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.lf-h1 {
+  font-family: var(--lifeflow-font-display);
+  font-size: var(--lifeflow-font-size-h1);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+
+.lf-h2 {
+  font-family: var(--lifeflow-font-display);
+  font-size: var(--lifeflow-font-size-h2);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+}
+
+.lf-h3 {
+  font-family: var(--lifeflow-font-body);
+  font-size: var(--lifeflow-font-size-h3);
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.lf-body {
+  font-family: var(--lifeflow-font-body);
+  font-size: var(--lifeflow-font-size-body);
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.lf-body-sm {
+  font-family: var(--lifeflow-font-body);
+  font-size: var(--lifeflow-font-size-sm);
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.lf-caption {
+  font-family: var(--lifeflow-font-body);
+  font-size: var(--lifeflow-font-size-caption);
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.lf-mono {
+  font-family: var(--lifeflow-font-mono);
+  font-size: var(--lifeflow-font-size-sm);
+  font-weight: 400;
+  line-height: 1.6;
+}
+
+/* === PROGRESS BAR (iOS thin bar) === */
+.knit-track {
+  position: relative;
+  height: 6px;
+  border-radius: var(--lifeflow-radius-full);
+  overflow: hidden;
+  background: var(--lifeflow-knit-bg);
+}
+
+.knit-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  border-radius: var(--lifeflow-radius-full);
+  background: var(--lifeflow-knit-thread);
+  z-index: 2;
+  transition: width 0.5s ease-in-out;
+}
+
+.knit-fill--done { background: var(--lifeflow-knit-thread-completed); }
+.knit-fill--partial { background: var(--lifeflow-knit-thread-partial); }
+
+.knit-yarn {
+  display: none;
+}
+
+.knit-percent {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 4;
+  font-family: var(--lifeflow-font-body);
+  font-size: var(--lifeflow-font-size-sm);
+  font-weight: 600;
+  color: var(--lifeflow-text-primary);
+  line-height: 1;
+}
+
+/* === TAB BAR (glass, follows mode) === */
+.lf-tabbar-glass {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 40;
+  border-top: 1px solid var(--lifeflow-border);
+  background: var(--lifeflow-tabbar-bg);
+  -webkit-backdrop-filter: saturate(var(--lifeflow-tabbar-blur-saturate)) blur(var(--lifeflow-tabbar-blur));
+  backdrop-filter: saturate(var(--lifeflow-tabbar-blur-saturate)) blur(var(--lifeflow-tabbar-blur));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  @theme inline {
+    --color-background: var(--lifeflow-background);
+    --color-foreground: var(--lifeflow-foreground);
+    --color-card: var(--lifeflow-card);
+    --color-card-foreground: var(--lifeflow-card-foreground);
+    --color-popover: var(--lifeflow-popover);
+    --color-popover-foreground: var(--lifeflow-popover-foreground);
+    --color-primary: var(--lifeflow-primary);
+    --color-primary-foreground: var(--lifeflow-primary-foreground);
+    --color-muted: var(--lifeflow-muted);
+    --color-muted-foreground: var(--lifeflow-muted-foreground);
+    --color-border: var(--lifeflow-border);
+    --color-input: var(--lifeflow-input);
+    --color-ring: var(--lifeflow-ring);
+    --radius-sm: var(--lifeflow-radius-sm);
+    --radius-md: var(--lifeflow-radius-md);
+    --radius-lg: var(--lifeflow-radius-lg);
+    --radius-xl: var(--lifeflow-radius-xl);
+  }
+  @layer base {
+    body { background: var(--lifeflow-background); color: var(--lifeflow-foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style id="semantic-token-fallback">
+      .bg-background { background-color: var(--lifeflow-background); }
+      .text-background { color: var(--lifeflow-background); }
+      .border-background { border-color: var(--lifeflow-background); }
+      .ring-background { --tw-ring-color: var(--lifeflow-background); }
+      .bg-foreground { background-color: var(--lifeflow-foreground); }
+      .text-foreground { color: var(--lifeflow-foreground); }
+      .border-foreground { border-color: var(--lifeflow-foreground); }
+      .ring-foreground { --tw-ring-color: var(--lifeflow-foreground); }
+      .bg-card { background-color: var(--lifeflow-card); }
+      .text-card { color: var(--lifeflow-card); }
+      .border-card { border-color: var(--lifeflow-card); }
+      .ring-card { --tw-ring-color: var(--lifeflow-card); }
+      .bg-card-foreground { background-color: var(--lifeflow-card-foreground); }
+      .text-card-foreground { color: var(--lifeflow-card-foreground); }
+      .border-card-foreground { border-color: var(--lifeflow-card-foreground); }
+      .ring-card-foreground { --tw-ring-color: var(--lifeflow-card-foreground); }
+      .bg-popover { background-color: var(--lifeflow-popover); }
+      .text-popover { color: var(--lifeflow-popover); }
+      .border-popover { border-color: var(--lifeflow-popover); }
+      .ring-popover { --tw-ring-color: var(--lifeflow-popover); }
+      .bg-popover-foreground { background-color: var(--lifeflow-popover-foreground); }
+      .text-popover-foreground { color: var(--lifeflow-popover-foreground); }
+      .border-popover-foreground { border-color: var(--lifeflow-popover-foreground); }
+      .ring-popover-foreground { --tw-ring-color: var(--lifeflow-popover-foreground); }
+      .bg-primary { background-color: var(--lifeflow-primary); }
+      .text-primary { color: var(--lifeflow-primary); }
+      .border-primary { border-color: var(--lifeflow-primary); }
+      .ring-primary { --tw-ring-color: var(--lifeflow-primary); }
+      .bg-primary-foreground { background-color: var(--lifeflow-primary-foreground); }
+      .text-primary-foreground { color: var(--lifeflow-primary-foreground); }
+      .border-primary-foreground { border-color: var(--lifeflow-primary-foreground); }
+      .ring-primary-foreground { --tw-ring-color: var(--lifeflow-primary-foreground); }
+      .bg-muted { background-color: var(--lifeflow-muted); }
+      .text-muted { color: var(--lifeflow-muted); }
+      .border-muted { border-color: var(--lifeflow-muted); }
+      .ring-muted { --tw-ring-color: var(--lifeflow-muted); }
+      .bg-muted-foreground { background-color: var(--lifeflow-muted-foreground); }
+      .text-muted-foreground { color: var(--lifeflow-muted-foreground); }
+      .border-muted-foreground { border-color: var(--lifeflow-muted-foreground); }
+      .ring-muted-foreground { --tw-ring-color: var(--lifeflow-muted-foreground); }
+      .bg-border { background-color: var(--lifeflow-border); }
+      .text-border { color: var(--lifeflow-border); }
+      .border-border { border-color: var(--lifeflow-border); }
+      .ring-border { --tw-ring-color: var(--lifeflow-border); }
+      .bg-input { background-color: var(--lifeflow-input); }
+      .text-input { color: var(--lifeflow-input); }
+      .border-input { border-color: var(--lifeflow-input); }
+      .ring-input { --tw-ring-color: var(--lifeflow-input); }
+      .bg-ring { background-color: var(--lifeflow-ring); }
+      .text-ring { color: var(--lifeflow-ring); }
+      .border-ring { border-color: var(--lifeflow-ring); }
+      .ring-ring { --tw-ring-color: var(--lifeflow-ring); }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+</head>
+<body class="min-h-screen font-sans antialiased">
+    <main>
+      <style>
+        /* === 页面级设计令牌：模块语义色（双主题共用，取值对齐 colors_and_type.css）=== */
+        :root {
+          --lifeflow-module-sleep: #6366F1;
+          --lifeflow-module-sleep-light: rgba(99,102,241,0.14);
+          --lifeflow-module-ideal: #8B5CF6;
+          --lifeflow-module-ideal-light: rgba(139,92,246,0.14);
+          --lifeflow-module-focus: #8B5CF6;
+          --lifeflow-module-focus-light: rgba(139,92,246,0.14);
+          --lifeflow-module-study: #3B82F6;
+          --lifeflow-module-study-light: rgba(59,130,246,0.14);
+          --lifeflow-module-training: #F97316;
+          --lifeflow-module-training-light: rgba(249,115,22,0.14);
+          --lifeflow-module-habit: #10B981;
+          --lifeflow-module-habit-light: rgba(16,185,129,0.14);
+          --lifeflow-scrim: rgba(17,17,26,0.45);
+        }
+        .dark { --lifeflow-scrim: rgba(0,0,0,0.62); }
+
+        /* === 静态布局兜底：关键布局不依赖运行时 Tailwind === */
+        .hidden { display: none !important; }
+        .lf-page-container { max-width: 28rem; margin-inline: auto; padding-inline: 1rem; }
+        .lf-goal-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; }
+        .lf-fab { position: fixed; bottom: 180px; right: max(1rem, calc(50vw - 199px)); z-index: 40; }
+        .goal-card { position: relative; display: flex; flex-direction: column; border-radius: 1rem; background: var(--lifeflow-card); box-shadow: var(--lifeflow-shadow-1); }
+        .lf-ring-wrap { position: relative; display: block; width: 52px; height: 52px; flex: none; }
+        .lf-ring-svg { display: block; width: 100%; height: 100%; transform: rotate(-90deg); }
+        .lf-ring-label { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+
+        /* === 目标状态过滤 tabs（静态样式）=== */
+        .goal-tab {
+          flex: none; display: inline-flex; align-items: center;
+          height: 2rem; padding: 0 0.875rem; border-radius: 9999px;
+          font-size: 12.5px; line-height: 1;
+          color: var(--lifeflow-text-secondary);
+          background: var(--lifeflow-card);
+          box-shadow: var(--lifeflow-shadow-1);
+          transition: color 0.15s ease, background-color 0.15s ease;
+        }
+        .goal-tab:hover { color: var(--lifeflow-primary); }
+        .goal-tab:focus-visible { outline: 2px solid var(--lifeflow-ring); outline-offset: 2px; }
+        .goal-tab--active { background: var(--lifeflow-primary-light); color: var(--lifeflow-primary); font-weight: 600; }
+
+        /* === BottomSheet 新建目标 === */
+        .lf-sheet { position: fixed; inset: 0; z-index: 50; visibility: hidden; opacity: 0; transition: opacity 0.22s ease, visibility 0.22s; }
+        .lf-sheet--visible { visibility: visible; opacity: 1; }
+        .lf-sheet-backdrop { position: absolute; inset: 0; width: 100%; height: 100%; background: var(--lifeflow-scrim); }
+        .lf-sheet-panel {
+          position: absolute; left: 0; right: 0; bottom: 0;
+          margin-inline: auto; max-width: 28rem;
+          border-radius: 1rem 1rem 0 0;
+          background: var(--lifeflow-card);
+          box-shadow: var(--lifeflow-shadow-3);
+          padding: 0.625rem 1.25rem calc(1.5rem + env(safe-area-inset-bottom, 0px));
+          transform: translateY(100%);
+          transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+          will-change: transform;
+        }
+        .lf-sheet--visible .lf-sheet-panel { transform: translateY(0); }
+
+        /* === 快速创建：模式切换 segmented（静态样式，与页面 segmented 风格一致）=== */
+        .lf-mode-segmented {
+          display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 0.25rem; border-radius: var(--lifeflow-radius-lg);
+          background: var(--lifeflow-muted); padding: 0.25rem;
+        }
+        .goal-mode-tab {
+          display: inline-flex; align-items: center; justify-content: center;
+          height: 2rem; border-radius: var(--lifeflow-radius-md);
+          font-size: 13px; line-height: 1; font-weight: 500;
+          color: var(--lifeflow-text-secondary);
+          transition: color 0.15s ease, background-color 0.15s ease;
+        }
+        .goal-mode-tab:hover { color: var(--lifeflow-primary); }
+        .goal-mode-tab:focus-visible { outline: 2px solid var(--lifeflow-ring); outline-offset: 2px; }
+        .goal-mode-tab--active { background: var(--lifeflow-card); color: var(--lifeflow-primary); font-weight: 600; box-shadow: var(--lifeflow-shadow-1); }
+
+        /* === 快速创建：面板滚动区（双模式共用，超出滚动）=== */
+        .lf-sheet-scroll {
+          max-height: 64vh;
+          max-height: min(calc(100dvh - 14.5rem), 64vh);
+          overflow-y: auto;
+          overscroll-behavior: contain;
+          -webkit-overflow-scrolling: touch;
+          scrollbar-width: none;
+        }
+        .lf-sheet-scroll::-webkit-scrollbar { display: none; }
+
+        /* === 快速创建：模板卡 === */
+        .tpl-card {
+          display: flex; align-items: center; gap: 0.75rem; width: 100%;
+          border-radius: var(--lifeflow-radius-lg);
+          background: var(--lifeflow-muted);
+          padding: 0.75rem;
+          text-align: left;
+          transition: background-color 0.15s ease, opacity 0.15s ease;
+        }
+        .tpl-card:hover { background: var(--lifeflow-primary-light); }
+        .tpl-card:active { opacity: 0.7; }
+        .tpl-card:focus-visible { outline: 2px solid var(--lifeflow-ring); outline-offset: 2px; }
+        .tpl-card-icon { display: flex; height: 2.25rem; width: 2.25rem; flex: none; align-items: center; justify-content: center; border-radius: var(--lifeflow-radius-full); }
+
+        /* === 快速创建：步骤引导条 === */
+        .lf-step {
+          flex: 1 1 0; min-width: 0;
+          display: inline-flex; align-items: center; justify-content: center; gap: 0.375rem;
+          height: 2.25rem; padding: 0 0.5rem;
+          border-radius: var(--lifeflow-radius-full);
+          background: var(--lifeflow-muted);
+          color: var(--lifeflow-text-tertiary);
+          font-size: 11px; line-height: 1; font-weight: 500;
+          transition: background-color 0.2s ease, color 0.2s ease;
+        }
+        .lf-step-num {
+          display: inline-flex; align-items: center; justify-content: center;
+          width: 1.125rem; height: 1.125rem; flex: none;
+          border-radius: var(--lifeflow-radius-full);
+          background: var(--lifeflow-border-light);
+          font-size: 10.5px; line-height: 1; font-weight: 600;
+        }
+        .lf-step-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .lf-step--active { background: var(--lifeflow-module-ideal-light); color: var(--lifeflow-module-ideal); font-weight: 600; }
+        .lf-step--active .lf-step-num { background: var(--lifeflow-module-ideal); color: var(--lifeflow-text-inverse); }
+        .lf-step--done { background: var(--lifeflow-module-ideal-light); color: var(--lifeflow-module-ideal); }
+        .lf-step--done .lf-step-num { background: var(--lifeflow-module-ideal); color: var(--lifeflow-text-inverse); }
+        .lf-step-arrow { flex: none; color: var(--lifeflow-text-tertiary); font-size: 12px; line-height: 1; padding-inline: 0.125rem; }
+        @keyframes lf-step-pop {
+          0% { transform: scale(1); }
+          45% { transform: scale(1.07); }
+          100% { transform: scale(1); }
+        }
+        .lf-step-pop { animation: lf-step-pop 0.26s ease; }
+
+        /* === 快速创建：提示词折叠区 === */
+        .lf-prompt-chev { transition: transform 0.2s ease; }
+        .lf-rotate-45 { transform: rotate(45deg); }
+        .lf-prompt-fold--open { animation: lf-panel-in 0.18s ease both; }
+
+        /* === 快速创建：五层预览入场 + 面板切换微交互 === */
+        .lf-preview-enter { animation: lf-card-in 0.3s ease both; }
+        .lf-panel-in { animation: lf-panel-in 0.18s ease both; }
+        @keyframes lf-panel-in {
+          from { opacity: 0; transform: translateY(4px); }
+          to { opacity: 1; transform: none; }
+        }
+
+        /* === 内联 Toast === */
+        .lf-toast {
+          position: fixed; inset-inline: 0; bottom: 88px; z-index: 60;
+          display: flex; justify-content: center; padding-inline: 1rem;
+          pointer-events: none;
+          opacity: 0; visibility: hidden;
+          transform: translateY(8px) scale(0.97);
+          transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
+        }
+        .lf-toast--show { opacity: 1; visibility: visible; transform: none; }
+
+        /* === T25 目标三分类 · 8+8+8（睡眠紫 #8B5CF6 / 工作学习蓝 #3B82F6 / 生活绿 #34C759）=== */
+        .lf-cat-sleep { --lf-cat: var(--lifeflow-module-ideal); --lf-cat-bg: var(--lifeflow-module-ideal-light); }
+        .lf-cat-workstudy { --lf-cat: var(--lifeflow-module-study); --lf-cat-bg: var(--lifeflow-module-study-light); }
+        .lf-cat-life { --lf-cat: var(--state-success); --lf-cat-bg: var(--state-success-light); }
+
+        .lf-cat-chip {
+          border: 1px solid var(--lifeflow-border-light);
+          background: var(--lifeflow-muted);
+          color: var(--lf-cat, var(--lifeflow-text-secondary));
+          transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+        }
+        .lf-cat-chip.is-active { border-color: var(--lf-cat); background: var(--lf-cat-bg); }
+
+        /* === T25 挂靠功能 chips（0~多个：study/focus/workout/posture/wellness/water/diet/leisure/notes/routine/medication/sleep）=== */
+        .lf-dock-study { --lf-dock: var(--lifeflow-module-study); --lf-dock-bg: var(--lifeflow-module-study-light); }
+        .lf-dock-focus { --lf-dock: var(--lifeflow-module-focus); --lf-dock-bg: var(--lifeflow-module-focus-light); }
+        .lf-dock-workout { --lf-dock: var(--lifeflow-module-training); --lf-dock-bg: var(--lifeflow-module-training-light); }
+        .lf-dock-posture { --lf-dock: var(--lifeflow-module-training); --lf-dock-bg: var(--lifeflow-module-training-light); }
+        .lf-dock-wellness { --lf-dock: var(--lifeflow-module-habit); --lf-dock-bg: var(--lifeflow-module-habit-light); }
+        .lf-dock-water { --lf-dock: var(--lifeflow-module-water); --lf-dock-bg: var(--lifeflow-module-water-light); }
+        .lf-dock-diet { --lf-dock: var(--lifeflow-module-habit); --lf-dock-bg: var(--lifeflow-module-habit-light); }
+        .lf-dock-leisure { --lf-dock: var(--lifeflow-module-ideal); --lf-dock-bg: var(--lifeflow-module-ideal-light); }
+        .lf-dock-notes { --lf-dock: var(--lifeflow-module-study); --lf-dock-bg: var(--lifeflow-module-study-light); }
+        .lf-dock-routine { --lf-dock: var(--lifeflow-module-habit); --lf-dock-bg: var(--lifeflow-module-habit-light); }
+        .lf-dock-medication { --lf-dock: var(--state-warning); --lf-dock-bg: var(--state-warning-light); }
+        .lf-dock-sleep { --lf-dock: var(--lifeflow-module-sleep); --lf-dock-bg: var(--lifeflow-module-sleep-light); }
+
+        .lf-dock-chip {
+          border: 1px solid var(--lifeflow-border-light);
+          background: var(--lifeflow-muted);
+          color: var(--lifeflow-text-secondary);
+          transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+        }
+        .lf-dock-chip.is-active { border-color: var(--lf-dock); background: var(--lf-dock-bg); color: var(--lf-dock); }
+
+        /* === 微交互：卡片入场 === */
+        @keyframes lf-card-in {
+          from { opacity: 0; transform: translateY(6px) scale(0.98); }
+          to { opacity: 1; transform: none; }
+        }
+        .goal-card-enter { animation: lf-card-in 0.28s ease both; }
+
+        /* === 减少动态偏好 === */
+        @media (prefers-reduced-motion: reduce) {
+          .lf-sheet, .lf-sheet-panel, .lf-toast, .goal-tab { transition-duration: 0.01ms; }
+          .goal-card-enter { animation-duration: 0.01ms; }
+          .knit-fill { transition-duration: 0.01ms; }
+          .goal-mode-tab, .tpl-card, .lf-step, .lf-prompt-chev { transition-duration: 0.01ms; }
+          .lf-preview-enter, .lf-panel-in, .lf-step-pop, .lf-prompt-fold--open { animation-duration: 0.01ms; }
+        }
+      </style>
+
+      <div class="lf-page-container document-scroll mx-auto max-w-md px-4 pt-3 pb-[104px] space-y-3">
+        <!-- 1 顶部：ISO 周标题 + 日期 -->
+        <header class="flex items-end justify-between gap-3">
+          <div class="min-w-0 flex-1">
+            <h1 class="lf-h1 flex flex-wrap items-baseline gap-x-2 leading-tight text-[var(--lifeflow-text-primary)]"><span class="lf-mono text-[24px] font-bold tracking-tight">2026-W33</span><span class="text-[var(--lifeflow-module-ideal)]">·</span><span>第 33 周</span></h1>
+            <p class="mt-1 text-[13px] text-[var(--lifeflow-text-secondary)]"><span class="lf-mono text-[12.5px]">8/10</span> 周一</p>
+          </div>
+        </header>
+
+        <!-- 2 今日焦点：焦点任务 + 来源标签 + 专注按钮 -->
+        <section id="section-focus" class="rounded-xl bg-[var(--lifeflow-card)] px-4 pt-4 pb-3 shadow-[var(--lifeflow-shadow-1)]">
+          <div class="flex items-center justify-between gap-3">
+            <h2 class="lf-h2 leading-tight text-[var(--lifeflow-text-primary)]">今日焦点</h2>
+            <span class="shrink-0 rounded-md bg-[var(--lifeflow-module-focus-light)] px-2.5 py-1 text-[12px] font-semibold leading-none text-[var(--lifeflow-module-focus)]">进行中</span>
+          </div>
+
+          <div class="mt-3 flex items-center gap-3 rounded-lg bg-[var(--lifeflow-muted)] px-3 py-2.5">
+            <div class="min-w-0 flex-1">
+              <p class="truncate text-[14.5px] font-semibold leading-snug text-[var(--lifeflow-text-primary)]">判断推理 第3讲</p>
+              <p class="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-[var(--lifeflow-text-tertiary)]">
+                <span class="lf-mono text-[11.5px]">09:00–10:30</span>
+                <span class="rounded-[6px] bg-[var(--lifeflow-module-study-light)] px-1.5 py-0.5 text-[11px] font-medium leading-none text-[var(--lifeflow-module-study)]">考研英语 · 真题</span>
+              </p>
+            </div>
+            <button type="button" aria-label="开始专注：判断推理 第3讲" onclick="FocusActions.startFocus()" class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--lifeflow-module-focus)] text-[var(--lifeflow-text-inverse)] transition-transform active:scale-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--lifeflow-ring)]"><i data-lucide="timer" class="h-4 w-4"></i></button>
+          </div>
+
+          <div class="mt-3 flex items-center gap-3">
+            <div class="knit-track min-w-0 flex-1"><div class="knit-fill" style="width:25%"></div></div>
+            <span class="lf-mono shrink-0 text-[12px] font-semibold leading-none text-[var(--lifeflow-text-primary)]">1/4</span>
+          </div>
+
+          <p class="mt-2.5 border-t border-[var(--lifeflow-border-light)] pt-2 text-[12px] text-[var(--lifeflow-text-tertiary)]">今日焦点来自目标日行动 · 自动生成</p>
+        </section>
+
+        <!-- 3 成就徽章行（M4） -->
+        <section id="section-achievement-summary">
+          <a href="#" data-dom-id="achievement-summary" class="flex items-center gap-3 rounded-xl bg-[var(--lifeflow-card)] px-4 py-3 shadow-[var(--lifeflow-shadow-1)] transition-opacity active:opacity-70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--lifeflow-ring)]">
+            <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--lifeflow-module-ideal-light)] text-[var(--lifeflow-module-ideal)]"><i data-lucide="flame" class="h-5 w-5"></i></span>
+            <span class="min-w-0 flex-1">
+              <span class="block text-[15px] font-semibold leading-snug text-[var(--lifeflow-text-primary)]">连续 <span class="lf-mono font-bold text-[var(--lifeflow-module-ideal)]">12</span> 天</span>
+              <span class="mt-0.5 block text-[12px] text-[var(--lifeflow-text-tertiary)]">每日专注 · 保持节奏</span>
+            </span>
+            <span class="flex shrink-0 items-center gap-1 rounded-full bg-[var(--lifeflow-module-ideal-light)] px-2.5 py-1 text-[12px] font-semibold leading-none text-[var(--lifeflow-module-ideal)]"><i data-lucide="award" class="h-3.5 w-3.5"></i><span class="lf-mono font-bold">23</span> 枚</span>
+            <i data-lucide="chevron-right" class="h-4 w-4 shrink-0 text-[var(--lifeflow-text-tertiary)]"></i>
+          </a>
+        </section>
+
+        <!-- 4 目标网格 + 状态过滤 -->
+        <section id="section-goal-grid">
+          <div class="flex items-center justify-between gap-3 px-1">
+            <h2 class="lf-h2 leading-tight text-[var(--lifeflow-text-primary)]">目标</h2>
+            <span class="shrink-0 text-[13px] text-[var(--lifeflow-text-tertiary)]">共 <span class="lf-mono" id="count-all">3</span> 个</span>
+          </div>
+
+          <div id="goal-filters" class="no-scrollbar mt-2.5 flex items-center gap-1.5 overflow-x-auto">
+            <button type="button" class="goal-tab goal-tab--active" data-filter="all" aria-pressed="true">全部 <span class="lf-mono" id="tab-count-all">3</span></button>
+            <button type="button" class="goal-tab" data-filter="active" aria-pressed="false">进行中 <span class="lf-mono" id="tab-count-active">1</span></button>
+            <button type="button" class="goal-tab" data-filter="paused" aria-pressed="false">已暂停 <span class="lf-mono" id="tab-count-paused">1</span></button>
+            <button type="button" class="goal-tab" data-filter="done" aria-pressed="false">已完成 <span class="lf-mono" id="tab-count-done">1</span></button>
+          </div>
+
+          <div id="goal-grid" class="lf-goal-grid mt-3">
+            <a href="#" data-dom-id="goal-card-1" data-state="active" class="goal-card relative p-3.5 pb-3 transition-opacity active:opacity-70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--lifeflow-ring)]">
+              <button type="button" data-dom-id="sun-goal-1" aria-label="定位理想日：考研英语 80+" onclick="event.stopPropagation(); GoalActions.locateIdeal(1)" class="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-[var(--lifeflow-module-ideal-light)] text-[var(--lifeflow-module-ideal)] transition-transform active:scale-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--lifeflow-ring)]"><i data-lucide="sun" class="h-3.5 w-3.5"></i></button>
+              <span class="lf-ring-wrap mt-1">
+                <svg viewBox="0 0 56 56" class="lf-ring-svg" aria-hidden="true"><circle cx="28" cy="28" r="24" fill="none" stroke="var(--lifeflow-knit-bg)" stroke-width="5"></circle><circle cx="28" cy="28" r="24" fill="none" stroke="var(--lifeflow-module-study)" stroke-width="5" stroke-linecap="round" stroke-dasharray="150.8" stroke-dashoffset="57.3"></circle></svg>
+                <span class="lf-ring-label"><span class="lf-mono text-[12px] font-bold leading-none text-[var(--lifeflow-text-primary)]">62%</span></span>
+              </span>
+              <h3 class="mt-3 truncate text-[15px] font-bold leading-snug text-[var(--lifeflow-text-primary)]">考研英语 80+</h3>
+              <p class="mt-1 min-h-[34px] text-[12px] leading-snug text-[var(--lifeflow-text-tertiary)]">真题二刷 <span class="lf-mono text-[var(--lifeflow-text-secondary)]">62%</span> · 单词 <span class="lf-mono text-[var(--lifeflow-text-secondary)]">3800/5500</span></p>
+              <div class="mt-2.5 flex flex-wrap items-center gap-1.5">
+                <span class="inline-flex items-center rounded-full bg-[var(--lifeflow-muted)] px-2 h-6 text-[10.5px] font-medium leading-none text-[var(--lifeflow-text-secondary)]">进行中</span>
+                <span class="inline-flex items-center gap-1 rounded-full bg-[var(--lifeflow-module-study-light)] px-2 h-6 text-[10.5px] font-medium leading-none text-[var(--lifeflow-module-study)]"><i data-lucide="sparkles" class="h-3 w-3 shrink-0"></i>今日学习 <span class="lf-mono font-semibold">2/4</span></span>
+              </div>
+            </a>
+            <a href="#" data-dom-id="goal-card-2" data-state="paused" class="goal-card relative p-3.5 pb-3 transition-opacity active:opacity-70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--lifeflow-ring)]">
+              <button type="button" data-dom-id="sun-goal-2" aria-label="定位理想日：健康体态 改善" onclick="event.stopPropagation(); GoalActions.locateIdeal(2)" class="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-[var(--lifeflow-module-ideal-light)] text-[var(--lifeflow-module-ideal)] transition-transform active:scale-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--lifeflow-ring)]"><i data-lucide="sun" class="h-3.5 w-3.5"></i></button>
+              <span class="lf-ring-wrap mt-1">
+                <svg viewBox="0 0 56 56" class="lf-ring-svg" aria-hidden="true"><circle cx="28" cy="28" r="24" fill="none" stroke="var(--lifeflow-knit-bg)" stroke-width="5"></circle><circle cx="28" cy="28" r="24" fill="none" stroke="var(--lifeflow-module-training)" stroke-width="5" stroke-linecap="round" stroke-dasharray="150.8" stroke-dashoffset="90.5"></circle></svg>
+                <span class="lf-ring-label"><span class="lf-mono text-[12px] font-bold leading-none text-[var(--lifeflow-text-primary)]">40%</span></span>
+              </span>
+              <h3 class="mt-3 truncate text-[15px] font-bold leading-snug text-[var(--lifeflow-text-primary)]">健康体态 改善</h3>
+              <p class="mt-1 min-h-[34px] text-[12px] leading-snug text-[var(--lifeflow-text-tertiary)]">体脂 <span class="lf-mono text-[var(--lifeflow-text-secondary)]">22→18%</span> · 每周 <span class="lf-mono text-[var(--lifeflow-text-secondary)]">3</span> 练</p>
+              <div class="mt-2.5 flex flex-wrap items-center gap-1.5">
+                <span class="inline-flex items-center rounded-full bg-[var(--lifeflow-muted)] px-2 h-6 text-[10.5px] font-medium leading-none text-[var(--lifeflow-text-secondary)]">已暂停</span>
+                <span class="inline-flex items-center gap-1 rounded-full bg-[var(--lifeflow-module-training-light)] px-2 h-6 text-[10.5px] font-medium leading-none text-[var(--lifeflow-module-training)]"><i data-lucide="sparkles" class="h-3 w-3 shrink-0"></i>今日学习 <span class="lf-mono font-semibold">0/3</span></span>
+              </div>
+            </a>
+            <a href="#" data-dom-id="goal-card-3" data-state="done" class="goal-card relative p-3.5 pb-3 transition-opacity active:opacity-70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--lifeflow-ring)]">
+              <button type="button" data-dom-id="sun-goal-3" aria-label="定位理想日：习惯养成 早起" onclick="event.stopPropagation(); GoalActions.locateIdeal(3)" class="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-[var(--lifeflow-module-ideal-light)] text-[var(--lifeflow-module-ideal)] transition-transform active:scale-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--lifeflow-ring)]"><i data-lucide="sun" class="h-3.5 w-3.5"></i></button>
+              <span class="lf-ring-wrap mt-1">
+                <svg viewBox="0 0 56 56" class="lf-ring-svg" aria-hidden="true"><circle cx="28" cy="28" r="24" fill="none" stroke="var(--lifeflow-knit-bg)" stroke-width="5"></circle><circle cx="28" cy="28" r="24" fill="none" stroke="var(--lifeflow-module-habit)" stroke-width="5" stroke-linecap="round" stroke-dasharray="150.8" stroke-dashoffset="0"></circle></svg>
+                <span class="lf-ring-label"><span class="lf-mono text-[12px] font-bold leading-none text-[var(--lifeflow-text-primary)]">100%</span></span>
+              </span>
+              <h3 class="mt-3 truncate text-[15px] font-bold leading-snug text-[var(--lifeflow-text-primary)]">习惯养成 早起</h3>
+              <p class="mt-1 min-h-[34px] text-[12px] leading-snug text-[var(--lifeflow-text-tertiary)]"><span class="lf-mono text-[var(--lifeflow-text-secondary)]">6:30</span> 起床 · 连续打卡 <span class="lf-mono text-[var(--lifeflow-text-secondary)]">9</span> 天</p>
+              <div class="mt-2.5 flex flex-wrap items-center gap-1.5">
+                <span class="inline-flex items-center rounded-full bg-[var(--lifeflow-muted)] px-2 h-6 text-[10.5px] font-medium leading-none text-[var(--lifeflow-text-secondary)]">已完成</span>
+                <span class="inline-flex items-center gap-1 rounded-full bg-[var(--lifeflow-module-habit-light)] px-2 h-6 text-[10.5px] font-medium leading-none text-[var(--lifeflow-module-habit)]"><i data-lucide="sparkles" class="h-3 w-3 shrink-0"></i>今日学习 <span class="lf-mono font-semibold">3/3</span></span>
+              </div>
+            </a>
+          </div>
+        </section>
+      </div>
+
+      <!-- 新建目标 FAB -->
+      <button type="button" id="fab-new-goal" aria-label="新建目标" onclick="GoalActions.openNew()" class="lf-fab fixed bottom-[180px] z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--lifeflow-primary)] text-[var(--lifeflow-text-inverse)] shadow-[var(--lifeflow-shadow-3)] transition-transform active:scale-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--lifeflow-ring)]"><i data-lucide="plus" class="h-6 w-6"></i></button>
+
+      <!-- 新建目标 BottomSheet（快速创建 / 手动创建 双模式） -->
+      <div id="sheet-new-goal" class="lf-sheet fixed inset-0 z-50" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="sheet-new-goal-title">
+        <button type="button" id="sheet-backdrop" class="lf-sheet-backdrop cursor-pointer focus-visible:outline-none" aria-label="关闭新建目标"></button>
+        <div class="lf-sheet-panel">
+          <span aria-hidden="true" class="mx-auto block h-1 w-9 rounded-full bg-[var(--lifeflow-border-light)]"></span>
+          <div class="mt-2 flex items-center justify-between gap-3">
+            <h2 id="sheet-new-goal-title" class="lf-h2 leading-tight text-[var(--lifeflow-text-primary)]">新建目标</h2>
+            <button type="button" data-dom-id="goal-sheet-close" aria-label="关闭" onclick="GoalActions.closeNew()" class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--lifeflow-muted)] text-[var(--lifeflow-text-secondary)] transition-transform active:scale-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--lifeflow-ring)]"><i data-lucide="x" class="h-4 w-4"></i></button>
+          </div>
+
+          <!-- 模式切换 segmented -->
+          <div id="goal-mode-segmented" class="lf-mode-segmented mt-3" role="tablist" aria-label="新建目标方式">
+            <button type="button" id="mode-quick" class="goal-mode-tab goal-mode-tab--active" role="tab" aria-selected="true" data-mode="quick" onclick="QuickActions.switchMode('quick')">快速创建</button>
+            <button type="button" id="mode-manual" class="goal-mode-tab" role="tab" aria-selected="false" data-mode="manual" onclick="QuickActions.switchMode('manual')">手动创建</button>
+          </div>
+
+          <!-- 快速创建面板（默认显示） -->
+          <div id="panel-quick" class="lf-sheet-scroll mt-4 space-y-3">
+            <!-- 步骤引导条 -->
+            <div id="quick-steps" class="px-1" role="group" aria-label="快速创建步骤">
+              <div class="flex items-center gap-1">
+                <div class="lf-step lf-step--active" data-step="1" aria-current="step">
+                  <span class="lf-step-num lf-mono">1</span>
+                  <i data-lucide="check" class="lf-step-ok hidden h-3 w-3 shrink-0"></i>
+                  <span class="lf-step-label">复制提示词</span>
+                </div>
+                <span class="lf-step-arrow" aria-hidden="true">→</span>
+                <div class="lf-step" data-step="2">
+                  <span class="lf-step-num lf-mono">2</span>
+                  <i data-lucide="check" class="lf-step-ok hidden h-3 w-3 shrink-0"></i>
+                  <span class="lf-step-label">问 AI 拿 JSON</span>
+                </div>
+                <span class="lf-step-arrow" aria-hidden="true">→</span>
+                <div class="lf-step" data-step="3">
+                  <span class="lf-step-num lf-mono">3</span>
+                  <i data-lucide="check" class="lf-step-ok hidden h-3 w-3 shrink-0"></i>
+                  <span class="lf-step-label">导入生成</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 卡片一：① 复制提示词 -->
+            <section class="rounded-xl bg-[var(--lifeflow-card)] px-4 py-4 shadow-[var(--lifeflow-shadow-1)]">
+              <div class="flex items-center gap-2.5">
+                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--lifeflow-module-ideal-light)] text-[var(--lifeflow-module-ideal)]"><i data-lucide="copy" class="h-4 w-4"></i></span>
+                <div class="min-w-0 flex-1">
+                  <h3 class="text-[15px] font-semibold leading-snug text-[var(--lifeflow-text-primary)]">① 复制提示词</h3>
+                  <p class="mt-0.5 text-[12px] leading-snug text-[var(--lifeflow-text-tertiary)]">复制五层拆解法提示词，发给豆包 / DeepSeek 等 AI，让它返回 JSON 格式的目标计划</p>
+                </div>
+              </div>
+              <button type="button" data-dom-id="copy-prompt" onclick="QuickActions.copyPrompt()" class="mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-[var(--lifeflow-module-ideal)] text-[15px] font-semibold text-[var(--lifeflow-text-inverse)] transition-opacity active:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--lifeflow-ring)]"><i data-lucide="clipboard-copy" class="h-4 w-4 shrink-0"></i>复制提示词</button>
+              <button type="button" data-dom-id="prompt-toggle" aria-expanded="false" onclick="QuickActions.togglePrompt()" class="mt-2.5 flex h-8 w-full items-center justify-center gap-1.5 rounded-md text-[12.5px] font-medium leading-none text-[var(--lifeflow-text-secondary)] transition-colors hover:text-[var(--lifeflow-primary)] active:opacity-70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--lifeflow-ring)]">
+                <span class="lf-prompt-toggle-label">查看提示词全文</span>
+                <i data-lucide="plus" class="lf-prompt-chev h-3.5 w-3.5 shrink-0"></i>
+              </button>
+              <div id="prompt-fold" class="lf-prompt-fold hidden mt-2">
+                <pre id="prompt-text" class="lf-mono max-h-[240px] overflow-y-auto whitespace-pre-wrap rounded-lg bg-[var(--lifeflow-muted)] px-3 py-2.5 text-[12px] leading-relaxed text-[var(--lifeflow-text-secondary)]"></pre>
+              </div>
+            </section>
+
+            <!-- 卡片二：② 导入 AI 生成的目标 -->
+            <section class="rounded-xl bg-[var(--lifeflow-card)] px-4 py-4 shadow-[var(--lifeflow-shadow-1)]">
+              <div class="flex items-center gap-2.5">
+                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--lifeflow-module-study-light)] text-[var(--lifeflow-module-study)]"><i data-lucide="file-json" class="h-4 w-4"></i></span>
+                <div class="min-w-0 flex-1">
+                  <h3 class="text-[15px] font-semibold leading-snug text-[var(--lifeflow-text-primary)]">② 导入 AI 生成的目标</h3>
+                  <p class="mt-0.5 text-[12px] leading-snug text-[var(--lifeflow-text-tertiary)]">把 AI 返回的 JSON 粘贴进来，一键拆解为完整五层结构</p>
+                </div>
+              </div>
+              <textarea data-dom-id="import-json-input" id="import-json-input" rows="4" spellcheck="false" placeholder="粘贴 AI 返回的 JSON…" autocomplete="off" enterkeyhint="done" class="lf-mono mt-3 w-full resize-none rounded-lg border border-[var(--lifeflow-border-light)] bg-[var(--lifeflow-input)] px-3 py-2.5 text-[13px] text-[var(--lifeflow-text-primary)] placeholder:text-[var(--lifeflow-text-tertiary)] focus:border-[var(--lifeflow-primary)] focus:outline-none"></textarea>
+              <button type="button" data-dom-id="import-json-btn" onclick="QuickActions.importJson()" class="mt-2.5 flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-[var(--lifeflow-module-ideal)] text-[15px] font-semibold text-[var(--lifeflow-text-inverse)] transition-opacity active:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--lifeflow-ring)]"><i data-lucide="sparkles" class="h-4 w-4 shrink-0"></i>导入一键生成目标</button>
+            </section>
+
+            <!-- 卡片三：或从模板快速开始 -->
+            <section class="rounded-xl bg-[var(--lifeflow-card)] px-4 py-4 shadow-[var(--lifeflow-shadow-1)]">
+              <div class="flex items-center gap-2.5">
+                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--lifeflow-module-ideal-light)] text-[var(--lifeflow-module-ideal)]"><i data-lucide="sparkles" class="h-4 w-4"></i></span>
+                <div class="min-w-0 flex-1">
+                  <h3 class="text-[15px] font-semibold leading-snug text-[var(--lifeflow-text-primary)]">或从模板快速开始</h3>
+                  <p class="mt-0.5 text-[12px] leading-snug text-[var(--lifeflow-text-tertiary)]">内置常用模板，点击一键填充五层结构</p>
+                </div>
+                <span class="shrink-0 text-[11.5px] leading-none text-[var(--lifeflow-text-tertiary)]"><span class="lf-mono">3</span> 模板</span>
+              </div>
+              <div class="mt-3 space-y-2">
+                <button type="button" data-dom-id="tpl-1" onclick="QuickActions.useTemplate(0)" class="tpl-card">
+                  <span class="tpl-card-icon bg-[var(--lifeflow-module-study-light)] text-[var(--lifeflow-module-study)]"><i data-lucide="file-json" class="h-4 w-4"></i></span>
+                  <span class="min-w-0 flex-1">
+                    <span class="block text-[14px] font-semibold leading-snug text-[var(--lifeflow-text-primary)]">考研英语 80+</span>
+                    <span class="mt-0.5 block text-[12px] leading-snug text-[var(--lifeflow-text-tertiary)]">真题二刷 · 单词 5500</span>
+                  </span>
+                  <span class="shrink-0 text-[11.5px] leading-none text-[var(--lifeflow-text-tertiary)]">每日 <span class="lf-mono">4</span> 小时</span>
+                </button>
+                <button type="button" data-dom-id="tpl-2" onclick="QuickActions.useTemplate(1)" class="tpl-card">
+                  <span class="tpl-card-icon bg-[var(--lifeflow-module-training-light)] text-[var(--lifeflow-module-training)]"><i data-lucide="download" class="h-4 w-4"></i></span>
+                  <span class="min-w-0 flex-1">
+                    <span class="block text-[14px] font-semibold leading-snug text-[var(--lifeflow-text-primary)]">健康减脂 12 斤</span>
+                    <span class="mt-0.5 block text-[12px] leading-snug text-[var(--lifeflow-text-tertiary)]">体脂 22→18% · 每周 3 练</span>
+                  </span>
+                  <span class="shrink-0 text-[11.5px] leading-none text-[var(--lifeflow-text-tertiary)]">每周 <span class="lf-mono">3</span> 小时</span>
+                </button>
+                <button type="button" data-dom-id="tpl-3" onclick="QuickActions.useTemplate(2)" class="tpl-card">
+                  <span class="tpl-card-icon bg-[var(--lifeflow-module-habit-light)] text-[var(--lifeflow-module-habit)]"><i data-lucide="sparkles" class="h-4 w-4"></i></span>
+                  <span class="min-w-0 flex-1">
+                    <span class="block text-[14px] font-semibold leading-snug text-[var(--lifeflow-text-primary)]">习惯养成 早起 6:30</span>
+                    <span class="mt-0.5 block text-[12px] leading-snug text-[var(--lifeflow-text-tertiary)]">6:30 起床 · 连续打卡 90 天</span>
+                  </span>
+                  <span class="shrink-0 text-[11.5px] leading-none text-[var(--lifeflow-text-tertiary)]">每日 <span class="lf-mono">30</span> 分钟</span>
+                </button>
+              </div>
+            </section>
+
+            <!-- 五层预览卡（初始隐藏） -->
+            <section id="quick-preview" class="hidden rounded-xl border border-[var(--lifeflow-border-light)] bg-[var(--lifeflow-card)] px-4 py-4 shadow-[var(--lifeflow-shadow-1)]">
+              <div class="flex items-center justify-between gap-3">
+                <h3 class="text-[15px] font-semibold leading-snug text-[var(--lifeflow-text-primary)]">五层目标预览</h3>
+                <span class="shrink-0 rounded-full bg-[var(--lifeflow-module-ideal-light)] px-2.5 py-1 text-[11px] font-semibold leading-none text-[var(--lifeflow-module-ideal)]">已拆解</span>
+              </div>
+              <div class="mt-3 space-y-3">
+                <div class="rounded-lg bg-[var(--lifeflow-muted)] px-3 py-2.5">
+                  <div class="flex items-center justify-between gap-2">
+                    <span class="text-[11px] font-semibold leading-none text-[var(--lifeflow-module-ideal)]">目标名</span>
+                    <span id="preview-cat-badge" class="lf-cat-badge lf-cat-workstudy inline-flex items-center gap-1 rounded-full bg-[var(--lf-cat-bg)] px-2 py-0.5 text-[10.5px] font-semibold leading-none" style="color: var(--lf-cat);"><span class="h-1.5 w-1.5 rounded-full" style="background: var(--lf-cat);"></span>工作学习</span>
+                  </div>
+                  <p id="preview-name" class="mt-1 text-[15px] font-bold leading-snug text-[var(--lifeflow-text-primary)]"></p>
+                </div>
+                <div class="rounded-lg bg-[var(--lifeflow-muted)] px-3 py-2.5">
+                  <span class="text-[11px] font-semibold leading-none text-[var(--lifeflow-text-tertiary)]">愿景</span>
+                  <p id="preview-vision" class="mt-1 text-[13px] leading-snug text-[var(--lifeflow-text-primary)]"></p>
+                </div>
+                <div class="rounded-lg bg-[var(--lifeflow-muted)] px-3 py-2.5">
+                  <div class="flex items-center justify-between gap-2">
+                    <span class="text-[11px] font-semibold leading-none text-[var(--lifeflow-text-tertiary)]">关键结果 KR</span>
+                    <span class="lf-mono text-[11px] leading-none text-[var(--lifeflow-text-tertiary)]">3</span>
+                  </div>
+                  <ul id="preview-krs" class="mt-2 space-y-2"></ul>
+                </div>
+                <div class="rounded-lg bg-[var(--lifeflow-muted)] px-3 py-2.5">
+                  <span class="text-[11px] font-semibold leading-none text-[var(--lifeflow-text-tertiary)]">策略</span>
+                  <p id="preview-strategy" class="mt-1 text-[13px] font-medium leading-snug text-[var(--lifeflow-text-primary)]"></p>
+                </div>
+                <div class="rounded-lg bg-[var(--lifeflow-muted)] px-3 py-2.5">
+                  <span class="text-[11px] font-semibold leading-none text-[var(--lifeflow-text-tertiary)]">每周行动</span>
+                  <ul id="preview-actions" class="mt-2 space-y-1.5"></ul>
+                </div>
+              </div>
+              <button type="button" data-dom-id="quick-save" onclick="QuickActions.save()" class="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-[var(--lifeflow-primary)] text-[15px] font-semibold text-[var(--lifeflow-text-inverse)] transition-opacity active:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--lifeflow-ring)]"><i data-lucide="check" class="h-4 w-4 shrink-0"></i>保存目标</button>
+            </section>
+          </div>
+
+          <!-- 手动创建面板（原表单，可滚动，初始隐藏） -->
+          <form id="goal-new-form" class="lf-sheet-scroll hidden mt-4 space-y-3" onsubmit="event.preventDefault(); GoalActions.saveNew();" novalidate>
+            <label class="block">
+              <span class="text-[12px] font-medium text-[var(--lifeflow-text-secondary)]">目标名</span>
+              <input id="goal-name-input" name="goal-name" type="text" placeholder="如：考研英语 80+" autocomplete="off" enterkeyhint="next" class="mt-1.5 h-11 w-full rounded-lg border border-[var(--lifeflow-border-light)] bg-[var(--lifeflow-input)] px-3 text-[15px] text-[var(--lifeflow-text-primary)] placeholder:text-[var(--lifeflow-text-tertiary)] focus:border-[var(--lifeflow-primary)] focus:outline-none" />
+            </label>
+            <label class="block">
+              <span class="text-[12px] font-medium text-[var(--lifeflow-text-secondary)]">愿景</span>
+              <input id="goal-vision-input" name="goal-vision" type="text" placeholder="想成为什么样的人" autocomplete="off" enterkeyhint="next" class="mt-1.5 h-11 w-full rounded-lg border border-[var(--lifeflow-border-light)] bg-[var(--lifeflow-input)] px-3 text-[15px] text-[var(--lifeflow-text-primary)] placeholder:text-[var(--lifeflow-text-tertiary)] focus:border-[var(--lifeflow-primary)] focus:outline-none" />
+            </label>
+
+            <!-- T25 目标分类 · 8+8+8（睡眠 8h / 工作学习 8h / 生活 8h） -->
+            <div>
+              <div class="flex items-center justify-between gap-3">
+                <span class="text-[12px] font-medium text-[var(--lifeflow-text-secondary)]">目标分类 · 8+8+8</span>
+                <span class="text-[11px] leading-none text-[var(--lifeflow-text-tertiary)]">睡眠 8h · 工作学习 8h · 生活 8h</span>
+              </div>
+              <div id="goal-category-seg" class="mt-1.5 flex gap-2" role="group" aria-label="目标分类">
+                <button type="button" data-cat="sleep" onclick="GoalActions.setCategory('sleep')" aria-pressed="false" class="lf-cat-chip lf-cat-sleep flex h-10 flex-1 items-center justify-center gap-1.5 rounded-lg text-[13px] font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--lifeflow-ring)]"><i data-lucide="moon" class="h-4 w-4 shrink-0"></i>睡眠</button>
+                <button type="button" data-cat="workStudy" onclick="GoalActions.setCategory('workStudy')" aria-pressed="true" class="lf-cat-chip lf-cat-workstudy is-active flex h-10 flex-1 items-center justify-center gap-1.5 rounded-lg text-[13px] font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--lifeflow-ring)]"><i data-lucide="zap" class="h-4 w-4 shrink-0"></i>工作学习</button>
+                <button type="button" data-cat="life" onclick="GoalActions.setCategory('life')" aria-pressed="false" class="lf-cat-chip lf-cat-life flex h-10 flex-1 items-center justify-center gap-1.5 rounded-lg text-[13px] font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--lifeflow-ring)]"><i data-lucide="sun" class="h-4 w-4 shrink-0"></i>生活</button>
+              </div>
+            </div>
+
+            <!-- T25 挂靠功能（选填 · 0~多个：study/focus/workout/posture/wellness/water/diet/leisure/notes/routine/medication/sleep） -->
+            <div>
+              <span class="text-[12px] font-medium text-[var(--lifeflow-text-secondary)]">挂靠功能（选填）</span>
+              <div id="goal-dock-chips" class="mt-1.5 flex flex-wrap gap-2" role="group" aria-label="挂靠功能">
+                <button type="button" id="dock-chip-study" data-dock="study" onclick="GoalActions.toggleDock('study')" aria-pressed="false" class="lf-dock-chip lf-dock-study inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[12px] font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--lifeflow-ring)]"><i data-lucide="book-open" class="h-3.5 w-3.5 shrink-0"></i>学习</button>
+                <button type="button" id="dock-chip-focus" data-dock="focus" onclick="GoalActions.toggleDock('focus')" aria-pressed="false" class="lf-dock-chip lf-dock-focus inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[12px] font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--lifeflow-ring)]"><i data-lucide="timer" class="h-3.5 w-3.5 shrink-0"></i>专注</button>
+                <button type="button" id="dock-chip-workout" data-dock="workout" onclick="GoalActions.toggleDock('workout')" aria-pressed="false" class="lf-dock-chip lf-dock-workout inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[12px] font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--lifeflow-ring)]"><i data-lucide="dumbbell" class="h-3.5 w-3.5 shrink-0"></i>训练</button>
+                <button type="button" id="dock-chip-posture" data-dock="posture" onclick="GoalActions.toggleDock('posture')" aria-pressed="false" class="lf-dock-chip lf-dock-posture inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[12px] font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--lifeflow-ring)]"><i data-lucide="person-standing" class="h-3.5 w-3.5 shrink-0"></i>体态</button>
+                <button type="button" id="dock-chip-wellness" data-dock="wellness" onclick="GoalActions.toggleDock('wellness')" aria-pressed="false" class="lf-dock-chip lf-dock-wellness inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[12px] font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--lifeflow-ring)]"><i data-lucide="heart-pulse" class="h-3.5 w-3.5 shrink-0"></i>健康</button>
+                <button type="button" id="dock-chip-water" data-dock="water" onclick="GoalActions.toggleDock('water')" aria-pressed="false" class="lf-dock-chip lf-dock-water inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[12px] font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--lifeflow-ring)]"><i data-lucide="droplet" class="h-3.5 w-3.5 shrink-0"></i>饮水</button>
+                <button type="button" id="dock-chip-diet" data-dock="diet" onclick="GoalActions.toggleDock('diet')" aria-pressed="false" class="lf-dock-chip lf-dock-diet inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[12px] font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--lifeflow-ring)]"><i data-lucide="apple" class="h-3.5 w-3.5 shrink-0"></i>饮食</button>
+                <button type="button" id="dock-chip-leisure" data-dock="leisure" onclick="GoalActions.toggleDock('leisure')" aria-pressed="false" class="lf-dock-chip lf-dock-leisure inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[12px] font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--lifeflow-ring)]"><i data-lucide="gamepad-2" class="h-3.5 w-3.5 shrink-0"></i>休闲</button>
+                <button type="button" id="dock-chip-notes" data-dock="notes" onclick="GoalActions.toggleDock('notes')" aria-pressed="false" class="lf-dock-chip lf-dock-notes inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[12px] font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--lifeflow-ring)]"><i data-lucide="notebook-pen" class="h-3.5 w-3.5 shrink-0"></i>随手记</button>
+                <button type="button" id="dock-chip-routine" data-dock="routine" onclick="GoalActions.toggleDock('routine')" aria-pressed="false" class="lf-dock-chip lf-dock-routine inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[12px] font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--lifeflow-ring)]"><i data-lucide="repeat" class="h-3.5 w-3.5 shrink-0"></i>惯例</button>
+                <button type="button" id="dock-chip-medication" data-dock="medication" onclick="GoalActions.toggleDock('medication')" aria-pressed="false" class="lf-dock-chip lf-dock-medication inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[12px] font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--lifeflow-ring)]"><i data-lucide="pill" class="h-3.5 w-3.5 shrink-0"></i>用药</button>
+                <button type="button" id="dock-chip-sleep" data-dock="sleep" onclick="GoalActions.toggleDock('sleep')" aria-pressed="false" class="lf-dock-chip lf-dock-sleep inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[12px] font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--lifeflow-ring)]"><i data-lucide="moon" class="h-3.5 w-3.5 shrink-0"></i>睡眠</button>
+              </div>
+              <p class="mt-2 flex items-center gap-1.5 text-[11px] leading-snug text-[var(--lifeflow-text-tertiary)]"><i data-lucide="info" class="h-3.5 w-3.5 shrink-0"></i>挂靠后日程显示功能图标；不挂靠显示目标图标</p>
+            </div>
+            <label class="block">
+              <span class="text-[12px] font-medium text-[var(--lifeflow-text-secondary)]">关键结果 KR</span>
+              <textarea id="goal-kr-input" name="goal-kr" rows="2" placeholder="一条可衡量的结果，如：单词 5500" autocomplete="off" class="mt-1.5 min-h-[56px] w-full resize-none rounded-lg border border-[var(--lifeflow-border-light)] bg-[var(--lifeflow-input)] px-3 py-2.5 text-[15px] text-[var(--lifeflow-text-primary)] placeholder:text-[var(--lifeflow-text-tertiary)] focus:border-[var(--lifeflow-primary)] focus:outline-none"></textarea>
+            </label>
+            <div class="flex items-center gap-2.5 pt-1">
+              <button type="button" onclick="GoalActions.closeNew()" class="h-11 flex-1 rounded-lg bg-[var(--lifeflow-muted)] text-[15px] font-medium text-[var(--lifeflow-text-secondary)] transition-opacity active:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--lifeflow-ring)]">取消</button>
+              <button type="submit" class="h-11 flex-1 rounded-lg bg-[var(--lifeflow-primary)] text-[15px] font-semibold text-[var(--lifeflow-text-inverse)] transition-opacity active:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--lifeflow-ring)]">保存目标</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- 内联 Toast -->
+      <div id="lf-toast" class="lf-toast" role="status" aria-live="polite">
+        <div class="pointer-events-auto flex items-center gap-2.5 rounded-xl border border-[var(--lifeflow-border-light)] bg-[var(--lifeflow-popover)] px-4 py-2.5 shadow-[var(--lifeflow-shadow-3)]">
+          <span id="lf-toast-icon" class="flex h-5 w-5 shrink-0 items-center justify-center text-[var(--lifeflow-module-focus)]"><i data-lucide="timer" class="h-4 w-4"></i></span>
+          <p id="lf-toast-msg" class="text-[13.5px] font-medium leading-none text-[var(--lifeflow-text-primary)]">开始 90 分钟专注</p>
+          <button type="button" id="lf-toast-action" class="hidden shrink-0 rounded-md bg-[var(--lifeflow-muted)] px-2.5 h-7 text-[12.5px] font-medium leading-none text-[var(--lifeflow-text-secondary)] transition-opacity active:opacity-70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--lifeflow-ring)]">取消</button>
+        </div>
+      </div>
+
+      <!-- 5 底部导航（固定毛玻璃） -->
+      <nav data-mobile-nav="global" id="bottom-nav" class="lf-tabbar-glass w-full max-w-md mx-auto h-[64px]"><div class="grid grid-cols-4 h-full"><a href="#" data-dom-id="nav-home" data-nav-key="home" data-active="false" class="min-w-0 flex flex-col items-center justify-center gap-0.5 h-full text-[var(--lifeflow-text-tertiary)]"><i data-lucide="home" class="w-5 h-5 shrink-0"></i><span class="text-[11px] leading-none whitespace-nowrap max-w-full truncate">首页</span></a><a href="#" data-dom-id="nav-goals" data-nav-key="goals" data-active="true" class="min-w-0 flex flex-col items-center justify-center gap-0.5 h-full text-[var(--lifeflow-primary)]"><i data-lucide="target" class="w-5 h-5 shrink-0"></i><span class="text-[11px] leading-none whitespace-nowrap max-w-full truncate font-semibold">目标</span></a><a href="#" data-dom-id="nav-schedule" data-nav-key="schedule" data-active="false" class="min-w-0 flex flex-col items-center justify-center gap-0.5 h-full text-[var(--lifeflow-text-tertiary)]"><i data-lucide="calendar-days" class="w-5 h-5 shrink-0"></i><span class="text-[11px] leading-none whitespace-nowrap max-w-full truncate">日程</span></a><a href="#" data-dom-id="nav-ideal" data-nav-key="ideal" data-active="false" class="min-w-0 flex flex-col items-center justify-center gap-0.5 h-full text-[var(--lifeflow-text-tertiary)]"><i data-lucide="sun" class="w-5 h-5 shrink-0"></i><span class="text-[11px] leading-none whitespace-nowrap max-w-full truncate">理想日</span></a></div></nav>
+    </main>
+    <script>
+      (function () {
+        'use strict';
+
+        var reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        /* ---------- 内联 Toast ---------- */
+        var toastEl = document.getElementById('lf-toast');
+        var toastMsg = document.getElementById('lf-toast-msg');
+        var toastIcon = document.getElementById('lf-toast-icon');
+        var toastAction = document.getElementById('lf-toast-action');
+        var toastTimer = null;
+
+        function hideToast() {
+          if (toastTimer) { clearTimeout(toastTimer); toastTimer = null; }
+          toastEl.classList.remove('lf-toast--show');
+        }
+
+        function showToast(msg, opts) {
+          opts = opts || {};
+          if (toastTimer) { clearTimeout(toastTimer); }
+          toastMsg.textContent = msg;
+          toastIcon.innerHTML = '<i data-lucide="' + (opts.icon || 'check') + '" class="h-4 w-4"></i>';
+          if (opts.withCancel) {
+            toastAction.classList.remove('hidden');
+            toastAction.onclick = function (e) { e.stopPropagation(); hideToast(); if (opts.onCancel) { opts.onCancel(); } };
+          } else {
+            toastAction.classList.add('hidden');
+            toastAction.onclick = null;
+          }
+          if (window.lucide) { window.lucide.createIcons(); }
+          toastEl.classList.add('lf-toast--show');
+          toastTimer = setTimeout(hideToast, opts.duration || 2600);
+        }
+
+        toastEl.addEventListener('click', function (e) {
+          if (!e.target.closest || !e.target.closest('#lf-toast-action')) { hideToast(); }
+        });
+
+        /* ---------- 今日焦点：专注确认 ---------- */
+        window.FocusActions = {
+          startFocus: function () {
+            showToast('开始 90 分钟专注', { icon: 'timer', withCancel: true });
+          }
+        };
+
+        /* ---------- 目标卡 / 新建目标 ---------- */
+        var sheet = document.getElementById('sheet-new-goal');
+
+        function esc(s) {
+          return String(s).replace(/[&<>"']/g, function (c) {
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+          });
+        }
+
+        /* ---------- T25 目标三分类 / 挂靠功能（演示变量） ---------- */
+        var CAT_META = {
+          sleep: { label: '睡眠', cls: 'lf-cat-sleep' },
+          workStudy: { label: '工作学习', cls: 'lf-cat-workstudy' },
+          life: { label: '生活', cls: 'lf-cat-life' }
+        };
+
+        function renderPreviewCatBadge() {
+          var el = document.getElementById('preview-cat-badge');
+          if (!el) { return; }
+          var meta = CAT_META[window.GoalActions && GoalActions.category] || CAT_META.workStudy;
+          el.className = 'lf-cat-badge ' + meta.cls + ' inline-flex items-center gap-1 rounded-full bg-[var(--lf-cat-bg)] px-2 py-0.5 text-[10.5px] font-semibold leading-none';
+          el.style.color = 'var(--lf-cat)';
+          el.innerHTML = '<span class="h-1.5 w-1.5 rounded-full" style="background: var(--lf-cat);"></span>' + meta.label;
+        }
+
+        function resetDockChips() {
+          var chips = Array.prototype.slice.call(document.querySelectorAll('#goal-dock-chips [data-dock]'));
+          chips.forEach(function (c) {
+            c.setAttribute('aria-pressed', 'false');
+            c.classList.remove('is-active');
+          });
+        }
+
+        window.GoalActions = {
+          category: 'workStudy',
+          docks: [],
+          setCategory: function (key) {
+            GoalActions.category = CAT_META[key] ? key : 'workStudy';
+            var btns = Array.prototype.slice.call(document.querySelectorAll('#goal-category-seg [data-cat]'));
+            btns.forEach(function (b) {
+              var on = b.getAttribute('data-cat') === GoalActions.category;
+              b.setAttribute('aria-pressed', on ? 'true' : 'false');
+              b.classList.toggle('is-active', on);
+            });
+            renderPreviewCatBadge();
+          },
+          toggleDock: function (key) {
+            var i = GoalActions.docks.indexOf(key);
+            if (i >= 0) { GoalActions.docks.splice(i, 1); } else { GoalActions.docks.push(key); }
+            var chip = document.getElementById('dock-chip-' + key);
+            if (chip) {
+              var on = GoalActions.docks.indexOf(key) >= 0;
+              chip.setAttribute('aria-pressed', on ? 'true' : 'false');
+              chip.classList.toggle('is-active', on);
+            }
+          },
+          locateIdeal: function (n) {
+            var total = n === 1 ? 4 : n === 2 ? 3 : 2;
+            showToast('已定位 · 今日理想日 ' + total + ' 项安排', { icon: 'sun' });
+          },
+          openNew: function () {
+            QuickActions.switchMode('quick', true);
+            sheet.classList.add('lf-sheet--visible');
+            sheet.setAttribute('aria-hidden', 'false');
+            document.body.style.overflow = 'hidden';
+            setTimeout(function () {
+              var quickPanel = document.getElementById('panel-quick');
+              var isQuickVisible = quickPanel && !quickPanel.classList.contains('hidden');
+              var f = document.getElementById(isQuickVisible ? 'copy-prompt' : 'goal-name-input');
+              if (f) { f.focus(); }
+            }, reducedMotion ? 0 : 240);
+          },
+          closeNew: function () {
+            sheet.classList.remove('lf-sheet--visible');
+            sheet.setAttribute('aria-hidden', 'true');
+            document.body.style.overflow = '';
+            var fab = document.getElementById('fab-new-goal');
+            if (fab) { fab.focus(); }
+            QuickActions.reset();
+          },
+          saveNew: function () {
+            var nameInput = document.getElementById('goal-name-input');
+            var visionInput = document.getElementById('goal-vision-input');
+            var krInput = document.getElementById('goal-kr-input');
+            var name = nameInput.value.trim();
+            if (!name) {
+              showToast('请填写目标名', { icon: 'alert-circle' });
+              nameInput.focus();
+              return;
+            }
+            var vision = visionInput.value.trim();
+            var kr = krInput.value.trim();
+            var card = document.createElement('a');
+            card.setAttribute('href', '#');
+            card.setAttribute('data-dom-id', 'goal-card-new');
+            card.setAttribute('data-state', 'active');
+            card.className = 'goal-card relative p-3.5 pb-3 transition-opacity active:opacity-70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--lifeflow-ring)]';
+            card.innerHTML =
+              '<button type="button" data-dom-id="sun-goal-new" aria-label="定位理想日：' + esc(name) + '" onclick="event.stopPropagation(); GoalActions.locateIdeal(3)" class="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-[var(--lifeflow-module-ideal-light)] text-[var(--lifeflow-module-ideal)] transition-transform active:scale-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--lifeflow-ring)]"><i data-lucide="sun" class="h-3.5 w-3.5"></i></button>' +
+              '<span class="lf-ring-wrap mt-1"><svg viewBox="0 0 56 56" class="lf-ring-svg" aria-hidden="true"><circle cx="28" cy="28" r="24" fill="none" stroke="var(--lifeflow-knit-bg)" stroke-width="5"></circle><circle cx="28" cy="28" r="24" fill="none" stroke="var(--lifeflow-module-study)" stroke-width="5" stroke-linecap="round" stroke-dasharray="150.8" stroke-dashoffset="150.8"></circle></svg><span class="lf-ring-label"><span class="lf-mono text-[12px] font-bold leading-none text-[var(--lifeflow-text-primary)]">0%</span></span></span>' +
+              '<h3 class="mt-3 truncate text-[15px] font-bold leading-snug text-[var(--lifeflow-text-primary)]">' + esc(name) + '</h3>' +
+              '<p class="mt-1 min-h-[34px] text-[12px] leading-snug text-[var(--lifeflow-text-tertiary)]">' + esc(kr || vision || 'KR 待拆解 · 从第一步开始') + '</p>' +
+              '<div class="mt-2.5 flex flex-wrap items-center gap-1.5"><span class="inline-flex items-center rounded-full bg-[var(--lifeflow-muted)] px-2 h-6 text-[10.5px] font-medium leading-none text-[var(--lifeflow-text-secondary)]">进行中</span><span class="inline-flex items-center gap-1 rounded-full bg-[var(--lifeflow-module-study-light)] px-2 h-6 text-[10.5px] font-medium leading-none text-[var(--lifeflow-module-study)]"><i data-lucide="sparkles" class="h-3 w-3 shrink-0"></i>今日学习 <span class="lf-mono font-semibold">0/4</span></span></div>';
+            document.getElementById('goal-grid').appendChild(card);
+            if (!reducedMotion) { void card.offsetWidth; card.classList.add('goal-card-enter'); }
+            if (window.lucide) { window.lucide.createIcons(); }
+            nameInput.value = ''; visionInput.value = ''; krInput.value = '';
+            GoalActions.category = 'workStudy';
+            GoalActions.docks = [];
+            resetDockChips();
+            GoalActions.setCategory('workStudy');
+            updateCounts();
+            applyFilter(currentFilter);
+            GoalActions.closeNew();
+            showToast('目标已创建', { icon: 'check' });
+          }
+        };
+
+        /* ---------- 快速创建：步骤状态机 / 提示词 / JSON 导入 / 五层预览 ---------- */
+        var PROMPT_TEXT = [
+          '你是 LifeFlow 的目标规划助手。请按「五层拆解法」把我描述的目标拆解成结构化计划。',
+          '',
+          '五层结构说明：',
+          '1. 目标 goal_name：一句话说清要达成什么（例如：考研英语 80+）',
+          '2. 愿景 vision：达成后我成为什么样的人、过上什么样的生活',
+          '3. 关键结果 krs：3 个可衡量的结果（每项含 title 标题、target 目标值、unit 单位）',
+          '4. 策略 strategy：达成目标的打法（period 周期、frequency 每周执行频次、daily_hours 每日投入小时数）',
+          '5. 每周行动 weekly_actions：3~7 条落到具体周几的行动（weekday 周几、action 动作、duration_min 时长分钟）',
+          '',
+          '我的目标：{在这里粘贴你的目标描述，例如：我想在 12 月底考研英语考到 80 分，目前阅读正确率只有 55%，每天能投入 4 小时}',
+          '',
+          '请只返回一个合法 JSON，不要输出任何解释文字，按以下 Schema：',
+          '{',
+          '  "goal_name": "目标名",',
+          '  "vision": "愿景描述",',
+          '  "krs": [',
+          '    { "title": "关键结果 1", "target": 80, "unit": "分" },',
+          '    { "title": "关键结果 2", "target": 5500, "unit": "词" },',
+          '    { "title": "关键结果 3", "target": 3, "unit": "轮" }',
+          '  ],',
+          '  "strategy": { "period": "12 周", "frequency": "每周 6 天", "daily_hours": 4 },',
+          '  "weekly_actions": [',
+          '    { "weekday": "周一", "action": "精读真题 1 篇并复盘", "duration_min": 90 },',
+          '    { "weekday": "周二", "action": "背诵单词 100 个", "duration_min": 60 },',
+          '    { "weekday": "周五", "action": "真题模考并订正错题", "duration_min": 120 }',
+          '  ]',
+          '}',
+          '',
+          '完整示例（可直接改数字后使用）：',
+          '{',
+          '  "goal_name": "考研英语 80+",',
+          '  "vision": "成为在考场上游刃有余的英语强者，阅读、写作全面 80+",',
+          '  "krs": [',
+          '    { "title": "真题模考稳定 80 分", "target": 80, "unit": "分" },',
+          '    { "title": "阅读正确率提升", "target": 80, "unit": "%" },',
+          '    { "title": "完成 3 轮真题精刷", "target": 3, "unit": "轮" }',
+          '  ],',
+          '  "strategy": { "period": "至 12 月底", "frequency": "每周 6 天", "daily_hours": 4 },',
+          '  "weekly_actions": [',
+          '    { "weekday": "周一", "action": "早间精读真题 1 篇", "duration_min": 90 },',
+          '    { "weekday": "周二", "action": "晚间背诵单词 100 个", "duration_min": 60 },',
+          '    { "weekday": "周六", "action": "真题模考 + 错题复盘", "duration_min": 120 }',
+          '  ]',
+          '}'
+        ].join('\n');
+
+        var stepState = 1;
+
+        var TEMPLATES = [
+          {
+            name: '考研英语 80+',
+            vision: '成为考场上游刃有余的英语强者，阅读、写作全面 80+',
+            krs: ['真题模考稳定 80 分', '阅读正确率提升至 80%', '12 月底前完成 3 轮真题精刷'],
+            strategy: '每日投入 4 小时 · 每周 6 天 · 冲刺至 12 月底',
+            actions: ['早间 90 分钟精读真题 1 篇', '晚间 60 分钟背诵单词 100 个']
+          },
+          {
+            name: '健康减脂 12 斤',
+            vision: '成为精力充沛、体态轻盈、穿什么都好看的人',
+            krs: ['体脂率降至 18%', '体重减少 12 斤', '每周完成 3 次力量训练'],
+            strategy: '每周训练 3 次 · 每次 60 分钟 · 周期 12 周',
+            actions: ['每周 3 次 40 分钟有氧', '晚餐替换为高蛋白轻食']
+          },
+          {
+            name: '习惯养成 早起 6:30',
+            vision: '成为掌控清晨节奏、自律从容的人',
+            krs: ['连续 90 天 6:30 前起床', '起床后完成 30 分钟晨间仪式', '睡前 23:30 前入睡'],
+            strategy: '每日执行 · 周期 90 天 · 每周复盘 1 次',
+            actions: ['每日 6:30 起床后拉伸 10 分钟', '每晚 23:30 前放下手机']
+          }
+        ];
+
+        function setStep(n) {
+          stepState = n;
+          var chips = Array.prototype.slice.call(document.querySelectorAll('#quick-steps .lf-step'));
+          chips.forEach(function (chip) {
+            var s = parseInt(chip.getAttribute('data-step'), 10);
+            var active = s === n;
+            var done = s < n;
+            chip.classList.toggle('lf-step--active', active);
+            chip.classList.toggle('lf-step--done', done);
+            var num = chip.querySelector('.lf-step-num');
+            var ok = chip.querySelector('.lf-step-ok');
+            if (num) { num.classList.toggle('hidden', done); }
+            if (ok) { ok.classList.toggle('hidden', !done); }
+            chip.setAttribute('aria-current', active ? 'step' : 'false');
+            if (active && !reducedMotion) {
+              chip.classList.remove('lf-step-pop');
+              void chip.offsetWidth;
+              chip.classList.add('lf-step-pop');
+            }
+          });
+        }
+
+        function legacyCopyText(text) {
+          var ta = document.createElement('textarea');
+          ta.value = text;
+          ta.setAttribute('readonly', '');
+          ta.style.position = 'fixed';
+          ta.style.top = '0';
+          ta.style.opacity = '0';
+          document.body.appendChild(ta);
+          ta.select();
+          var ok = false;
+          try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+          document.body.removeChild(ta);
+          return ok;
+        }
+
+        function normalizeData(data) {
+          var name = (data.goal_name && String(data.goal_name).trim()) || '我的新目标';
+          var vision = (data.vision && String(data.vision).trim()) || '成为持续精进、状态稳定的人';
+          var krs = [];
+          (Array.isArray(data.krs) ? data.krs : []).forEach(function (kr, i) {
+            if (typeof kr === 'string') { krs.push(kr); return; }
+            if (!kr) { return; }
+            var title = kr.title ? String(kr.title) : '关键结果 ' + (i + 1);
+            var target = kr.target !== undefined && kr.target !== null ? String(kr.target) : '';
+            var unit = kr.unit ? String(kr.unit) : '';
+            var s = title;
+            if (target !== '') { s += ' · ' + target + (unit ? ' ' + unit : ''); }
+            krs.push(s);
+          });
+          var strategy = '';
+          if (data.strategy && typeof data.strategy === 'object') {
+            var parts = [];
+            if (data.strategy.period) { parts.push(String(data.strategy.period)); }
+            if (data.strategy.frequency) { parts.push(String(data.strategy.frequency)); }
+            if (data.strategy.daily_hours !== undefined && data.strategy.daily_hours !== null && String(data.strategy.daily_hours).trim() !== '') { parts.push('每日 ' + data.strategy.daily_hours + ' 小时'); }
+            strategy = parts.join(' · ');
+          } else if (typeof data.strategy === 'string') {
+            strategy = data.strategy;
+          }
+          if (!strategy) { strategy = '90 天 · 每周 5 天 · 每日 2 小时'; }
+          var actions = [];
+          (Array.isArray(data.weekly_actions) ? data.weekly_actions : []).forEach(function (a) {
+            if (typeof a === 'string') { actions.push(a); return; }
+            if (!a) { return; }
+            var weekday = a.weekday ? String(a.weekday) : '';
+            var action = a.action ? String(a.action) : '';
+            var dur = a.duration_min !== undefined && a.duration_min !== null ? String(a.duration_min) + ' 分钟' : '';
+            var s = [weekday, action].filter(Boolean).join(' · ');
+            if (dur) { s += s ? ' · ' + dur : dur; }
+            if (s) { actions.push(s); }
+          });
+          if (actions.length === 0) { actions = ['每日执行 60 分钟核心动作']; }
+          return { name: name, vision: vision, krs: krs, strategy: strategy, actions: actions };
+        }
+
+        function fillPreview(data) {
+          document.getElementById('preview-name').textContent = data.name;
+          document.getElementById('preview-vision').textContent = data.vision;
+          renderPreviewCatBadge();
+
+          var krWrap = document.getElementById('preview-krs');
+          krWrap.innerHTML = '';
+          data.krs.forEach(function (kr) {
+            var li = document.createElement('li');
+            li.className = 'rounded-lg bg-[var(--lifeflow-card)] px-3 py-2';
+            li.innerHTML =
+              '<div class="flex items-center gap-2"><i data-lucide="check" class="h-3.5 w-3.5 shrink-0 text-[var(--lifeflow-module-study)]"></i><p class="min-w-0 flex-1 text-[13px] leading-snug text-[var(--lifeflow-text-primary)]">' + esc(kr) + '</p><span class="lf-mono shrink-0 text-[11.5px] text-[var(--lifeflow-text-tertiary)]">0%</span></div>' +
+              '<div class="knit-track mt-1.5"><div class="knit-fill" style="width:0%"></div></div>';
+            krWrap.appendChild(li);
+          });
+
+          document.getElementById('preview-strategy').textContent = data.strategy;
+
+          var actionWrap = document.getElementById('preview-actions');
+          actionWrap.innerHTML = '';
+          data.actions.forEach(function (a) {
+            var li = document.createElement('li');
+            li.className = 'flex items-center gap-2 text-[13px] leading-snug text-[var(--lifeflow-text-primary)]';
+            li.innerHTML = '<i data-lucide="plus" class="h-3.5 w-3.5 shrink-0 text-[var(--lifeflow-module-ideal)]"></i><span class="min-w-0 flex-1">' + esc(a) + '</span>';
+            actionWrap.appendChild(li);
+          });
+
+          if (window.lucide) { window.lucide.createIcons(); }
+          var preview = document.getElementById('quick-preview');
+          preview.classList.remove('hidden');
+          if (!reducedMotion) {
+            preview.classList.remove('lf-preview-enter');
+            void preview.offsetWidth;
+            preview.classList.add('lf-preview-enter');
+          }
+        }
+
+        window.QuickActions = {
+          switchMode: function (mode, silent) {
+            var isQuick = mode === 'quick';
+            var quick = document.getElementById('panel-quick');
+            var manual = document.getElementById('goal-new-form');
+            quick.classList.toggle('hidden', !isQuick);
+            manual.classList.toggle('hidden', isQuick);
+            var tabs = Array.prototype.slice.call(document.querySelectorAll('#goal-mode-segmented .goal-mode-tab'));
+            tabs.forEach(function (tab) {
+              var active = tab.getAttribute('data-mode') === mode;
+              tab.classList.toggle('goal-mode-tab--active', active);
+              tab.setAttribute('aria-selected', active ? 'true' : 'false');
+            });
+            var panel = isQuick ? quick : manual;
+            if (!silent && !reducedMotion) {
+              panel.classList.remove('lf-panel-in');
+              void panel.offsetWidth;
+              panel.classList.add('lf-panel-in');
+            }
+          },
+          copyPrompt: function () {
+            var done = function () {
+              setStep(2);
+              showToast('提示词已复制，去问问 AI 吧', { icon: 'clipboard-copy' });
+            };
+            var fallback = function () { legacyCopyText(PROMPT_TEXT); done(); };
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+              navigator.clipboard.writeText(PROMPT_TEXT).then(done, fallback);
+            } else {
+              legacyCopyText(PROMPT_TEXT);
+              done();
+            }
+          },
+          togglePrompt: function () {
+            var fold = document.getElementById('prompt-fold');
+            var btn = document.getElementById('prompt-toggle');
+            if (!fold || !btn) { return; }
+            var opening = fold.classList.contains('hidden');
+            var pre = document.getElementById('prompt-text');
+            if (pre && !pre.textContent) { pre.textContent = PROMPT_TEXT; }
+            fold.classList.toggle('hidden', !opening);
+            btn.setAttribute('aria-expanded', opening ? 'true' : 'false');
+            var label = btn.querySelector('.lf-prompt-toggle-label');
+            var icon = btn.querySelector('.lf-prompt-chev');
+            if (label) { label.textContent = opening ? '收起提示词' : '查看提示词全文'; }
+            if (icon) { icon.classList.toggle('lf-rotate-45', opening); }
+            if (opening && !reducedMotion) {
+              fold.classList.remove('lf-prompt-fold--open');
+              void fold.offsetWidth;
+              fold.classList.add('lf-prompt-fold--open');
+            }
+          },
+          importJson: function () {
+            var raw = (document.getElementById('import-json-input').value || '').trim();
+            var data = null;
+            try {
+              data = JSON.parse(raw);
+            } catch (e) {
+              data = null;
+            }
+            if (!data || typeof data !== 'object' || Array.isArray(data)) {
+              setStep(2);
+              showToast('JSON 格式有误，请检查后重试', { icon: 'alert-circle' });
+              return;
+            }
+            var filled = false;
+            if (!data.goal_name || !String(data.goal_name).trim()) { data.goal_name = '我的新目标'; filled = true; }
+            if (!data.vision || !String(data.vision).trim()) { data.vision = '成为持续精进、状态稳定的人'; filled = true; }
+            if (!Array.isArray(data.krs) || data.krs.length === 0) {
+              data.krs = [
+                { title: '达成目标', target: 100, unit: '%' },
+                { title: '建立稳定执行节奏', target: 30, unit: '天' },
+                { title: '完成阶段复盘', target: 1, unit: '次' }
+              ];
+              filled = true;
+            } else if (data.krs.length < 3) {
+              var pad = [
+                { title: '建立稳定执行节奏', target: 30, unit: '天' },
+                { title: '完成阶段复盘', target: 1, unit: '次' }
+              ];
+              while (data.krs.length < 3) { data.krs.push(pad[data.krs.length - 1] || pad[0]); }
+              filled = true;
+            }
+            if (!data.strategy || typeof data.strategy !== 'object') {
+              data.strategy = { period: '90 天', frequency: '每周 5 天', daily_hours: 2 };
+              filled = true;
+            }
+            if (!Array.isArray(data.weekly_actions) || data.weekly_actions.length === 0) {
+              data.weekly_actions = [{ weekday: '周一', action: '执行第一项关键动作', duration_min: 60 }];
+              filled = true;
+            }
+            fillPreview(normalizeData(data));
+            setStep(3);
+            if (filled) {
+              showToast('已按默认值补全部分字段', { icon: 'check' });
+              setTimeout(function () { showToast('导入成功 · 五层目标已生成', { icon: 'sparkles' }); }, 1300);
+            } else {
+              showToast('导入成功 · 五层目标已生成', { icon: 'sparkles' });
+            }
+          },
+          useTemplate: function (i) {
+            var t = TEMPLATES[i];
+            if (!t) { return; }
+            fillPreview({ name: t.name, vision: t.vision, krs: t.krs.slice(), strategy: t.strategy, actions: t.actions.slice() });
+            setStep(3);
+          },
+          save: function () {
+            GoalActions.closeNew();
+            showToast('目标已创建 · 五层结构就绪', { icon: 'check' });
+          },
+          reset: function () {
+            var preview = document.getElementById('quick-preview');
+            if (preview) { preview.classList.add('hidden'); }
+            var imp = document.getElementById('import-json-input');
+            if (imp) { imp.value = ''; }
+            var fold = document.getElementById('prompt-fold');
+            var btn = document.getElementById('prompt-toggle');
+            if (fold) { fold.classList.add('hidden'); }
+            if (btn) {
+              btn.setAttribute('aria-expanded', 'false');
+              var label = btn.querySelector('.lf-prompt-toggle-label');
+              var icon = btn.querySelector('.lf-prompt-chev');
+              if (label) { label.textContent = '查看提示词全文'; }
+              if (icon) { icon.classList.remove('lf-rotate-45'); }
+            }
+            setStep(1);
+            QuickActions.switchMode('quick', true);
+          }
+        };
+
+        document.getElementById('sheet-backdrop').addEventListener('click', GoalActions.closeNew);
+
+        document.addEventListener('keydown', function (e) {
+          if (e.key === 'Escape') { GoalActions.closeNew(); hideToast(); }
+        });
+
+        /* ---------- 目标状态过滤 ---------- */
+        var currentFilter = 'all';
+        var tabs = Array.prototype.slice.call(document.querySelectorAll('#goal-filters .goal-tab'));
+
+        function applyFilter(filter) {
+          currentFilter = filter;
+          var cards = Array.prototype.slice.call(document.querySelectorAll('#goal-grid .goal-card'));
+          cards.forEach(function (card) {
+            var show = filter === 'all' || card.getAttribute('data-state') === filter;
+            card.classList.toggle('hidden', !show);
+            if (show && !reducedMotion) {
+              card.classList.remove('goal-card-enter');
+              void card.offsetWidth;
+              card.classList.add('goal-card-enter');
+            }
+          });
+          tabs.forEach(function (tab) {
+            var active = tab.getAttribute('data-filter') === filter;
+            tab.classList.toggle('goal-tab--active', active);
+            tab.setAttribute('aria-pressed', active ? 'true' : 'false');
+          });
+        }
+
+        tabs.forEach(function (tab) {
+          tab.addEventListener('click', function () { applyFilter(tab.getAttribute('data-filter')); });
+        });
+
+        /* ---------- 目标计数 ---------- */
+        function updateCounts() {
+          var nAll = document.querySelectorAll('#goal-grid .goal-card').length;
+          var nActive = document.querySelectorAll('#goal-grid .goal-card[data-state="active"]').length;
+          var nPaused = document.querySelectorAll('#goal-grid .goal-card[data-state="paused"]').length;
+          var nDone = document.querySelectorAll('#goal-grid .goal-card[data-state="done"]').length;
+          var set = function (id, n) { var el = document.getElementById(id); if (el) { el.textContent = n; } };
+          set('count-all', nAll);
+          set('tab-count-all', nAll);
+          set('tab-count-active', nActive);
+          set('tab-count-paused', nPaused);
+          set('tab-count-done', nDone);
+        }
+        updateCounts();
+      })();
+    </script>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

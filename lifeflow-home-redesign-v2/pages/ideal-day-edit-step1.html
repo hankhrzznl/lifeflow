@@ -1,0 +1,1119 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>理想日编辑 · 第 1 步 选择大段与功能</title>
+    <style id="theme-vars">
+/* LifeFlow 首页 — 日间浅色 / 夜间深色 双模式 */
+
+/* === LIGHT MODE (日间 · iOS 原生浅色) === */
+:root {
+  /* SURFACE & TEXT */
+  --lifeflow-background: #F2F2F7;
+  --lifeflow-foreground: #1C1C1E;
+  --lifeflow-card: #FFFFFF;
+  --lifeflow-card-foreground: #1C1C1E;
+  --lifeflow-popover: #FFFFFF;
+  --lifeflow-popover-foreground: #1C1C1E;
+  --lifeflow-muted: #F2F2F7;
+  --lifeflow-muted-foreground: #6C6C70;
+  --lifeflow-border: rgba(60,60,67,0.29);
+  --lifeflow-border-light: rgba(60,60,67,0.12);
+  --lifeflow-border-dashed: rgba(60,60,67,0.2);
+  --lifeflow-input: rgba(60,60,67,0.12);
+  --lifeflow-ring: #007AFF;
+
+  /* BRAND */
+  --lifeflow-primary: #007AFF;
+  --lifeflow-primary-hover: #0066D6;
+  --lifeflow-primary-light: rgba(0,122,255,0.12);
+  --lifeflow-primary-foreground: #FFFFFF;
+
+  /* PROGRESS */
+  --lifeflow-knit-thread: #007AFF;
+  --lifeflow-knit-thread-completed: #34C759;
+  --lifeflow-knit-thread-partial: #FF9500;
+  --lifeflow-knit-bg: #E9E9EB;
+  --lifeflow-knit-grid: rgba(60,60,67,0.1);
+
+  /* STATE */
+  --state-success: #34C759;
+  --state-success-light: rgba(52,199,89,0.14);
+  --state-warning: #FF3B30;
+  --state-warning-light: rgba(255,59,48,0.12);
+  --state-error: #FF3B30;
+  --state-error-light: rgba(255,59,48,0.12);
+  --state-info: #007AFF;
+  --state-info-light: rgba(0,122,255,0.12);
+
+  /* TEXT */
+  --lifeflow-text-primary: #1C1C1E;
+  --lifeflow-text-secondary: #6C6C70;
+  --lifeflow-text-tertiary: #8E8E93;
+  --lifeflow-text-inverse: #FFFFFF;
+
+  /* SHADOWS */
+  --lifeflow-shadow-1: 0 0 0 1px rgba(0,0,0,0.02), 0 1px 2px rgba(0,0,0,0.03);
+  --lifeflow-shadow-2: 0 2px 8px rgba(0,0,0,0.05);
+  --lifeflow-shadow-3: 0 8px 24px rgba(0,0,0,0.12);
+  --lifeflow-shadow-knit: none;
+
+  /* TAB BAR (light glass) */
+  --lifeflow-tabbar-bg: rgba(255,255,255,0.72);
+  --lifeflow-tabbar-blur: 20px;
+  --lifeflow-tabbar-blur-saturate: 180%;
+
+  /* AI BALL (deep blue) */
+  --lifeflow-ai-ball: #2E5FA3;
+
+  /* TYPOGRAPHY */
+  --lifeflow-font-display: -apple-system, BlinkMacSystemFont, "SF Pro SC", "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif;
+  --lifeflow-font-body: -apple-system, BlinkMacSystemFont, "SF Pro SC", "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif;
+  --lifeflow-font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+
+  --lifeflow-font-size-display: 34px;
+  --lifeflow-font-size-h1: 28px;
+  --lifeflow-font-size-h2: 20px;
+  --lifeflow-font-size-h3: 17px;
+  --lifeflow-font-size-body: 15px;
+  --lifeflow-font-size-sm: 13px;
+  --lifeflow-font-size-caption: 12px;
+
+  /* SPACING */
+  --lifeflow-space-xs: 4px;
+  --lifeflow-space-sm: 8px;
+  --lifeflow-space-md: 12px;
+  --lifeflow-space-lg: 16px;
+  --lifeflow-space-xl: 24px;
+  --lifeflow-space-2xl: 32px;
+
+  /* RADIUS */
+  --lifeflow-radius-sm: 6px;
+  --lifeflow-radius-md: 10px;
+  --lifeflow-radius-lg: 12px;
+  --lifeflow-radius-xl: 16px;
+  --lifeflow-radius-full: 9999px;
+
+  /* PORTABLE ALIASES */
+  --background: var(--lifeflow-background);
+  --foreground: var(--lifeflow-foreground);
+  --card: var(--lifeflow-card);
+  --card-foreground: var(--lifeflow-card-foreground);
+  --popover: var(--lifeflow-popover);
+  --popover-foreground: var(--lifeflow-popover-foreground);
+  --primary: var(--lifeflow-primary);
+  --primary-foreground: var(--lifeflow-primary-foreground);
+  --muted: var(--lifeflow-muted);
+  --muted-foreground: var(--lifeflow-muted-foreground);
+  --border: var(--lifeflow-border);
+  --input: var(--lifeflow-input);
+  --ring: var(--lifeflow-ring);
+  --radius-sm: var(--lifeflow-radius-sm);
+  --radius-md: var(--lifeflow-radius-md);
+  --radius-lg: var(--lifeflow-radius-lg);
+}
+
+/* === DARK MODE (夜间 · 深色沉浸式 Apple Fitness) === */
+.dark {
+  /* SURFACE & TEXT */
+  --lifeflow-background: #0B0F17;
+  --lifeflow-foreground: #F2F5FA;
+  --lifeflow-card: #141B28;
+  --lifeflow-card-foreground: #F2F5FA;
+  --lifeflow-popover: #1A2232;
+  --lifeflow-popover-foreground: #F2F5FA;
+  --lifeflow-muted: #1C2432;
+  --lifeflow-muted-foreground: rgba(242,245,250,0.6);
+  --lifeflow-border: rgba(255,255,255,0.09);
+  --lifeflow-border-light: rgba(255,255,255,0.06);
+  --lifeflow-border-dashed: rgba(255,255,255,0.18);
+  --lifeflow-input: rgba(255,255,255,0.12);
+  --lifeflow-ring: #0A84FF;
+
+  /* BRAND */
+  --lifeflow-primary: #0A84FF;
+  --lifeflow-primary-hover: #3D9BFF;
+  --lifeflow-primary-light: rgba(10,132,255,0.18);
+  --lifeflow-primary-foreground: #FFFFFF;
+
+  /* PROGRESS */
+  --lifeflow-knit-thread: #0A84FF;
+  --lifeflow-knit-thread-completed: #30D158;
+  --lifeflow-knit-thread-partial: #FF9F0A;
+  --lifeflow-knit-bg: rgba(255,255,255,0.1);
+  --lifeflow-knit-grid: rgba(255,255,255,0.08);
+
+  /* STATE */
+  --state-success: #30D158;
+  --state-success-light: rgba(48,209,88,0.16);
+  --state-warning: #FF453A;
+  --state-warning-light: rgba(255,69,58,0.16);
+  --state-error: #FF453A;
+  --state-error-light: rgba(255,69,58,0.16);
+  --state-info: #64D2FF;
+  --state-info-light: rgba(100,210,255,0.14);
+
+  /* TEXT */
+  --lifeflow-text-primary: #F2F5FA;
+  --lifeflow-text-secondary: rgba(242,245,250,0.72);
+  --lifeflow-text-tertiary: rgba(242,245,250,0.45);
+  --lifeflow-text-inverse: #FFFFFF;
+
+  /* SHADOWS */
+  --lifeflow-shadow-1: 0 1px 2px rgba(0,0,0,0.3);
+  --lifeflow-shadow-2: 0 4px 12px rgba(0,0,0,0.4);
+  --lifeflow-shadow-3: 0 8px 28px rgba(0,0,0,0.55), 0 0 18px rgba(10,132,255,0.28);
+  --lifeflow-shadow-knit: none;
+
+  /* TAB BAR (dark glass) */
+  --lifeflow-tabbar-bg: rgba(13,18,28,0.72);
+  --lifeflow-tabbar-blur: 20px;
+  --lifeflow-tabbar-blur-saturate: 180%;
+
+  /* AI BALL (deep blue) */
+  --lifeflow-ai-ball: #2E5FA3;
+}
+
+/* === MODULE COLORS (v2 · 模块语义色, 双主题共用) === */
+:root {
+  /* 睡眠 / 冥想 */
+  --lifeflow-module-sleep: #6366F1;
+  --lifeflow-module-sleep-light: rgba(99,102,241,0.14);
+  /* 理想日 / 专注 */
+  --lifeflow-module-ideal: #8B5CF6;
+  --lifeflow-module-ideal-light: rgba(139,92,246,0.14);
+  --lifeflow-module-focus: #8B5CF6;
+  --lifeflow-module-focus-light: rgba(139,92,246,0.14);
+  /* 学习 / 饮水 */
+  --lifeflow-module-study: #3B82F6;
+  --lifeflow-module-study-light: rgba(59,130,246,0.14);
+  --lifeflow-module-water: #3B82F6;
+  --lifeflow-module-water-light: rgba(59,130,246,0.14);
+  /* 训练 / 功法 / 体态 */
+  --lifeflow-module-training: #F97316;
+  --lifeflow-module-training-light: rgba(249,115,22,0.14);
+  /* 习惯 */
+  --lifeflow-module-habit: #10B981;
+  --lifeflow-module-habit-light: rgba(16,185,129,0.14);
+  /* 记账 */
+  --lifeflow-module-expense: #FF3B30;
+  --lifeflow-module-expense-light: rgba(255,59,48,0.14);
+  --lifeflow-module-income: #34C759;
+  --lifeflow-module-income-light: rgba(52,199,89,0.14);
+  /* 提醒 */
+  --lifeflow-module-reminder: #F59E0B;
+  --lifeflow-module-reminder-light: rgba(245,158,11,0.14);
+  /* 8+8+8 环形三色 */
+  --lifeflow-ring-sleep: #5856D6;
+  --lifeflow-ring-study: #0A84FF;
+  --lifeflow-ring-rest: #34C759;
+}
+
+/* === TYPOGRAPHY UTILITY CLASSES === */
+.lf-display {
+  font-family: var(--lifeflow-font-display);
+  font-size: var(--lifeflow-font-size-display);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.lf-h1 {
+  font-family: var(--lifeflow-font-display);
+  font-size: var(--lifeflow-font-size-h1);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+
+.lf-h2 {
+  font-family: var(--lifeflow-font-display);
+  font-size: var(--lifeflow-font-size-h2);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+}
+
+.lf-h3 {
+  font-family: var(--lifeflow-font-body);
+  font-size: var(--lifeflow-font-size-h3);
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.lf-body {
+  font-family: var(--lifeflow-font-body);
+  font-size: var(--lifeflow-font-size-body);
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.lf-body-sm {
+  font-family: var(--lifeflow-font-body);
+  font-size: var(--lifeflow-font-size-sm);
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.lf-caption {
+  font-family: var(--lifeflow-font-body);
+  font-size: var(--lifeflow-font-size-caption);
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.lf-mono {
+  font-family: var(--lifeflow-font-mono);
+  font-size: var(--lifeflow-font-size-sm);
+  font-weight: 400;
+  line-height: 1.6;
+}
+
+/* === PROGRESS BAR (iOS thin bar) === */
+.knit-track {
+  position: relative;
+  height: 6px;
+  border-radius: var(--lifeflow-radius-full);
+  overflow: hidden;
+  background: var(--lifeflow-knit-bg);
+}
+
+.knit-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  border-radius: var(--lifeflow-radius-full);
+  background: var(--lifeflow-knit-thread);
+  z-index: 2;
+  transition: width 0.5s ease-in-out;
+}
+
+.knit-fill--done { background: var(--lifeflow-knit-thread-completed); }
+.knit-fill--partial { background: var(--lifeflow-knit-thread-partial); }
+
+.knit-yarn {
+  display: none;
+}
+
+.knit-percent {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 4;
+  font-family: var(--lifeflow-font-body);
+  font-size: var(--lifeflow-font-size-sm);
+  font-weight: 600;
+  color: var(--lifeflow-text-primary);
+  line-height: 1;
+}
+
+/* === TAB BAR (glass, follows mode) === */
+.lf-tabbar-glass {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 40;
+  border-top: 1px solid var(--lifeflow-border);
+  background: var(--lifeflow-tabbar-bg);
+  -webkit-backdrop-filter: saturate(var(--lifeflow-tabbar-blur-saturate)) blur(var(--lifeflow-tabbar-blur));
+  backdrop-filter: saturate(var(--lifeflow-tabbar-blur-saturate)) blur(var(--lifeflow-tabbar-blur));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  @theme inline {
+    --color-background: var(--lifeflow-background);
+    --color-foreground: var(--lifeflow-foreground);
+    --color-card: var(--lifeflow-card);
+    --color-card-foreground: var(--lifeflow-card-foreground);
+    --color-popover: var(--lifeflow-popover);
+    --color-popover-foreground: var(--lifeflow-popover-foreground);
+    --color-primary: var(--lifeflow-primary);
+    --color-primary-foreground: var(--lifeflow-primary-foreground);
+    --color-muted: var(--lifeflow-muted);
+    --color-muted-foreground: var(--lifeflow-muted-foreground);
+    --color-border: var(--lifeflow-border);
+    --color-input: var(--lifeflow-input);
+    --color-ring: var(--lifeflow-ring);
+    --radius-sm: var(--lifeflow-radius-sm);
+    --radius-md: var(--lifeflow-radius-md);
+    --radius-lg: var(--lifeflow-radius-lg);
+    --radius-xl: var(--lifeflow-radius-xl);
+  }
+  @layer base {
+    body { background: var(--lifeflow-background); color: var(--lifeflow-foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style id="semantic-token-fallback">
+      .bg-background { background-color: var(--lifeflow-background); }
+      .text-background { color: var(--lifeflow-background); }
+      .border-background { border-color: var(--lifeflow-background); }
+      .ring-background { --tw-ring-color: var(--lifeflow-background); }
+      .bg-foreground { background-color: var(--lifeflow-foreground); }
+      .text-foreground { color: var(--lifeflow-foreground); }
+      .border-foreground { border-color: var(--lifeflow-foreground); }
+      .ring-foreground { --tw-ring-color: var(--lifeflow-foreground); }
+      .bg-card { background-color: var(--lifeflow-card); }
+      .text-card { color: var(--lifeflow-card); }
+      .border-card { border-color: var(--lifeflow-card); }
+      .ring-card { --tw-ring-color: var(--lifeflow-card); }
+      .bg-card-foreground { background-color: var(--lifeflow-card-foreground); }
+      .text-card-foreground { color: var(--lifeflow-card-foreground); }
+      .border-card-foreground { border-color: var(--lifeflow-card-foreground); }
+      .ring-card-foreground { --tw-ring-color: var(--lifeflow-card-foreground); }
+      .bg-popover { background-color: var(--lifeflow-popover); }
+      .text-popover { color: var(--lifeflow-popover); }
+      .border-popover { border-color: var(--lifeflow-popover); }
+      .ring-popover { --tw-ring-color: var(--lifeflow-popover); }
+      .bg-popover-foreground { background-color: var(--lifeflow-popover-foreground); }
+      .text-popover-foreground { color: var(--lifeflow-popover-foreground); }
+      .border-popover-foreground { border-color: var(--lifeflow-popover-foreground); }
+      .ring-popover-foreground { --tw-ring-color: var(--lifeflow-popover-foreground); }
+      .bg-primary { background-color: var(--lifeflow-primary); }
+      .text-primary { color: var(--lifeflow-primary); }
+      .border-primary { border-color: var(--lifeflow-primary); }
+      .ring-primary { --tw-ring-color: var(--lifeflow-primary); }
+      .bg-primary-foreground { background-color: var(--lifeflow-primary-foreground); }
+      .text-primary-foreground { color: var(--lifeflow-primary-foreground); }
+      .border-primary-foreground { border-color: var(--lifeflow-primary-foreground); }
+      .ring-primary-foreground { --tw-ring-color: var(--lifeflow-primary-foreground); }
+      .bg-muted { background-color: var(--lifeflow-muted); }
+      .text-muted { color: var(--lifeflow-muted); }
+      .border-muted { border-color: var(--lifeflow-muted); }
+      .ring-muted { --tw-ring-color: var(--lifeflow-muted); }
+      .bg-muted-foreground { background-color: var(--lifeflow-muted-foreground); }
+      .text-muted-foreground { color: var(--lifeflow-muted-foreground); }
+      .border-muted-foreground { border-color: var(--lifeflow-muted-foreground); }
+      .ring-muted-foreground { --tw-ring-color: var(--lifeflow-muted-foreground); }
+      .bg-border { background-color: var(--lifeflow-border); }
+      .text-border { color: var(--lifeflow-border); }
+      .border-border { border-color: var(--lifeflow-border); }
+      .ring-border { --tw-ring-color: var(--lifeflow-border); }
+      .bg-input { background-color: var(--lifeflow-input); }
+      .text-input { color: var(--lifeflow-input); }
+      .border-input { border-color: var(--lifeflow-input); }
+      .ring-input { --tw-ring-color: var(--lifeflow-input); }
+      .bg-ring { background-color: var(--lifeflow-ring); }
+      .text-ring { color: var(--lifeflow-ring); }
+      .border-ring { border-color: var(--lifeflow-ring); }
+      .ring-ring { --tw-ring-color: var(--lifeflow-ring); }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+</head>
+<body class="min-h-screen font-sans antialiased">
+    <style id="step1-page-styles">
+      /* === 模块功能色（按功能语义，浅色 / 深色双套） === */
+      :root {
+        --lifeflow-module-study: #0A7CFF;
+        --lifeflow-module-study-light: rgba(10,124,255,0.14);
+        --lifeflow-module-sleep: #7C5CFF;
+        --lifeflow-module-sleep-light: rgba(124,92,255,0.14);
+        --lifeflow-module-meds: #D97706;
+        --lifeflow-module-meds-light: rgba(217,119,6,0.16);
+        --lifeflow-module-training: #FF7A1A;
+        --lifeflow-module-training-light: rgba(255,122,26,0.14);
+        --lifeflow-module-gongfa: #22C55E;
+        --lifeflow-module-gongfa-light: rgba(34,197,94,0.14);
+        --lifeflow-module-posture: #10B981;
+        --lifeflow-module-posture-light: rgba(16,185,129,0.14);
+        --lifeflow-module-schedule: #AF52DE;
+        --lifeflow-module-schedule-light: rgba(175,82,222,0.14);
+        --lifeflow-module-food: #FF9500;
+        --lifeflow-module-food-light: rgba(255,149,0,0.15);
+        --lifeflow-module-water: #0EA5E9;
+        --lifeflow-module-water-light: rgba(14,165,233,0.14);
+        --lifeflow-module-blank: #8E8E93;
+        --lifeflow-module-blank-light: rgba(142,142,147,0.16);
+
+        /* T25 · 8+8+8 三分类语义色（睡眠紫 / 工作学习蓝 / 生活绿） */
+        --lifeflow-888-sleep: #8B5CF6;
+        --lifeflow-888-sleep-light: rgba(139,92,246,0.14);
+        --lifeflow-888-study: #3B82F6;
+        --lifeflow-888-study-light: rgba(59,130,246,0.14);
+        --lifeflow-888-life: #34C759;
+        --lifeflow-888-life-light: rgba(52,199,89,0.14);
+      }
+      .dark {
+        --lifeflow-module-study: #409CFF;
+        --lifeflow-module-study-light: rgba(64,156,255,0.2);
+        --lifeflow-module-sleep: #A78BFA;
+        --lifeflow-module-sleep-light: rgba(167,139,250,0.2);
+        --lifeflow-module-meds: #E8A23D;
+        --lifeflow-module-meds-light: rgba(232,162,61,0.2);
+        --lifeflow-module-training: #FF8A3D;
+        --lifeflow-module-training-light: rgba(255,138,61,0.2);
+        --lifeflow-module-gongfa: #4ADE80;
+        --lifeflow-module-gongfa-light: rgba(74,222,128,0.2);
+        --lifeflow-module-posture: #34D399;
+        --lifeflow-module-posture-light: rgba(52,211,153,0.2);
+        --lifeflow-module-schedule: #C084FC;
+        --lifeflow-module-schedule-light: rgba(192,132,252,0.2);
+        --lifeflow-module-food: #FFB340;
+        --lifeflow-module-food-light: rgba(255,179,64,0.2);
+        --lifeflow-module-water: #38BDF8;
+        --lifeflow-module-water-light: rgba(56,189,248,0.2);
+        --lifeflow-module-blank: #9BA1AD;
+        --lifeflow-module-blank-light: rgba(155,161,173,0.22);
+      }
+
+      /* === 关键布局静态 CSS 兜底（不依赖运行时 Tailwind） === */
+      #wizard-shell { display: flex; flex-direction: column; height: 100vh; }
+      @supports (height: 100dvh) { #wizard-shell { height: 100dvh; } }
+      #wizard-shell > header,
+      #wizard-shell > footer { flex-shrink: 0; }
+      #step1-content {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior-y: contain;
+      }
+      #bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; }
+      .lf-next-bar { padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px)); }
+
+      /* === 组件样式 === */
+      .lf-icon-btn {
+        display: flex; align-items: center; justify-content: center;
+        width: 32px; height: 32px; border-radius: 9999px;
+        background: var(--lifeflow-muted); color: var(--lifeflow-text-primary);
+        transition: background-color .15s ease, transform .12s ease;
+      }
+      .lf-icon-btn:hover { background: var(--lifeflow-border-light); }
+      .lf-icon-btn:active { transform: scale(0.92); }
+
+      .lf-step-indicator {
+        display: inline-flex; align-items: center; gap: 2px;
+        border-radius: 9999px; background: var(--lifeflow-muted);
+        padding: 4px 10px; font-family: var(--lifeflow-font-mono);
+        font-size: 12px; font-weight: 500; line-height: 1;
+        color: var(--lifeflow-text-tertiary);
+      }
+      .lf-step-indicator b { color: var(--lifeflow-primary); font-weight: 700; }
+
+      .lf-hint {
+        display: flex; align-items: flex-start; gap: 6px;
+        padding: 2px 2px 4px; font-size: 12px; line-height: 1.5;
+        color: var(--lifeflow-text-secondary);
+      }
+      .lf-hint svg { margin-top: 1px; flex-shrink: 0; }
+
+      /* 8+8+8 三分类配额提示条（T25 · 480 分钟 × 3） */
+      .lf-quota-strip {
+        display: flex; flex-wrap: wrap; gap: 6px;
+        padding: 2px 2px 6px;
+      }
+      .lf-quota-item {
+        display: inline-flex; align-items: center; gap: 5px;
+        padding: 4px 9px; border-radius: 9999px;
+        background: var(--lifeflow-muted);
+        font-size: 11px; line-height: 1.4; color: var(--lifeflow-text-secondary);
+      }
+      .lf-quota-item b { font-family: var(--lifeflow-font-mono); font-weight: 600; color: var(--lifeflow-text-primary); }
+      .lf-quota-dot { width: 8px; height: 8px; border-radius: 9999px; flex-shrink: 0; }
+
+      /* 睡眠段：入睡/起床可调 + 配额提示（T25 · sleepBedTime/sleepWakeTime 双向同步） */
+      .lf-sleep-edit-hint {
+        display: flex; align-items: center; gap: 5px;
+        padding: 2px 16px 0; font-size: 11px; line-height: 1.5;
+        color: var(--lifeflow-888-sleep);
+      }
+      .lf-sleep-edit-hint svg { width: 13px; height: 13px; flex-shrink: 0; }
+      .lf-quota-hint {
+        display: flex; align-items: center; gap: 5px;
+        padding: 2px 16px 0; font-size: 11px; line-height: 1.5;
+        color: var(--lifeflow-888-sleep);
+      }
+      .lf-quota-hint svg { width: 13px; height: 13px; flex-shrink: 0; }
+
+      .lf-seg-card {
+        overflow: hidden; border-radius: var(--lifeflow-radius-lg);
+        background: var(--lifeflow-card); box-shadow: var(--lifeflow-shadow-1);
+      }
+      .lf-seg-icon {
+        display: flex; align-items: center; justify-content: center;
+        width: 36px; height: 36px; border-radius: 9999px;
+        background: var(--lf-chip-light); color: var(--lf-chip); flex-shrink: 0;
+      }
+      .lf-seg-count {
+        min-width: 26px; text-align: center; border-radius: 9999px;
+        background: var(--lifeflow-muted); padding: 3px 8px;
+        font-family: var(--lifeflow-font-mono); font-size: 12px;
+        font-weight: 600; color: var(--lifeflow-text-secondary);
+      }
+      .lf-badge-lock {
+        display: inline-flex; align-items: center; gap: 3px;
+        border-radius: 9999px; padding: 2px 8px; font-size: 10px;
+        font-weight: 500; line-height: 1.2; white-space: nowrap;
+        color: var(--lifeflow-module-sleep); background: var(--lifeflow-module-sleep-light);
+      }
+      .lf-seg-time {
+        display: inline-flex; align-items: center; gap: 3px;
+        border-radius: var(--lifeflow-radius-sm); background: var(--lifeflow-muted);
+        padding: 4px 10px; font-size: 12px; font-weight: 600;
+        color: var(--lifeflow-text-secondary); font-variant-numeric: tabular-nums;
+      }
+      .lf-adjust-btn {
+        display: inline-flex; align-items: center; gap: 4px;
+        border-radius: var(--lifeflow-radius-sm);
+        border: 1px solid var(--lifeflow-border-light);
+        background: var(--lifeflow-muted); padding: 5px 10px;
+        font-size: 12px; font-weight: 500; color: var(--lifeflow-text-secondary);
+        transition: background-color .15s ease, color .15s ease, transform .12s ease;
+      }
+      .lf-adjust-btn:hover { background: var(--lifeflow-border-light); color: var(--lifeflow-text-primary); }
+      .lf-adjust-btn:active { transform: scale(0.96); }
+
+      .lf-editor {
+        border-top: 1px solid var(--lifeflow-border-light);
+        background: var(--lifeflow-muted);
+        padding: 12px 16px;
+        animation: lf-slide .2s ease-out;
+      }
+      @keyframes lf-slide {
+        from { opacity: 0; transform: translateY(-4px); }
+        to { opacity: 1; transform: none; }
+      }
+      .lf-time-input {
+        width: 86px; text-align: center; border-radius: var(--lifeflow-radius-sm);
+        background: var(--lifeflow-card); border: 1px solid var(--lifeflow-border-light);
+        padding: 6px 8px; font-family: var(--lifeflow-font-mono); font-size: 13px;
+        font-weight: 600; color: var(--lifeflow-text-primary);
+        outline: none; transition: border-color .15s ease;
+      }
+      .lf-time-input:focus { border-color: var(--lifeflow-ring); }
+      /* 睡眠段时间输入：可编辑态（入睡/起床可调 · 睡眠紫强调） */
+      .lf-time-input--sleep {
+        border: 1px solid var(--lifeflow-888-sleep);
+        background: var(--lifeflow-card);
+        color: var(--lifeflow-text-primary);
+        cursor: text;
+      }
+      .lf-time-input--sleep:hover { box-shadow: 0 0 0 2px var(--lifeflow-888-sleep-light); }
+      .lf-time-input--sleep:focus { border-color: var(--lifeflow-888-sleep); box-shadow: 0 0 0 2.5px var(--lifeflow-888-sleep-light); }
+      .lf-btn-sm {
+        border-radius: var(--lifeflow-radius-sm); padding: 7px 14px;
+        font-size: 13px; font-weight: 600; line-height: 1;
+        transition: background-color .15s ease, color .15s ease, transform .12s ease;
+      }
+      .lf-btn-sm:active { transform: scale(0.97); }
+      .lf-btn-sm-primary { background: var(--lifeflow-primary); color: var(--lifeflow-primary-foreground); }
+      .lf-btn-sm-primary:hover { background: var(--lifeflow-primary-hover); }
+      .lf-btn-sm-ghost { background: var(--lifeflow-border-light); color: var(--lifeflow-text-secondary); }
+      .lf-btn-sm-ghost:hover { color: var(--lifeflow-text-primary); }
+
+      /* 功能 chip */
+      .lf-chip {
+        position: relative;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        gap: 6px; min-width: 0;
+        border-radius: var(--lifeflow-radius-md);
+        border: 1px solid var(--lifeflow-border-light);
+        background: var(--lifeflow-muted);
+        padding: 10px 4px;
+        color: var(--lifeflow-text-tertiary);
+        transition: background-color .15s ease, border-color .15s ease, transform .12s ease;
+      }
+      .lf-chip svg { color: inherit; }
+      .lf-chip:hover { border-color: var(--lifeflow-border); }
+      .lf-chip:active { transform: scale(0.95); }
+      .lf-chip-label {
+        max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        font-size: 10px; line-height: 1; font-weight: 500;
+      }
+      .lf-chip--on { border-color: var(--lf-chip); background: var(--lf-chip-light); color: var(--lifeflow-text-primary); }
+      .lf-chip--on:hover { border-color: var(--lf-chip); }
+      .lf-chip--on svg { color: var(--lf-chip); }
+      .lf-check-badge {
+        position: absolute; top: -5px; right: -5px;
+        display: none; align-items: center; justify-content: center;
+        width: 18px; height: 18px; border-radius: 9999px;
+        background: var(--lf-chip);
+        box-shadow: 0 0 0 1.5px var(--lifeflow-card), var(--lifeflow-shadow-2);
+      }
+      .lf-chip--on .lf-check-badge { display: inline-flex; animation: lf-pop .3s cubic-bezier(.34,1.56,.64,1); }
+      .lf-chip--on .lf-check-badge svg { color: #FFFFFF; }
+      @keyframes lf-pop {
+        0% { transform: scale(0); opacity: 0; }
+        70% { transform: scale(1.15); }
+        100% { transform: scale(1); opacity: 1; }
+      }
+
+      /* 睡眠段锁定行 */
+      .lf-locked-row {
+        display: flex; align-items: center; gap: 10px;
+        width: 100%; text-align: left;
+        border-top: 1px solid var(--lifeflow-border-light);
+        padding: 10px 16px; cursor: not-allowed;
+        color: var(--lifeflow-text-secondary);
+        background: transparent;
+      }
+      .lf-locked-check {
+        display: inline-flex; align-items: center; justify-content: center;
+        width: 20px; height: 20px; border-radius: 9999px; flex-shrink: 0;
+        background: var(--lifeflow-module-sleep); color: #FFFFFF;
+      }
+      .lf-lock-badge {
+        display: inline-flex; align-items: center; gap: 3px;
+        border-radius: 9999px; padding: 3px 8px; font-size: 10px;
+        font-weight: 500; line-height: 1; white-space: nowrap;
+        color: var(--lifeflow-module-sleep); background: var(--lifeflow-module-sleep-light);
+      }
+      .lf-shake { animation: lf-shake .25s ease-in-out; }
+      @keyframes lf-shake {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-3px); }
+        75% { transform: translateX(3px); }
+      }
+
+      /* 底部下一步 */
+      .lf-next-btn {
+        display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+        min-width: 104px; border-radius: 9999px;
+        background: var(--lifeflow-primary); color: var(--lifeflow-primary-foreground);
+        padding: 12px 20px; font-size: 15px; font-weight: 600; line-height: 1;
+        transition: background-color .15s ease, transform .12s ease;
+      }
+      .lf-next-btn:hover { background: var(--lifeflow-primary-hover); }
+      .lf-next-btn:active { transform: scale(0.97); }
+      .lf-next-pop { animation: lf-pop .3s cubic-bezier(.34,1.56,.64,1); }
+
+      #step1-status { transition: color .2s ease; }
+      .lf-status-flash { animation: lf-status .8s ease-out; }
+      @keyframes lf-status {
+        0% { opacity: .45; color: var(--lifeflow-primary); transform: translateY(1px); }
+        100% { opacity: 1; color: var(--lifeflow-text-tertiary); transform: none; }
+      }
+      .lf-flash { animation: lf-flash .5s ease-out; }
+      @keyframes lf-flash {
+        0% { box-shadow: 0 0 0 2px var(--lifeflow-ring); }
+        100% { box-shadow: 0 0 0 0 transparent; }
+      }
+
+      .lf-chip:focus-visible,
+      .lf-adjust-btn:focus-visible,
+      .lf-btn-sm:focus-visible,
+      .lf-next-btn:focus-visible,
+      .lf-icon-btn:focus-visible,
+      .lf-locked-row:focus-visible {
+        outline: 2px solid var(--lifeflow-ring);
+        outline-offset: 2px;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .lf-chip, .lf-adjust-btn, .lf-btn-sm, .lf-icon-btn, .lf-next-btn,
+        .lf-check-badge, .lf-editor, .lf-shake, .lf-next-pop, .lf-status-flash, .lf-flash {
+          animation: none !important;
+          transition: none !important;
+        }
+      }
+    </style>
+    <main id="wizard-shell" class="mx-auto w-full max-w-md h-screen flex flex-col">
+      <!-- 1. 固定顶部头部 -->
+      <header class="shrink-0 z-20 flex items-center gap-2 border-b border-[var(--lifeflow-border-light)] bg-[var(--lifeflow-background)] px-4 pb-3 pt-3">
+        <a href="#" data-dom-id="edit-back" aria-label="返回理想日" class="lf-icon-btn shrink-0"><i data-lucide="chevron-left" class="h-5 w-5"></i></a>
+        <h1 class="min-w-0 flex-1 truncate text-center text-[17px] font-semibold leading-none text-[var(--lifeflow-text-primary)]">编辑理想日</h1>
+        <span class="lf-step-indicator shrink-0" aria-label="步骤 1 于 2"><b>1</b> / 2</span>
+      </header>
+
+      <!-- 2. 滚动内容区：五段功能勾选 -->
+      <section id="step1-content" class="no-scrollbar space-y-3 px-4 py-3">
+        <p class="lf-hint"><i data-lucide="info" class="h-3.5 w-3.5 text-[var(--lifeflow-primary)]"></i><span>勾选各时段功能；点「调整」可修改段边界；睡眠段入睡/起床可调，同步睡眠目标。</span></p>
+
+        <!-- 8+8+8 三分类配额提示（T25 · 睡眠紫 / 工作学习蓝 / 生活绿） -->
+        <div class="lf-quota-strip" aria-label="8+8+8 三分类配额，各 480 分钟">
+          <span class="lf-quota-item"><i class="lf-quota-dot" style="background:var(--lifeflow-888-sleep)"></i>睡眠 <b>8h</b> · 恢复精力</span>
+          <span class="lf-quota-item"><i class="lf-quota-dot" style="background:var(--lifeflow-888-study)"></i>工作学习 <b>8h</b> · 专注产出</span>
+          <span class="lf-quota-item"><i class="lf-quota-dot" style="background:var(--lifeflow-888-life)"></i>生活 <b>8h</b> · 滋养联结</span>
+        </div>
+
+        <!-- 睡眠段（独特段 · 锁定） -->
+        <section data-dom-id="seg-sleep" class="lf-seg-card">
+          <div class="flex items-center gap-3 px-4 pb-2 pt-3">
+            <span class="lf-seg-icon" style="--lf-chip:var(--lifeflow-module-sleep);--lf-chip-light:var(--lifeflow-module-sleep-light)"><i data-lucide="moon" class="h-[18px] w-[18px]"></i></span>
+            <div class="min-w-0 flex-1">
+              <div class="flex flex-wrap items-center gap-1.5">
+                <h2 class="text-[15px] font-semibold leading-tight text-[var(--lifeflow-text-primary)]">睡眠</h2>
+                <span class="lf-badge-lock"><i data-lucide="lock" class="h-3 w-3"></i>仅 sleep 功能锁定</span>
+              </div>
+              <p class="mt-0.5 truncate text-[12px] leading-tight text-[var(--lifeflow-text-secondary)]">夜间 7.5h + 午睡 0.5h · 独特段</p>
+            </div>
+            <span class="lf-seg-count shrink-0" data-seg-count aria-label="已选功能数">2</span>
+          </div>
+
+          <div data-time-row class="flex flex-wrap items-center gap-x-2 gap-y-1.5 px-4 pb-3">
+            <span class="lf-mono lf-seg-time">夜间 <span data-time-cell="night-start">22:30</span> <span class="opacity-60">—</span> <span data-time-cell="night-end">06:00</span></span>
+            <span class="lf-mono lf-seg-time">午睡 <span data-time-cell="nap-start">12:30</span> <span class="opacity-60">—</span> <span data-time-cell="nap-end">13:00</span></span>
+            <button type="button" data-adjust="sleep" aria-label="调整睡眠段起止时间" class="lf-adjust-btn"><i data-lucide="sliders-horizontal" class="h-3.5 w-3.5"></i>调整</button>
+          </div>
+
+          <p class="lf-sleep-edit-hint"><i data-lucide="sliders-horizontal"></i>入睡/起床可调 · 调整后双向同步睡眠目标（sleepBedTime / sleepWakeTime）</p>
+          <p id="sleep-quota-hint" class="lf-quota-hint"><i data-lucide="moon"></i>睡眠配额 8h · 恢复精力</p>
+
+          <div data-editor="sleep" class="lf-editor" hidden>
+            <div class="space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="w-8 shrink-0 text-[12px] text-[var(--lifeflow-text-secondary)]">夜间</span>
+                <input type="time" data-edit="night-start" value="22:30" aria-label="夜间睡眠开始时间（入睡）" class="lf-time-input lf-time-input--sleep">
+                <span class="text-[13px] text-[var(--lifeflow-text-tertiary)]">—</span>
+                <input type="time" data-edit="night-end" value="06:00" aria-label="夜间睡眠结束时间（起床）" class="lf-time-input lf-time-input--sleep">
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="w-8 shrink-0 text-[12px] text-[var(--lifeflow-text-secondary)]">午睡</span>
+                <input type="time" data-edit="nap-start" value="12:30" aria-label="午睡开始时间" class="lf-time-input lf-time-input--sleep">
+                <span class="text-[13px] text-[var(--lifeflow-text-tertiary)]">—</span>
+                <input type="time" data-edit="nap-end" value="13:00" aria-label="午睡结束时间" class="lf-time-input lf-time-input--sleep">
+              </div>
+            </div>
+            <div class="mt-2 flex items-center gap-2">
+              <button type="button" data-editor-save class="lf-btn-sm lf-btn-sm-primary">保存</button>
+              <button type="button" data-editor-cancel class="lf-btn-sm lf-btn-sm-ghost">取消</button>
+            </div>
+          </div>
+
+          <button type="button" data-locked-row data-name="夜间睡眠" aria-label="夜间睡眠 已锁定 不可取消" class="lf-locked-row">
+            <span class="lf-locked-check"><i data-lucide="check" class="h-3 w-3"></i></span>
+            <i data-lucide="moon" class="h-4 w-4 shrink-0 text-[var(--lifeflow-module-sleep)]"></i>
+            <span class="min-w-0 flex-1 truncate text-[13px] font-medium text-[var(--lifeflow-text-primary)]">夜间睡眠</span>
+            <span class="lf-lock-badge"><i data-lucide="lock" class="h-3 w-3"></i>锁定</span>
+          </button>
+          <button type="button" data-locked-row data-name="午睡" aria-label="午睡 已锁定 不可取消" class="lf-locked-row">
+            <span class="lf-locked-check"><i data-lucide="check" class="h-3 w-3"></i></span>
+            <i data-lucide="zzz" class="h-4 w-4 shrink-0 text-[var(--lifeflow-module-sleep)]"></i>
+            <span class="min-w-0 flex-1 truncate text-[13px] font-medium text-[var(--lifeflow-text-primary)]">午睡</span>
+            <span class="lf-lock-badge"><i data-lucide="lock" class="h-3 w-3"></i>锁定</span>
+          </button>
+          <p class="flex items-start gap-1.5 border-t border-[var(--lifeflow-border-light)] px-4 py-2.5 text-[11px] leading-relaxed text-[var(--lifeflow-text-tertiary)]"><i data-lucide="info" class="mt-px h-3.5 w-3.5 shrink-0 text-[var(--lifeflow-module-sleep)]"></i>该段为独特睡眠段：仅含 sleep 功能且锁定不可取消，夜间与午睡时长将影响次日清晨起点。</p>
+        </section>
+
+        <!-- 上午段 -->
+        <section data-dom-id="seg-morning" class="lf-seg-card">
+          <div class="flex items-center gap-3 px-4 pb-2 pt-3">
+            <span class="lf-seg-icon" style="--lf-chip:var(--lifeflow-module-study);--lf-chip-light:var(--lifeflow-module-study-light)"><i data-lucide="sunrise" class="h-[18px] w-[18px]"></i></span>
+            <div class="min-w-0 flex-1">
+              <h2 class="text-[15px] font-semibold leading-tight text-[var(--lifeflow-text-primary)]">上午</h2>
+              <p class="mt-0.5 truncate text-[12px] leading-tight text-[var(--lifeflow-text-secondary)]">生活 2h + 目标 3h</p>
+            </div>
+            <span class="lf-seg-count shrink-0" data-seg-count aria-label="已选功能数">4</span>
+          </div>
+          <div data-time-row class="flex items-center gap-2 px-4 pb-3">
+            <span class="lf-mono lf-seg-time"><span data-time-cell="start">06:00</span> <span class="opacity-60">—</span> <span data-time-cell="end">12:00</span></span>
+            <button type="button" data-adjust="morning" aria-label="调整上午段起止时间" class="lf-adjust-btn"><i data-lucide="sliders-horizontal" class="h-3.5 w-3.5"></i>调整</button>
+          </div>
+          <div data-editor="morning" class="lf-editor" hidden>
+            <div class="flex items-center gap-2">
+              <input type="time" data-edit="start" value="06:00" aria-label="上午段开始时间" class="lf-time-input">
+              <span class="text-[13px] text-[var(--lifeflow-text-tertiary)]">—</span>
+              <input type="time" data-edit="end" value="12:00" aria-label="上午段结束时间" class="lf-time-input">
+            </div>
+            <div class="mt-2 flex items-center gap-2">
+              <button type="button" data-editor-save class="lf-btn-sm lf-btn-sm-primary">保存</button>
+              <button type="button" data-editor-cancel class="lf-btn-sm lf-btn-sm-ghost">取消</button>
+            </div>
+          </div>
+          <div class="grid grid-cols-4 gap-2 border-t border-[var(--lifeflow-border-light)] p-3">
+            <button type="button" data-chip data-seg="morning" data-name="作息" aria-pressed="true" aria-label="作息 已选择" class="lf-chip lf-chip--on" style="--lf-chip:var(--lifeflow-module-schedule);--lf-chip-light:var(--lifeflow-module-schedule-light)"><i data-lucide="clock" class="h-[18px] w-[18px]"></i><span class="lf-chip-label">作息</span><span class="lf-check-badge"><i data-lucide="check" class="h-3 w-3"></i></span></button>
+            <button type="button" data-chip data-seg="morning" data-name="饮食" aria-pressed="true" aria-label="饮食 已选择" class="lf-chip lf-chip--on" style="--lf-chip:var(--lifeflow-module-food);--lf-chip-light:var(--lifeflow-module-food-light)"><i data-lucide="utensils" class="h-[18px] w-[18px]"></i><span class="lf-chip-label">饮食</span><span class="lf-check-badge"><i data-lucide="check" class="h-3 w-3"></i></span></button>
+            <button type="button" data-chip data-seg="morning" data-name="饮水" aria-pressed="true" aria-label="饮水 已选择" class="lf-chip lf-chip--on" style="--lf-chip:var(--lifeflow-module-water);--lf-chip-light:var(--lifeflow-module-water-light)"><i data-lucide="droplets" class="h-[18px] w-[18px]"></i><span class="lf-chip-label">饮水</span><span class="lf-check-badge"><i data-lucide="check" class="h-3 w-3"></i></span></button>
+            <button type="button" data-chip data-seg="morning" data-name="学习" aria-pressed="true" aria-label="学习 已选择" class="lf-chip lf-chip--on" style="--lf-chip:var(--lifeflow-module-study);--lf-chip-light:var(--lifeflow-module-study-light)"><i data-lucide="book-open" class="h-[18px] w-[18px]"></i><span class="lf-chip-label">学习</span><span class="lf-check-badge"><i data-lucide="check" class="h-3 w-3"></i></span></button>
+            <button type="button" data-chip data-seg="morning" data-name="专注" aria-pressed="false" aria-label="专注 未选择" class="lf-chip" style="--lf-chip:var(--lifeflow-module-study);--lf-chip-light:var(--lifeflow-module-study-light)"><i data-lucide="timer" class="h-[18px] w-[18px]"></i><span class="lf-chip-label">专注</span><span class="lf-check-badge"><i data-lucide="check" class="h-3 w-3"></i></span></button>
+            <button type="button" data-chip data-seg="morning" data-name="训练" aria-pressed="false" aria-label="训练 未选择" class="lf-chip" style="--lf-chip:var(--lifeflow-module-training);--lf-chip-light:var(--lifeflow-module-training-light)"><i data-lucide="dumbbell" class="h-[18px] w-[18px]"></i><span class="lf-chip-label">训练</span><span class="lf-check-badge"><i data-lucide="check" class="h-3 w-3"></i></span></button>
+            <button type="button" data-chip data-seg="morning" data-name="功法" aria-pressed="false" aria-label="功法 未选择" class="lf-chip" style="--lf-chip:var(--lifeflow-module-gongfa);--lf-chip-light:var(--lifeflow-module-gongfa-light)"><i data-lucide="sprout" class="h-[18px] w-[18px]"></i><span class="lf-chip-label">功法</span><span class="lf-check-badge"><i data-lucide="check" class="h-3 w-3"></i></span></button>
+            <button type="button" data-chip data-seg="morning" data-name="体态" aria-pressed="false" aria-label="体态 未选择" class="lf-chip" style="--lf-chip:var(--lifeflow-module-posture);--lf-chip-light:var(--lifeflow-module-posture-light)"><i data-lucide="person-standing" class="h-[18px] w-[18px]"></i><span class="lf-chip-label">体态</span><span class="lf-check-badge"><i data-lucide="check" class="h-3 w-3"></i></span></button>
+            <button type="button" data-chip data-seg="morning" data-name="吃药" aria-pressed="false" aria-label="吃药 未选择" class="lf-chip" style="--lf-chip:var(--lifeflow-module-meds);--lf-chip-light:var(--lifeflow-module-meds-light)"><i data-lucide="pill" class="h-[18px] w-[18px]"></i><span class="lf-chip-label">吃药</span><span class="lf-check-badge"><i data-lucide="check" class="h-3 w-3"></i></span></button>
+            <button type="button" data-chip data-seg="morning" data-name="冥想" aria-pressed="false" aria-label="冥想 未选择" class="lf-chip" style="--lf-chip:var(--lifeflow-module-gongfa);--lf-chip-light:var(--lifeflow-module-gongfa-light)"><i data-lucide="flower" class="h-[18px] w-[18px]"></i><span class="lf-chip-label">冥想</span><span class="lf-check-badge"><i data-lucide="check" class="h-3 w-3"></i></span></button>
+            <button type="button" data-chip data-seg="morning" data-name="留白" aria-pressed="false" aria-label="留白 未选择" class="lf-chip" style="--lf-chip:var(--lifeflow-module-blank);--lf-chip-light:var(--lifeflow-module-blank-light)"><i data-lucide="coffee" class="h-[18px] w-[18px]"></i><span class="lf-chip-label">留白</span><span class="lf-check-badge"><i data-lucide="check" class="h-3 w-3"></i></span></button>
+            <button type="button" data-chip data-seg="morning" data-name="备忘" aria-pressed="false" aria-label="备忘 未选择" class="lf-chip" style="--lf-chip:var(--lifeflow-module-study);--lf-chip-light:var(--lifeflow-module-study-light)"><i data-lucide="sticky-note" class="h-[18px] w-[18px]"></i><span class="lf-chip-label">备忘</span><span class="lf-check-badge"><i data-lucide="check" class="h-3 w-3"></i></span></button>
+          </div>
+        </section>
+
+        <!-- 中午段 -->
+        <section data-dom-id="seg-noon" class="lf-seg-card">
+          <div class="flex items-center gap-3 px-4 pb-2 pt-3">
+            <span class="lf-seg-icon" style="--lf-chip:var(--lifeflow-module-food);--lf-chip-light:var(--lifeflow-module-food-light)"><i data-lucide="coffee" class="h-[18px] w-[18px]"></i></span>
+            <div class="min-w-0 flex-1">
+              <h2 class="text-[15px] font-semibold leading-tight text-[var(--lifeflow-text-primary)]">中午</h2>
+              <p class="mt-0.5 truncate text-[12px] leading-tight text-[var(--lifeflow-text-secondary)]">午餐午休 · 生活补充</p>
+            </div>
+            <span class="lf-seg-count shrink-0" data-seg-count aria-label="已选功能数">2</span>
+          </div>
+          <div data-time-row class="flex items-center gap-2 px-4 pb-3">
+            <span class="lf-mono lf-seg-time"><span data-time-cell="start">12:00</span> <span class="opacity-60">—</span> <span data-time-cell="end">14:00</span></span>
+            <button type="button" data-adjust="noon" aria-label="调整中午段起止时间" class="lf-adjust-btn"><i data-lucide="sliders-horizontal" class="h-3.5 w-3.5"></i>调整</button>
+          </div>
+          <div data-editor="noon" class="lf-editor" hidden>
+            <div class="flex items-center gap-2">
+              <input type="time" data-edit="start" value="12:00" aria-label="中午段开始时间" class="lf-time-input">
+              <span class="text-[13px] text-[var(--lifeflow-text-tertiary)]">—</span>
+              <input type="time" data-edit="end" value="14:00" aria-label="中午段结束时间" class="lf-time-input">
+            </div>
+            <div class="mt-2 flex items-center gap-2">
+              <button type="button" data-editor-save class="lf-btn-sm lf-btn-sm-primary">保存</button>
+              <button type="button" data-editor-cancel class="lf-btn-sm lf-btn-sm-ghost">取消</button>
+            </div>
+          </div>
+          <div class="grid grid-cols-4 gap-2 border-t border-[var(--lifeflow-border-light)] p-3">
+            <button type="button" data-chip data-seg="noon" data-name="饮食" aria-pressed="true" aria-label="饮食 已选择" class="lf-chip lf-chip--on" style="--lf-chip:var(--lifeflow-module-food);--lf-chip-light:var(--lifeflow-module-food-light)"><i data-lucide="utensils" class="h-[18px] w-[18px]"></i><span class="lf-chip-label">饮食</span><span class="lf-check-badge"><i data-lucide="check" class="h-3 w-3"></i></span></button>
+            <button type="button" data-chip data-seg="noon" data-name="饮水" aria-pressed="true" aria-label="饮水 已选择" class="lf-chip lf-chip--on" style="--lf-chip:var(--lifeflow-module-water);--lf-chip-light:var(--lifeflow-module-water-light)"><i data-lucide="droplets" class="h-[18px] w-[18px]"></i><span class="lf-chip-label">饮水</span><span class="lf-check-badge"><i data-lucide="check" class="h-3 w-3"></i></span></button>
+            <button type="button" data-chip data-seg="noon" data-name="作息" aria-pressed="false" aria-label="作息 未选择" class="lf-chip" style="--lf-chip:var(--lifeflow-module-schedule);--lf-chip-light:var(--lifeflow-module-schedule-light)"><i data-lucide="clock" class="h-[18px] w-[18px]"></i><span class="lf-chip-label">作息</span><span class="lf-check-badge"><i data-lucide="check" class="h-3 w-3"></i></span></button>
+            <button type="button" data-chip data-seg="noon" data-name="学习" aria-pressed="false" aria-label="学习 未选择" class="lf-chip" style="--lf-chip:var(--lifeflow-module-study);--lf-chip-light:var(--lifeflow-module-study-light)"><i data-lucide="book-open" class="h-[18px] w-[18px]"></i><span class="lf-chip-label">学习</span><span class="lf-check-badge"><i data-lucide="check" class="h-3 w-3"></i></span></button>
+            <button type="button" data-chip data-seg="noon" data-name="专注" aria-pressed="false" aria-label="专注 未选择" class="lf-chip" style="--lf-chip:var(--lifeflow-module-study);--lf-chip-light:var(--lifeflow-module-study-light)"><i data-lucide="timer" class="h-[18px] w-[18px]"></i><span class="lf-chip-label">专注</span><span class="lf-check-badge"><i data-lucide="check" class="h-3 w-3"></i></span></button>
+            <button type="button" data-chip data-seg="noon" data-name="训练" aria-pressed="false" aria-label="训练 未选择" class="lf-chip" style="--lf-chip:var(--lifeflow-module-training);--lf-chip-light:var(--lifeflow-module-training-light)"><i data-lucide="dumbbell" class="h-[18px] w-[18px]"></i><span class="lf-chip-label">训练</span><span class="lf-check-badge"><i data-lucide="check" class="h-3 w-3"></i></span></button>
+            <button type="button" data-chip data-seg="noon" data-name="功法" aria-pressed="false" aria-label="功法 未选择" class="lf-chip" style="--lf-chip:var(--lifeflow-module-gongfa);--lf-chip-light:var(--lifeflow-module-gongfa-light)"><i data-lucide="sprout" class="h-[18px] w-[18px]"></i><span class="lf-chip-label">功法</span><span class="lf-check-badge"><i data-lucide="check" class="h-3 w-3"></i></span></button>
+            <button type="button" data-chip data-seg="noon" data-name="体态" aria-pressed="false" aria-label="体态 未选择" class="lf-chip" style="--lf-chip:var(--lifeflow-module-posture);--lf-chip-light:var(--lifeflow-module-posture-light)"><i data-lucide="person-standing" class="h-[18px] w-[18px]"></i><span class="lf-chip-label">体态</span><span class="lf-check-badge"><i data-lucide="check" class="h-3 w-3"></i></span></button>
+            <button type="button" data-chip data-seg="noon" data-name="吃药" aria-pressed="false" aria-label="吃药 未选择" class="lf-chip" style="--lf-chip:var(--lifeflow-module-meds);--lf-chip-light:var(--lifeflow-module-meds-light)"><i data-lucide="pill" class="h-[18px] w-[18px]"></i><span class="lf-chip-label">吃药</span><span class="lf-check-badge"><i data-lucide="check" class="h-3 w-3"></i></span></button>
+            <button type="button" data-chip data-seg="noon" data-name="冥想" aria-pressed="false" aria-label="冥想 未选择" class="lf-chip" style="--lf-chip:var(--lifeflow-module-gongfa);--lf-chip-light:var(--lifeflow-module-gongfa-light)"><i data-lucide="flower" class="h-[18px] w-[18px]"></i><span class="lf-chip-label">冥想</span><span class="lf-check-badge"><i data-lucide="check" class="h-3 w-3"></i></span></button>
+            <button type="button" data-chip data-seg="noon" data-name="留白" aria-pressed="false" aria-label="留白 未选择" class="lf-chip" style="--lf-chip:var(--lifeflow-module-blank);--lf-chip-light:var(--lifeflow-module-blank-light)"><i data-lucide="coffee" class="h-[18px] w-[18px]"></i><span class="lf-chip-label">留白</span><span class="lf-check-badge"><i data-lucide="check" class="h-3 w-3"></i></span></button>
+            <button type="button" data-chip data-seg="noon" data-name="备忘" aria-pressed="false" aria-label="备忘 未选择" class="lf-chip" style="--lf-chip:var(--lifeflow-module-study);--lf-chip-light:var(--lifeflow-module-study-light)"><i data-lucide="sticky-note" class="h-[18px] w-[18px]"></i><span class="lf-chip-label">备忘</span><span class="lf-check-badge"><i data-lucide="check" class="h-3 w-3"></i></span></button>
+          </div>
+        </section>
+
+        <!-- 下午段 -->
+        <section data-dom-id="seg-afternoon" class="lf-seg-card">
+          <div class="flex items-center gap-3 px-4 pb-2 pt-3">
+            <span class="lf-seg-icon" style="--lf-chip:var(--lifeflow-module-study);--lf-chip-light:var(--lifeflow-module-study-light)"><i data-lucide="cloud-sun" class="h-[18px] w-[18px]"></i></span>
+            <div class="min-w-0 flex-1">
+              <h2 class="text-[15px] font-semibold leading-tight text-[var(--lifeflow-text-primary)]">下午</h2>
+              <p class="mt-0.5 truncate text-[12px] leading-tight text-[var(--lifeflow-text-secondary)]">生活 2h + 目标 3h</p>
+            </div>
+            <span class="lf-seg-count shrink-0" data-seg-count aria-label="已选功能数">4</span>
+          </div>
+          <div data-time-row class="flex items-center gap-2 px-4 pb-3">
+            <span class="lf-mono lf-seg-time"><span data-time-cell="start">14:00</span> <span class="opacity-60">—</span> <span data-time-cell="end">18:00</span></span>
+            <button type="button" data-adjust="afternoon" aria-label="调整下午段起止时间" class="lf-adjust-btn"><i data-lucide="sliders-horizontal" class="h-3.5 w-3.5"></i>调整</button>
+          </div>
+          <div data-editor="afternoon" class="lf-editor" hidden>
+            <div class="flex items-center gap-2">
+              <input type="time" data-edit="start" value="14:00" aria-label="下午段开始时间" class="lf-time-input">
+              <span class="text-[13px] text-[var(--lifeflow-text-tertiary)]">—</span>
+              <input type="time" data-edit="end" value="18:00" aria-label="下午段结束时间" class="lf-time-input">
+            </div>
+            <div class="mt-2 flex items-center gap-2">
+              <button type="button" data-editor-save class="lf-btn-sm lf-btn-sm-primary">保存</button>
+              <button type="button" data-editor-cancel class="lf-btn-sm lf-btn-sm-ghost">取消</button>
+            </div>
+          </div>
+          <div class="grid grid-cols-4 gap-2 border-t border-[var(--lifeflow-border-light)] p-3">
+            <button type="button" data-chip data-seg="afternoon" data-name="学习" aria-pressed="true" aria-label="学习 已选择" class="lf-chip lf-chip--on" style="--lf-chip:var(--lifeflow-module-study);--lf-chip-light:var(--lifeflow-module-study-light)"><i data-lucide="book-open" class="h-[18px] w-[18px]"></i><span class="lf-chip-label">学习</span><span class="lf-check-badge"><i data-lucide="check" class="h-3 w-3"></i></span></button>
+            <button type="button" data-chip data-seg="afternoon" data-name="专注" aria-pressed="true" aria-label="专注 已选择" class="lf-chip lf-chip--on" style="--lf-chip:var(--lifeflow-module-study);--lf-chip-light:var(--lifeflow-module-study-light)"><i data-lucide="timer" class="h-[18px] w-[18px]"></i><span class="lf-chip-label">专注</span><span class="lf-check-badge"><i data-lucide="check" class="h-3 w-3"></i></span></button>
+            <button type="button" data-chip data-seg="afternoon" data-name="训练" aria-pressed="false" aria-label="训练 未选择" class="lf-chip" style="--lf-chip:var(--lifeflow-module-training);--lf-chip-light:var(--lifeflow-module-training-light)"><i data-lucide="dumbbell" class="h-[18px] w-[18px]"></i><span class="lf-chip-label">训练</span><span class="lf-check-badge"><i data-lucide="check" class="h-3 w-3"></i></span></button>
+            <button type="button" data-chip data-seg="afternoon" data-name="功法" aria-pressed="false" aria-label="功法 未选择" class="lf-chip" style="--lf-chip:var(--lifeflow-module-gongfa);--lf-chip-light:var(--lifeflow-module-gongfa-light)"><i data-lucide="sprout" class="h-[18px] w-[18px]"></i><span class="lf-chip-label">功法</span><span class="lf-check-badge"><i data-lucide="check" class="h-3 w-3"></i></span></button>
+            <button type="button" data-chip data-seg="afternoon" data-name="体态" aria-pressed="false" aria-label="体态 未选择" class="lf-chip" style="--lf-chip:var(--lifeflow-module-posture);--lf-chip-light:var(--lifeflow-module-posture-light)"><i data-lucide="person-standing" class="h-[18px] w-[18px]"></i><span class="lf-chip-label">体态</span><span class="lf-check-badge"><i data-lucide="check" class="h-3 w-3"></i></span></button>
+            <button type="button" data-chip data-seg="afternoon" data-name="作息" aria-pressed="false" aria-label="作息 未选择" class="lf-chip" style="--lf-chip:var(--lifeflow-module-schedule);--lf-chip-light:var(--lifeflow-module-schedule-light)"><i data-lucide="clock" class="h-[18px] w-[18px]"></i><span class="lf-chip-label">作息</span><span class="lf-check-badge"><i data-lucide="check" class="h-3 w-3"></i></span></button>
+            <button type="button" data-chip data-seg="afternoon" data-name="饮水" aria-pressed="true" aria-label="饮水 已选择" class="lf-chip lf-chip--on" style="--lf-chip:var(--lifeflow-module-water);--lf-chip-light:var(--lifeflow-module-water-light)"><i data-lucide="droplets" class="h-[18px] w-[18px]"></i><span class="lf-chip-label">饮水</span><span class="lf-check-badge"><i data-lucide="check" class="h-3 w-3"></i></span></button>
+            <button type="button" data-chip data-seg="afternoon" data-name="吃药" aria-pressed="false" aria-label="吃药 未选择" class="lf-chip" style="--lf-chip:var(--lifeflow-module-meds);--lf-chip-light:var(--lifeflow-module-meds-light)"><i data-lucide="pill" class="h-[18px] w-[18px]"></i><span class="lf-chip-label">吃药</span><span class="lf-check-badge"><i data-lucide="check" class="h-3 w-3"></i></span></button>
+            <button type="button" data-chip data-seg="afternoon" data-name="冥想" aria-pressed="false" aria-label="冥想 未选择" class="lf-chip" style="--lf-chip:var(--lifeflow-module-gongfa);--lf-chip-light:var(--lifeflow-module-gongfa-light)"><i data-lucide="flower" class="h-[18px] w-[18px]"></i><span class="lf-chip-label">冥想</span><span class="lf-check-badge"><i data-lucide="check" class="h-3 w-3"></i></span></button>
+            <button type="button" data-chip data-seg="afternoon" data-name="留白" aria-pressed="true" aria-label="留白 已选择" class="lf-chip lf-chip--on" style="--lf-chip:var(--lifeflow-module-blank);--lf-chip-light:var(--lifeflow-module-blank-light)"><i data-lucide="coffee" class="h-[18px] w-[18px]"></i><span class="lf-chip-label">留白</span><span class="lf-check-badge"><i data-lucide="check" class="h-3 w-3"></i></span></button>
+            <button type="button" data-chip data-seg="afternoon" data-name="备忘" aria-pressed="false" aria-label="备忘 未选择" class="lf-chip" style="--lf-chip:var(--lifeflow-module-study);--lf-chip-light:var(--lifeflow-module-study-light)"><i data-lucide="sticky-note" class="h-[18px] w-[18px]"></i><span class="lf-chip-label">备忘</span><span class="lf-check-badge"><i data-lucide="check" class="h-3 w-3"></i></span></button>
+            <button type="button" data-chip data-seg="afternoon" data-name="饮食" aria-pressed="false" aria-label="饮食 未选择" class="lf-chip" style="--lf-chip:var(--lifeflow-module-food);--lf-chip-light:var(--lifeflow-module-food-light)"><i data-lucide="utensils" class="h-[18px] w-[18px]"></i><span class="lf-chip-label">饮食</span><span class="lf-check-badge"><i data-lucide="check" class="h-3 w-3"></i></span></button>
+          </div>
+        </section>
+
+        <!-- 晚上段 -->
+        <section data-dom-id="seg-evening" class="lf-seg-card">
+          <div class="flex items-center gap-3 px-4 pb-2 pt-3">
+            <span class="lf-seg-icon" style="--lf-chip:var(--lifeflow-module-schedule);--lf-chip-light:var(--lifeflow-module-schedule-light)"><i data-lucide="moon-star" class="h-[18px] w-[18px]"></i></span>
+            <div class="min-w-0 flex-1">
+              <h2 class="text-[15px] font-semibold leading-tight text-[var(--lifeflow-text-primary)]">晚上</h2>
+              <p class="mt-0.5 truncate text-[12px] leading-tight text-[var(--lifeflow-text-secondary)]">生活 4h + 目标 2h</p>
+            </div>
+            <span class="lf-seg-count shrink-0" data-seg-count aria-label="已选功能数">8</span>
+          </div>
+          <div data-time-row class="flex items-center gap-2 px-4 pb-3">
+            <span class="lf-mono lf-seg-time"><span data-time-cell="start">18:00</span> <span class="opacity-60">—</span> <span data-time-cell="end">22:30</span></span>
+            <button type="button" data-adjust="evening" aria-label="调整晚上段起止时间" class="lf-adjust-btn"><i data-lucide="sliders-horizontal" class="h-3.5 w-3.5"></i>调整</button>
+          </div>
+          <div data-editor="evening" class="lf-editor" hidden>
+            <div class="flex items-center gap-2">
+              <input type="time" data-edit="start" value="18:00" aria-label="晚上段开始时间" class="lf-time-input">
+              <span class="text-[13px] text-[var(--lifeflow-text-tertiary)]">—</span>
+              <input type="time" data-edit="end" value="22:30" aria-label="晚上段结束时间" class="lf-time-input">
+            </div>
+            <div class="mt-2 flex items-center gap-2">
+              <button type="button" data-editor-save class="lf-btn-sm lf-btn-sm-primary">保存</button>
+              <button type="button" data-editor-cancel class="lf-btn-sm lf-btn-sm-ghost">取消</button>
+            </div>
+          </div>
+          <div class="grid grid-cols-4 gap-2 border-t border-[var(--lifeflow-border-light)] p-3">
+            <button type="button" data-chip data-seg="evening" data-name="学习" aria-pressed="true" aria-label="学习 已选择" class="lf-chip lf-chip--on" style="--lf-chip:var(--lifeflow-module-study);--lf-chip-light:var(--lifeflow-module-study-light)"><i data-lucide="book-open" class="h-[18px] w-[18px]"></i><span class="lf-chip-label">学习</span><span class="lf-check-badge"><i data-lucide="check" class="h-3 w-3"></i></span></button>
+            <button type="button" data-chip data-seg="evening" data-name="专注" aria-pressed="true" aria-label="专注 已选择" class="lf-chip lf-chip--on" style="--lf-chip:var(--lifeflow-module-study);--lf-chip-light:var(--lifeflow-module-study-light)"><i data-lucide="timer" class="h-[18px] w-[18px]"></i><span class="lf-chip-label">专注</span><span class="lf-check-badge"><i data-lucide="check" class="h-3 w-3"></i></span></button>
+            <button type="button" data-chip data-seg="evening" data-name="训练" aria-pressed="false" aria-label="训练 未选择" class="lf-chip" style="--lf-chip:var(--lifeflow-module-training);--lf-chip-light:var(--lifeflow-module-training-light)"><i data-lucide="dumbbell" class="h-[18px] w-[18px]"></i><span class="lf-chip-label">训练</span><span class="lf-check-badge"><i data-lucide="check" class="h-3 w-3"></i></span></button>
+            <button type="button" data-chip data-seg="evening" data-name="功法" aria-pressed="true" aria-label="功法 已选择" class="lf-chip lf-chip--on" style="--lf-chip:var(--lifeflow-module-gongfa);--lf-chip-light:var(--lifeflow-module-gongfa-light)"><i data-lucide="sprout" class="h-[18px] w-[18px]"></i><span class="lf-chip-label">功法</span><span class="lf-check-badge"><i data-lucide="check" class="h-3 w-3"></i></span></button>
+            <button type="button" data-chip data-seg="evening" data-name="体态" aria-pressed="true" aria-label="体态 已选择" class="lf-chip lf-chip--on" style="--lf-chip:var(--lifeflow-module-posture);--lf-chip-light:var(--lifeflow-module-posture-light)"><i data-lucide="person-standing" class="h-[18px] w-[18px]"></i><span class="lf-chip-label">体态</span><span class="lf-check-badge"><i data-lucide="check" class="h-3 w-3"></i></span></button>
+            <button type="button" data-chip data-seg="evening" data-name="作息" aria-pressed="false" aria-label="作息 未选择" class="lf-chip" style="--lf-chip:var(--lifeflow-module-schedule);--lf-chip-light:var(--lifeflow-module-schedule-light)"><i data-lucide="clock" class="h-[18px] w-[18px]"></i><span class="lf-chip-label">作息</span><span class="lf-check-badge"><i data-lucide="check" class="h-3 w-3"></i></span></button>
+            <button type="button" data-chip data-seg="evening" data-name="饮水" aria-pressed="true" aria-label="饮水 已选择" class="lf-chip lf-chip--on" style="--lf-chip:var(--lifeflow-module-water);--lf-chip-light:var(--lifeflow-module-water-light)"><i data-lucide="droplets" class="h-[18px] w-[18px]"></i><span class="lf-chip-label">饮水</span><span class="lf-check-badge"><i data-lucide="check" class="h-3 w-3"></i></span></button>
+            <button type="button" data-chip data-seg="evening" data-name="饮食" aria-pressed="true" aria-label="饮食 已选择" class="lf-chip lf-chip--on" style="--lf-chip:var(--lifeflow-module-food);--lf-chip-light:var(--lifeflow-module-food-light)"><i data-lucide="utensils" class="h-[18px] w-[18px]"></i><span class="lf-chip-label">饮食</span><span class="lf-check-badge"><i data-lucide="check" class="h-3 w-3"></i></span></button>
+            <button type="button" data-chip data-seg="evening" data-name="吃药" aria-pressed="false" aria-label="吃药 未选择" class="lf-chip" style="--lf-chip:var(--lifeflow-module-meds);--lf-chip-light:var(--lifeflow-module-meds-light)"><i data-lucide="pill" class="h-[18px] w-[18px]"></i><span class="lf-chip-label">吃药</span><span class="lf-check-badge"><i data-lucide="check" class="h-3 w-3"></i></span></button>
+            <button type="button" data-chip data-seg="evening" data-name="冥想" aria-pressed="false" aria-label="冥想 未选择" class="lf-chip" style="--lf-chip:var(--lifeflow-module-gongfa);--lf-chip-light:var(--lifeflow-module-gongfa-light)"><i data-lucide="flower" class="h-[18px] w-[18px]"></i><span class="lf-chip-label">冥想</span><span class="lf-check-badge"><i data-lucide="check" class="h-3 w-3"></i></span></button>
+            <button type="button" data-chip data-seg="evening" data-name="留白" aria-pressed="true" aria-label="留白 已选择" class="lf-chip lf-chip--on" style="--lf-chip:var(--lifeflow-module-blank);--lf-chip-light:var(--lifeflow-module-blank-light)"><i data-lucide="coffee" class="h-[18px] w-[18px]"></i><span class="lf-chip-label">留白</span><span class="lf-check-badge"><i data-lucide="check" class="h-3 w-3"></i></span></button>
+            <button type="button" data-chip data-seg="evening" data-name="备忘" aria-pressed="true" aria-label="备忘 已选择" class="lf-chip lf-chip--on" style="--lf-chip:var(--lifeflow-module-study);--lf-chip-light:var(--lifeflow-module-study-light)"><i data-lucide="sticky-note" class="h-[18px] w-[18px]"></i><span class="lf-chip-label">备忘</span><span class="lf-check-badge"><i data-lucide="check" class="h-3 w-3"></i></span></button>
+          </div>
+        </section>
+      </section>
+
+      <!-- 3. 固定底部：下一步 + 已选计数（safe-area） -->
+      <footer class="lf-next-bar shrink-0 px-4 pt-3">
+        <div class="flex items-center gap-3 rounded-xl border border-[var(--lifeflow-border-light)] bg-[var(--lifeflow-card)] px-4 py-3 shadow-[var(--lifeflow-shadow-2)]">
+          <div class="min-w-0 flex-1">
+            <p class="text-[12px] leading-tight text-[var(--lifeflow-text-secondary)]">已选 <span id="step1-count" class="lf-mono font-semibold text-[var(--lifeflow-primary)]">20</span> 项</p>
+            <p id="step1-status" aria-live="polite" class="mt-1 truncate text-[11px] leading-tight text-[var(--lifeflow-text-tertiary)]">点选功能 · 调整各段时段</p>
+          </div>
+          <a href="#" data-dom-id="edit-next" class="lf-next-btn shrink-0">下一步<i data-lucide="arrow-right" class="h-4 w-4"></i></a>
+        </div>
+      </footer>
+
+      <!-- 4. 底部导航 -->
+      <nav data-mobile-nav="global" id="bottom-nav" class="lf-tabbar-glass w-full max-w-md mx-auto h-[64px]"><div class="grid grid-cols-4 h-full"><a href="#" data-dom-id="nav-home" data-nav-key="home" data-active="false" class="min-w-0 flex flex-col items-center justify-center gap-0.5 h-full text-[var(--lifeflow-text-tertiary)]"><i data-lucide="home" class="w-5 h-5 shrink-0"></i><span class="text-[11px] leading-none whitespace-nowrap max-w-full truncate">首页</span></a><a href="#" data-dom-id="nav-goals" data-nav-key="goals" data-active="false" class="min-w-0 flex flex-col items-center justify-center gap-0.5 h-full text-[var(--lifeflow-text-tertiary)]"><i data-lucide="target" class="w-5 h-5 shrink-0"></i><span class="text-[11px] leading-none whitespace-nowrap max-w-full truncate">目标</span></a><a href="#" data-dom-id="nav-schedule" data-nav-key="schedule" data-active="false" class="min-w-0 flex flex-col items-center justify-center gap-0.5 h-full text-[var(--lifeflow-text-tertiary)]"><i data-lucide="calendar-days" class="w-5 h-5 shrink-0"></i><span class="text-[11px] leading-none whitespace-nowrap max-w-full truncate">日程</span></a><a href="#" data-dom-id="nav-ideal" data-nav-key="ideal" data-active="true" class="min-w-0 flex flex-col items-center justify-center gap-0.5 h-full text-[var(--lifeflow-primary)]"><i data-lucide="sun" class="w-5 h-5 shrink-0"></i><span class="text-[11px] leading-none whitespace-nowrap max-w-full truncate font-semibold">理想日</span></a></div></nav>
+    </main>
+    <script>
+(function () {
+  'use strict';
+
+  function showStatus(msg) {
+    var st = document.getElementById('step1-status');
+    if (!st) return;
+    st.textContent = msg;
+    st.classList.remove('lf-status-flash');
+    void st.offsetWidth;
+    st.classList.add('lf-status-flash');
+  }
+
+  function updateCount() {
+    var total = 0;
+    document.querySelectorAll('[data-dom-id^="seg-"]').forEach(function (card) {
+      var n = card.querySelectorAll('[data-locked-row], [data-chip].lf-chip--on').length;
+      var c = card.querySelector('[data-seg-count]');
+      if (c) c.textContent = n;
+      total += n;
+    });
+    var el = document.getElementById('step1-count');
+    if (el) el.textContent = total;
+    return total;
+  }
+
+  /* 功能 chips 勾选切换 */
+  document.querySelectorAll('[data-chip]').forEach(function (chip) {
+    chip.addEventListener('click', function () {
+      var on = chip.classList.toggle('lf-chip--on');
+      chip.setAttribute('aria-pressed', on ? 'true' : 'false');
+      chip.setAttribute('aria-label', (chip.getAttribute('data-name') || '功能') + (on ? ' 已选择' : ' 未选择'));
+      updateCount();
+      showStatus((chip.getAttribute('data-name') || '功能') + (on ? ' 已选' : ' 已取消'));
+    });
+  });
+
+  /* 睡眠段锁定行：不可取消 */
+  document.querySelectorAll('[data-locked-row]').forEach(function (row) {
+    row.addEventListener('click', function () {
+      row.classList.remove('lf-shake');
+      void row.offsetWidth;
+      row.classList.add('lf-shake');
+      showStatus('睡眠功能已锁定，不可取消勾选');
+    });
+  });
+
+  /* 段边界调整（展开时间输入 → 保存更新段标签） */
+  function openEditor(key) {
+    var card = document.querySelector('[data-dom-id="seg-' + key + '"]');
+    if (!card) return;
+    var row = card.querySelector('[data-time-row]');
+    var ed = card.querySelector('[data-editor]');
+    if (row) row.hidden = true;
+    if (ed) {
+      ed.hidden = false;
+      var f = ed.querySelector('input[type="time"]');
+      if (f) f.focus();
+    }
+  }
+
+  function closeEditor(ed) {
+    var card = ed.closest('[data-dom-id^="seg-"]');
+    ed.hidden = true;
+    var row = card ? card.querySelector('[data-time-row]') : null;
+    if (row) row.hidden = false;
+  }
+
+  function applyEditor(ed) {
+    var card = ed.closest('[data-dom-id^="seg-"]');
+    if (card) {
+      ed.querySelectorAll('input[type="time"]').forEach(function (inp) {
+        var key = inp.getAttribute('data-edit');
+        if (!key) return;
+        var cell = card.querySelector('[data-time-cell="' + key + '"]');
+        if (cell && inp.value) cell.textContent = inp.value;
+      });
+      card.querySelectorAll('[data-time-row] .lf-seg-time').forEach(function (p) {
+        p.classList.remove('lf-flash');
+        void p.offsetWidth;
+        p.classList.add('lf-flash');
+      });
+    }
+    closeEditor(ed);
+    var isSleep = card && card.getAttribute('data-dom-id') === 'seg-sleep';
+    showStatus(isSleep
+      ? '入睡/起床已更新 · 双向同步 sleepBedTime / sleepWakeTime'
+      : '时段边界已更新');
+  }
+
+  document.addEventListener('click', function (e) {
+    if (!e.target || !e.target.closest) return;
+    var adj = e.target.closest('[data-adjust]');
+    if (adj) { openEditor(adj.getAttribute('data-adjust')); return; }
+    var save = e.target.closest('[data-editor-save]');
+    if (save) { applyEditor(save.closest('[data-editor]')); return; }
+    var cancel = e.target.closest('[data-editor-cancel]');
+    if (cancel) { closeEditor(cancel.closest('[data-editor]')); }
+  });
+
+  /* 返回 */
+  var back = document.querySelector('[data-dom-id="edit-back"]');
+  if (back) {
+    back.addEventListener('click', function (e) {
+      e.preventDefault();
+      if (window.history && window.history.length > 1) { window.history.back(); }
+      else { showStatus('已返回理想日列表（原型演示）'); }
+    });
+  }
+
+  /* 下一步 */
+  var next = document.querySelector('[data-dom-id="edit-next"]');
+  if (next) {
+    next.addEventListener('click', function (e) {
+      e.preventDefault();
+      var n = updateCount();
+      showStatus('已记录 ' + n + ' 项选择，进入第 2 步「配置时间与次数」（原型演示）');
+      next.classList.remove('lf-next-pop');
+      void next.offsetWidth;
+      next.classList.add('lf-next-pop');
+    });
+  }
+
+  updateCount();
+})();
+    </script>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

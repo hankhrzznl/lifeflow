@@ -1,0 +1,2040 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>理想日 · 模板自定义</title>
+    <style id="theme-vars">
+/* LifeFlow 首页 — 日间浅色 / 夜间深色 双模式 */
+
+/* === LIGHT MODE (日间 · iOS 原生浅色) === */
+:root {
+  /* SURFACE & TEXT */
+  --lifeflow-background: #F2F2F7;
+  --lifeflow-foreground: #1C1C1E;
+  --lifeflow-card: #FFFFFF;
+  --lifeflow-card-foreground: #1C1C1E;
+  --lifeflow-popover: #FFFFFF;
+  --lifeflow-popover-foreground: #1C1C1E;
+  --lifeflow-muted: #F2F2F7;
+  --lifeflow-muted-foreground: #6C6C70;
+  --lifeflow-border: rgba(60,60,67,0.29);
+  --lifeflow-border-light: rgba(60,60,67,0.12);
+  --lifeflow-border-dashed: rgba(60,60,67,0.2);
+  --lifeflow-input: rgba(60,60,67,0.12);
+  --lifeflow-ring: #007AFF;
+
+  /* BRAND */
+  --lifeflow-primary: #007AFF;
+  --lifeflow-primary-hover: #0066D6;
+  --lifeflow-primary-light: rgba(0,122,255,0.12);
+  --lifeflow-primary-foreground: #FFFFFF;
+
+  /* PROGRESS */
+  --lifeflow-knit-thread: #007AFF;
+  --lifeflow-knit-thread-completed: #34C759;
+  --lifeflow-knit-thread-partial: #FF9500;
+  --lifeflow-knit-bg: #E9E9EB;
+  --lifeflow-knit-grid: rgba(60,60,67,0.1);
+
+  /* STATE */
+  --state-success: #34C759;
+  --state-success-light: rgba(52,199,89,0.14);
+  --state-warning: #FF3B30;
+  --state-warning-light: rgba(255,59,48,0.12);
+  --state-error: #FF3B30;
+  --state-error-light: rgba(255,59,48,0.12);
+  --state-info: #007AFF;
+  --state-info-light: rgba(0,122,255,0.12);
+
+  /* TEXT */
+  --lifeflow-text-primary: #1C1C1E;
+  --lifeflow-text-secondary: #6C6C70;
+  --lifeflow-text-tertiary: #8E8E93;
+  --lifeflow-text-inverse: #FFFFFF;
+
+  /* SHADOWS */
+  --lifeflow-shadow-1: 0 0 0 1px rgba(0,0,0,0.02), 0 1px 2px rgba(0,0,0,0.03);
+  --lifeflow-shadow-2: 0 2px 8px rgba(0,0,0,0.05);
+  --lifeflow-shadow-3: 0 8px 24px rgba(0,0,0,0.12);
+  --lifeflow-shadow-knit: none;
+
+  /* TAB BAR (light glass) */
+  --lifeflow-tabbar-bg: rgba(255,255,255,0.72);
+  --lifeflow-tabbar-blur: 20px;
+  --lifeflow-tabbar-blur-saturate: 180%;
+
+  /* AI BALL (deep blue) */
+  --lifeflow-ai-ball: #2E5FA3;
+
+  /* TYPOGRAPHY */
+  --lifeflow-font-display: -apple-system, BlinkMacSystemFont, "SF Pro SC", "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif;
+  --lifeflow-font-body: -apple-system, BlinkMacSystemFont, "SF Pro SC", "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif;
+  --lifeflow-font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+
+  --lifeflow-font-size-display: 34px;
+  --lifeflow-font-size-h1: 28px;
+  --lifeflow-font-size-h2: 20px;
+  --lifeflow-font-size-h3: 17px;
+  --lifeflow-font-size-body: 15px;
+  --lifeflow-font-size-sm: 13px;
+  --lifeflow-font-size-caption: 12px;
+
+  /* SPACING */
+  --lifeflow-space-xs: 4px;
+  --lifeflow-space-sm: 8px;
+  --lifeflow-space-md: 12px;
+  --lifeflow-space-lg: 16px;
+  --lifeflow-space-xl: 24px;
+  --lifeflow-space-2xl: 32px;
+
+  /* RADIUS */
+  --lifeflow-radius-sm: 6px;
+  --lifeflow-radius-md: 10px;
+  --lifeflow-radius-lg: 12px;
+  --lifeflow-radius-xl: 16px;
+  --lifeflow-radius-full: 9999px;
+
+  /* PORTABLE ALIASES */
+  --background: var(--lifeflow-background);
+  --foreground: var(--lifeflow-foreground);
+  --card: var(--lifeflow-card);
+  --card-foreground: var(--lifeflow-card-foreground);
+  --popover: var(--lifeflow-popover);
+  --popover-foreground: var(--lifeflow-popover-foreground);
+  --primary: var(--lifeflow-primary);
+  --primary-foreground: var(--lifeflow-primary-foreground);
+  --muted: var(--lifeflow-muted);
+  --muted-foreground: var(--lifeflow-muted-foreground);
+  --border: var(--lifeflow-border);
+  --input: var(--lifeflow-input);
+  --ring: var(--lifeflow-ring);
+  --radius-sm: var(--lifeflow-radius-sm);
+  --radius-md: var(--lifeflow-radius-md);
+  --radius-lg: var(--lifeflow-radius-lg);
+}
+
+/* === DARK MODE (夜间 · 深色沉浸式 Apple Fitness) === */
+.dark {
+  /* SURFACE & TEXT */
+  --lifeflow-background: #0B0F17;
+  --lifeflow-foreground: #F2F5FA;
+  --lifeflow-card: #141B28;
+  --lifeflow-card-foreground: #F2F5FA;
+  --lifeflow-popover: #1A2232;
+  --lifeflow-popover-foreground: #F2F5FA;
+  --lifeflow-muted: #1C2432;
+  --lifeflow-muted-foreground: rgba(242,245,250,0.6);
+  --lifeflow-border: rgba(255,255,255,0.09);
+  --lifeflow-border-light: rgba(255,255,255,0.06);
+  --lifeflow-border-dashed: rgba(255,255,255,0.18);
+  --lifeflow-input: rgba(255,255,255,0.12);
+  --lifeflow-ring: #0A84FF;
+
+  /* BRAND */
+  --lifeflow-primary: #0A84FF;
+  --lifeflow-primary-hover: #3D9BFF;
+  --lifeflow-primary-light: rgba(10,132,255,0.18);
+  --lifeflow-primary-foreground: #FFFFFF;
+
+  /* PROGRESS */
+  --lifeflow-knit-thread: #0A84FF;
+  --lifeflow-knit-thread-completed: #30D158;
+  --lifeflow-knit-thread-partial: #FF9F0A;
+  --lifeflow-knit-bg: rgba(255,255,255,0.1);
+  --lifeflow-knit-grid: rgba(255,255,255,0.08);
+
+  /* STATE */
+  --state-success: #30D158;
+  --state-success-light: rgba(48,209,88,0.16);
+  --state-warning: #FF453A;
+  --state-warning-light: rgba(255,69,58,0.16);
+  --state-error: #FF453A;
+  --state-error-light: rgba(255,69,58,0.16);
+  --state-info: #64D2FF;
+  --state-info-light: rgba(100,210,255,0.14);
+
+  /* TEXT */
+  --lifeflow-text-primary: #F2F5FA;
+  --lifeflow-text-secondary: rgba(242,245,250,0.72);
+  --lifeflow-text-tertiary: rgba(242,245,250,0.45);
+  --lifeflow-text-inverse: #FFFFFF;
+
+  /* SHADOWS */
+  --lifeflow-shadow-1: 0 1px 2px rgba(0,0,0,0.3);
+  --lifeflow-shadow-2: 0 4px 12px rgba(0,0,0,0.4);
+  --lifeflow-shadow-3: 0 8px 28px rgba(0,0,0,0.55), 0 0 18px rgba(10,132,255,0.28);
+  --lifeflow-shadow-knit: none;
+
+  /* TAB BAR (dark glass) */
+  --lifeflow-tabbar-bg: rgba(13,18,28,0.72);
+  --lifeflow-tabbar-blur: 20px;
+  --lifeflow-tabbar-blur-saturate: 180%;
+
+  /* AI BALL (deep blue) */
+  --lifeflow-ai-ball: #2E5FA3;
+}
+
+/* === MODULE COLORS (v2 · 模块语义色, 双主题共用) === */
+:root {
+  /* 睡眠 / 冥想 */
+  --lifeflow-module-sleep: #6366F1;
+  --lifeflow-module-sleep-light: rgba(99,102,241,0.14);
+  /* 理想日 / 专注 */
+  --lifeflow-module-ideal: #8B5CF6;
+  --lifeflow-module-ideal-light: rgba(139,92,246,0.14);
+  --lifeflow-module-focus: #8B5CF6;
+  --lifeflow-module-focus-light: rgba(139,92,246,0.14);
+  /* 学习 / 饮水 */
+  --lifeflow-module-study: #3B82F6;
+  --lifeflow-module-study-light: rgba(59,130,246,0.14);
+  --lifeflow-module-water: #3B82F6;
+  --lifeflow-module-water-light: rgba(59,130,246,0.14);
+  /* 训练 / 功法 / 体态 */
+  --lifeflow-module-training: #F97316;
+  --lifeflow-module-training-light: rgba(249,115,22,0.14);
+  /* 习惯 */
+  --lifeflow-module-habit: #10B981;
+  --lifeflow-module-habit-light: rgba(16,185,129,0.14);
+  /* 记账 */
+  --lifeflow-module-expense: #FF3B30;
+  --lifeflow-module-expense-light: rgba(255,59,48,0.14);
+  --lifeflow-module-income: #34C759;
+  --lifeflow-module-income-light: rgba(52,199,89,0.14);
+  /* 提醒 */
+  --lifeflow-module-reminder: #F59E0B;
+  --lifeflow-module-reminder-light: rgba(245,158,11,0.14);
+  /* 8+8+8 环形三色（T25 三分类语义色） */
+  --lifeflow-ring-sleep: #8B5CF6;
+  --lifeflow-ring-study: #3B82F6;
+  --lifeflow-ring-rest: #34C759;
+
+  /* T25 · 8+8+8 三分类语义色（睡眠紫 / 工作学习蓝 / 生活绿） */
+  --lifeflow-888-sleep: #8B5CF6;
+  --lifeflow-888-sleep-light: rgba(139,92,246,0.14);
+  --lifeflow-888-study: #3B82F6;
+  --lifeflow-888-study-light: rgba(59,130,246,0.14);
+  --lifeflow-888-life: #34C759;
+  --lifeflow-888-life-light: rgba(52,199,89,0.14);
+}
+
+/* === TYPOGRAPHY UTILITY CLASSES === */
+.lf-display {
+  font-family: var(--lifeflow-font-display);
+  font-size: var(--lifeflow-font-size-display);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.lf-h1 {
+  font-family: var(--lifeflow-font-display);
+  font-size: var(--lifeflow-font-size-h1);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+
+.lf-h2 {
+  font-family: var(--lifeflow-font-display);
+  font-size: var(--lifeflow-font-size-h2);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+}
+
+.lf-h3 {
+  font-family: var(--lifeflow-font-body);
+  font-size: var(--lifeflow-font-size-h3);
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.lf-body {
+  font-family: var(--lifeflow-font-body);
+  font-size: var(--lifeflow-font-size-body);
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.lf-body-sm {
+  font-family: var(--lifeflow-font-body);
+  font-size: var(--lifeflow-font-size-sm);
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.lf-caption {
+  font-family: var(--lifeflow-font-body);
+  font-size: var(--lifeflow-font-size-caption);
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.lf-mono {
+  font-family: var(--lifeflow-font-mono);
+  font-size: var(--lifeflow-font-size-sm);
+  font-weight: 400;
+  line-height: 1.6;
+}
+
+/* === PROGRESS BAR (iOS thin bar) === */
+.knit-track {
+  position: relative;
+  height: 6px;
+  border-radius: var(--lifeflow-radius-full);
+  overflow: hidden;
+  background: var(--lifeflow-knit-bg);
+}
+
+.knit-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  border-radius: var(--lifeflow-radius-full);
+  background: var(--lifeflow-knit-thread);
+  z-index: 2;
+  transition: width 0.5s ease-in-out;
+}
+
+.knit-fill--done { background: var(--lifeflow-knit-thread-completed); }
+.knit-fill--partial { background: var(--lifeflow-knit-thread-partial); }
+
+.knit-yarn {
+  display: none;
+}
+
+.knit-percent {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 4;
+  font-family: var(--lifeflow-font-body);
+  font-size: var(--lifeflow-font-size-sm);
+  font-weight: 600;
+  color: var(--lifeflow-text-primary);
+  line-height: 1;
+}
+
+/* === TAB BAR (glass, follows mode) === */
+.lf-tabbar-glass {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 40;
+  border-top: 1px solid var(--lifeflow-border);
+  background: var(--lifeflow-tabbar-bg);
+  -webkit-backdrop-filter: saturate(var(--lifeflow-tabbar-blur-saturate)) blur(var(--lifeflow-tabbar-blur));
+  backdrop-filter: saturate(var(--lifeflow-tabbar-blur-saturate)) blur(var(--lifeflow-tabbar-blur));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  @theme inline {
+    --color-background: var(--lifeflow-background);
+    --color-foreground: var(--lifeflow-foreground);
+    --color-card: var(--lifeflow-card);
+    --color-card-foreground: var(--lifeflow-card-foreground);
+    --color-popover: var(--lifeflow-popover);
+    --color-popover-foreground: var(--lifeflow-popover-foreground);
+    --color-primary: var(--lifeflow-primary);
+    --color-primary-foreground: var(--lifeflow-primary-foreground);
+    --color-muted: var(--lifeflow-muted);
+    --color-muted-foreground: var(--lifeflow-muted-foreground);
+    --color-border: var(--lifeflow-border);
+    --color-input: var(--lifeflow-input);
+    --color-ring: var(--lifeflow-ring);
+    --radius-sm: var(--lifeflow-radius-sm);
+    --radius-md: var(--lifeflow-radius-md);
+    --radius-lg: var(--lifeflow-radius-lg);
+    --radius-xl: var(--lifeflow-radius-xl);
+  }
+  @layer base {
+    body { background: var(--lifeflow-background); color: var(--lifeflow-foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style id="semantic-token-fallback">
+      .bg-background { background-color: var(--lifeflow-background); }
+      .text-background { color: var(--lifeflow-background); }
+      .border-background { border-color: var(--lifeflow-background); }
+      .ring-background { --tw-ring-color: var(--lifeflow-background); }
+      .bg-foreground { background-color: var(--lifeflow-foreground); }
+      .text-foreground { color: var(--lifeflow-foreground); }
+      .border-foreground { border-color: var(--lifeflow-foreground); }
+      .ring-foreground { --tw-ring-color: var(--lifeflow-foreground); }
+      .bg-card { background-color: var(--lifeflow-card); }
+      .text-card { color: var(--lifeflow-card); }
+      .border-card { border-color: var(--lifeflow-card); }
+      .ring-card { --tw-ring-color: var(--lifeflow-card); }
+      .bg-card-foreground { background-color: var(--lifeflow-card-foreground); }
+      .text-card-foreground { color: var(--lifeflow-card-foreground); }
+      .border-card-foreground { border-color: var(--lifeflow-card-foreground); }
+      .ring-card-foreground { --tw-ring-color: var(--lifeflow-card-foreground); }
+      .bg-popover { background-color: var(--lifeflow-popover); }
+      .text-popover { color: var(--lifeflow-popover); }
+      .border-popover { border-color: var(--lifeflow-popover); }
+      .ring-popover { --tw-ring-color: var(--lifeflow-popover); }
+      .bg-popover-foreground { background-color: var(--lifeflow-popover-foreground); }
+      .text-popover-foreground { color: var(--lifeflow-popover-foreground); }
+      .border-popover-foreground { border-color: var(--lifeflow-popover-foreground); }
+      .ring-popover-foreground { --tw-ring-color: var(--lifeflow-popover-foreground); }
+      .bg-primary { background-color: var(--lifeflow-primary); }
+      .text-primary { color: var(--lifeflow-primary); }
+      .border-primary { border-color: var(--lifeflow-primary); }
+      .ring-primary { --tw-ring-color: var(--lifeflow-primary); }
+      .bg-primary-foreground { background-color: var(--lifeflow-primary-foreground); }
+      .text-primary-foreground { color: var(--lifeflow-primary-foreground); }
+      .border-primary-foreground { border-color: var(--lifeflow-primary-foreground); }
+      .ring-primary-foreground { --tw-ring-color: var(--lifeflow-primary-foreground); }
+      .bg-muted { background-color: var(--lifeflow-muted); }
+      .text-muted { color: var(--lifeflow-muted); }
+      .border-muted { border-color: var(--lifeflow-muted); }
+      .ring-muted { --tw-ring-color: var(--lifeflow-muted); }
+      .bg-muted-foreground { background-color: var(--lifeflow-muted-foreground); }
+      .text-muted-foreground { color: var(--lifeflow-muted-foreground); }
+      .border-muted-foreground { border-color: var(--lifeflow-muted-foreground); }
+      .ring-muted-foreground { --tw-ring-color: var(--lifeflow-muted-foreground); }
+      .bg-border { background-color: var(--lifeflow-border); }
+      .text-border { color: var(--lifeflow-border); }
+      .border-border { border-color: var(--lifeflow-border); }
+      .ring-border { --tw-ring-color: var(--lifeflow-border); }
+      .bg-input { background-color: var(--lifeflow-input); }
+      .text-input { color: var(--lifeflow-input); }
+      .border-input { border-color: var(--lifeflow-input); }
+      .ring-input { --tw-ring-color: var(--lifeflow-input); }
+      .bg-ring { background-color: var(--lifeflow-ring); }
+      .text-ring { color: var(--lifeflow-ring); }
+      .border-ring { border-color: var(--lifeflow-ring); }
+      .ring-ring { --tw-ring-color: var(--lifeflow-ring); }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+</head>
+<body class="min-h-screen font-sans antialiased">
+    <main>
+      <style id="critical-layout">
+        /* ============================================================
+           LifeFlow 理想日 · 8+8+8 时间轴 — 关键布局静态 CSS
+           不依赖 Tailwind 运行时即可渲染骨架；
+           一切颜色引用 var(--lifeflow-*)，无硬编码色值。
+           ============================================================ */
+
+        /* ---- 模块语义色 / 8+8+8 环形三色 token（对齐 colors_and_type.css 与理想日编辑流页面） ---- */
+        :root {
+          --lifeflow-module-sleep: #6366F1;
+          --lifeflow-module-sleep-light: rgba(99,102,241,0.14);
+          --lifeflow-module-ideal: #8B5CF6;
+          --lifeflow-module-ideal-light: rgba(139,92,246,0.14);
+          --lifeflow-module-focus: #8B5CF6;
+          --lifeflow-module-focus-light: rgba(139,92,246,0.14);
+          --lifeflow-module-study: #3B82F6;
+          --lifeflow-module-study-light: rgba(59,130,246,0.14);
+          --lifeflow-module-training: #F97316;
+          --lifeflow-module-training-light: rgba(249,115,22,0.14);
+          --lifeflow-module-water: #3B82F6;
+          --lifeflow-module-water-light: rgba(59,130,246,0.14);
+          --lifeflow-module-habit: #10B981;
+          --lifeflow-module-habit-light: rgba(16,185,129,0.14);
+          --lifeflow-module-medication: #D97706;
+          --lifeflow-module-medication-light: rgba(217,119,6,0.16);
+          --lifeflow-module-routine: #AF52DE;
+          --lifeflow-module-routine-light: rgba(175,82,222,0.14);
+          --lifeflow-module-wellness: #22C55E;
+          --lifeflow-module-wellness-light: rgba(34,197,94,0.14);
+          --lifeflow-module-posture: #10B981;
+          --lifeflow-module-posture-light: rgba(16,185,129,0.14);
+          --lifeflow-module-food: #FF9500;
+          --lifeflow-module-food-light: rgba(255,149,0,0.15);
+          --lifeflow-module-blank: #8E8E93;
+          --lifeflow-module-blank-light: rgba(142,142,147,0.16);
+          --lifeflow-ring-sleep: #5856D6;
+          --lifeflow-ring-study: #0A84FF;
+          --lifeflow-ring-rest: #34C759;
+        }
+        html.dark {
+          --lifeflow-module-sleep: #8B8FF8;
+          --lifeflow-module-sleep-light: rgba(139,143,248,0.2);
+          --lifeflow-module-ideal: #A78BFA;
+          --lifeflow-module-ideal-light: rgba(167,139,250,0.2);
+          --lifeflow-module-focus: #A78BFA;
+          --lifeflow-module-focus-light: rgba(167,139,250,0.2);
+          --lifeflow-module-study: #4DA3FF;
+          --lifeflow-module-study-light: rgba(77,163,255,0.2);
+          --lifeflow-module-training: #FB923C;
+          --lifeflow-module-training-light: rgba(251,146,60,0.2);
+          --lifeflow-module-water: #60A5FA;
+          --lifeflow-module-water-light: rgba(96,165,250,0.2);
+          --lifeflow-module-habit: #34D399;
+          --lifeflow-module-habit-light: rgba(52,211,153,0.2);
+          --lifeflow-module-medication: #E8A23D;
+          --lifeflow-module-medication-light: rgba(232,162,61,0.2);
+          --lifeflow-module-routine: #C084FC;
+          --lifeflow-module-routine-light: rgba(192,132,252,0.2);
+          --lifeflow-module-wellness: #4ADE80;
+          --lifeflow-module-wellness-light: rgba(74,222,128,0.2);
+          --lifeflow-module-posture: #34D399;
+          --lifeflow-module-posture-light: rgba(52,211,153,0.2);
+          --lifeflow-module-food: #FFB340;
+          --lifeflow-module-food-light: rgba(255,179,64,0.2);
+          --lifeflow-module-blank: #9BA1AD;
+          --lifeflow-module-blank-light: rgba(155,161,173,0.22);
+        }
+
+        /* ---- 基础 ---- */
+        body { overflow-x: hidden; }
+        a:focus-visible, button:focus-visible {
+          outline: 2px solid var(--lifeflow-ring);
+          outline-offset: 2px;
+          border-radius: 6px;
+        }
+        svg[data-lucide] { display: inline-block; flex-shrink: 0; }
+        .document-scroll { -webkit-overflow-scrolling: touch; }
+
+        /* ---- 430px 移动容器：内容区预留 104px 防底部导航遮挡 ---- */
+        .lf-container {
+          max-width: 28rem;
+          margin-inline: auto;
+          padding: 0.75rem 1rem 6.5rem;
+        }
+
+        /* ---- 卡片基元（圆角 16，阴影极浅） ---- */
+        .lf-card {
+          background: var(--lifeflow-card);
+          border-radius: 16px;
+          border: 1px solid var(--lifeflow-border-light);
+          box-shadow: var(--lifeflow-shadow-1);
+          transition: transform 0.15s ease, border-color 0.15s ease;
+        }
+        .lf-card:hover { border-color: var(--lifeflow-border); }
+        .lf-card:active { transform: scale(0.992); }
+
+        .lf-sect-label { font-size: 13px; font-weight: 600; color: var(--lifeflow-text-secondary); }
+
+        /* ---- 底部导航静态兜底 ---- */
+        #bottom-nav {
+          position: fixed;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          z-index: 40;
+          height: 64px;
+          border-top: 1px solid var(--lifeflow-border);
+          background: var(--lifeflow-tabbar-bg);
+          -webkit-backdrop-filter: saturate(var(--lifeflow-tabbar-blur-saturate)) blur(var(--lifeflow-tabbar-blur));
+          backdrop-filter: saturate(var(--lifeflow-tabbar-blur-saturate)) blur(var(--lifeflow-tabbar-blur));
+          padding-bottom: env(safe-area-inset-bottom, 0px);
+        }
+        #bottom-nav > div { display: grid; grid-template-columns: repeat(4, 1fr); height: 100%; }
+        #bottom-nav a { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+
+        /* ---- 8+8+8 环形 section（静态兜底） ---- */
+        #section-ring { display: block; }
+        .lf-ring-card { display: flex; align-items: center; gap: 16px; padding: 16px; }
+        .lf-ring-wrap { position: relative; width: 124px; height: 124px; flex-shrink: 0; }
+        .lf-ring-svg { display: block; width: 100%; height: 100%; transform: rotate(-90deg); }
+        .lf-ring-arc { fill: none; stroke-width: 11; stroke-linecap: round; }
+        .lf-ring-arc--sleep { stroke: var(--lifeflow-ring-sleep); stroke-dasharray: 104.6 209.6; stroke-dashoffset: 0; }
+        .lf-ring-arc--study { stroke: var(--lifeflow-ring-study); stroke-dasharray: 104.6 209.6; stroke-dashoffset: -104.6; }
+        .lf-ring-arc--rest { stroke: var(--lifeflow-ring-rest); stroke-dasharray: 104.9 209.3; stroke-dashoffset: -209.2; }
+        @keyframes lf-ring-draw { from { stroke-dashoffset: 314.16; } }
+        .lf-ring-arc { animation: lf-ring-draw 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+        .lf-ring-arc--study { animation-delay: 0.12s; }
+        .lf-ring-arc--rest { animation-delay: 0.24s; }
+        .lf-ring-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+        .lf-ring-num { font-size: 20px; font-weight: 700; line-height: 1.1; color: var(--lifeflow-text-primary); font-variant-numeric: tabular-nums; }
+        .lf-ring-sub { font-size: 10px; line-height: 1.2; color: var(--lifeflow-text-tertiary); }
+        .lf-legend { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 7px; }
+        .lf-legend .lf-mono { font-size: 11px; line-height: 1; }
+        .lf-legend-item { display: flex; align-items: center; gap: 7px; min-width: 0; font-size: 12px; font-weight: 500; color: var(--lifeflow-text-primary); }
+        .lf-legend-dot { width: 8px; height: 8px; border-radius: 9999px; flex-shrink: 0; }
+        .lf-dot-sleep { background: var(--lifeflow-ring-sleep); }
+        .lf-dot-study { background: var(--lifeflow-ring-study); }
+        .lf-dot-rest { background: var(--lifeflow-ring-rest); }
+
+        /* ---- segmented（作息 / 模板） ---- */
+        .lf-seg { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2px; padding: 2px; border-radius: 9999px; background: var(--lifeflow-muted); border: 1px solid var(--lifeflow-border-light); }
+        .lf-seg button { display: inline-flex; align-items: center; justify-content: center; height: 30px; border-radius: 9999px; font-size: 13px; font-weight: 500; color: var(--lifeflow-text-secondary); transition: background-color 0.15s ease, color 0.15s ease; }
+        .lf-seg button:hover { color: var(--lifeflow-text-primary); }
+        .lf-seg button.seg-active { background: var(--lifeflow-card); color: var(--lifeflow-text-primary); font-weight: 600; box-shadow: var(--lifeflow-shadow-2); }
+
+        /* ---- 手动锁定 switch ---- */
+        .lf-switch { position: relative; display: inline-flex; width: 51px; height: 31px; flex-shrink: 0; border-radius: 9999px; background: var(--lifeflow-knit-bg); transition: background-color 0.2s ease; }
+        .lf-switch .lf-knob { position: absolute; top: 2px; left: 2px; width: 27px; height: 27px; border-radius: 9999px; background: var(--lifeflow-primary-foreground); box-shadow: var(--lifeflow-shadow-2); transition: transform 0.2s ease; }
+        .lf-switch.lock-on { background: var(--lifeflow-primary); }
+        .lf-switch.lock-on .lf-knob { transform: translateX(20px); }
+
+        /* ---- 段卡片 ---- */
+        .lf-blocks > .block-card + .block-card { margin-top: 12px; }
+        .block-card { background: var(--lifeflow-card); border-radius: 16px; border: 1px solid var(--lifeflow-border-light); box-shadow: var(--lifeflow-shadow-1); overflow: hidden; cursor: pointer; transition: opacity 0.2s ease, filter 0.2s ease, transform 0.15s ease, border-color 0.15s ease; }
+        .block-card:hover { border-color: var(--lifeflow-border); }
+        .block-card:active { transform: scale(0.992); }
+        .block-hd { display: flex; align-items: center; gap: 12px; padding: 14px 16px 8px; }
+        .block-chip { display: inline-flex; align-items: center; justify-content: center; width: 38px; height: 38px; flex-shrink: 0; border-radius: 9999px; }
+        .block-chip svg { width: 18px; height: 18px; }
+        .block-chip--sleep { background: var(--lifeflow-module-sleep-light); color: var(--lifeflow-module-sleep); }
+        .block-chip--morning { background: var(--lifeflow-module-training-light); color: var(--lifeflow-module-training); }
+        .block-chip--noon { background: var(--lifeflow-module-food-light); color: var(--lifeflow-module-food); }
+        .block-chip--afternoon { background: var(--lifeflow-module-study-light); color: var(--lifeflow-module-study); }
+        .block-chip--evening { background: var(--lifeflow-module-routine-light); color: var(--lifeflow-module-routine); }
+        .block-title { display: flex; align-items: center; gap: 8px; min-width: 0; }
+        .block-title h2 { font-size: 16px; font-weight: 700; line-height: 1.25; color: var(--lifeflow-text-primary); white-space: nowrap; }
+        .block-sub { margin-top: 2px; font-size: 12px; line-height: 1.5; color: var(--lifeflow-text-secondary); }
+        .block-sub .lf-mono { font-size: 12px; line-height: 1.5; }
+        .lf-badge-lock { display: inline-flex; align-items: center; gap: 3px; height: 20px; padding: 0 7px; border-radius: 6px; background: var(--lifeflow-module-sleep-light); color: var(--lifeflow-module-sleep); font-size: 10px; font-weight: 600; line-height: 1; white-space: nowrap; }
+        .lf-badge-lock svg { width: 11px; height: 11px; }
+        .lf-edit-btn { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; flex-shrink: 0; border-radius: 9999px; color: var(--lifeflow-text-tertiary); transition: background-color 0.15s ease, color 0.15s ease; }
+        .lf-edit-btn:hover { background: var(--lifeflow-muted); color: var(--lifeflow-text-primary); }
+        .lf-edit-btn svg { width: 15px; height: 15px; }
+        .lf-done-ring { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; flex-shrink: 0; border-radius: 9999px; border: 2px dashed var(--lifeflow-border-dashed); color: transparent; transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease; }
+        .lf-done-ring svg { width: 13px; height: 13px; }
+        .block-card.is-done .lf-done-ring { border-style: solid; border-color: var(--state-success); background: var(--state-success); color: var(--lifeflow-primary-foreground); }
+        .block-card.is-done { opacity: 0.62; filter: saturate(0.35); }
+
+        /* ---- 绑定功能图标行 ---- */
+        .lf-fn-row { display: flex; align-items: center; gap: 10px; padding: 4px 16px 10px; overflow-x: auto; }
+        .lf-fn-cap { flex-shrink: 0; font-size: 10px; color: var(--lifeflow-text-tertiary); white-space: nowrap; }
+        .lf-fn-item { display: inline-flex; flex-direction: column; align-items: center; gap: 3px; flex-shrink: 0; }
+        .lf-fn-chip { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 9999px; transition: transform 0.15s ease, opacity 0.15s ease; }
+        .lf-fn-chip:hover { transform: scale(1.08); }
+        .lf-fn-chip:active { transform: scale(0.92); }
+        .lf-fn-chip svg { width: 15px; height: 15px; }
+        .lf-fn-label { font-size: 10px; line-height: 1; color: var(--lifeflow-text-tertiary); white-space: nowrap; }
+        .lf-fn--study { background: var(--lifeflow-module-study-light); color: var(--lifeflow-module-study); }
+        .lf-fn--sleep { background: var(--lifeflow-module-sleep-light); color: var(--lifeflow-module-sleep); }
+        .lf-fn--medication { background: var(--lifeflow-module-medication-light); color: var(--lifeflow-module-medication); }
+        .lf-fn--workout { background: var(--lifeflow-module-training-light); color: var(--lifeflow-module-training); }
+        .lf-fn--wellness { background: var(--lifeflow-module-wellness-light); color: var(--lifeflow-module-wellness); }
+        .lf-fn--posture { background: var(--lifeflow-module-posture-light); color: var(--lifeflow-module-posture); }
+        .lf-fn--routine { background: var(--lifeflow-module-routine-light); color: var(--lifeflow-module-routine); }
+
+        /* ---- 时段行 ---- */
+        .slot-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 16px; border-top: 1px solid var(--lifeflow-border-light); }
+        .slot-name { min-width: 0; font-size: 14px; font-weight: 600; color: var(--lifeflow-text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .slot-meta { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+        .slot-time { font-size: 12px; line-height: 1.4; color: var(--lifeflow-text-primary); font-variant-numeric: tabular-nums; white-space: nowrap; }
+        .slot-dur { display: inline-flex; align-items: center; height: 18px; padding: 0 7px; border-radius: 6px; background: var(--lifeflow-muted); color: var(--lifeflow-text-secondary); font-size: 10px; line-height: 1; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+        /* ---- 模板系统 v2（按天独立模板 / 单模板+日历） ---- */
+        [hidden] { display: none !important; }
+        [data-mode-panel] { display: none; }
+        [data-mode-panel].active { display: block; animation: lf-panel-in 0.18s ease both; }
+        @keyframes lf-panel-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+        .tpl-chips { display: flex; gap: 8px; overflow-x: auto; padding: 10px 1px 2px; }
+        .tpl-chip { display: inline-flex; align-items: center; justify-content: center; height: 32px; padding: 0 14px; border-radius: 9999px; border: 1px solid var(--lifeflow-border-light); background: var(--lifeflow-card); color: var(--lifeflow-text-secondary); font-size: 13px; font-weight: 500; white-space: nowrap; flex-shrink: 0; cursor: pointer; transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.15s ease; }
+        .tpl-chip:hover { color: var(--lifeflow-text-primary); border-color: var(--lifeflow-border); }
+        .tpl-chip:active { transform: scale(0.94); }
+        .tpl-chip.is-active { background: var(--lifeflow-primary-light); border-color: var(--lifeflow-primary); color: var(--lifeflow-primary); font-weight: 600; }
+        .tpl-chip.is-picked { background: var(--lifeflow-primary-light); border-color: var(--lifeflow-primary); color: var(--lifeflow-primary); font-weight: 600; }
+
+        .tpl-copy-row { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+        .tpl-copy-btn { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border-radius: 9999px; border: 1px solid var(--lifeflow-border-light); background: var(--lifeflow-card); color: var(--lifeflow-text-secondary); font-size: 12px; font-weight: 500; cursor: pointer; transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease; }
+        .tpl-copy-btn:hover { background: var(--lifeflow-muted); color: var(--lifeflow-text-primary); }
+        .tpl-copy-btn svg { width: 14px; height: 14px; }
+        .tpl-copy-cap { font-size: 11px; color: var(--lifeflow-text-tertiary); min-width: 0; }
+
+        .tpl-picker { max-height: 0; opacity: 0; overflow: hidden; transition: max-height 0.25s ease, opacity 0.2s ease; }
+        .tpl-picker.open { max-height: 260px; opacity: 1; }
+        .tpl-picker-inner { padding-top: 10px; margin-top: 10px; border-top: 1px solid var(--lifeflow-border-light); }
+        .tpl-picker-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+        .tpl-picker-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; }
+
+        .tpl-name-wrap { margin-top: 10px; }
+        .tpl-name-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; padding: 8px 10px; border-radius: 10px; background: var(--lifeflow-muted); border: 1px solid var(--lifeflow-border-light); cursor: pointer; text-align: left; transition: border-color 0.15s ease; }
+        .tpl-name-row:hover { border-color: var(--lifeflow-border); }
+        .tpl-name-main { display: flex; align-items: center; gap: 7px; min-width: 0; font-size: 13px; font-weight: 600; color: var(--lifeflow-text-primary); }
+        .tpl-name-main svg { width: 15px; height: 15px; color: var(--lifeflow-primary); flex-shrink: 0; }
+        .tpl-name-txt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .tpl-rename-hint { font-size: 11px; color: var(--lifeflow-text-tertiary); flex-shrink: 0; }
+        .tpl-name-edit { display: flex; align-items: center; gap: 8px; padding: 6px; border-radius: 10px; background: var(--lifeflow-muted); }
+        .tpl-name-input { flex: 1; min-width: 0; height: 34px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--lifeflow-primary); background: var(--lifeflow-card); color: var(--lifeflow-text-primary); font-size: 13px; outline: none; }
+
+        .lf-single-card { display: flex; align-items: center; gap: 10px; width: 100%; margin-top: 10px; padding: 12px; border-radius: 12px; border: 1px solid var(--lifeflow-border-light); background: var(--lifeflow-muted); cursor: pointer; text-align: left; transition: border-color 0.15s ease; }
+        .lf-single-card:hover { border-color: var(--lifeflow-border); }
+        .lf-single-icon { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; flex-shrink: 0; border-radius: 10px; background: var(--lifeflow-primary-light); color: var(--lifeflow-primary); }
+        .lf-single-icon svg { width: 17px; height: 17px; }
+        .lf-single-name { min-width: 0; flex: 1; font-size: 14px; font-weight: 600; color: var(--lifeflow-text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .lf-single-cap { font-size: 11px; color: var(--lifeflow-text-tertiary); flex-shrink: 0; }
+
+        .exec-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+        .exec-chip { display: inline-flex; align-items: center; justify-content: center; gap: 4px; height: 34px; padding: 0 12px; border-radius: 9999px; border: 1px solid var(--lifeflow-border-light); background: var(--lifeflow-card); color: var(--lifeflow-text-secondary); font-size: 13px; font-weight: 500; cursor: pointer; transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.15s ease; }
+        .exec-chip svg { width: 13px; height: 13px; opacity: 0; transform: scale(0.5); transition: opacity 0.15s ease, transform 0.15s ease; }
+        .exec-chip:hover { color: var(--lifeflow-text-primary); }
+        .exec-chip:active { transform: scale(0.94); }
+        .exec-chip.is-on { background: var(--lifeflow-primary); border-color: var(--lifeflow-primary); color: var(--lifeflow-primary-foreground); font-weight: 600; }
+        .exec-chip.is-on svg { opacity: 1; transform: scale(1); }
+
+        .tpl-controls { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--lifeflow-border-light); }
+
+        .lf-mini-btn { display: inline-flex; align-items: center; justify-content: center; gap: 5px; height: 30px; padding: 0 12px; border-radius: 9999px; font-size: 12px; font-weight: 500; cursor: pointer; transition: opacity 0.15s ease; }
+        .lf-mini-btn:active { opacity: 0.85; }
+        .lf-mini-btn svg { width: 14px; height: 14px; }
+        .lf-mini-btn--primary { background: var(--lifeflow-primary); color: var(--lifeflow-primary-foreground); }
+
+        /* ---- 多模板日历（模板 chips / 操作行 / 月历视图） ---- */
+        .tpl-add-btn { display: inline-flex; align-items: center; justify-content: center; gap: 5px; height: 32px; padding: 0 14px; border-radius: 9999px; border: 1px dashed var(--lifeflow-border-dashed); background: transparent; color: var(--lifeflow-text-secondary); font-size: 13px; font-weight: 500; white-space: nowrap; flex-shrink: 0; cursor: pointer; transition: color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease, transform 0.15s ease; }
+        .tpl-add-btn:hover { color: var(--lifeflow-primary); border-color: var(--lifeflow-primary); background: var(--lifeflow-primary-light); }
+        .tpl-add-btn:active { transform: scale(0.94); }
+        .tpl-add-btn svg { width: 14px; height: 14px; }
+
+        .tpl-op-row { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+        .tpl-op-name { display: inline-flex; align-items: center; gap: 6px; min-width: 0; flex: 1; height: 34px; padding: 0 12px; border-radius: 10px; background: var(--lifeflow-muted); border: 1px solid var(--lifeflow-border-light); color: var(--lifeflow-text-primary); font-size: 13px; font-weight: 600; cursor: pointer; text-align: left; transition: border-color 0.15s ease; }
+        .tpl-op-name:hover { border-color: var(--lifeflow-border); }
+        .tpl-op-name:active { transform: scale(0.98); }
+        .tpl-op-name svg { width: 14px; height: 14px; color: var(--lifeflow-primary); flex-shrink: 0; }
+        .tpl-op-name-txt { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .tpl-del-btn { display: inline-flex; align-items: center; gap: 5px; height: 34px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--lifeflow-border-light); background: var(--lifeflow-card); color: var(--state-error); font-size: 12px; font-weight: 500; flex-shrink: 0; cursor: pointer; transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.15s ease; }
+        .tpl-del-btn:hover { background: var(--state-error-light); border-color: var(--state-error); }
+        .tpl-del-btn:active { transform: scale(0.94); }
+        .tpl-del-btn svg { width: 13px; height: 13px; }
+
+        /* ---- 由目标生成入口按钮（T25 · 工作学习蓝系浅底） ---- */
+        .goal-gen-open-btn {
+          display: flex; align-items: center; gap: 8px;
+          width: 100%; height: 44px; margin-top: 10px;
+          padding: 0 14px; border-radius: 12px;
+          border: 1px solid transparent;
+          background: var(--lifeflow-888-study-light);
+          color: var(--lifeflow-888-study);
+          font-size: 14px; font-weight: 600; cursor: pointer;
+          transition: background-color .15s ease, border-color .15s ease, transform .12s ease;
+        }
+        .goal-gen-open-btn:hover { border-color: var(--lifeflow-888-study); }
+        .goal-gen-open-btn:active { transform: scale(0.98); }
+        .goal-gen-open-btn svg { width: 16px; height: 16px; flex-shrink: 0; }
+        .goal-gen-open-cap { margin-left: auto; font-size: 11px; font-weight: 500; opacity: .72; white-space: nowrap; }
+
+        /* ---- 底部 Sheet（T25 · 由目标生成） ---- */
+        [hidden] { display: none !important; }
+        .lf-sheet-overlay {
+          position: fixed; inset: 0; z-index: 80;
+          display: flex; align-items: flex-end; justify-content: center;
+          background: rgba(0,0,0,0.45);
+          animation: lf-overlay-in .18s ease-out;
+        }
+        .lf-sheet {
+          width: 100%; max-width: 448px; max-height: 84vh;
+          display: flex; flex-direction: column; overflow: hidden;
+          border-radius: 20px 20px 0 0;
+          background: var(--lifeflow-card);
+          box-shadow: var(--lifeflow-shadow-3);
+          animation: lf-sheet-up .28s cubic-bezier(.32,.72,.24,1);
+          padding-bottom: env(safe-area-inset-bottom, 0px);
+        }
+        .lf-sheet-grip { width: 36px; height: 5px; margin: 8px auto 0; border-radius: 9999px; background: var(--lifeflow-border); flex-shrink: 0; }
+        .lf-sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 16px 8px; }
+        .lf-sheet-title { font-size: 17px; font-weight: 700; line-height: 1.3; color: var(--lifeflow-text-primary); }
+        .lf-sheet-sub { margin-top: 2px; font-size: 12px; line-height: 1.4; color: var(--lifeflow-text-tertiary); }
+        .lf-sheet-close {
+          display: inline-flex; align-items: center; justify-content: center;
+          width: 32px; height: 32px; flex-shrink: 0; border-radius: 9999px;
+          background: var(--lifeflow-muted); color: var(--lifeflow-text-secondary); cursor: pointer;
+          transition: background-color .15s ease, color .15s ease, transform .12s ease;
+        }
+        .lf-sheet-close:hover { color: var(--lifeflow-text-primary); }
+        .lf-sheet-close:active { transform: scale(0.9); }
+        .lf-sheet-progress { display: flex; gap: 6px; padding: 0 16px 10px; }
+        .lf-sheet-step {
+          display: inline-flex; align-items: center; height: 26px; padding: 0 10px;
+          border-radius: 9999px; font-size: 11px; font-weight: 600; line-height: 1;
+          color: var(--lifeflow-text-tertiary); background: var(--lifeflow-muted);
+        }
+        .lf-sheet-step.is-on { color: var(--lifeflow-888-study); background: var(--lifeflow-888-study-light); }
+        .lf-sheet-body { overflow-y: auto; padding: 0 16px 14px; }
+
+        /* 第 1 步：目标多选 */
+        .goal-gen-cap { padding: 2px 2px 8px; font-size: 12px; line-height: 1.5; color: var(--lifeflow-text-secondary); }
+        .goal-gen-list { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none; }
+        .goal-gen-goal {
+          display: flex; align-items: center; gap: 8px;
+          width: 100%; padding: 11px 12px; border-radius: 12px;
+          border: 1px solid var(--lifeflow-border-light);
+          background: var(--lifeflow-muted); color: var(--lifeflow-text-primary);
+          font-size: 14px; text-align: left; cursor: pointer;
+          transition: border-color .15s ease, background-color .15s ease, box-shadow .15s ease, transform .12s ease;
+        }
+        .goal-gen-goal:hover { border-color: var(--lifeflow-border); }
+        .goal-gen-goal:active { transform: scale(0.98); }
+        .goal-gen-goal.is-on {
+          background: var(--lifeflow-card);
+          border-color: var(--lifeflow-888-study);
+          box-shadow: 0 0 0 2px var(--lifeflow-888-study-light);
+        }
+        .gg-dot { width: 10px; height: 10px; border-radius: 9999px; background: var(--gg); flex-shrink: 0; }
+        .gg-name { min-width: 0; flex: 1; font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .gg-tag {
+          flex-shrink: 0; display: inline-flex; align-items: center; height: 20px; padding: 0 8px;
+          border-radius: 6px; background: var(--lifeflow-border-light);
+          font-size: 10px; font-weight: 500; line-height: 1; color: var(--lifeflow-text-tertiary); white-space: nowrap;
+        }
+        .gg-check {
+          width: 18px; height: 18px; flex-shrink: 0; color: var(--lifeflow-888-study);
+          opacity: 0; transform: scale(.5);
+          transition: opacity .15s ease, transform .15s ease;
+        }
+        .goal-gen-goal.is-on .gg-check { opacity: 1; transform: scale(1); }
+
+        /* 第 2 步：配额决策预览 */
+        .goal-gen-quota { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+        .gg-q {
+          display: inline-flex; align-items: center; height: 24px; padding: 0 10px;
+          border-radius: 9999px; font-size: 11px; font-weight: 600; line-height: 1;
+        }
+        .gg-q--sleep { color: var(--lifeflow-888-sleep); background: var(--lifeflow-888-sleep-light); }
+        .gg-q--study { color: var(--lifeflow-888-study); background: var(--lifeflow-888-study-light); }
+        .gg-q--life { color: var(--lifeflow-888-life); background: var(--lifeflow-888-life-light); }
+        .gg-q-note { font-size: 11px; line-height: 1.5; color: var(--lifeflow-text-tertiary); }
+        .goal-gen-decisions { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none; }
+        .gg-decision {
+          display: flex; align-items: center; gap: 8px; padding: 10px 12px;
+          border-radius: 12px; border: 1px solid var(--lifeflow-border-light);
+          background: var(--lifeflow-card);
+        }
+        .gg-dur { flex-shrink: 0; font-size: 12px; font-weight: 600; color: var(--lifeflow-text-secondary); font-variant-numeric: tabular-nums; }
+        .gg-badge {
+          flex-shrink: 0; display: inline-flex; align-items: center; height: 22px; padding: 0 9px;
+          border-radius: 9999px; font-size: 11px; font-weight: 600; line-height: 1; white-space: nowrap;
+        }
+        .gg-badge--keep { color: var(--lifeflow-888-life); background: var(--lifeflow-888-life-light); }
+        .gg-badge--compress { color: var(--lifeflow-888-study); background: var(--lifeflow-888-study-light); }
+        .gg-badge--carry { color: var(--lifeflow-module-reminder); background: var(--lifeflow-module-reminder-light); }
+
+        /* Sheet 底部操作区 */
+        .lf-sheet-foot { padding: 10px 16px calc(12px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--lifeflow-border-light); }
+        .goal-gen-foot { display: flex; flex-direction: column; gap: 8px; }
+        .goal-gen-cta {
+          display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+          width: 100%; height: 44px; border-radius: 12px;
+          font-size: 15px; font-weight: 600; line-height: 1; cursor: pointer;
+          transition: opacity .15s ease, transform .12s ease;
+        }
+        .goal-gen-cta svg { width: 16px; height: 16px; }
+        .goal-gen-cta--primary { background: var(--lifeflow-primary); color: var(--lifeflow-primary-foreground); }
+        .goal-gen-cta--primary:hover { background: var(--lifeflow-primary-hover); }
+        .goal-gen-cta--primary:active { transform: scale(0.98); }
+        .goal-gen-explain { text-align: center; font-size: 11px; line-height: 1.5; color: var(--lifeflow-text-tertiary); }
+
+        @keyframes lf-overlay-in { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes lf-sheet-up { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+        /* 月历卡片 */
+        .tpl-cal { margin-top: 10px; padding: 12px; border-radius: 12px; border: 1px solid var(--lifeflow-border-light); background: var(--lifeflow-card); }
+        .cal-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+        .cal-nav { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 9999px; background: var(--lifeflow-muted); border: 1px solid var(--lifeflow-border-light); color: var(--lifeflow-text-secondary); cursor: pointer; transition: background-color 0.15s ease, color 0.15s ease, transform 0.15s ease; }
+        .cal-nav:hover { color: var(--lifeflow-primary); }
+        .cal-nav:active { transform: scale(0.9); }
+        .cal-nav svg { width: 16px; height: 16px; }
+        .cal-month { font-size: 14px; font-weight: 600; color: var(--lifeflow-text-primary); }
+
+        .cal-week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; margin-top: 10px; }
+        .cal-week span { font-size: 10px; font-weight: 500; color: var(--lifeflow-text-tertiary); text-align: center; line-height: 1.6; }
+
+        /* 日期网格：纯 CSS grid · 7 列，静态兜底不依赖 Tailwind 编译 */
+        .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; margin-top: 4px; }
+        .cal-day { display: inline-flex; align-items: center; justify-content: center; width: 100%; aspect-ratio: 1 / 1; border-radius: 9999px; background: var(--lifeflow-muted); color: var(--lifeflow-text-primary); font-size: 12px; font-variant-numeric: tabular-nums; cursor: pointer; border: none; transition: background-color 0.15s ease, color 0.15s ease, transform 0.15s ease; }
+        .cal-day:hover { background: var(--lifeflow-primary-light); color: var(--lifeflow-primary); }
+        .cal-day:active { transform: scale(0.88); }
+        .cal-day.is-sel { background: var(--lifeflow-primary); color: var(--lifeflow-primary-foreground); font-weight: 600; }
+        .cal-blank { display: block; }
+
+        .cal-hint { margin-top: 8px; font-size: 11px; line-height: 1.5; color: var(--lifeflow-text-tertiary); }
+        .cal-stats { margin-top: 8px; font-size: 12px; line-height: 1.5; color: var(--lifeflow-text-secondary); }
+        .cal-stats .lf-mono { font-size: 12px; }
+
+        /* ---- Toast ---- */
+        .lf-toast { position: fixed; left: 50%; bottom: calc(76px + env(safe-area-inset-bottom, 0px)); transform: translate(-50%, 10px); z-index: 60; max-width: 280px; padding: 9px 16px; border-radius: 10px; background: var(--lifeflow-popover); color: var(--lifeflow-popover-foreground); box-shadow: var(--lifeflow-shadow-3); font-size: 13px; font-weight: 500; line-height: 1.4; text-align: center; opacity: 0; pointer-events: none; transition: opacity 0.2s ease, transform 0.2s ease; }
+        .lf-toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+        /* ---- v2 联动增强：目标事项跟随排布 / 重排提示条 / 冲突提示 ---- */
+        #section-goal-items { display: block; }
+        .goal-card {
+          position: relative;
+          margin-top: 12px;
+          padding: 12px 14px 10px;
+          border-radius: 16px;
+          border: 1px solid var(--lifeflow-border-light);
+          border-top: 3px solid var(--lifeflow-module-ideal);
+          background: var(--lifeflow-card);
+          box-shadow: var(--lifeflow-shadow-1);
+        }
+        .goal-hd { display: flex; align-items: center; gap: 8px; }
+        .goal-hd-icon {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 26px;
+          height: 26px;
+          flex-shrink: 0;
+          border-radius: 9999px;
+          background: var(--lifeflow-module-ideal-light);
+          color: var(--lifeflow-module-ideal);
+        }
+        .goal-hd-icon svg { width: 13px; height: 13px; }
+        .goal-title { font-size: 14px; font-weight: 700; line-height: 1.3; color: var(--lifeflow-text-primary); }
+        .goal-sub { margin-top: 1px; font-size: 11px; line-height: 1.4; color: var(--lifeflow-text-tertiary); }
+        .goal-list { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+        .goal-item { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 10px; background: var(--lifeflow-module-ideal-light); }
+        .goal-item-icon { color: var(--lifeflow-module-ideal); flex-shrink: 0; }
+        .goal-item-icon svg { width: 14px; height: 14px; }
+        .goal-name { min-width: 0; flex: 1; font-size: 13px; font-weight: 600; color: var(--lifeflow-text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .goal-time { flex-shrink: 0; font-size: 12px; color: var(--lifeflow-text-primary); font-variant-numeric: tabular-nums; }
+        .goal-time.goal-time-bump { animation: goal-time-bump 0.3s ease; }
+        @keyframes goal-time-bump { 0% { transform: translateY(0); } 35% { transform: translateY(-2px); } 70% { transform: translateY(1px); } 100% { transform: translateY(0); } }
+        .goal-src { flex-shrink: 0; display: inline-flex; align-items: center; height: 18px; padding: 0 7px; border-radius: 6px; background: var(--lifeflow-module-ideal); color: var(--lifeflow-primary-foreground); font-size: 10px; font-weight: 600; line-height: 1; white-space: nowrap; }
+        .goal-note { margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--lifeflow-border-dashed); font-size: 11px; line-height: 1.5; color: var(--lifeflow-text-tertiary); }
+        #conflict-hint { display: flex; align-items: center; gap: 6px; margin-top: 8px; padding: 8px 12px; border-radius: 10px; background: var(--state-warning-light); color: var(--state-warning); font-size: 12px; font-weight: 500; line-height: 1.4; }
+        #conflict-hint svg { width: 13px; height: 13px; flex-shrink: 0; }
+        .resched-toast { display: flex; align-items: center; gap: 8px; margin-top: 10px; padding: 8px 12px; border-radius: 9999px; background: var(--state-success-light); border: 1px solid var(--state-success); color: var(--state-success); opacity: 0; transform: translateY(-4px); transition: opacity 0.22s ease, transform 0.22s ease; }
+        .resched-toast.show { opacity: 1; transform: translateY(0); }
+        .resched-toast svg { width: 13px; height: 13px; flex-shrink: 0; }
+        .resched-txt { min-width: 0; flex: 1; font-size: 12px; font-weight: 500; line-height: 1.4; }
+        .resched-close { display: inline-flex; align-items: center; justify-content: center; height: 24px; padding: 0 8px; border-radius: 9999px; background: var(--state-success); color: var(--lifeflow-primary-foreground); font-size: 11px; font-weight: 600; line-height: 1; flex-shrink: 0; cursor: pointer; transition: opacity 0.15s ease; }
+        .resched-close:hover { opacity: 0.9; }
+        .resched-close:active { opacity: 0.75; }
+
+        /* ---- 动效偏好 ---- */
+        @media (prefers-reduced-motion: reduce) {
+          .lf-ring-arc, .lf-card, .block-card, .lf-switch .lf-knob, .lf-done-ring, .lf-toast, .lf-seg button { transition: none !important; animation: none !important; }
+          .tpl-chip, .exec-chip, .tpl-picker, [data-mode-panel], .lf-mini-btn { transition: none !important; animation: none !important; }
+          .cal-day, .cal-nav, .tpl-add-btn, .tpl-del-btn, .tpl-op-name { transition: none !important; animation: none !important; }
+          .resched-toast, .goal-time, .goal-time.goal-time-bump, #conflict-hint { transition: none !important; animation: none !important; }
+          .lf-sheet-overlay, .lf-sheet, .goal-gen-open-btn, .goal-gen-goal, .gg-check, .goal-gen-cta { transition: none !important; animation: none !important; }
+        }
+      </style>
+
+      <div class="lf-container document-scroll mx-auto w-full max-w-md px-4 pb-[104px] pt-3" style="font-family:var(--lifeflow-font-body)">
+
+        <!-- 1. 页头：标题 -->
+        <header class="pb-3 pt-1">
+          <h1 class="lf-h1 text-[var(--lifeflow-text-primary)]">理想日</h1>
+          <p class="mt-1 text-[13px] leading-snug text-[var(--lifeflow-text-secondary)]">5 大段时间轴 · 每段功能独立规划</p>
+        </header>
+
+        <!-- 2. 8+8+8 三色环形分布 -->
+        <section id="section-ring" class="pb-2" aria-label="8+8+8 三色环形分布">
+          <div class="lf-card lf-ring-card">
+            <div class="lf-ring-wrap">
+              <svg class="lf-ring-svg" viewBox="0 0 120 120" aria-hidden="true">
+                <circle class="lf-ring-arc lf-ring-arc--sleep" cx="60" cy="60" r="50"></circle>
+                <circle class="lf-ring-arc lf-ring-arc--study" cx="60" cy="60" r="50"></circle>
+                <circle class="lf-ring-arc lf-ring-arc--rest" cx="60" cy="60" r="50"></circle>
+              </svg>
+              <div class="lf-ring-center">
+                <div class="lf-ring-num lf-mono"><span id="ring-hours">22.5</span><span class="text-[11px] font-semibold"> h</span></div>
+                <div class="lf-ring-sub">已安排 / 24h</div>
+              </div>
+            </div>
+            <div class="lf-legend">
+              <div class="flex items-center gap-1.5 pb-0.5">
+                <i data-lucide="sparkles" class="h-3.5 w-3.5 shrink-0 text-[var(--lifeflow-primary)]"></i>
+                <span class="text-[13px] font-bold text-[var(--lifeflow-text-primary)]">8+8+8 理想分布</span>
+              </div>
+              <div class="lf-legend-item"><i class="lf-legend-dot lf-dot-sleep"></i><span class="min-w-0 truncate">睡眠</span><span class="lf-mono ml-auto font-semibold">8h</span></div>
+              <div class="lf-legend-item"><i class="lf-legend-dot lf-dot-study"></i><span class="min-w-0 truncate">学习</span><span class="lf-mono ml-auto font-semibold">8h</span></div>
+              <div class="lf-legend-item"><i class="lf-legend-dot lf-dot-rest"></i><span class="min-w-0 truncate">生活</span><span class="lf-mono ml-auto font-semibold">8h</span></div>
+              <p class="pt-0.5 text-[10px] leading-relaxed text-[var(--lifeflow-text-tertiary)]">三色环形随模板安排实时计算</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- 3. 模板系统：按天独立模板 / 多模板 × 日历选执行日期 -->
+        <section class="pb-2" aria-label="模板系统">
+          <div class="lf-card px-4 py-3">
+
+            <!-- 3.1 模式切换 -->
+            <div class="lf-seg" role="group" aria-label="模板模式切换">
+              <button type="button" data-mode-tab="daily" data-dom-id="mode-daily" aria-pressed="true" class="seg-active">按天模板</button>
+              <button type="button" data-mode-tab="multi" data-dom-id="mode-multi" aria-pressed="false">多模板日历</button>
+            </div>
+
+            <!-- 3.2 按天模板模式（默认）：7 个独立模板 -->
+            <div data-mode-panel="daily" class="active" aria-label="按天模板模式">
+              <div class="tpl-chips no-scrollbar" role="group" aria-label="选择每天独立模板">
+                <button type="button" class="tpl-chip is-active" data-dom-id="tpl-mon" data-day="0" aria-pressed="true">周一</button>
+                <button type="button" class="tpl-chip" data-dom-id="tpl-tue" data-day="1" aria-pressed="false">周二</button>
+                <button type="button" class="tpl-chip" data-dom-id="tpl-wed" data-day="2" aria-pressed="false">周三</button>
+                <button type="button" class="tpl-chip" data-dom-id="tpl-thu" data-day="3" aria-pressed="false">周四</button>
+                <button type="button" class="tpl-chip" data-dom-id="tpl-fri" data-day="4" aria-pressed="false">周五</button>
+                <button type="button" class="tpl-chip" data-dom-id="tpl-sat" data-day="5" aria-pressed="false">周六</button>
+                <button type="button" class="tpl-chip" data-dom-id="tpl-sun" data-day="6" aria-pressed="false">周日</button>
+              </div>
+
+              <div class="tpl-copy-row">
+                <button type="button" id="tpl-copy" data-dom-id="tpl-copy" aria-expanded="false" class="tpl-copy-btn"><i data-lucide="copy" class="shrink-0"></i>复制到其他天</button>
+                <span class="tpl-copy-cap">将该模板复制给其他天</span>
+              </div>
+
+              <div class="tpl-picker" id="tpl-copy-picker" aria-hidden="true">
+                <div class="tpl-picker-inner">
+                  <div class="tpl-picker-chips" id="tpl-copy-days"><!-- 由脚本填充可选日期 --></div>
+                  <div class="tpl-picker-foot">
+                    <span class="text-[11px] text-[var(--lifeflow-text-tertiary)]">可多选 · 复制模板与名称</span>
+                    <button type="button" id="tpl-copy-confirm" data-dom-id="tpl-copy-confirm" class="lf-mini-btn lf-mini-btn--primary"><i data-lucide="check" class="shrink-0"></i>复制所选</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="tpl-name-wrap">
+                <button type="button" id="tpl-rename" data-dom-id="tpl-rename" class="tpl-name-row" aria-label="重命名当前模板">
+                  <span class="tpl-name-main"><i data-lucide="calendar-days" class="shrink-0"></i><span id="tpl-name-txt" class="tpl-name-txt">周三模板</span></span>
+                  <span class="tpl-rename-hint">点击起名</span>
+                </button>
+                <div class="tpl-name-edit" id="tpl-rename-edit" hidden>
+                  <input type="text" id="tpl-rename-input" class="tpl-name-input" maxlength="12" placeholder="为本周三起名" aria-label="模板名称">
+                  <button type="button" id="tpl-rename-confirm" data-dom-id="tpl-rename-confirm" class="lf-mini-btn lf-mini-btn--primary"><i data-lucide="check" class="shrink-0"></i>确定</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- 3.3 多模板日历模式：多模板 × 每模板日历选执行日期 -->
+            <div data-mode-panel="multi" aria-label="多模板日历模式">
+              <!-- 模板列表：横向滚动 chips + 新增（上限 5 个） -->
+              <div class="tpl-chips no-scrollbar" id="tpl-chip-row" role="group" aria-label="模板列表">
+                <button type="button" class="tpl-chip is-active" data-dom-id="tpl-chip-1" data-tpl-id="1" aria-pressed="true">工作日模板</button>
+                <button type="button" class="tpl-chip" data-dom-id="tpl-chip-2" data-tpl-id="2" aria-pressed="false">周末模板</button>
+                <button type="button" id="tpl-add" data-dom-id="tpl-add" class="tpl-add-btn"><i data-lucide="plus" class="shrink-0"></i>新增模板</button>
+              </div>
+
+              <!-- 当前模板操作行：重命名 + 删除 -->
+              <div class="tpl-op-row">
+                <button type="button" id="tpl-rename-multi" data-dom-id="tpl-rename" class="tpl-op-name" aria-label="重命名当前模板">
+                  <span id="tpl-multi-name" class="tpl-op-name-txt">工作日模板</span>
+                  <i data-lucide="pencil" class="shrink-0"></i>
+                </button>
+                <button type="button" id="tpl-del" data-dom-id="tpl-del" class="tpl-del-btn"><i data-lucide="trash-2" class="shrink-0"></i>删除</button>
+              </div>
+
+              <!-- 由目标生成（T25 · 目标 → 理想日 → 日程 桥接） -->
+              <button type="button" id="goal-gen-open" data-dom-id="goal-gen-open" class="goal-gen-open-btn" aria-haspopup="dialog" aria-label="由目标生成理想日模板">
+                <i data-lucide="sparkles" class="shrink-0"></i>由目标生成
+                <span class="goal-gen-open-cap">选目标 · 配额预览 · 落日程</span>
+              </button>
+              <div class="tpl-name-edit" id="tpl-multi-edit" hidden>
+                <input type="text" id="tpl-multi-input" class="tpl-name-input" maxlength="12" placeholder="为模板起名" aria-label="模板名称">
+                <button type="button" id="tpl-multi-confirm" data-dom-id="tpl-rename-confirm" class="lf-mini-btn lf-mini-btn--primary"><i data-lucide="check" class="shrink-0"></i>确定</button>
+              </div>
+
+              <!-- 日历选择卡：月历视图（周一~周日），数据按模板隔离 -->
+              <div class="tpl-cal" id="tpl-calendar" aria-label="执行日期日历">
+                <div class="cal-head">
+                  <button type="button" id="cal-prev" data-dom-id="cal-prev" class="cal-nav" aria-label="上一个月"><i data-lucide="chevron-left" class="shrink-0"></i></button>
+                  <div class="cal-month lf-mono" id="cal-month-label">2026 年 8 月</div>
+                  <button type="button" id="cal-next" data-dom-id="cal-next" class="cal-nav" aria-label="下一个月"><i data-lucide="chevron-right" class="shrink-0"></i></button>
+                </div>
+                <div class="cal-week">
+                  <span>周一</span><span>周二</span><span>周三</span><span>周四</span><span>周五</span><span>周六</span><span>周日</span>
+                </div>
+                <div class="cal-grid" id="cal-grid">
+                  <span class="cal-blank"></span><span class="cal-blank"></span><span class="cal-blank"></span><span class="cal-blank"></span><span class="cal-blank"></span>
+                  <button type="button" class="cal-day lf-mono" data-dom-id="cal-day-1" data-day="1" aria-pressed="false">1</button>
+                  <button type="button" class="cal-day lf-mono" data-dom-id="cal-day-2" data-day="2" aria-pressed="false">2</button>
+                  <button type="button" class="cal-day lf-mono is-sel" data-dom-id="cal-day-3" data-day="3" aria-pressed="true">3</button>
+                  <button type="button" class="cal-day lf-mono is-sel" data-dom-id="cal-day-4" data-day="4" aria-pressed="true">4</button>
+                  <button type="button" class="cal-day lf-mono is-sel" data-dom-id="cal-day-5" data-day="5" aria-pressed="true">5</button>
+                  <button type="button" class="cal-day lf-mono is-sel" data-dom-id="cal-day-6" data-day="6" aria-pressed="true">6</button>
+                  <button type="button" class="cal-day lf-mono is-sel" data-dom-id="cal-day-7" data-day="7" aria-pressed="true">7</button>
+                  <button type="button" class="cal-day lf-mono" data-dom-id="cal-day-8" data-day="8" aria-pressed="false">8</button>
+                  <button type="button" class="cal-day lf-mono" data-dom-id="cal-day-9" data-day="9" aria-pressed="false">9</button>
+                  <button type="button" class="cal-day lf-mono is-sel" data-dom-id="cal-day-10" data-day="10" aria-pressed="true">10</button>
+                  <button type="button" class="cal-day lf-mono is-sel" data-dom-id="cal-day-11" data-day="11" aria-pressed="true">11</button>
+                  <button type="button" class="cal-day lf-mono is-sel" data-dom-id="cal-day-12" data-day="12" aria-pressed="true">12</button>
+                  <button type="button" class="cal-day lf-mono is-sel" data-dom-id="cal-day-13" data-day="13" aria-pressed="true">13</button>
+                  <button type="button" class="cal-day lf-mono is-sel" data-dom-id="cal-day-14" data-day="14" aria-pressed="true">14</button>
+                  <button type="button" class="cal-day lf-mono" data-dom-id="cal-day-15" data-day="15" aria-pressed="false">15</button>
+                  <button type="button" class="cal-day lf-mono" data-dom-id="cal-day-16" data-day="16" aria-pressed="false">16</button>
+                  <button type="button" class="cal-day lf-mono is-sel" data-dom-id="cal-day-17" data-day="17" aria-pressed="true">17</button>
+                  <button type="button" class="cal-day lf-mono is-sel" data-dom-id="cal-day-18" data-day="18" aria-pressed="true">18</button>
+                  <button type="button" class="cal-day lf-mono is-sel" data-dom-id="cal-day-19" data-day="19" aria-pressed="true">19</button>
+                  <button type="button" class="cal-day lf-mono is-sel" data-dom-id="cal-day-20" data-day="20" aria-pressed="true">20</button>
+                  <button type="button" class="cal-day lf-mono is-sel" data-dom-id="cal-day-21" data-day="21" aria-pressed="true">21</button>
+                  <button type="button" class="cal-day lf-mono" data-dom-id="cal-day-22" data-day="22" aria-pressed="false">22</button>
+                  <button type="button" class="cal-day lf-mono" data-dom-id="cal-day-23" data-day="23" aria-pressed="false">23</button>
+                  <button type="button" class="cal-day lf-mono is-sel" data-dom-id="cal-day-24" data-day="24" aria-pressed="true">24</button>
+                  <button type="button" class="cal-day lf-mono is-sel" data-dom-id="cal-day-25" data-day="25" aria-pressed="true">25</button>
+                  <button type="button" class="cal-day lf-mono is-sel" data-dom-id="cal-day-26" data-day="26" aria-pressed="true">26</button>
+                  <button type="button" class="cal-day lf-mono is-sel" data-dom-id="cal-day-27" data-day="27" aria-pressed="true">27</button>
+                  <button type="button" class="cal-day lf-mono is-sel" data-dom-id="cal-day-28" data-day="28" aria-pressed="true">28</button>
+                  <button type="button" class="cal-day lf-mono" data-dom-id="cal-day-29" data-day="29" aria-pressed="false">29</button>
+                  <button type="button" class="cal-day lf-mono" data-dom-id="cal-day-30" data-day="30" aria-pressed="false">30</button>
+                  <button type="button" class="cal-day lf-mono is-sel" data-dom-id="cal-day-31" data-day="31" aria-pressed="true">31</button>
+                  <span class="cal-blank"></span><span class="cal-blank"></span><span class="cal-blank"></span><span class="cal-blank"></span><span class="cal-blank"></span><span class="cal-blank"></span>
+                </div>
+                <p class="cal-hint" id="cal-hint" data-dom-id="cal-hint">该日将执行「工作日模板」</p>
+              </div>
+
+              <!-- 已选统计 -->
+              <p class="cal-stats" data-dom-id="cal-stats">已选 <span id="cal-count" class="lf-mono font-semibold">21</span> 天 · 本周执行 <span id="cal-weekdays" class="lf-mono font-semibold">周一至周五</span></p>
+            </div>
+
+            <!-- 3.4 共享控制：手动锁定 / 恢复自动 + 提示行 -->
+            <div class="tpl-controls">
+              <span class="flex min-w-0 shrink-0 items-center gap-1.5">
+                <i data-lucide="lock" class="h-3.5 w-3.5 shrink-0 text-[var(--lifeflow-text-tertiary)]"></i>
+                <span class="text-[12px] font-medium text-[var(--lifeflow-text-secondary)]">手动锁定</span>
+                <button type="button" id="lock-switch" data-dom-id="lock-switch" role="switch" aria-checked="false" aria-label="手动锁定模板" class="lf-switch"><span class="lf-knob"></span></button>
+              </span>
+              <button type="button" id="btn-restore" data-dom-id="btn-restore" class="flex h-8 shrink-0 items-center gap-1 rounded-full border border-[var(--lifeflow-border-light)] bg-[var(--lifeflow-card)] px-3 text-[13px] font-medium text-[var(--lifeflow-text-secondary)] transition-colors hover:bg-[var(--lifeflow-muted)] hover:text-[var(--lifeflow-text-primary)] active:opacity-90"><i data-lucide="refresh-cw" class="h-3.5 w-3.5"></i>恢复自动</button>
+            </div>
+
+            <!-- 3.5 重排反馈条：切换模板 / 恢复自动时出现，体现目标事项自动跟随重排 -->
+            <div id="reschedule-toast" data-dom-id="reschedule-toast" class="resched-toast" role="status" aria-live="polite" hidden>
+              <i data-lucide="refresh-cw" class="shrink-0"></i>
+              <span id="reschedule-text" data-dom-id="reschedule-text" class="resched-txt">已按新模板自动重排 2 项目标事项 · 内容不变</span>
+              <button type="button" id="reschedule-close" data-dom-id="reschedule-close" class="resched-close" aria-label="关闭重排提示">关闭</button>
+            </div>
+
+            <p id="template-hint" class="mt-2.5 text-[12px] leading-relaxed text-[var(--lifeflow-text-tertiary)]">当前模板：周三 · 独立排布</p>
+          </div>
+        </section>
+
+        <!-- 3.6 目标事项跟随排布（v2 联动增强：小卡时间随模板/天切换） -->
+        <section id="section-goal-items" data-dom-id="section-goal-items" class="pt-2" aria-label="目标事项跟随排布">
+          <div class="goal-card">
+            <div class="goal-hd">
+              <span class="goal-hd-icon"><i data-lucide="sparkles" class="shrink-0"></i></span>
+              <div class="min-w-0">
+                <h2 class="goal-title">目标事项跟随排布</h2>
+                <p class="goal-sub">来自「目标」模块 · 时间随模板自动重排</p>
+              </div>
+            </div>
+            <ul class="goal-list">
+              <li class="goal-item" data-dom-id="goal-item-1">
+                <i data-lucide="sparkles" class="goal-item-icon shrink-0"></i>
+                <span class="goal-name">考研英语 · 阅读 1 篇</span>
+                <span id="goal-time-1" data-dom-id="goal-time-1" class="goal-time lf-mono">08:00-09:40</span>
+                <span class="goal-src">来源 目标</span>
+              </li>
+              <li class="goal-item" data-dom-id="goal-item-2">
+                <i data-lucide="sparkles" class="goal-item-icon shrink-0"></i>
+                <span class="goal-name">考研英语 · 单词 200 个</span>
+                <span id="goal-time-2" data-dom-id="goal-time-2" class="goal-time lf-mono">14:00-14:30</span>
+                <span class="goal-src">来源 目标</span>
+              </li>
+            </ul>
+            <p class="goal-note">切换模板将自动重排，手动锁定的事项不受影响</p>
+          </div>
+
+          <!-- 3.7 冲突提示：目标事项时间与手动事项冲突时显示 -->
+          <div id="conflict-hint" data-dom-id="conflict-hint" role="status" hidden>
+            <i data-lucide="alert-triangle" class="shrink-0"></i>
+            <span>1 项目标事项顺延至 15:00</span>
+          </div>
+        </section>
+
+        <!-- 4. 5 大段列表 -->
+        <section class="pt-2" aria-label="5 大段时间轴">
+          <div class="flex items-center justify-between gap-2 pb-2">
+            <h2 class="lf-sect-label">5 大段 · 点击整段标记完成</h2>
+            <span class="lf-mono text-[11px] text-[var(--lifeflow-text-tertiary)]">已排 <span id="total-scheduled" class="font-semibold">22.5h</span></span>
+          </div>
+
+          <div class="lf-blocks">
+            <!-- 睡眠段 -->
+            <section class="block-card" data-dom-id="block-sleep" data-block-name="睡眠" tabindex="0" aria-label="睡眠段 22:30-06:00 含午睡">
+              <div class="block-hd">
+                <span class="block-chip block-chip--sleep"><i data-lucide="moon"></i></span>
+                <div class="min-w-0 flex-1">
+                  <div class="block-title">
+                    <h2>睡眠</h2>
+                    <span class="lf-badge-lock"><i data-lucide="lock"></i>仅 sleep 功能锁定</span>
+                  </div>
+                  <p class="block-sub"><span class="lf-mono">22:30-06:00</span> + 午睡 <span class="lf-mono">12:30-13:00</span> · 2 时段 · 共 <span class="lf-mono font-semibold">8h</span></p>
+                </div>
+                <span class="lf-done-ring"><i data-lucide="check"></i></span>
+                <a href="#" data-dom-id="edit-entry" data-block-name="睡眠" class="lf-edit-btn" aria-label="编辑睡眠段边界"><i data-lucide="pencil"></i></a>
+              </div>
+              <div class="lf-fn-row no-scrollbar">
+                <span class="lf-fn-cap">锁定功能</span>
+                <a href="#" data-dom-id="fn-sleep" data-fn-label="睡眠" data-fn-locked="1" class="lf-fn-item" aria-label="睡眠功能已锁定"><span class="lf-fn-chip lf-fn--sleep"><i data-lucide="moon"></i></span><span class="lf-fn-label">睡眠</span></a>
+              </div>
+              <div class="slot-row"><span class="slot-name">夜间睡眠</span><span class="slot-meta"><span class="slot-time lf-mono">22:30 → 06:00</span><span class="slot-dur lf-mono">7.5h</span></span></div>
+              <div class="slot-row"><span class="slot-name">午睡</span><span class="slot-meta"><span class="slot-time lf-mono">12:30 → 13:00</span><span class="slot-dur lf-mono">0.5h</span></span></div>
+            </section>
+
+            <!-- 上午段 -->
+            <section class="block-card" data-dom-id="block-morning" data-block-name="上午" tabindex="0" aria-label="上午段 06:00-12:30">
+              <div class="block-hd">
+                <span class="block-chip block-chip--morning"><i data-lucide="sunrise"></i></span>
+                <div class="min-w-0 flex-1">
+                  <div class="block-title"><h2>上午</h2></div>
+                  <p class="block-sub"><span class="lf-mono">06:00-12:30</span> · 3 时段</p>
+                </div>
+                <span class="lf-done-ring"><i data-lucide="check"></i></span>
+                <a href="#" data-dom-id="edit-entry" data-block-name="上午" class="lf-edit-btn" aria-label="编辑上午段边界"><i data-lucide="pencil"></i></a>
+              </div>
+              <div class="lf-fn-row no-scrollbar">
+                <span class="lf-fn-cap">绑定功能</span>
+                <a href="#" data-dom-id="fn-routine" data-fn-label="作息" class="lf-fn-item" aria-label="作息功能"><span class="lf-fn-chip lf-fn--routine"><i data-lucide="clock"></i></span><span class="lf-fn-label">作息</span></a>
+                <a href="#" data-dom-id="fn-workout" data-fn-label="训练" class="lf-fn-item" aria-label="训练功能"><span class="lf-fn-chip lf-fn--workout"><i data-lucide="dumbbell"></i></span><span class="lf-fn-label">训练</span></a>
+                <a href="#" data-dom-id="fn-study" data-fn-label="学习" class="lf-fn-item" aria-label="学习功能"><span class="lf-fn-chip lf-fn--study"><i data-lucide="book-open"></i></span><span class="lf-fn-label">学习</span></a>
+              </div>
+              <div class="slot-row"><span class="slot-name">起床洗漱</span><span class="slot-meta"><span class="slot-time lf-mono">06:00 → 06:30</span><span class="slot-dur lf-mono">0.5h</span></span></div>
+              <div class="slot-row"><span class="slot-name">晨间训练</span><span class="slot-meta"><span class="slot-time lf-mono">06:30 → 08:00</span><span class="slot-dur lf-mono">1.5h</span></span></div>
+              <div class="slot-row"><span class="slot-name">主目标学习</span><span class="slot-meta"><span class="slot-time lf-mono">08:00 → 11:00</span><span class="slot-dur lf-mono">3h</span></span></div>
+            </section>
+
+            <!-- 中午段 -->
+            <section class="block-card" data-dom-id="block-noon" data-block-name="中午" tabindex="0" aria-label="中午段 12:30-14:00">
+              <div class="block-hd">
+                <span class="block-chip block-chip--noon"><i data-lucide="coffee"></i></span>
+                <div class="min-w-0 flex-1">
+                  <div class="block-title"><h2>中午</h2></div>
+                  <p class="block-sub"><span class="lf-mono">12:30-14:00</span> · 1 时段</p>
+                </div>
+                <span class="lf-done-ring"><i data-lucide="check"></i></span>
+                <a href="#" data-dom-id="edit-entry" data-block-name="中午" class="lf-edit-btn" aria-label="编辑中午段边界"><i data-lucide="pencil"></i></a>
+              </div>
+              <div class="lf-fn-row no-scrollbar">
+                <span class="lf-fn-cap">绑定功能</span>
+                <a href="#" data-dom-id="fn-medication" data-fn-label="吃药" class="lf-fn-item" aria-label="吃药功能"><span class="lf-fn-chip lf-fn--medication"><i data-lucide="pill"></i></span><span class="lf-fn-label">吃药</span></a>
+              </div>
+              <div class="slot-row"><span class="slot-name">午餐午休</span><span class="slot-meta"><span class="slot-time lf-mono">13:00 → 14:00</span><span class="slot-dur lf-mono">1h</span></span></div>
+            </section>
+
+            <!-- 下午段 -->
+            <section class="block-card" data-dom-id="block-afternoon" data-block-name="下午" tabindex="0" aria-label="下午段 14:00-18:30">
+              <div class="block-hd">
+                <span class="block-chip block-chip--afternoon"><i data-lucide="cloud-sun"></i></span>
+                <div class="min-w-0 flex-1">
+                  <div class="block-title"><h2>下午</h2></div>
+                  <p class="block-sub"><span class="lf-mono">14:00-18:30</span> · 2 时段</p>
+                </div>
+                <span class="lf-done-ring"><i data-lucide="check"></i></span>
+                <a href="#" data-dom-id="edit-entry" data-block-name="下午" class="lf-edit-btn" aria-label="编辑下午段边界"><i data-lucide="pencil"></i></a>
+              </div>
+              <div class="lf-fn-row no-scrollbar">
+                <span class="lf-fn-cap">绑定功能</span>
+                <a href="#" data-dom-id="fn-study" data-fn-label="学习" class="lf-fn-item" aria-label="学习功能"><span class="lf-fn-chip lf-fn--study"><i data-lucide="book-open"></i></span><span class="lf-fn-label">学习</span></a>
+              </div>
+              <div class="slot-row"><span class="slot-name">次目标学习</span><span class="slot-meta"><span class="slot-time lf-mono">14:00 → 17:00</span><span class="slot-dur lf-mono">3h</span></span></div>
+              <div class="slot-row"><span class="slot-name">自由活动</span><span class="slot-meta"><span class="slot-time lf-mono">17:00 → 18:30</span><span class="slot-dur lf-mono">1.5h</span></span></div>
+            </section>
+
+            <!-- 晚上段 -->
+            <section class="block-card" data-dom-id="block-evening" data-block-name="晚上" tabindex="0" aria-label="晚上段 18:30-22:30">
+              <div class="block-hd">
+                <span class="block-chip block-chip--evening"><i data-lucide="moon-star"></i></span>
+                <div class="min-w-0 flex-1">
+                  <div class="block-title"><h2>晚上</h2></div>
+                  <p class="block-sub"><span class="lf-mono">18:30-22:30</span> · 4 时段</p>
+                </div>
+                <span class="lf-done-ring"><i data-lucide="check"></i></span>
+                <a href="#" data-dom-id="edit-entry" data-block-name="晚上" class="lf-edit-btn" aria-label="编辑晚上段边界"><i data-lucide="pencil"></i></a>
+              </div>
+              <div class="lf-fn-row no-scrollbar">
+                <span class="lf-fn-cap">绑定功能</span>
+                <a href="#" data-dom-id="fn-posture" data-fn-label="体态" class="lf-fn-item" aria-label="体态功能"><span class="lf-fn-chip lf-fn--posture"><i data-lucide="person-standing"></i></span><span class="lf-fn-label">体态</span></a>
+                <a href="#" data-dom-id="fn-wellness" data-fn-label="功法" class="lf-fn-item" aria-label="功法功能"><span class="lf-fn-chip lf-fn--wellness"><i data-lucide="sprout"></i></span><span class="lf-fn-label">功法</span></a>
+                <a href="#" data-dom-id="fn-study" data-fn-label="学习" class="lf-fn-item" aria-label="学习功能"><span class="lf-fn-chip lf-fn--study"><i data-lucide="book-open"></i></span><span class="lf-fn-label">学习</span></a>
+              </div>
+              <div class="slot-row"><span class="slot-name">晚餐</span><span class="slot-meta"><span class="slot-time lf-mono">18:30 → 19:30</span><span class="slot-dur lf-mono">1h</span></span></div>
+              <div class="slot-row"><span class="slot-name">晚间复盘</span><span class="slot-meta"><span class="slot-time lf-mono">19:30 → 21:00</span><span class="slot-dur lf-mono">1.5h</span></span></div>
+              <div class="slot-row"><span class="slot-name">拉伸养生</span><span class="slot-meta"><span class="slot-time lf-mono">21:00 → 21:30</span><span class="slot-dur lf-mono">0.5h</span></span></div>
+              <div class="slot-row"><span class="slot-name">自由时间</span><span class="slot-meta"><span class="slot-time lf-mono">21:30 → 22:30</span><span class="slot-dur lf-mono">1h</span></span></div>
+            </section>
+          </div>
+
+          <p class="px-1 pt-2 text-[11px] leading-relaxed text-[var(--lifeflow-text-tertiary)]">点击段卡片整段标记完成 · 点击功能图标安排该功能 · 右侧「编辑」调整段边界</p>
+        </section>
+      </div>
+
+      <!-- 5. 底部导航 -->
+      <nav data-mobile-nav="global" id="bottom-nav" class="lf-tabbar-glass w-full max-w-md mx-auto h-[64px]"><div class="grid grid-cols-4 h-full"><a href="#" data-dom-id="nav-home" data-nav-key="home" data-active="false" class="min-w-0 flex flex-col items-center justify-center gap-0.5 h-full text-[var(--lifeflow-text-tertiary)]"><i data-lucide="home" class="w-5 h-5 shrink-0"></i><span class="text-[11px] leading-none whitespace-nowrap max-w-full truncate">首页</span></a><a href="#" data-dom-id="nav-goals" data-nav-key="goals" data-active="false" class="min-w-0 flex flex-col items-center justify-center gap-0.5 h-full text-[var(--lifeflow-text-tertiary)]"><i data-lucide="target" class="w-5 h-5 shrink-0"></i><span class="text-[11px] leading-none whitespace-nowrap max-w-full truncate">目标</span></a><a href="#" data-dom-id="nav-schedule" data-nav-key="schedule" data-active="false" class="min-w-0 flex flex-col items-center justify-center gap-0.5 h-full text-[var(--lifeflow-text-tertiary)]"><i data-lucide="calendar-days" class="w-5 h-5 shrink-0"></i><span class="text-[11px] leading-none whitespace-nowrap max-w-full truncate">日程</span></a><a href="#" data-dom-id="nav-ideal" data-nav-key="ideal" data-active="true" class="min-w-0 flex flex-col items-center justify-center gap-0.5 h-full text-[var(--lifeflow-primary)]"><i data-lucide="sun" class="w-5 h-5 shrink-0"></i><span class="text-[11px] leading-none whitespace-nowrap max-w-full truncate font-semibold">理想日</span></a></div></nav>
+
+      <!-- Toast -->
+      <div id="lf-toast" class="lf-toast" role="status" aria-live="polite"></div>
+
+      <!-- 6. 由目标生成 · 底部 Sheet（T25 演示态：选目标 → 配额决策预览 → 确认落日程） -->
+      <div id="goal-gen-overlay" class="lf-sheet-overlay" hidden>
+        <div class="lf-sheet" role="dialog" aria-modal="true" aria-label="由目标生成理想日">
+          <div class="lf-sheet-grip"></div>
+          <div class="lf-sheet-head">
+            <div class="min-w-0">
+              <h2 class="lf-sheet-title">由目标生成理想日</h2>
+              <p class="lf-sheet-sub">目标 → 理想日 → 日程 · 单向管道</p>
+            </div>
+            <button type="button" id="goal-gen-close" data-dom-id="goal-gen-close" class="lf-sheet-close" aria-label="关闭"><i data-lucide="x" class="h-5 w-5"></i></button>
+          </div>
+
+          <div class="lf-sheet-progress" role="group" aria-label="生成步骤">
+            <span class="lf-sheet-step is-on" data-gen-step="1">1 · 选择目标</span>
+            <span class="lf-sheet-step" data-gen-step="2">2 · 配额预览</span>
+          </div>
+
+          <div class="lf-sheet-body no-scrollbar">
+            <!-- 第 1 步：多选进行中目标 -->
+            <div id="goal-gen-pane1" class="goal-gen-pane" role="group" aria-label="选择进行中目标">
+              <p class="goal-gen-cap">进行中目标 · 可多选，点击选中高亮</p>
+              <ul class="goal-gen-list">
+                <li>
+                  <button type="button" data-gen-goal aria-pressed="false" class="goal-gen-goal">
+                    <i class="gg-dot" style="--gg:var(--lifeflow-888-study)"></i>
+                    <span class="gg-name">考研英语 · 主目标学习</span>
+                    <span class="gg-tag">学习 · 已挂靠周三</span>
+                    <i data-lucide="check" class="gg-check"></i>
+                  </button>
+                </li>
+                <li>
+                  <button type="button" data-gen-goal aria-pressed="false" class="goal-gen-goal">
+                    <i class="gg-dot" style="--gg:var(--lifeflow-module-training)"></i>
+                    <span class="gg-name">晨间训练 · 体能提升</span>
+                    <span class="gg-tag">训练 · 已挂靠周三</span>
+                    <i data-lucide="check" class="gg-check"></i>
+                  </button>
+                </li>
+                <li>
+                  <button type="button" data-gen-goal aria-pressed="false" class="goal-gen-goal">
+                    <i class="gg-dot" style="--gg:var(--lifeflow-888-sleep)"></i>
+                    <span class="gg-name">早睡早起 · 作息目标</span>
+                    <span class="gg-tag">睡眠 · 未挂靠</span>
+                    <i data-lucide="check" class="gg-check"></i>
+                  </button>
+                </li>
+                <li>
+                  <button type="button" data-gen-goal aria-pressed="false" class="goal-gen-goal">
+                    <i class="gg-dot" style="--gg:var(--lifeflow-888-life)"></i>
+                    <span class="gg-name">家庭陪伴 · 晚餐散步</span>
+                    <span class="gg-tag">生活 · 未挂靠</span>
+                    <i data-lucide="check" class="gg-check"></i>
+                  </button>
+                </li>
+                <li>
+                  <button type="button" data-gen-goal aria-pressed="false" class="goal-gen-goal">
+                    <i class="gg-dot" style="--gg:var(--lifeflow-888-study)"></i>
+                    <span class="gg-name">单词 200 个 · 碎片时间</span>
+                    <span class="gg-tag">学习 · 未挂靠</span>
+                    <i data-lucide="check" class="gg-check"></i>
+                  </button>
+                </li>
+              </ul>
+            </div>
+
+            <!-- 第 2 步：配额决策预览 -->
+            <div id="goal-gen-pane2" class="goal-gen-pane" role="group" aria-label="配额决策预览" hidden>
+              <div class="goal-gen-quota">
+                <span class="gg-q gg-q--sleep">睡眠 8h</span>
+                <span class="gg-q gg-q--study">工作学习 8h</span>
+                <span class="gg-q gg-q--life">生活 8h</span>
+                <span class="gg-q-note">8+8+8 配额 480 分钟 × 3</span>
+              </div>
+              <ul class="goal-gen-decisions">
+                <li class="gg-decision">
+                  <i class="gg-dot" style="--gg:var(--lifeflow-888-study)"></i>
+                  <span class="gg-name">考研英语 · 阅读 1 篇</span>
+                  <span class="gg-dur lf-mono">3h</span>
+                  <span class="gg-badge gg-badge--keep">保留</span>
+                </li>
+                <li class="gg-decision">
+                  <i class="gg-dot" style="--gg:var(--lifeflow-module-training)"></i>
+                  <span class="gg-name">晨间训练 · 体能提升</span>
+                  <span class="gg-dur lf-mono">1.5h</span>
+                  <span class="gg-badge gg-badge--compress">压缩至 45min</span>
+                </li>
+                <li class="gg-decision">
+                  <i class="gg-dot" style="--gg:var(--lifeflow-888-sleep)"></i>
+                  <span class="gg-name">早睡早起 · 作息目标</span>
+                  <span class="gg-dur lf-mono">30min</span>
+                  <span class="gg-badge gg-badge--keep">保留</span>
+                </li>
+                <li class="gg-decision">
+                  <i class="gg-dot" style="--gg:var(--lifeflow-888-life)"></i>
+                  <span class="gg-name">家庭陪伴 · 晚餐散步</span>
+                  <span class="gg-dur lf-mono">1h</span>
+                  <span class="gg-badge gg-badge--carry">顺延次日</span>
+                </li>
+                <li class="gg-decision">
+                  <i class="gg-dot" style="--gg:var(--lifeflow-888-study)"></i>
+                  <span class="gg-name">单词 200 个 · 碎片时间</span>
+                  <span class="gg-dur lf-mono">40min</span>
+                  <span class="gg-badge gg-badge--compress">压缩至 45min</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="lf-sheet-foot">
+            <div id="goal-gen-foot1" class="goal-gen-foot">
+              <button type="button" id="goal-gen-next" data-dom-id="goal-gen-next" class="goal-gen-cta goal-gen-cta--primary">下一步 · 配额决策预览<i data-lucide="arrow-right" class="h-4 w-4"></i></button>
+            </div>
+            <div id="goal-gen-foot2" class="goal-gen-foot" hidden>
+              <button type="button" id="goal-gen-confirm" data-dom-id="goal-gen-confirm" class="goal-gen-cta goal-gen-cta--primary"><i data-lucide="calendar-days" class="h-4 w-4"></i>确认生成并落日程</button>
+              <p class="goal-gen-explain">保留时长=完整入段 · 压缩=配额优化 · 顺延=次日同段优先排</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <script>
+      (function () {
+        'use strict';
+
+        /* ---------- Toast ---------- */
+        var toastEl = document.getElementById('lf-toast');
+        var toastTimer = null;
+        function toast(msg) {
+          if (!toastEl) return;
+          toastEl.textContent = msg;
+          toastEl.classList.add('show');
+          if (toastTimer) clearTimeout(toastTimer);
+          toastTimer = setTimeout(function () { toastEl.classList.remove('show'); }, 1600);
+        }
+
+        /* ---------- 预置模板数据：工作日（周一~周五）/ 周末（周六~周日） ---------- */
+        var DAYS = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+
+        var WORKDAY = {
+          name: '工作日模板',
+          total: 22.5,
+          blocks: {
+            sleep: { aria: '睡眠段 22:30-06:00 含午睡', sub: '<span class="lf-mono">22:30-06:00</span> + 午睡 <span class="lf-mono">12:30-13:00</span> · 2 时段 · 共 <span class="lf-mono font-semibold">8h</span>', slots: [['夜间睡眠', '22:30 → 06:00', '7.5h'], ['午睡', '12:30 → 13:00', '0.5h']] },
+            morning: { aria: '上午段 06:00-12:30', sub: '<span class="lf-mono">06:00-12:30</span> · 3 时段', slots: [['起床洗漱', '06:00 → 06:30', '0.5h'], ['晨间训练', '06:30 → 08:00', '1.5h'], ['主目标学习', '08:00 → 11:00', '3h']] },
+            noon: { aria: '中午段 12:30-14:00', sub: '<span class="lf-mono">12:30-14:00</span> · 1 时段', slots: [['午餐午休', '13:00 → 14:00', '1h']] },
+            afternoon: { aria: '下午段 14:00-18:30', sub: '<span class="lf-mono">14:00-18:30</span> · 2 时段', slots: [['次目标学习', '14:00 → 17:00', '3h'], ['自由活动', '17:00 → 18:30', '1.5h']] },
+            evening: { aria: '晚上段 18:30-22:30', sub: '<span class="lf-mono">18:30-22:30</span> · 4 时段', slots: [['晚餐', '18:30 → 19:30', '1h'], ['晚间复盘', '19:30 → 21:00', '1.5h'], ['拉伸养生', '21:00 → 21:30', '0.5h'], ['自由时间', '21:30 → 22:30', '1h']] }
+          }
+        };
+
+        var WEEKEND = {
+          name: '周末模板',
+          total: 23.5,
+          blocks: {
+            sleep: { aria: '睡眠段 23:00-07:30', sub: '<span class="lf-mono">23:00-07:30</span> · 1 时段 · 共 <span class="lf-mono font-semibold">8.5h</span>', slots: [['夜间睡眠', '23:00 → 07:30', '8.5h']] },
+            morning: { aria: '上午段 07:30-12:30', sub: '<span class="lf-mono">07:30-12:30</span> · 3 时段', slots: [['自然醒晨练', '07:30 → 09:00', '1.5h'], ['家庭早餐', '09:00 → 10:00', '1h'], ['主目标学习', '10:00 → 12:30', '2.5h']] },
+            noon: { aria: '中午段 12:30-14:00', sub: '<span class="lf-mono">12:30-14:00</span> · 2 时段', slots: [['午餐', '12:30 → 13:30', '1h'], ['自由放松', '13:30 → 14:00', '0.5h']] },
+            afternoon: { aria: '下午段 14:00-18:00', sub: '<span class="lf-mono">14:00-18:00</span> · 2 时段', slots: [['户外自由时间', '14:00 → 16:00', '2h'], ['次目标学习', '16:00 → 18:00', '2h']] },
+            evening: { aria: '晚上段 18:00-22:30', sub: '<span class="lf-mono">18:00-22:30</span> · 4 时段', slots: [['晚餐', '18:00 → 19:00', '1h'], ['观影娱乐', '19:00 → 20:30', '1.5h'], ['拉伸养生', '20:30 → 21:00', '0.5h'], ['睡前阅读', '21:00 → 22:30', '1.5h']] }
+          }
+        };
+
+        /* 每天独立：名称 + 配置 */
+        var dayNames = ['周一模板', '周二模板', '周三模板', '周四模板', '周五模板', '周六模板', '周日模板'];
+        var dayConfig = [WORKDAY, WORKDAY, WORKDAY, WORKDAY, WORKDAY, WEEKEND, WEEKEND];
+
+        var state = {
+          mode: 'daily',
+          currentDay: 2, /* 默认激活周三 */
+          locked: false,
+          copySel: [],
+          currentTplId: 1, /* 多模板日历：当前激活模板 */
+          calYear: 2026,   /* 日历视图：默认 2026 年 8 月 */
+          calMonth: 7,
+          hintDate: null   /* 日期提示：最近一次点击的日期 */
+        };
+
+        var LOCKED_HINT = '已手动锁定 · 自动排布暂停，时段不会被模板覆盖';
+        var isInit = true; /* 初始化阶段（页面加载）不弹重排提示 */
+
+        /* ---------- DOM 引用 ---------- */
+        var tplHint = document.getElementById('template-hint');
+        var ringHours = document.getElementById('ring-hours');
+        var totalScheduled = document.getElementById('total-scheduled');
+        var lockSwitch = document.getElementById('lock-switch');
+        var btnRestore = document.getElementById('btn-restore');
+        var panelDaily = document.querySelector('[data-mode-panel="daily"]');
+        var panelMulti = document.querySelector('[data-mode-panel="multi"]');
+
+        /* ---------- 渲染：时段列表 + 环形中心 + 已排总时长 ---------- */
+        function renderBlock(name, data) {
+          var card = document.querySelector('[data-dom-id="block-' + name + '"]');
+          if (!card) return;
+          var sub = card.querySelector('.block-sub');
+          if (sub && data.sub) sub.innerHTML = data.sub;
+          var rows = Array.prototype.slice.call(card.querySelectorAll('.slot-row'));
+          rows.forEach(function (r) { r.parentNode.removeChild(r); });
+          data.slots.forEach(function (s) {
+            var html = '<div class="slot-row"><span class="slot-name">' + s[0] + '</span><span class="slot-meta"><span class="slot-time lf-mono">' + s[1] + '</span><span class="slot-dur lf-mono">' + s[2] + '</span></span></div>';
+            card.insertAdjacentHTML('beforeend', html);
+          });
+          if (data.aria) card.setAttribute('aria-label', data.aria);
+        }
+
+        function renderConfig(cfg) {
+          if (ringHours) ringHours.textContent = String(cfg.total);
+          if (totalScheduled) totalScheduled.textContent = cfg.total + 'h';
+          ['sleep', 'morning', 'noon', 'afternoon', 'evening'].forEach(function (k) {
+            renderBlock(k, cfg.blocks[k]);
+          });
+        }
+
+        /* ---------- 提示行 ---------- */
+        function hintForMode() {
+          if (state.locked) return LOCKED_HINT;
+          if (state.mode === 'multi') return '当前模板：' + activeTpl().name + ' · 日历选择执行日期';
+          return '当前模板：' + DAYS[state.currentDay] + ' · 独立排布';
+        }
+        function refreshHint() { if (tplHint) tplHint.textContent = hintForMode(); }
+
+        /* ---------- 模式切换（按天模板 / 单模板+日历） ---------- */
+        var modeBtns = document.querySelectorAll('[data-mode-tab]');
+        function switchMode(mode) {
+          state.mode = mode;
+          Array.prototype.forEach.call(modeBtns, function (b) {
+            var on = b.getAttribute('data-mode-tab') === mode;
+            b.classList.toggle('seg-active', on);
+            b.setAttribute('aria-pressed', on ? 'true' : 'false');
+          });
+          if (panelDaily) panelDaily.classList.toggle('active', mode === 'daily');
+          if (panelMulti) panelMulti.classList.toggle('active', mode === 'multi');
+          if (mode === 'daily') { renderDaily(); } else { renderTplPanel(); }
+          if (!isInit) showRescheduleToast();
+        }
+        Array.prototype.forEach.call(modeBtns, function (b) {
+          b.addEventListener('click', function () { switchMode(b.getAttribute('data-mode-tab')); });
+        });
+
+        /* ---------- 按天模式：7 天 chips ---------- */
+        var dayChips = document.querySelectorAll('.tpl-chips .tpl-chip[data-day]');
+        var tplNameTxt = document.getElementById('tpl-name-txt');
+
+        function renderDaily() {
+          Array.prototype.forEach.call(dayChips, function (c) {
+            var on = Number(c.getAttribute('data-day')) === state.currentDay;
+            c.classList.toggle('is-active', on);
+            c.setAttribute('aria-pressed', on ? 'true' : 'false');
+          });
+          if (tplNameTxt) tplNameTxt.textContent = dayNames[state.currentDay];
+          renderConfig(dayConfig[state.currentDay]);
+          refreshHint();
+          closePicker();
+          updateGoalSection();
+        }
+
+        Array.prototype.forEach.call(dayChips, function (c) {
+          c.addEventListener('click', function () {
+            var d = Number(c.getAttribute('data-day'));
+            if (d === state.currentDay) return;
+            state.currentDay = d;
+            renderDaily();
+            showRescheduleToast();
+          });
+        });
+
+        /* ---------- 复制到其他天 ---------- */
+        var copyBtn = document.getElementById('tpl-copy');
+        var copyPicker = document.getElementById('tpl-copy-picker');
+        var copyDaysWrap = document.getElementById('tpl-copy-days');
+        var copyConfirm = document.getElementById('tpl-copy-confirm');
+
+        function buildCopyDays() {
+          if (!copyDaysWrap) return;
+          copyDaysWrap.innerHTML = '';
+          DAYS.forEach(function (label, i) {
+            if (i === state.currentDay) return;
+            var b = document.createElement('button');
+            b.type = 'button';
+            var picked = state.copySel.indexOf(i) >= 0;
+            b.className = 'tpl-chip' + (picked ? ' is-picked' : '');
+            b.textContent = label;
+            b.setAttribute('aria-pressed', picked ? 'true' : 'false');
+            b.addEventListener('click', function () {
+              var idx = state.copySel.indexOf(i);
+              var nowOn = idx < 0;
+              if (nowOn) state.copySel.push(i); else state.copySel.splice(idx, 1);
+              b.classList.toggle('is-picked', nowOn);
+              b.setAttribute('aria-pressed', nowOn ? 'true' : 'false');
+            });
+            copyDaysWrap.appendChild(b);
+          });
+        }
+        function openPicker() {
+          if (!copyPicker) return;
+          state.copySel = [];
+          buildCopyDays();
+          copyPicker.classList.add('open');
+          copyPicker.setAttribute('aria-hidden', 'false');
+          if (copyBtn) copyBtn.setAttribute('aria-expanded', 'true');
+        }
+        function closePicker() {
+          if (!copyPicker) return;
+          copyPicker.classList.remove('open');
+          copyPicker.setAttribute('aria-hidden', 'true');
+          if (copyBtn) copyBtn.setAttribute('aria-expanded', 'false');
+        }
+        if (copyBtn) copyBtn.addEventListener('click', function () {
+          if (copyPicker && copyPicker.classList.contains('open')) closePicker(); else openPicker();
+        });
+        if (copyConfirm) copyConfirm.addEventListener('click', function () {
+          if (!state.copySel.length) { toast('请先选择要复制到的日期'); return; }
+          var targets = state.copySel.slice().sort(function (a, b) { return a - b; });
+          var labels = targets.map(function (i) { return DAYS[i]; }).join('、');
+          var srcName = dayNames[state.currentDay];
+          var srcCfg = dayConfig[state.currentDay];
+          targets.forEach(function (i) { dayNames[i] = srcName; dayConfig[i] = srcCfg; });
+          toast('已复制 ' + DAYS[state.currentDay] + ' → ' + labels);
+          state.copySel = [];
+          closePicker();
+        });
+
+        /* ---------- 内联重命名（每天模板 / 通用模板共用） ---------- */
+        function bindRename(opts) {
+          var trigger = opts.trigger;
+          var editBox = opts.editBox;
+          var input = opts.input;
+          var confirmBtn = opts.confirm;
+          function open() {
+            input.value = opts.getCurrent();
+            input.placeholder = opts.placeholder();
+            trigger.setAttribute('hidden', '');
+            editBox.removeAttribute('hidden');
+            input.focus();
+            input.select();
+          }
+          function close(save) {
+            if (save) {
+              var val = input.value.trim();
+              if (val) { opts.onSave(val); toast('已重命名：' + val); }
+            }
+            editBox.setAttribute('hidden', '');
+            trigger.removeAttribute('hidden');
+          }
+          trigger.addEventListener('click', open);
+          confirmBtn.addEventListener('click', function () { close(true); });
+          input.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') close(true);
+            if (e.key === 'Escape') close(false);
+          });
+        }
+
+        bindRename({
+          trigger: document.getElementById('tpl-rename'),
+          editBox: document.getElementById('tpl-rename-edit'),
+          input: document.getElementById('tpl-rename-input'),
+          confirm: document.getElementById('tpl-rename-confirm'),
+          getCurrent: function () { return dayNames[state.currentDay]; },
+          placeholder: function () { return '为本周' + DAYS[state.currentDay].charAt(1) + '起名'; },
+          onSave: function (name) {
+            dayNames[state.currentDay] = name;
+            if (tplNameTxt) tplNameTxt.textContent = name;
+          }
+        });
+
+        /* ---------- 多模板日历：模板数据（数据按模板隔离） ---------- */
+        var templates = [
+          { id: 1, name: '工作日模板', dates: new Set(), cfg: WORKDAY },
+          { id: 2, name: '周末模板', dates: new Set(), cfg: WEEKEND }
+        ];
+        var nextTplId = 3;
+
+        /* 默认预置：工作日模板选周一~周五、周末模板选周六~周日（2026 年 8 月） */
+        (function seedTplDates() {
+          var dim = new Date(2026, 8, 0).getDate();
+          for (var d = 1; d <= dim; d++) {
+            var wd = (new Date(2026, 7, d).getDay() + 6) % 7; /* 周一=0 … 周日=6 */
+            if (wd <= 4) templates[0].dates.add('8-' + d);
+            if (wd >= 5) templates[1].dates.add('8-' + d);
+          }
+        })();
+
+        function activeTpl() {
+          for (var i = 0; i < templates.length; i++) {
+            if (templates[i].id === state.currentTplId) return templates[i];
+          }
+          return templates[0];
+        }
+        function daysInMonth() { return new Date(state.calYear, state.calMonth + 1, 0).getDate(); }
+        function firstOffset() { return (new Date(state.calYear, state.calMonth, 1).getDay() + 6) % 7; }
+        function dayKey(d) { return (state.calMonth + 1) + '-' + d; }
+        function weekdayIdx(d) { return (new Date(state.calYear, state.calMonth, d).getDay() + 6) % 7; }
+
+        /* ---------- 多模板重命名（点击名称/铅笔进入，回车/失焦保存） ---------- */
+        var tplRenameMulti = document.getElementById('tpl-rename-multi');
+        var tplMultiEdit = document.getElementById('tpl-multi-edit');
+        var tplMultiInput = document.getElementById('tpl-multi-input');
+        var tplMultiConfirm = document.getElementById('tpl-multi-confirm');
+        var multiEditOpen = false;
+
+        function openMultiRename() {
+          if (!tplRenameMulti || !tplMultiEdit || !tplMultiInput || multiEditOpen) return;
+          multiEditOpen = true;
+          tplMultiInput.value = activeTpl().name;
+          tplMultiInput.placeholder = '为模板起名';
+          tplRenameMulti.setAttribute('hidden', '');
+          tplMultiEdit.removeAttribute('hidden');
+          tplMultiInput.focus();
+          tplMultiInput.select();
+        }
+        function closeMultiRename(save) {
+          if (!multiEditOpen || !tplRenameMulti || !tplMultiEdit) return;
+          multiEditOpen = false;
+          if (save) {
+            var val = tplMultiInput.value.trim();
+            if (val) { activeTpl().name = val; toast('已重命名：' + val); }
+          }
+          tplMultiEdit.setAttribute('hidden', '');
+          tplRenameMulti.removeAttribute('hidden');
+          renderTplPanel();
+        }
+        if (tplRenameMulti) tplRenameMulti.addEventListener('click', openMultiRename);
+        if (tplMultiConfirm) tplMultiConfirm.addEventListener('click', function () { closeMultiRename(true); });
+        if (tplMultiInput) {
+          tplMultiInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') closeMultiRename(true);
+            if (e.key === 'Escape') closeMultiRename(false);
+          });
+          tplMultiInput.addEventListener('blur', function () { closeMultiRename(true); });
+        }
+
+        /* ---------- 模板 chips（横向滚动） + 新增 / 删除 ---------- */
+        function renderTplChips() {
+          var row = document.getElementById('tpl-chip-row');
+          if (!row) return;
+          var old = row.querySelectorAll('.tpl-chip[data-tpl-id]');
+          Array.prototype.forEach.call(old, function (c) { c.parentNode.removeChild(c); });
+          templates.forEach(function (t) {
+            var b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'tpl-chip' + (t.id === state.currentTplId ? ' is-active' : '');
+            b.setAttribute('data-dom-id', 'tpl-chip-' + t.id);
+            b.setAttribute('data-tpl-id', String(t.id));
+            b.setAttribute('aria-pressed', t.id === state.currentTplId ? 'true' : 'false');
+            b.textContent = t.name;
+            b.addEventListener('click', function () { switchTpl(t.id); });
+            row.insertBefore(b, row.lastChild);
+          });
+        }
+
+        function switchTpl(id) {
+          if (id === state.currentTplId) return;
+          if (multiEditOpen) closeMultiRename(false);
+          state.currentTplId = id;
+          state.hintDate = null;
+          renderTplPanel();
+          showRescheduleToast();
+        }
+
+        var tplAdd = document.getElementById('tpl-add');
+        if (tplAdd) tplAdd.addEventListener('click', function () {
+          if (templates.length >= 5) { toast('最多 5 个模板'); return; }
+          var cur = activeTpl();
+          var t = { id: nextTplId, name: '模板 ' + nextTplId, dates: new Set(), cfg: JSON.parse(JSON.stringify(cur.cfg)) };
+          nextTplId++;
+          templates.push(t);
+          state.currentTplId = t.id;
+          state.hintDate = null;
+          renderTplPanel();
+          toast('已新增模板「' + t.name + '」');
+        });
+
+        var tplDel = document.getElementById('tpl-del');
+        if (tplDel) tplDel.addEventListener('click', function () {
+          if (templates.length <= 1) { toast('至少保留一个模板'); return; }
+          var t = activeTpl();
+          if (!window.confirm('删除模板「' + t.name + '」？删除后其日历日期将保留为空白')) return;
+          var idx = templates.indexOf(t);
+          templates.splice(idx, 1);
+          var prev = templates[Math.max(0, idx - 1)];
+          state.currentTplId = prev.id;
+          state.hintDate = null;
+          renderTplPanel();
+          toast('已删除模板「' + t.name + '」');
+        });
+
+        /* ---------- 月历渲染（纯 CSS grid） ---------- */
+        function renderTplCalendar() {
+          var grid = document.getElementById('cal-grid');
+          var label = document.getElementById('cal-month-label');
+          var hint = document.getElementById('cal-hint');
+          if (label) label.textContent = state.calYear + ' 年 ' + (state.calMonth + 1) + ' 月';
+          if (!grid) return;
+          var t = activeTpl();
+          var dim = daysInMonth();
+          var off = firstOffset();
+          grid.innerHTML = '';
+          for (var i = 0; i < off; i++) {
+            var b = document.createElement('span');
+            b.className = 'cal-blank';
+            grid.appendChild(b);
+          }
+          for (var d = 1; d <= dim; d++) {
+            var sel = t.dates.has(dayKey(d));
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'cal-day lf-mono' + (sel ? ' is-sel' : '');
+            btn.setAttribute('data-dom-id', 'cal-day-' + d);
+            btn.setAttribute('data-day', String(d));
+            btn.setAttribute('aria-pressed', sel ? 'true' : 'false');
+            btn.textContent = String(d);
+            (function (day) {
+              btn.addEventListener('click', function () { toggleTplDate(day); });
+            })(d);
+            grid.appendChild(btn);
+          }
+          if (hint) {
+            if (state.hintDate !== null) {
+              var picked = t.dates.has(dayKey(state.hintDate));
+              hint.textContent = (state.calMonth + 1) + ' 月 ' + state.hintDate + ' 日 · ' + (picked ? '已选「' + t.name + '」' : '已取消选择');
+            } else {
+              hint.textContent = '该日将执行「' + t.name + '」';
+            }
+          }
+        }
+
+        function toggleTplDate(day) {
+          var t = activeTpl();
+          var key = dayKey(day);
+          if (t.dates.has(key)) { t.dates.delete(key); } else { t.dates.add(key); }
+          state.hintDate = day;
+          renderTplCalendar();
+          renderTplStats();
+          refreshHint();
+        }
+
+        var calPrev = document.getElementById('cal-prev');
+        var calNext = document.getElementById('cal-next');
+        function shiftMonth(delta) {
+          state.calMonth += delta;
+          if (state.calMonth < 0) { state.calMonth = 11; state.calYear--; }
+          if (state.calMonth > 11) { state.calMonth = 0; state.calYear++; }
+          state.hintDate = null;
+          renderTplCalendar();
+          renderTplStats();
+        }
+        if (calPrev) calPrev.addEventListener('click', function () { shiftMonth(-1); });
+        if (calNext) calNext.addEventListener('click', function () { shiftMonth(1); });
+
+        /* ---------- 已选统计：X 天 + 本周执行星期 ---------- */
+        function compactWeekdays(indices) {
+          var parts = [], start = indices[0], prev = indices[0];
+          for (var i = 1; i <= indices.length; i++) {
+            var cur = indices[i];
+            if (cur === prev + 1) { prev = cur; continue; }
+            var label = start === prev ? DAYS[start] : (prev - start === 1 ? DAYS[start] + '、' + DAYS[prev] : DAYS[start] + '至' + DAYS[prev]);
+            parts.push(label);
+            start = cur; prev = cur;
+          }
+          return parts.join('、');
+        }
+        function renderTplStats() {
+          var countEl = document.getElementById('cal-count');
+          var weekEl = document.getElementById('cal-weekdays');
+          var t = activeTpl();
+          var count = 0, wd = [];
+          var dim = daysInMonth();
+          for (var d = 1; d <= dim; d++) {
+            if (t.dates.has(dayKey(d))) {
+              count++;
+              var w = weekdayIdx(d);
+              if (wd.indexOf(w) < 0) wd.push(w);
+            }
+          }
+          wd.sort(function (a, b) { return a - b; });
+          if (countEl) countEl.textContent = String(count);
+          if (weekEl) weekEl.textContent = wd.length ? compactWeekdays(wd) : '无';
+        }
+
+        /* ---------- 多模板面板整包渲染：chips + 名称 + 日历 + 统计 + 5 大段列表 ---------- */
+        function renderTplPanel() {
+          renderTplChips();
+          var t = activeTpl();
+          var nameEl = document.getElementById('tpl-multi-name');
+          if (nameEl) nameEl.textContent = t.name;
+          renderTplCalendar();
+          renderTplStats();
+          renderConfig(t.cfg);
+          refreshHint();
+          updateGoalSection();
+        }
+
+        /* ---------- 手动锁定 switch（作用于当前模式） ---------- */
+        function setLocked(locked) {
+          state.locked = locked;
+          if (lockSwitch) {
+            lockSwitch.setAttribute('aria-checked', locked ? 'true' : 'false');
+            lockSwitch.classList.toggle('lock-on', locked);
+          }
+        }
+        if (lockSwitch) {
+          lockSwitch.addEventListener('click', function () {
+            var locked = !state.locked;
+            setLocked(locked);
+            refreshHint();
+            toast(locked ? '已手动锁定模板' : '已解除手动锁定');
+          });
+        }
+
+        /* ---------- 恢复自动 ---------- */
+        if (btnRestore) {
+          btnRestore.addEventListener('click', function () {
+            setLocked(false);
+            refreshHint();
+            toast('已恢复自动排布');
+            showRescheduleToast();
+          });
+        }
+
+        /* ---------- v2 联动增强：目标事项跟随排布 + 重排提示条 + 冲突提示 ---------- */
+        var goalTime1El = document.getElementById('goal-time-1');
+        var goalTime2El = document.getElementById('goal-time-2');
+        var conflictHintEl = document.getElementById('conflict-hint');
+        var reschedToastEl = document.getElementById('reschedule-toast');
+        var reschedTextEl = document.getElementById('reschedule-text');
+        var reschedTimer = null;
+
+        /* 当前模板下目标事项的时间映射：工作日（周一~周五） / 周末（周六日）两组 */
+        function goalSchedule() {
+          var weekend = false;
+          if (state.mode === 'multi') {
+            var t = activeTpl();
+            weekend = t.id === 2 || t.name.indexOf('周末') >= 0;
+          } else {
+            weekend = state.currentDay >= 5; /* 周六 / 周日 */
+          }
+          return weekend
+            ? { times: ['09:00-10:30', '16:00-16:40'], conflict: true }
+            : { times: ['08:00-09:40', '14:00-14:30'], conflict: false };
+        }
+
+        function bumpGoalTime(el) {
+          if (!el) return;
+          el.classList.remove('goal-time-bump');
+          void el.offsetWidth; /* 强制重排，重触发动效 */
+          el.classList.add('goal-time-bump');
+        }
+
+        function updateGoalSection() {
+          var s = goalSchedule();
+          if (goalTime1El) { goalTime1El.textContent = s.times[0]; bumpGoalTime(goalTime1El); }
+          if (goalTime2El) { goalTime2El.textContent = s.times[1]; bumpGoalTime(goalTime2El); }
+          if (conflictHintEl) conflictHintEl.hidden = !s.conflict;
+        }
+
+        function showRescheduleToast() {
+          if (!reschedToastEl || !reschedTextEl) return;
+          var count = document.querySelectorAll('#section-goal-items .goal-item').length || 2;
+          reschedTextEl.textContent = '已按新模板自动重排 ' + count + ' 项目标事项 · 内容不变';
+          reschedToastEl.hidden = false;
+          reschedToastEl.classList.remove('show');
+          void reschedToastEl.offsetWidth; /* 重触发滑入动效 */
+          reschedToastEl.classList.add('show');
+          if (reschedTimer) clearTimeout(reschedTimer);
+          reschedTimer = setTimeout(function () { reschedToastEl.classList.remove('show'); }, 3200);
+        }
+        var reschedCloseBtn = document.getElementById('reschedule-close');
+        if (reschedCloseBtn) {
+          reschedCloseBtn.addEventListener('click', function () {
+            if (reschedTimer) clearTimeout(reschedTimer);
+            if (reschedToastEl) reschedToastEl.classList.remove('show');
+          });
+        }
+
+        /* ---------- 段完成：点击段主体（除功能按钮 / 编辑等链接外）整段切换对勾 + 置灰 ---------- */
+        var blockCards = document.querySelectorAll('.block-card');
+        Array.prototype.forEach.call(blockCards, function (card) {
+          function toggleDone() { card.classList.toggle('is-done'); }
+          card.addEventListener('click', function (e) {
+            if (e.target.closest('a, button, label')) return;
+            toggleDone();
+          });
+          card.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleDone(); }
+          });
+        });
+
+        /* ---------- 功能图标按钮：可见行为（Toast） ---------- */
+        var fnLinks = document.querySelectorAll('[data-fn-label]');
+        Array.prototype.forEach.call(fnLinks, function (a) {
+          a.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            var label = a.getAttribute('data-fn-label');
+            if (a.hasAttribute('data-fn-locked')) { toast('睡眠功能已锁定 · 仅可调整时段'); return; }
+            toast('已打开「' + label + '」功能');
+          });
+        });
+
+        /* ---------- 编辑入口：可见行为（Toast） ---------- */
+        var editLinks = document.querySelectorAll('[data-dom-id="edit-entry"]');
+        Array.prototype.forEach.call(editLinks, function (a) {
+          a.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            toast('编辑「' + a.getAttribute('data-block-name') + '」段边界');
+          });
+        });
+
+        /* ---------- 由目标生成：底部 Sheet（T25 演示态） ---------- */
+        var genOverlay = document.getElementById('goal-gen-overlay');
+        var genOpenBtn = document.getElementById('goal-gen-open');
+        var genCloseBtn = document.getElementById('goal-gen-close');
+        var genNextBtn = document.getElementById('goal-gen-next');
+        var genConfirmBtn = document.getElementById('goal-gen-confirm');
+        var genPane1 = document.getElementById('goal-gen-pane1');
+        var genPane2 = document.getElementById('goal-gen-pane2');
+        var genFoot1 = document.getElementById('goal-gen-foot1');
+        var genFoot2 = document.getElementById('goal-gen-foot2');
+        var genStepEls = document.querySelectorAll('.lf-sheet-step');
+
+        function setGenStep(n) {
+          if (!genPane1 || !genPane2 || !genFoot1 || !genFoot2) return;
+          genPane1.hidden = n !== 1;
+          genPane2.hidden = n !== 2;
+          genFoot1.hidden = n !== 1;
+          genFoot2.hidden = n !== 2;
+          Array.prototype.forEach.call(genStepEls, function (s) {
+            s.classList.toggle('is-on', Number(s.getAttribute('data-gen-step')) === n);
+          });
+        }
+
+        function openGoalGen() { if (genOverlay) genOverlay.hidden = false; }
+        function closeGoalGen() { if (genOverlay) genOverlay.hidden = true; }
+
+        if (genOpenBtn) genOpenBtn.addEventListener('click', openGoalGen);
+        if (genCloseBtn) {
+          genCloseBtn.addEventListener('click', function () { closeGoalGen(); setGenStep(1); });
+        }
+        if (genOverlay) {
+          genOverlay.addEventListener('click', function (e) {
+            if (e.target === genOverlay) { closeGoalGen(); setGenStep(1); }
+          });
+        }
+
+        var genGoals = document.querySelectorAll('[data-gen-goal]');
+        Array.prototype.forEach.call(genGoals, function (g) {
+          g.addEventListener('click', function () {
+            var on = g.classList.toggle('is-on');
+            g.setAttribute('aria-pressed', on ? 'true' : 'false');
+          });
+        });
+
+        if (genNextBtn) {
+          genNextBtn.addEventListener('click', function () { setGenStep(2); });
+        }
+        if (genConfirmBtn) {
+          genConfirmBtn.addEventListener('click', function () {
+            closeGoalGen();
+            setGenStep(1);
+            toast('已生成理想日模板并落入日程（原型演示）');
+          });
+        }
+
+        /* ---------- 初始化：默认按天模式 · 周三 ---------- */
+        switchMode('daily');
+        isInit = false;
+      })();
+      </script>
+    </main>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

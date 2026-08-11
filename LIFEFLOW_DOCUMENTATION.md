@@ -916,6 +916,19 @@
 - **分批上线**：每批独立 `commit` + build 通过后推送，最后合入 main；合并前用 `git stash` 隔离无关工作区改动
 - **升级必检**：画布视觉升级时逐一核对右上角/顶栏入口（返回、主题、账户、更多）不丢失；`react-hooks/set-state-in-effect` 类新 lint 错误用惰性初始化/纯函数消除，不加豁免注释
 
+### T25：目标三分类 × 理想日桥架构（v2.16+）— 内容/结构/执行三层单向管道
+
+> 本质：**目标=内容源（三类）、功能=归类标签、理想日=8+8+8 规划桥、日程=执行视图**；单向管道 `目标 → 理想日 → 日程`，冲突从架构上消解（时间资源单一所有权，避免平级系统互相抢占）。本架构同时支撑「一键导入」：DeepSeek 一次产出目标+理想日模板双结构，物理防冲突。
+
+- **目标三分类**（`GoalV2.goalCategory`：`sleep`/`workStudy`/`life`，新建默认 workStudy）：对应 8+8+8 三个 8h；`CATEGORY_META` 语义色 睡眠紫/工作学习蓝/生活绿；存量测试目标数据已清空（`clearAllGoalsV2`，设置页「重置目标数据」为等价入口）
+- **挂靠功能**（`GoalV2.attachedFeatures`：0~多个，白名单同 `FEATURE_META`）：功能三分类映射 `FEATURE_CATEGORY`（sleep→睡眠；study/focus/routine/medication→工作学习；leisure/water/diet/posture/wellness/**workout**/notes→生活，workout 归生活类为用户定案）；**日程图标规则**：目标行动挂靠功能 → 功能图标+功能色，未挂靠 → 目标图标+目标色（`syncDailyActionToItem`）
+- **8+8+8 配额智能融合（方案 E）**（`allocateQuota`，`QUOTA_MINUTES` 480×3）：高优先级（≥3）→ 弹性超配保留完整时长；中优先级（=2）→ 压缩至 70% 入段（标注「已压缩」）；低优先级（=1）→ 顺延次日（标注「已顺延」）；决策可见（理想日生成预览三态徽标）、超配提示不静默
+- **理想日「由目标生成」模式**（理想日页「由目标生成」入口，`matchGoalActionToBlock`）：选目标 → 配额决策预览 → 确认写入理想日 L2 规划层 → `generateIdealDayItems` 落日程；睡眠段物理排除非 sleep 功能
+- **V2 提示词**（`GOAL_V2_AI_PROMPT_V2`，复制按钮已切换；旧 `GOAL_V2_AI_PROMPT` 保留兼容）：一次生成 `{ goal, idealDayTemplate }` 双结构；`goal.goalCategory` + `attachedFeatures`；`dailyActions` **只挂 `blockId` 不写 time**（时间由模板分配，物理防冲突）；`idealDayTemplate` 含 5 段 + `sleepBedTime/sleepWakeTime` + 各段 features 白名单 + 配额
+- **导入规则**（`parseImportedGoalV2`/`validateImportedGoalV2`，兼容旧单目标格式）：目标写 goals 五表，模板**追加写入 `userSettings.templates`**（multi 模式，不覆盖 `dayTemplates[7]`）并同步睡眠时间；目标/模板任一部分失败不影响另一部分；blockId 挂靠失效即拒绝并提示
+- **睡眠双入口**：`IdealDayConfig.sleepBedTime/sleepWakeTime` 为单一数据源——睡眠页「入睡目标」stepper 调整时同步写；理想日两步向导 Step1 睡眠段 start/end 可编辑（v2.16 起解除 disabled）保存时同步；导入模板时也写入
+- **每日行动生成**：导入/新建目标后 `ensureDailyActionsForDate` 生成今日+未来 7 天，`syncAllDailyActionsByDate` 同步日程，`syncDailyActionToItem` 按挂靠规则定图标
+
 ---
 
 ## 附录 A：已退役体系（历史参考，勿按此实现）

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>理想日</title>
+    <title>编辑理想日 · 第 2 步</title>
     <style id="theme-vars">
 /* LifeFlow 2.0 — 极简克制设计系统
    第一性原理：目标驱动的个人生活操作系统
@@ -435,11 +435,11 @@
       }
     </style>
 </head>
-<body class="min-h-screen font-sans antialiased">
+<body class="min-h-screen font-sans antialiased document-scroll">
     <style id="critical-layout">
         /* ============================================================
-           LifeFlow 理想日 · 极简克制 — 关键布局静态 CSS 兜底
-           时间块主布局不依赖 Tailwind 运行时即可渲染；
+           LifeFlow 理想日编辑 · 第 2 步 — 极简克制
+           关键布局静态 CSS 兜底：不依赖 Tailwind 运行时即可渲染主布局；
            所有颜色引用 var(--lifeflow-*)，无硬编码色值。
            ============================================================ */
         body {
@@ -448,224 +448,242 @@
             font-family: var(--lifeflow-font-body);
             overflow-x: hidden;
         }
-        svg[data-lucide] {
+        /* 图标基线兜底：:where() 零特异性，Tailwind 尺寸类可覆盖 */
+        :where(svg[data-lucide]) {
             display: inline-block;
             flex-shrink: 0;
             width: 20px;
             height: 20px;
         }
-        .document-scroll { -webkit-overflow-scrolling: touch; }
         a:focus-visible, button:focus-visible {
             outline: 2px solid var(--lifeflow-ring);
             outline-offset: 2px;
-            border-radius: 6px;
+            border-radius: var(--lifeflow-radius-sm);
         }
 
-        /* ---- 页面容器（移动端 430px） ---- */
-        .lf-page {
-            max-width: 28rem;
-            margin-inline: auto;
-            padding: 0.75rem 1rem 6.5rem;
-        }
-
-        /* ---- 顶部栏 ---- */
-        .lf-topbar {
+        /* ---- 顶部栏：返回 / 标题 / 步骤指示 ---- */
+        .lf-hd {
             display: grid;
-            grid-template-columns: 40px 1fr 40px;
+            grid-template-columns: 40px 1fr auto;
             align-items: center;
+            gap: 4px;
             height: 48px;
             margin-bottom: 16px;
         }
-        .lf-topbar a {
+        .lf-hd-back {
             display: inline-flex;
             align-items: center;
             justify-content: center;
             width: 40px;
             height: 40px;
+            margin-left: -10px;
             color: var(--lifeflow-text-primary);
         }
-        .lf-topbar-title {
-            font-size: var(--lifeflow-font-size-h3);
+        .lf-hd-title {
+            font-size: 16px;
             font-weight: 600;
             letter-spacing: -0.01em;
-            text-align: center;
-            color: var(--lifeflow-text-primary);
             line-height: 1.4;
-        }
-
-        /* ---- 8+8+8 时间观说明条（细边框 · 中性灰三段） ---- */
-        .lf-888 {
-            border: 1px solid var(--lifeflow-border-light);
-            background: var(--lifeflow-card);
-            border-radius: var(--lifeflow-radius-lg);
-            padding: 14px 16px 16px;
-        }
-        .lf-888-legend {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 8px;
-            margin-bottom: 10px;
-        }
-        .lf-888-name {
-            font-size: var(--lifeflow-font-size-caption);
-            line-height: 1.4;
-            color: var(--lifeflow-text-tertiary);
-        }
-        .lf-888-val {
-            font-size: var(--lifeflow-font-size-sm);
-            font-weight: 600;
-            line-height: 1.5;
             color: var(--lifeflow-text-primary);
-            font-variant-numeric: tabular-nums;
-            font-feature-settings: "tnum";
-        }
-        .lf-888-bar {
-            display: flex;
-            gap: 3px;
-            height: 8px;
-        }
-        .lf-888-seg {
-            flex: 1 1 0;
-            height: 100%;
-            border-radius: var(--lifeflow-radius-full);
-        }
-        .lf-888-seg--sleep { background: var(--lifeflow-text-tertiary); }
-        .lf-888-seg--study { background: var(--lifeflow-text-secondary); }
-        .lf-888-seg--life  { background: var(--lifeflow-primary); }
-
-        /* ---- 今日节奏卡 ---- */
-        .lf-rhythm {
-            margin-top: 16px;
-            border: 1px solid var(--lifeflow-border-light);
-            background: var(--lifeflow-card);
-            border-radius: var(--lifeflow-radius-lg);
+            white-space: nowrap;
             overflow: hidden;
+            text-overflow: ellipsis;
         }
-        .lf-rhythm-hd {
+        .lf-steps {
             display: flex;
-            align-items: baseline;
-            justify-content: space-between;
-            gap: 12px;
-            padding: 16px 16px 12px;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 6px;
         }
-        .lf-rhythm-title {
-            font-size: var(--lifeflow-font-size-h3);
-            font-weight: 600;
-            letter-spacing: -0.01em;
-            color: var(--lifeflow-text-primary);
-            line-height: 1.4;
-        }
-        .lf-rhythm-sub {
-            font-size: var(--lifeflow-font-size-caption);
-            color: var(--lifeflow-text-tertiary);
-            margin-top: 2px;
-            line-height: 1.4;
-        }
-        .lf-rhythm-total {
-            font-size: var(--lifeflow-font-size-caption);
+        .lf-steps-text {
+            font-size: 12px;
+            line-height: 1;
             color: var(--lifeflow-text-tertiary);
             font-variant-numeric: tabular-nums;
             font-feature-settings: "tnum";
             white-space: nowrap;
         }
-
-        /* ---- 时段块（5 大段 · 细线分隔） ---- */
-        .lf-phase { padding: 12px 16px 14px; }
-        .lf-phase-hd {
+        .lf-steps-bar {
             display: flex;
-            align-items: baseline;
-            justify-content: space-between;
-            gap: 12px;
-            padding-bottom: 6px;
+            gap: 4px;
         }
-        .lf-phase-label {
-            font-size: var(--lifeflow-font-size-sm);
-            font-weight: 600;
-            color: var(--lifeflow-text-primary);
-            line-height: 1.5;
+        .lf-steps-seg {
+            width: 16px;
+            height: 3px;
+            border-radius: 2px;
+            background: var(--lifeflow-border-light);
         }
-        .lf-phase-time {
-            font-size: var(--lifeflow-font-size-caption);
-            color: var(--lifeflow-text-tertiary);
-            font-variant-numeric: tabular-nums;
-            font-feature-settings: "tnum";
-            white-space: nowrap;
-        }
+        .lf-steps-seg--on { background: var(--lifeflow-primary); }
 
-        /* ---- 事项行：左侧等宽时间列 ---- */
-        .lf-item {
-            display: grid;
-            grid-template-columns: 48px 1fr auto;
+        /* ---- 已选大段概览（一行细边框） ---- */
+        .lf-summary {
+            display: flex;
             align-items: center;
-            gap: 12px;
-            padding: 10px 0;
+            gap: 10px;
             min-width: 0;
+            padding: 12px 14px;
+            margin-bottom: 12px;
+            border: 1px solid var(--lifeflow-border-light);
+            border-radius: var(--lifeflow-radius-md);
+            background: var(--lifeflow-card);
         }
-        .lf-item-time {
-            font-family: var(--lifeflow-font-mono);
-            font-size: var(--lifeflow-font-size-caption);
-            line-height: 1.6;
+        .lf-summary-phases {
+            flex: 1 1 auto;
+            min-width: 0;
+            font-size: 13px;
+            line-height: 1.5;
+            color: var(--lifeflow-text-secondary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .lf-summary-count {
+            flex-shrink: 0;
+            font-size: 12px;
+            line-height: 1.5;
             color: var(--lifeflow-text-tertiary);
-            font-variant-numeric: tabular-nums;
-            font-feature-settings: "tnum";
             white-space: nowrap;
         }
-        .lf-item-body { min-width: 0; }
-        .lf-item-title {
-            font-size: var(--lifeflow-font-size-body);
+        .lf-summary-edit {
+            display: inline-flex;
+            align-items: center;
+            gap: 2px;
+            flex-shrink: 0;
+            padding: 4px 0 4px 8px;
+            font-size: 13px;
+            line-height: 1.5;
+            color: var(--lifeflow-text-secondary);
+            border-left: 1px solid var(--lifeflow-border-light);
+        }
+        .lf-summary-edit span { white-space: nowrap; }
+        .lf-summary-edit svg { color: var(--lifeflow-text-tertiary); }
+
+        /* ---- 配置表单（细线分隔） ---- */
+        .lf-config {
+            border: 1px solid var(--lifeflow-border-light);
+            border-radius: var(--lifeflow-radius-lg);
+            background: var(--lifeflow-card);
+            overflow: hidden;
+        }
+        .lf-sec { padding: 14px 16px; }
+        .lf-sec + .lf-sec { border-top: 1px solid var(--lifeflow-border-light); }
+        .lf-sec-title {
+            font-size: 15px;
+            font-weight: 600;
+            letter-spacing: -0.01em;
             line-height: 1.4;
             color: var(--lifeflow-text-primary);
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
+            margin-bottom: 6px;
         }
-        .lf-item-goal {
+        .lf-row {
             display: flex;
             align-items: center;
-            gap: 5px;
-            margin-top: 3px;
-            font-size: var(--lifeflow-font-size-caption);
-            line-height: 1.4;
-            color: var(--lifeflow-text-tertiary);
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
+            gap: 12px;
+            min-height: 44px;
+            padding: 4px 0;
         }
-        .lf-item-goal::before {
-            content: "";
-            width: 4px;
-            height: 4px;
-            border-radius: 9999px;
-            background: var(--lifeflow-text-tertiary);
+        .lf-row + .lf-row { border-top: 1px solid var(--lifeflow-border-light); }
+        .lf-row--btn {
+            width: 100%;
+            text-align: left;
+            background: transparent;
+            border: 0;
+            padding: 4px 0;
+            cursor: pointer;
+        }
+        .lf-row-label {
+            font-size: 15px;
+            line-height: 1.5;
+            color: var(--lifeflow-text-primary);
             flex-shrink: 0;
         }
-        .lf-item-dur {
-            font-size: var(--lifeflow-font-size-caption);
-            line-height: 1.6;
-            color: var(--lifeflow-text-tertiary);
+        .lf-spacer { flex: 1 1 auto; min-width: 8px; }
+        .lf-row-value {
+            font-size: 15px;
+            line-height: 1.5;
+            color: var(--lifeflow-text-secondary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .lf-row-value--strong { color: var(--lifeflow-text-primary); }
+        .lf-row-value--mono {
+            font-family: var(--lifeflow-font-mono);
             font-variant-numeric: tabular-nums;
             font-feature-settings: "tnum";
+        }
+        .lf-row-chev { color: var(--lifeflow-text-tertiary); }
+
+        /* ---- 步进器（- 45 分钟 +） ---- */
+        .lf-stepper {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            flex-shrink: 0;
+        }
+        .lf-stepper-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            border: 1px solid var(--lifeflow-border-light);
+            border-radius: var(--lifeflow-radius-sm);
+            background: var(--lifeflow-card);
+            color: var(--lifeflow-text-secondary);
+        }
+        .lf-stepper-btn:active { background: var(--lifeflow-muted); }
+        .lf-stepper-val {
+            min-width: 68px;
+            text-align: center;
+            font-size: 15px;
+            font-weight: 600;
+            line-height: 1.5;
+            color: var(--lifeflow-text-primary);
             white-space: nowrap;
+        }
+        .lf-stepper-unit {
+            font-size: 13px;
+            font-weight: 400;
+            color: var(--lifeflow-text-tertiary);
+        }
+
+        /* ---- 训练类型 chips（细线） ---- */
+        .lf-chips { display: flex; gap: 8px; flex-shrink: 0; }
+        .lf-chip {
+            padding: 6px 14px;
+            border: 1px solid var(--lifeflow-border-light);
+            border-radius: var(--lifeflow-radius-sm);
+            background: var(--lifeflow-card);
+            font-size: 13px;
+            line-height: 1.4;
+            color: var(--lifeflow-text-secondary);
+            white-space: nowrap;
+        }
+        .lf-chip--on {
+            border-color: var(--lifeflow-primary);
+            background: var(--lifeflow-primary-light);
+            color: var(--lifeflow-primary);
+            font-weight: 500;
         }
 
         /* ---- 底部主按钮（石墨黑填充 · 白字 · 圆角 8） ---- */
-        .lf-apply {
+        .lf-save {
             display: flex;
             align-items: center;
             justify-content: center;
             width: 100%;
             height: 48px;
-            margin-top: 20px;
+            margin-top: 24px;
             border-radius: var(--lifeflow-radius-md);
             background: var(--lifeflow-primary);
             color: var(--lifeflow-primary-foreground);
-            font-size: var(--lifeflow-font-size-body);
+            font-size: 15px;
             font-weight: 600;
             letter-spacing: 0.01em;
-            transition: transform 0.12s ease, opacity 0.12s ease;
+            transition: opacity 0.12s ease;
         }
-        .lf-apply:hover { opacity: 0.94; }
-        .lf-apply:active { transform: scale(0.99); }
+        .lf-save:active { opacity: 0.92; }
 
         /* ---- 底部导航静态兜底 ---- */
         #bottom-nav {
@@ -700,173 +718,111 @@
     </style>
 
     <main>
-        <div class="lf-page mx-auto max-w-md px-4 pt-3 pb-[100px]">
+        <div class="mx-auto max-w-md px-4 pt-3 pb-[100px]">
 
-            <!-- 顶部：返回 + 标题 + 编辑 -->
-            <header class="lf-topbar">
-                <a href="#" data-dom-id="back-ideal" aria-label="返回"><i data-lucide="chevron-left" class="w-5 h-5"></i></a>
-                <h1 class="lf-topbar-title">理想日</h1>
-                <a href="#" data-dom-id="edit-ideal" aria-label="编辑模板"><i data-lucide="pencil" class="w-5 h-5"></i></a>
+            <!-- 顶部：返回 + 标题 + 步骤指示 -->
+            <header class="lf-hd">
+                <a href="#" data-dom-id="back-step1" aria-label="返回上一步" class="lf-hd-back"><i data-lucide="chevron-left" class="w-5 h-5"></i></a>
+                <h1 class="lf-hd-title">编辑理想日</h1>
+                <div class="lf-steps" aria-label="步骤指示：第 2 步，共 2 步">
+                    <span class="lf-steps-text">第 2 步 / 共 2 步</span>
+                    <span class="lf-steps-bar" aria-hidden="true">
+                        <span class="lf-steps-seg lf-steps-seg--on"></span>
+                        <span class="lf-steps-seg lf-steps-seg--on"></span>
+                    </span>
+                </div>
             </header>
 
-            <!-- 8+8+8 时间观说明条（中性灰三段） -->
-            <section class="lf-888" aria-label="8+8+8 时间观，睡眠八小时、学习八小时、生活八小时">
-                <div class="lf-888-legend">
-                    <div><p class="lf-888-name">睡眠</p><p class="lf-888-val">8h</p></div>
-                    <div><p class="lf-888-name">学习</p><p class="lf-888-val">8h</p></div>
-                    <div><p class="lf-888-name">生活</p><p class="lf-888-val">8h</p></div>
-                </div>
-                <div class="lf-888-bar" aria-hidden="true">
-                    <span class="lf-888-seg lf-888-seg--sleep"></span>
-                    <span class="lf-888-seg lf-888-seg--study"></span>
-                    <span class="lf-888-seg lf-888-seg--life"></span>
-                </div>
+            <!-- 已选大段概览 -->
+            <section class="lf-summary" aria-label="已选大段概览" data-dom-id="step2-summary">
+                <span class="lf-summary-phases">晨间/上午/午间/下午/晚间</span>
+                <span class="lf-summary-count lf-tabular">已选 5 段</span>
+                <button type="button" data-dom-id="summary-edit-back" class="lf-summary-edit" aria-label="返回第 1 步编辑已选大段"><span>编辑返回</span><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
             </section>
 
-            <!-- 今日节奏卡：5 大段竖排时间块 -->
-            <section class="lf-rhythm" data-dom-id="rhythm-today" aria-label="今日节奏">
-                <header class="lf-rhythm-hd">
-                    <div>
-                        <h2 class="lf-rhythm-title">今日节奏</h2>
-                        <p class="lf-rhythm-sub">工作日模板</p>
+            <!-- 每段配置表单（细线分隔） -->
+            <section class="lf-config" aria-label="模板配置" data-dom-id="step2-config">
+
+                <!-- 学习段 -->
+                <div class="lf-sec" data-dom-id="sec-study">
+                    <h2 class="lf-sec-title">学习段</h2>
+                    <button type="button" data-dom-id="study-goal" class="lf-row lf-row--btn" aria-label="选择目标挂靠">
+                        <span class="lf-row-label">目标挂靠</span>
+                        <span class="lf-spacer"></span>
+                        <span class="lf-row-value lf-row-value--strong">省考 · 判断推理</span>
+                        <i data-lucide="chevron-right" class="w-4 h-4 lf-row-chev"></i>
+                    </button>
+                    <div class="lf-row" role="group" aria-label="学习时长">
+                        <span class="lf-row-label">时长</span>
+                        <span class="lf-spacer"></span>
+                        <div class="lf-stepper">
+                            <button type="button" data-dom-id="study-duration-dec" class="lf-stepper-btn" aria-label="减少学习时长"><i data-lucide="minus" class="w-4 h-4"></i></button>
+                            <span class="lf-stepper-val lf-tabular">45<span class="lf-stepper-unit"> 分钟</span></span>
+                            <button type="button" data-dom-id="study-duration-inc" class="lf-stepper-btn" aria-label="增加学习时长"><i data-lucide="plus" class="w-4 h-4"></i></button>
+                        </div>
                     </div>
-                    <span class="lf-rhythm-total">15h 已排</span>
-                </header>
-
-                <div class="lf-list-divider">
-
-                    <!-- 晨间 -->
-                    <section class="lf-phase" data-block-name="晨间" aria-label="晨间段 06:00-08:00">
-                        <header class="lf-phase-hd">
-                            <span class="lf-phase-label">晨间</span>
-                            <span class="lf-phase-time">06:00 – 08:00</span>
-                        </header>
-                        <ul class="lf-list-divider">
-                            <li class="lf-item">
-                                <span class="lf-item-time">06:00</span>
-                                <span class="lf-item-body"><span class="lf-item-title">起床洗漱</span></span>
-                                <span class="lf-item-dur">0.5h</span>
-                            </li>
-                            <li class="lf-item">
-                                <span class="lf-item-time">06:30</span>
-                                <span class="lf-item-body">
-                                    <span class="lf-item-title">晨间训练</span>
-                                    <span class="lf-item-goal">体能提升</span>
-                                </span>
-                                <span class="lf-item-dur">1.5h</span>
-                            </li>
-                        </ul>
-                    </section>
-
-                    <!-- 上午 -->
-                    <section class="lf-phase" data-block-name="上午" aria-label="上午段 08:00-12:30">
-                        <header class="lf-phase-hd">
-                            <span class="lf-phase-label">上午</span>
-                            <span class="lf-phase-time">08:00 – 12:30</span>
-                        </header>
-                        <ul class="lf-list-divider">
-                            <li class="lf-item">
-                                <span class="lf-item-time">08:00</span>
-                                <span class="lf-item-body">
-                                    <span class="lf-item-title">主目标学习</span>
-                                    <span class="lf-item-goal">省考 · 判断推理</span>
-                                </span>
-                                <span class="lf-item-dur">3h</span>
-                            </li>
-                        </ul>
-                    </section>
-
-                    <!-- 午间 -->
-                    <section class="lf-phase" data-block-name="午间" aria-label="午间段 12:30-14:00">
-                        <header class="lf-phase-hd">
-                            <span class="lf-phase-label">午间</span>
-                            <span class="lf-phase-time">12:30 – 14:00</span>
-                        </header>
-                        <ul class="lf-list-divider">
-                            <li class="lf-item">
-                                <span class="lf-item-time">12:30</span>
-                                <span class="lf-item-body"><span class="lf-item-title">午睡</span></span>
-                                <span class="lf-item-dur">0.5h</span>
-                            </li>
-                            <li class="lf-item">
-                                <span class="lf-item-time">13:00</span>
-                                <span class="lf-item-body"><span class="lf-item-title">午餐午休</span></span>
-                                <span class="lf-item-dur">1h</span>
-                            </li>
-                        </ul>
-                    </section>
-
-                    <!-- 下午 -->
-                    <section class="lf-phase" data-block-name="下午" aria-label="下午段 14:00-18:30">
-                        <header class="lf-phase-hd">
-                            <span class="lf-phase-label">下午</span>
-                            <span class="lf-phase-time">14:00 – 18:30</span>
-                        </header>
-                        <ul class="lf-list-divider">
-                            <li class="lf-item">
-                                <span class="lf-item-time">14:00</span>
-                                <span class="lf-item-body">
-                                    <span class="lf-item-title">次目标学习</span>
-                                    <span class="lf-item-goal">考研英语 · 阅读 1 篇</span>
-                                </span>
-                                <span class="lf-item-dur">3h</span>
-                            </li>
-                            <li class="lf-item">
-                                <span class="lf-item-time">17:00</span>
-                                <span class="lf-item-body"><span class="lf-item-title">自由活动</span></span>
-                                <span class="lf-item-dur">1.5h</span>
-                            </li>
-                        </ul>
-                    </section>
-
-                    <!-- 晚间 -->
-                    <section class="lf-phase" data-block-name="晚间" aria-label="晚间段 18:30-22:30">
-                        <header class="lf-phase-hd">
-                            <span class="lf-phase-label">晚间</span>
-                            <span class="lf-phase-time">18:30 – 22:30</span>
-                        </header>
-                        <ul class="lf-list-divider">
-                            <li class="lf-item">
-                                <span class="lf-item-time">18:30</span>
-                                <span class="lf-item-body"><span class="lf-item-title">晚餐</span></span>
-                                <span class="lf-item-dur">1h</span>
-                            </li>
-                            <li class="lf-item">
-                                <span class="lf-item-time">19:30</span>
-                                <span class="lf-item-body"><span class="lf-item-title">晚间复盘</span></span>
-                                <span class="lf-item-dur">1.5h</span>
-                            </li>
-                            <li class="lf-item">
-                                <span class="lf-item-time">21:00</span>
-                                <span class="lf-item-body"><span class="lf-item-title">拉伸养生</span></span>
-                                <span class="lf-item-dur">0.5h</span>
-                            </li>
-                            <li class="lf-item">
-                                <span class="lf-item-time">21:30</span>
-                                <span class="lf-item-body"><span class="lf-item-title">自由时间</span></span>
-                                <span class="lf-item-dur">1h</span>
-                            </li>
-                        </ul>
-                    </section>
-
                 </div>
+
+                <!-- 睡眠段 -->
+                <div class="lf-sec" data-dom-id="sec-sleep">
+                    <h2 class="lf-sec-title">睡眠段</h2>
+                    <button type="button" data-dom-id="sleep-bed" class="lf-row lf-row--btn" aria-label="选择就寝时间">
+                        <span class="lf-row-label">就寝</span>
+                        <span class="lf-spacer"></span>
+                        <span class="lf-row-value lf-row-value--mono">22:30</span>
+                        <i data-lucide="chevron-right" class="w-4 h-4 lf-row-chev"></i>
+                    </button>
+                    <button type="button" data-dom-id="sleep-wake" class="lf-row lf-row--btn" aria-label="选择起床时间">
+                        <span class="lf-row-label">起床</span>
+                        <span class="lf-spacer"></span>
+                        <span class="lf-row-value lf-row-value--mono">06:00</span>
+                        <i data-lucide="chevron-right" class="w-4 h-4 lf-row-chev"></i>
+                    </button>
+                </div>
+
+                <!-- 训练段 -->
+                <div class="lf-sec" data-dom-id="sec-training">
+                    <h2 class="lf-sec-title">训练段</h2>
+                    <div class="lf-row" role="group" aria-label="训练类型">
+                        <span class="lf-row-label">训练类型</span>
+                        <span class="lf-spacer"></span>
+                        <div class="lf-chips">
+                            <button type="button" data-dom-id="training-type-strength" class="lf-chip lf-chip--on" aria-pressed="true">力量</button>
+                            <button type="button" data-dom-id="training-type-cardio" class="lf-chip" aria-pressed="false">有氧</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 冥想段 -->
+                <div class="lf-sec" data-dom-id="sec-meditation">
+                    <h2 class="lf-sec-title">冥想段</h2>
+                    <button type="button" data-dom-id="meditation-way" class="lf-row lf-row--btn" aria-label="选择冥想方式">
+                        <span class="lf-row-label">方式</span>
+                        <span class="lf-spacer"></span>
+                        <span class="lf-row-value lf-row-value--strong">正念冥想</span>
+                        <i data-lucide="chevron-right" class="w-4 h-4 lf-row-chev"></i>
+                    </button>
+                    <div class="lf-row" role="group" aria-label="冥想时长">
+                        <span class="lf-row-label">时长</span>
+                        <span class="lf-spacer"></span>
+                        <div class="lf-stepper">
+                            <button type="button" data-dom-id="meditation-duration-dec" class="lf-stepper-btn" aria-label="减少冥想时长"><i data-lucide="minus" class="w-4 h-4"></i></button>
+                            <span class="lf-stepper-val lf-tabular">10<span class="lf-stepper-unit"> 分钟</span></span>
+                            <button type="button" data-dom-id="meditation-duration-inc" class="lf-stepper-btn" aria-label="增加冥想时长"><i data-lucide="plus" class="w-4 h-4"></i></button>
+                        </div>
+                    </div>
+                </div>
+
             </section>
 
             <!-- 底部主按钮 -->
-            <button type="button" class="lf-apply" data-dom-id="apply-template">按模板开始今日</button>
+            <button type="button" data-dom-id="step2-save" class="lf-save">保存模板</button>
 
         </div>
     </main>
 
     <!-- 底部导航 4-tab（ideal 激活） -->
-    <nav data-mobile-nav="global" id="bottom-nav" class="lf-tabbar-glass w-full max-w-md mx-auto h-[60px]">
-        <div class="grid grid-cols-4 h-full">
-            <a href="#" data-dom-id="nav-home" data-nav-key="home" data-active="false" class="min-w-0 flex flex-col items-center justify-center gap-1 h-full text-[var(--lifeflow-text-tertiary)]"><i data-lucide="home" class="w-5 h-5 shrink-0"></i><span class="text-[10.5px] leading-none whitespace-nowrap max-w-full truncate">首页</span></a>
-            <a href="#" data-dom-id="nav-goals" data-nav-key="goals" data-active="false" class="min-w-0 flex flex-col items-center justify-center gap-1 h-full text-[var(--lifeflow-text-tertiary)]"><i data-lucide="target" class="w-5 h-5 shrink-0"></i><span class="text-[10.5px] leading-none whitespace-nowrap max-w-full truncate">目标</span></a>
-            <a href="#" data-dom-id="nav-schedule" data-nav-key="schedule" data-active="false" class="min-w-0 flex flex-col items-center justify-center gap-1 h-full text-[var(--lifeflow-text-tertiary)]"><i data-lucide="calendar-days" class="w-5 h-5 shrink-0"></i><span class="text-[10.5px] leading-none whitespace-nowrap max-w-full truncate">日程</span></a>
-            <a href="#" data-dom-id="nav-ideal" data-nav-key="ideal" data-active="true" class="min-w-0 flex flex-col items-center justify-center gap-1 h-full text-[var(--lifeflow-primary)]"><i data-lucide="sun" class="w-5 h-5 shrink-0"></i><span class="text-[10.5px] leading-none whitespace-nowrap max-w-full truncate font-semibold">理想日</span></a>
-        </div>
-    </nav>
+    <nav data-mobile-nav="global" id="bottom-nav" class="lf-tabbar-glass w-full max-w-md mx-auto h-[60px]"><div class="grid grid-cols-4 h-full"><a href="#" data-dom-id="nav-home" data-nav-key="home" data-active="false" class="min-w-0 flex flex-col items-center justify-center gap-1 h-full text-[var(--lifeflow-text-tertiary)]"><i data-lucide="home" class="w-5 h-5 shrink-0"></i><span class="text-[10.5px] leading-none whitespace-nowrap max-w-full truncate">首页</span></a><a href="#" data-dom-id="nav-goals" data-nav-key="goals" data-active="false" class="min-w-0 flex flex-col items-center justify-center gap-1 h-full text-[var(--lifeflow-text-tertiary)]"><i data-lucide="target" class="w-5 h-5 shrink-0"></i><span class="text-[10.5px] leading-none whitespace-nowrap max-w-full truncate">目标</span></a><a href="#" data-dom-id="nav-schedule" data-nav-key="schedule" data-active="false" class="min-w-0 flex flex-col items-center justify-center gap-1 h-full text-[var(--lifeflow-text-tertiary)]"><i data-lucide="calendar-days" class="w-5 h-5 shrink-0"></i><span class="text-[10.5px] leading-none whitespace-nowrap max-w-full truncate">日程</span></a><a href="#" data-dom-id="nav-ideal" data-nav-key="ideal" data-active="true" class="min-w-0 flex flex-col items-center justify-center gap-1 h-full text-[var(--lifeflow-primary)]"><i data-lucide="sun" class="w-5 h-5 shrink-0"></i><span class="text-[10.5px] leading-none whitespace-nowrap max-w-full truncate font-semibold">理想日</span></a></div></nav>
 
     <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
     <script>lucide.createIcons();</script>

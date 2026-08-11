@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>训练中心</title>
+    <style id="theme-vars">
+/* LifeFlow 2.0 — 极简克制设计系统
+   第一性原理：目标驱动的个人生活操作系统
+   视觉原则：大留白 · 细线分层 · 单主色 · 克制圆角 · 精确排版
+   表面模型：静态内容用边框/背景分层，浮动层才允许阴影
+   色彩模型：石墨黑主色 + 中性灰阶 + 语义状态色（无模块彩）
+*/
+
+/* === LIGHT MODE（日间 · 极简克制） === */
+:root {
+  /* SURFACE & TEXT */
+  --lifeflow-background: #F6F6F7;
+  --lifeflow-foreground: #1A1A1E;
+  --lifeflow-card: #FFFFFF;
+  --lifeflow-card-foreground: #1A1A1E;
+  --lifeflow-popover: #FFFFFF;
+  --lifeflow-popover-foreground: #1A1A1E;
+  --lifeflow-muted: #F0F0F2;
+  --lifeflow-muted-foreground: #6E6E76;
+  --lifeflow-border: rgba(26,26,30,0.10);
+  --lifeflow-border-light: rgba(26,26,30,0.055);
+  --lifeflow-border-dashed: rgba(26,26,30,0.16);
+  --lifeflow-input: rgba(26,26,30,0.08);
+  --lifeflow-ring: #1A1A1E;
+
+  /* BRAND — 单主色（石墨黑，克制使用） */
+  --lifeflow-primary: #1A1A1E;
+  --lifeflow-primary-hover: #000000;
+  --lifeflow-primary-light: rgba(26,26,30,0.06);
+  --lifeflow-primary-foreground: #FFFFFF;
+
+  /* PROGRESS */
+  --lifeflow-knit-thread: #1A1A1E;
+  --lifeflow-knit-thread-completed: #16A34A;
+  --lifeflow-knit-thread-partial: #D97706;
+  --lifeflow-knit-bg: #EDEDEF;
+  --lifeflow-knit-grid: rgba(26,26,30,0.07);
+
+  /* STATE — 语义状态色（仅用于状态，不用于身份标识） */
+  --state-success: #16A34A;
+  --state-success-light: rgba(22,163,74,0.08);
+  --state-warning: #D97706;
+  --state-warning-light: rgba(217,119,6,0.08);
+  --state-error: #DC2626;
+  --state-error-light: rgba(220,38,38,0.08);
+  --state-info: #2563EB;
+  --state-info-light: rgba(37,99,235,0.08);
+
+  /* TEXT */
+  --lifeflow-text-primary: #1A1A1E;
+  --lifeflow-text-secondary: #55555E;
+  --lifeflow-text-tertiary: #8A8A93;
+  --lifeflow-text-disabled: #B8B8BF;
+  --lifeflow-text-inverse: #FFFFFF;
+
+  /* SHADOWS — 静态表面走边框，浮动层才用阴影（alpha <= 0.06） */
+  --lifeflow-shadow-1: 0 1px 2px rgba(26,26,30,0.04);
+  --lifeflow-shadow-2: 0 4px 16px rgba(26,26,30,0.06);
+  --lifeflow-shadow-3: 0 12px 32px rgba(26,26,30,0.10);
+  --lifeflow-shadow-knit: none;
+
+  /* TAB BAR — 白底细顶线 */
+  --lifeflow-tabbar-bg: rgba(255,255,255,0.92);
+  --lifeflow-tabbar-blur: 16px;
+  --lifeflow-tabbar-blur-saturate: 100%;
+
+  /* AI BALL */
+  --lifeflow-ai-ball: #1A1A1E;
+
+  /* TYPOGRAPHY — 精确排版：收紧字距、克制字重 */
+  --lifeflow-font-display: -apple-system, BlinkMacSystemFont, "SF Pro SC", "PingFang SC", "Noto Sans SC", "Helvetica Neue", "Microsoft YaHei", sans-serif;
+  --lifeflow-font-body: -apple-system, BlinkMacSystemFont, "SF Pro SC", "PingFang SC", "Noto Sans SC", "Helvetica Neue", "Microsoft YaHei", sans-serif;
+  --lifeflow-font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+
+  --lifeflow-font-size-display: 32px;
+  --lifeflow-font-size-h1: 26px;
+  --lifeflow-font-size-h2: 20px;
+  --lifeflow-font-size-h3: 16px;
+  --lifeflow-font-size-body: 15px;
+  --lifeflow-font-size-sm: 13px;
+  --lifeflow-font-size-caption: 12px;
+
+  /* SPACING */
+  --lifeflow-space-xs: 4px;
+  --lifeflow-space-sm: 8px;
+  --lifeflow-space-md: 12px;
+  --lifeflow-space-lg: 16px;
+  --lifeflow-space-xl: 24px;
+  --lifeflow-space-2xl: 32px;
+
+  /* RADIUS — 克制圆角：sm 4 / md 8 / lg 12 / full */
+  --lifeflow-radius-sm: 4px;
+  --lifeflow-radius-md: 8px;
+  --lifeflow-radius-lg: 12px;
+  --lifeflow-radius-xl: 12px;
+  --lifeflow-radius-full: 9999px;
+
+  /* PORTABLE ALIASES */
+  --background: var(--lifeflow-background);
+  --foreground: var(--lifeflow-foreground);
+  --card: var(--lifeflow-card);
+  --card-foreground: var(--lifeflow-card-foreground);
+  --popover: var(--lifeflow-popover);
+  --popover-foreground: var(--lifeflow-popover-foreground);
+  --primary: var(--lifeflow-primary);
+  --primary-foreground: var(--lifeflow-primary-foreground);
+  --muted: var(--lifeflow-muted);
+  --muted-foreground: var(--lifeflow-muted-foreground);
+  --border: var(--lifeflow-border);
+  --input: var(--lifeflow-input);
+  --ring: var(--lifeflow-ring);
+  --radius-sm: var(--lifeflow-radius-sm);
+  --radius-md: var(--lifeflow-radius-md);
+  --radius-lg: var(--lifeflow-radius-lg);
+  --color-background: var(--lifeflow-background);
+  --color-foreground: var(--lifeflow-foreground);
+  --color-card: var(--lifeflow-card);
+  --color-card-foreground: var(--lifeflow-card-foreground);
+  --color-popover: var(--lifeflow-popover);
+  --color-popover-foreground: var(--lifeflow-popover-foreground);
+  --color-primary: var(--lifeflow-primary);
+  --color-primary-foreground: var(--lifeflow-primary-foreground);
+  --color-muted: var(--lifeflow-muted);
+  --color-muted-foreground: var(--lifeflow-muted-foreground);
+  --color-border: var(--lifeflow-border);
+  --color-input: var(--lifeflow-input);
+  --color-ring: var(--lifeflow-ring);
+  --color-text-primary: var(--lifeflow-text-primary);
+  --color-text-secondary: var(--lifeflow-text-secondary);
+  --color-text-tertiary: var(--lifeflow-text-tertiary);
+  --color-text-disabled: var(--lifeflow-text-disabled);
+  --color-surface-card: var(--lifeflow-card);
+  --color-surface-muted: var(--lifeflow-muted);
+}
+
+/* === DARK MODE（夜间 · 深空石墨） === */
+.dark {
+  --lifeflow-background: #0E0E11;
+  --lifeflow-foreground: #F2F2F4;
+  --lifeflow-card: #16161A;
+  --lifeflow-card-foreground: #F2F2F4;
+  --lifeflow-popover: #1C1C21;
+  --lifeflow-popover-foreground: #F2F2F4;
+  --lifeflow-muted: #1E1E23;
+  --lifeflow-muted-foreground: rgba(242,242,244,0.55);
+  --lifeflow-border: rgba(255,255,255,0.10);
+  --lifeflow-border-light: rgba(255,255,255,0.06);
+  --lifeflow-border-dashed: rgba(255,255,255,0.18);
+  --lifeflow-input: rgba(255,255,255,0.10);
+  --lifeflow-ring: #F2F2F4;
+
+  --lifeflow-primary: #F2F2F4;
+  --lifeflow-primary-hover: #FFFFFF;
+  --lifeflow-primary-light: rgba(255,255,255,0.09);
+  --lifeflow-primary-foreground: #0E0E11;
+
+  --lifeflow-knit-thread: #F2F2F4;
+  --lifeflow-knit-thread-completed: #34D399;
+  --lifeflow-knit-thread-partial: #FBBF24;
+  --lifeflow-knit-bg: rgba(255,255,255,0.10);
+  --lifeflow-knit-grid: rgba(255,255,255,0.07);
+
+  --state-success: #34D399;
+  --state-success-light: rgba(52,211,153,0.12);
+  --state-warning: #FBBF24;
+  --state-warning-light: rgba(251,191,36,0.12);
+  --state-error: #F87171;
+  --state-error-light: rgba(248,113,113,0.12);
+  --state-info: #60A5FA;
+  --state-info-light: rgba(96,165,250,0.12);
+
+  --lifeflow-text-primary: #F2F2F4;
+  --lifeflow-text-secondary: rgba(242,242,244,0.68);
+  --lifeflow-text-tertiary: rgba(242,242,244,0.42);
+  --lifeflow-text-disabled: rgba(242,242,244,0.28);
+  --lifeflow-text-inverse: #0E0E11;
+
+  --lifeflow-shadow-1: 0 1px 2px rgba(0,0,0,0.30);
+  --lifeflow-shadow-2: 0 4px 16px rgba(0,0,0,0.40);
+  --lifeflow-shadow-3: 0 12px 32px rgba(0,0,0,0.55);
+  --lifeflow-shadow-knit: none;
+
+  --lifeflow-tabbar-bg: rgba(14,14,17,0.88);
+  --lifeflow-tabbar-blur: 16px;
+  --lifeflow-tabbar-blur-saturate: 100%;
+
+  --lifeflow-ai-ball: #F2F2F4;
+}
+
+/* === TYPOGRAPHY UTILITY CLASSES === */
+.lf-display {
+  font-family: var(--lifeflow-font-display);
+  font-size: var(--lifeflow-font-size-display);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.lf-h1 {
+  font-family: var(--lifeflow-font-display);
+  font-size: var(--lifeflow-font-size-h1);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+
+.lf-h2 {
+  font-family: var(--lifeflow-font-display);
+  font-size: var(--lifeflow-font-size-h2);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 1.3;
+}
+
+.lf-h3 {
+  font-family: var(--lifeflow-font-body);
+  font-size: var(--lifeflow-font-size-h3);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.4;
+}
+
+.lf-body {
+  font-family: var(--lifeflow-font-body);
+  font-size: var(--lifeflow-font-size-body);
+  font-weight: 400;
+  line-height: 1.55;
+}
+
+.lf-body-sm {
+  font-family: var(--lifeflow-font-body);
+  font-size: var(--lifeflow-font-size-sm);
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.lf-caption {
+  font-family: var(--lifeflow-font-body);
+  font-size: var(--lifeflow-font-size-caption);
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.lf-mono {
+  font-family: var(--lifeflow-font-mono);
+  font-size: var(--lifeflow-font-size-sm);
+  font-weight: 400;
+  line-height: 1.6;
+}
+
+/* === PROGRESS BAR（细胶囊） === */
+.knit-track {
+  position: relative;
+  height: 5px;
+  border-radius: var(--lifeflow-radius-full);
+  overflow: hidden;
+  background: var(--lifeflow-knit-bg);
+}
+
+.knit-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  border-radius: var(--lifeflow-radius-full);
+  background: var(--lifeflow-knit-thread);
+  z-index: 2;
+  transition: width 0.5s ease-in-out;
+}
+
+.knit-fill--done { background: var(--lifeflow-knit-thread-completed); }
+.knit-fill--partial { background: var(--lifeflow-knit-thread-partial); }
+
+.knit-yarn { display: none; }
+
+.knit-percent {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 4;
+  font-family: var(--lifeflow-font-body);
+  font-size: var(--lifeflow-font-size-sm);
+  font-weight: 600;
+  color: var(--lifeflow-text-primary);
+  line-height: 1;
+}
+
+/* === TAB BAR（白底细顶线，跟随模式） === */
+.lf-tabbar-glass {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 40;
+  border-top: 1px solid var(--lifeflow-border);
+  background: var(--lifeflow-tabbar-bg);
+  -webkit-backdrop-filter: saturate(var(--lifeflow-tabbar-blur-saturate)) blur(var(--lifeflow-tabbar-blur));
+  backdrop-filter: saturate(var(--lifeflow-tabbar-blur-saturate)) blur(var(--lifeflow-tabbar-blur));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* === 极简通用组件 === */
+/* 细线分隔列表（克制分割线） */
+.lf-list-divider > * + * {
+  border-top: 1px solid var(--lifeflow-border-light);
+}
+
+/* 卡片：静态内容用 1px 细边框 + 极淡阴影，不靠重阴影 */
+.lf-surface {
+  background: var(--lifeflow-card);
+  border: 1px solid var(--lifeflow-border-light);
+  border-radius: var(--lifeflow-radius-lg);
+}
+
+/* 数字对齐（时间/金额/进度） */
+.lf-tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+/* 大数字（统计强调） */
+.lf-stat {
+  font-family: var(--lifeflow-font-display);
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  @theme inline {
+    --color-background: var(--lifeflow-background);
+    --color-foreground: var(--lifeflow-foreground);
+    --color-card: var(--lifeflow-card);
+    --color-card-foreground: var(--lifeflow-card-foreground);
+    --color-popover: var(--lifeflow-popover);
+    --color-popover-foreground: var(--lifeflow-popover-foreground);
+    --color-primary: var(--lifeflow-primary);
+    --color-primary-foreground: var(--lifeflow-primary-foreground);
+    --color-muted: var(--lifeflow-muted);
+    --color-muted-foreground: var(--lifeflow-muted-foreground);
+    --color-border: var(--lifeflow-border);
+    --color-input: var(--lifeflow-input);
+    --color-ring: var(--lifeflow-ring);
+    --radius-sm: var(--lifeflow-radius-sm);
+    --radius-md: var(--lifeflow-radius-md);
+    --radius-lg: var(--lifeflow-radius-lg);
+    --radius-xl: var(--lifeflow-radius-xl);
+  }
+  @layer base {
+    body { background: var(--lifeflow-background); color: var(--lifeflow-foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style id="semantic-token-fallback">
+      .bg-background { background-color: var(--lifeflow-background); }
+      .text-background { color: var(--lifeflow-background); }
+      .border-background { border-color: var(--lifeflow-background); }
+      .ring-background { --tw-ring-color: var(--lifeflow-background); }
+      .bg-foreground { background-color: var(--lifeflow-foreground); }
+      .text-foreground { color: var(--lifeflow-foreground); }
+      .border-foreground { border-color: var(--lifeflow-foreground); }
+      .ring-foreground { --tw-ring-color: var(--lifeflow-foreground); }
+      .bg-card { background-color: var(--lifeflow-card); }
+      .text-card { color: var(--lifeflow-card); }
+      .border-card { border-color: var(--lifeflow-card); }
+      .ring-card { --tw-ring-color: var(--lifeflow-card); }
+      .bg-card-foreground { background-color: var(--lifeflow-card-foreground); }
+      .text-card-foreground { color: var(--lifeflow-card-foreground); }
+      .border-card-foreground { border-color: var(--lifeflow-card-foreground); }
+      .ring-card-foreground { --tw-ring-color: var(--lifeflow-card-foreground); }
+      .bg-popover { background-color: var(--lifeflow-popover); }
+      .text-popover { color: var(--lifeflow-popover); }
+      .border-popover { border-color: var(--lifeflow-popover); }
+      .ring-popover { --tw-ring-color: var(--lifeflow-popover); }
+      .bg-popover-foreground { background-color: var(--lifeflow-popover-foreground); }
+      .text-popover-foreground { color: var(--lifeflow-popover-foreground); }
+      .border-popover-foreground { border-color: var(--lifeflow-popover-foreground); }
+      .ring-popover-foreground { --tw-ring-color: var(--lifeflow-popover-foreground); }
+      .bg-primary { background-color: var(--lifeflow-primary); }
+      .text-primary { color: var(--lifeflow-primary); }
+      .border-primary { border-color: var(--lifeflow-primary); }
+      .ring-primary { --tw-ring-color: var(--lifeflow-primary); }
+      .bg-primary-foreground { background-color: var(--lifeflow-primary-foreground); }
+      .text-primary-foreground { color: var(--lifeflow-primary-foreground); }
+      .border-primary-foreground { border-color: var(--lifeflow-primary-foreground); }
+      .ring-primary-foreground { --tw-ring-color: var(--lifeflow-primary-foreground); }
+      .bg-muted { background-color: var(--lifeflow-muted); }
+      .text-muted { color: var(--lifeflow-muted); }
+      .border-muted { border-color: var(--lifeflow-muted); }
+      .ring-muted { --tw-ring-color: var(--lifeflow-muted); }
+      .bg-muted-foreground { background-color: var(--lifeflow-muted-foreground); }
+      .text-muted-foreground { color: var(--lifeflow-muted-foreground); }
+      .border-muted-foreground { border-color: var(--lifeflow-muted-foreground); }
+      .ring-muted-foreground { --tw-ring-color: var(--lifeflow-muted-foreground); }
+      .bg-border { background-color: var(--lifeflow-border); }
+      .text-border { color: var(--lifeflow-border); }
+      .border-border { border-color: var(--lifeflow-border); }
+      .ring-border { --tw-ring-color: var(--lifeflow-border); }
+      .bg-input { background-color: var(--lifeflow-input); }
+      .text-input { color: var(--lifeflow-input); }
+      .border-input { border-color: var(--lifeflow-input); }
+      .ring-input { --tw-ring-color: var(--lifeflow-input); }
+      .bg-ring { background-color: var(--lifeflow-ring); }
+      .text-ring { color: var(--lifeflow-ring); }
+      .border-ring { border-color: var(--lifeflow-ring); }
+      .ring-ring { --tw-ring-color: var(--lifeflow-ring); }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+</head>
+<body class="min-h-screen font-sans antialiased">
+<main class="min-h-screen">
+  <style id="critical-layout">
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
+    }
+
+    /* === 极简工具类 === */
+    .lf-sr-only {
+      position: absolute; width: 1px; height: 1px;
+      padding: 0; margin: -1px; overflow: hidden;
+      clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+    }
+
+    /* === 基础（静态兜底，暗色 body 用 token 深灰而非纯黑） === */
+    html, body { margin: 0; }
+    body {
+      background: var(--lifeflow-background);
+      color: var(--lifeflow-foreground);
+      font-family: var(--lifeflow-font-body);
+      -webkit-font-smoothing: antialiased;
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    button { -webkit-appearance: none; appearance: none; }
+    button:focus-visible {
+      outline: 2px solid var(--lifeflow-ring);
+      outline-offset: 2px;
+    }
+    main h1, main p { margin: 0; }
+
+    /* === 内容容器（静态兜底：居中 + 最大宽度 + 底部留白避开固定导航） === */
+    #document-scroll {
+      margin-left: auto;
+      margin-right: auto;
+      max-width: 28rem;
+      width: 100%;
+      padding: 12px 16px 100px;
+    }
+
+    /* === 顶部标题栏 === */
+    .train-topbar { display: flex; align-items: center; gap: 4px; }
+    .back-btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 36px; height: 36px; flex-shrink: 0;
+      border: 0;
+      border-radius: var(--lifeflow-radius-full);
+      background: transparent;
+      color: var(--lifeflow-text-primary);
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+    .back-btn:hover { background: var(--lifeflow-muted); }
+    .back-btn:active { opacity: 0.7; }
+    .page-title {
+      flex: 1; min-width: 0; text-align: center;
+      font-size: var(--lifeflow-font-size-h3);
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      line-height: 1.25;
+      color: var(--lifeflow-text-primary);
+    }
+    .topbar-spacer { width: 36px; flex-shrink: 0; }
+
+    /* === 今日训练总览卡 === */
+    .summary-card { padding: 18px 16px 14px; }
+    .summary-grid { display: grid; grid-template-columns: 1fr 1fr; }
+    .summary-item { text-align: center; min-width: 0; }
+    .summary-item + .summary-item { border-left: 1px solid var(--lifeflow-border-light); }
+    .summary-label {
+      font-size: var(--lifeflow-font-size-sm);
+      line-height: 1.4;
+      color: var(--lifeflow-text-secondary);
+    }
+    .summary-num {
+      margin-top: 3px;
+      font-family: var(--lifeflow-font-display);
+      font-size: var(--lifeflow-font-size-h3);
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      line-height: 1.2;
+      color: var(--lifeflow-text-primary);
+    }
+    .summary-unit {
+      margin-left: 2px;
+      font-family: var(--lifeflow-font-body);
+      font-size: var(--lifeflow-font-size-sm);
+      font-weight: 400;
+      letter-spacing: 0;
+      color: var(--lifeflow-text-tertiary);
+    }
+    .summary-progress {
+      margin-top: 14px; padding-top: 14px;
+      border-top: 1px solid var(--lifeflow-border-light);
+    }
+    .progress-track {
+      height: 4px;
+      border-radius: var(--lifeflow-radius-full);
+      background: var(--lifeflow-knit-bg);
+      overflow: hidden;
+    }
+    .progress-fill {
+      display: block; height: 100%;
+      border-radius: var(--lifeflow-radius-full);
+      background: var(--lifeflow-primary);
+      transition: width 0.4s ease;
+    }
+    .progress-text {
+      margin-top: 8px;
+      font-size: var(--lifeflow-font-size-caption);
+      line-height: 1.4;
+      text-align: right;
+      color: var(--lifeflow-text-tertiary);
+    }
+
+    /* === 今日计划列表 === */
+    .sect-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+    .sect-title {
+      font-size: var(--lifeflow-font-size-body);
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      line-height: 1.3;
+      color: var(--lifeflow-text-primary);
+    }
+    .sect-count {
+      font-size: var(--lifeflow-font-size-caption);
+      line-height: 1.4;
+      color: var(--lifeflow-text-tertiary);
+    }
+    .plan-list { padding: 0 16px; }
+    .plan-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 13px 0; min-width: 0;
+    }
+    .check-btn {
+      width: 22px; height: 22px; flex-shrink: 0;
+      display: inline-flex; align-items: center; justify-content: center;
+      border: 1.5px solid var(--lifeflow-border);
+      border-radius: var(--lifeflow-radius-full);
+      background: transparent;
+      color: var(--lifeflow-text-inverse);
+      transition: background 0.15s ease, border-color 0.15s ease;
+    }
+    .check-btn .check-ico { opacity: 0; transition: opacity 0.15s ease; }
+    .plan-row.is-done .check-btn {
+      background: var(--state-success);
+      border-color: var(--state-success);
+    }
+    .plan-row.is-done .check-btn .check-ico { opacity: 1; }
+    .plan-main { flex: 1; min-width: 0; }
+    .plan-title {
+      font-size: var(--lifeflow-font-size-body);
+      font-weight: 600;
+      line-height: 1.35;
+      color: var(--lifeflow-text-primary);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      transition: color 0.15s ease;
+    }
+    .plan-row.is-done .plan-title { color: var(--lifeflow-text-tertiary); }
+    .plan-sub {
+      margin-top: 2px;
+      font-size: var(--lifeflow-font-size-sm);
+      line-height: 1.4;
+      color: var(--lifeflow-text-tertiary);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .plan-time {
+      flex-shrink: 0;
+      font-size: var(--lifeflow-font-size-sm);
+      line-height: 1.4;
+      color: var(--lifeflow-text-secondary);
+    }
+
+    /* === 训练类型分段器（细线 + 激活石墨黑） === */
+    .seg {
+      display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 2px;
+      padding: 3px;
+      border: 1px solid var(--lifeflow-border-light);
+      border-radius: var(--lifeflow-radius-md);
+      background: var(--lifeflow-card);
+    }
+    .seg-btn {
+      height: 34px;
+      display: inline-flex; align-items: center; justify-content: center;
+      border: 0;
+      border-radius: 6px;
+      background: transparent;
+      font-size: var(--lifeflow-font-size-body);
+      font-weight: 500;
+      line-height: 1;
+      color: var(--lifeflow-text-secondary);
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+    .seg-btn:hover { color: var(--lifeflow-text-primary); }
+    .seg-btn.is-on {
+      background: var(--lifeflow-primary);
+      color: var(--lifeflow-primary-foreground);
+      font-weight: 600;
+    }
+    .seg-hint {
+      margin-top: 10px;
+      font-size: var(--lifeflow-font-size-caption);
+      line-height: 1.4;
+      text-align: center;
+      color: var(--lifeflow-text-tertiary);
+    }
+
+    /* === 底部主按钮 === */
+    .start-btn {
+      display: flex; align-items: center; justify-content: center;
+      width: 100%; height: 48px;
+      border: 0;
+      border-radius: var(--lifeflow-radius-md);
+      background: var(--lifeflow-primary);
+      color: var(--lifeflow-text-inverse);
+      font-size: var(--lifeflow-font-size-body);
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      line-height: 1;
+      transition: background 0.15s ease, opacity 0.15s ease;
+    }
+    .start-btn:hover { background: var(--lifeflow-primary-hover); }
+    .start-btn:active { opacity: 0.85; }
+
+    /* === 底部导航静态兜底（id 作用域，不依赖运行时 Tailwind） === */
+    #bottom-nav a {
+      color: var(--lifeflow-text-tertiary);
+      text-decoration: none;
+    }
+    #bottom-nav a[data-active="true"] {
+      color: var(--lifeflow-primary);
+      font-weight: 600;
+    }
+    #bottom-nav .grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      height: 100%;
+    }
+    #bottom-nav .flex {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      height: 100%;
+    }
+    #bottom-nav svg { width: 20px; height: 20px; }
+  </style>
+
+  <div id="document-scroll" class="mx-auto max-w-md px-4 pt-3 pb-[100px]">
+    <!-- 1 顶部：返回 + 标题「训练中心」 -->
+    <header class="train-topbar">
+      <a href="#" data-dom-id="back-more" class="back-btn" aria-label="返回">
+        <i data-lucide="chevron-left" class="h-5 w-5"></i>
+      </a>
+      <h1 class="page-title">训练中心</h1>
+      <span class="topbar-spacer" aria-hidden="true"></span>
+    </header>
+
+    <!-- 2 今日训练总览：力量 1/2 组 + 有氧 0/1 次（两列细线分隔 + 细进度条） -->
+    <section data-dom-id="train-summary" class="lf-surface summary-card mt-5" aria-label="今日训练总览">
+      <div class="summary-grid">
+        <div class="summary-item">
+          <p class="summary-label">力量</p>
+          <p class="summary-num"><span id="sum-strength-num" class="lf-tabular">1</span><span class="summary-unit">/ 2 组</span></p>
+        </div>
+        <div class="summary-item">
+          <p class="summary-label">有氧</p>
+          <p class="summary-num"><span id="sum-cardio-num" class="lf-tabular">0</span><span class="summary-unit">/ 1 次</span></p>
+        </div>
+      </div>
+      <div class="summary-progress">
+        <div class="progress-track" role="progressbar" aria-label="今日训练进度" aria-valuemin="0" aria-valuemax="3" aria-valuenow="1">
+          <span class="progress-fill" style="width: 33.333%"></span>
+        </div>
+        <p class="progress-text" id="progress-text">今日进度 · 已完成 1/3</p>
+      </div>
+    </section>
+
+    <!-- 3 今日计划列表（细线分隔） -->
+    <section class="mt-6">
+      <div class="sect-head">
+        <h2 class="sect-title">今日计划</h2>
+        <span class="sect-count">3 项</span>
+      </div>
+      <div data-dom-id="train-list" class="lf-surface lf-list-divider plan-list mt-3" aria-label="今日训练计划列表">
+        <!-- 力量 · 上肢（勾选态） -->
+        <div class="plan-row is-done" data-type="strength" data-state="done">
+          <button type="button" class="check-btn" data-action="check" aria-pressed="true" aria-label="标记 力量·上肢 为未完成">
+            <i data-lucide="check" class="check-ico w-3 h-3"></i>
+          </button>
+          <div class="plan-main">
+            <p class="plan-title">力量 · 上肢</p>
+            <p class="plan-sub">引体 4×8</p>
+          </div>
+          <span class="plan-time lf-tabular">14:00</span>
+        </div>
+        <!-- 力量 · 核心（待做） -->
+        <div class="plan-row" data-type="strength" data-state="todo">
+          <button type="button" class="check-btn" data-action="check" aria-pressed="false" aria-label="标记 力量·核心 为已完成">
+            <i data-lucide="check" class="check-ico w-3 h-3"></i>
+          </button>
+          <div class="plan-main">
+            <p class="plan-title">力量 · 核心</p>
+            <p class="plan-sub">平板支撑 3×60s</p>
+          </div>
+          <span class="plan-time lf-tabular">16:30</span>
+        </div>
+        <!-- 有氧 · 跑步（待做） -->
+        <div class="plan-row" data-type="cardio" data-state="todo">
+          <button type="button" class="check-btn" data-action="check" aria-pressed="false" aria-label="标记 有氧·跑步 为已完成">
+            <i data-lucide="check" class="check-ico w-3 h-3"></i>
+          </button>
+          <div class="plan-main">
+            <p class="plan-title">有氧 · 跑步</p>
+            <p class="plan-sub">3km</p>
+          </div>
+          <span class="plan-time lf-tabular">18:00</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4 训练类型 tab 分段：力量 / 有氧 / 拉伸 -->
+    <section class="mt-6">
+      <div class="seg" role="tablist" aria-label="训练类型">
+        <button type="button" class="seg-btn is-on" data-seg="strength" role="tab" aria-selected="true">力量</button>
+        <button type="button" class="seg-btn" data-seg="cardio" role="tab" aria-selected="false">有氧</button>
+        <button type="button" class="seg-btn" data-seg="stretch" role="tab" aria-selected="false">拉伸</button>
+      </div>
+      <p class="seg-hint" id="seg-hint">力量 · 今日已完成 1/2 组</p>
+    </section>
+
+    <!-- 5 底部主按钮：开始训练 -->
+    <button type="button" data-dom-id="train-start" class="start-btn mt-8">开始训练</button>
+  </div>
+
+  <!-- 底部导航 4-tab（首页激活） -->
+  <nav data-mobile-nav="global" id="bottom-nav" class="lf-tabbar-glass w-full max-w-md mx-auto h-[60px]"><div class="grid grid-cols-4 h-full"><a href="#" data-dom-id="nav-home" data-nav-key="home" data-active="true" class="min-w-0 flex flex-col items-center justify-center gap-1 h-full text-[var(--lifeflow-primary)]"><i data-lucide="home" class="w-5 h-5 shrink-0"></i><span class="text-[10.5px] leading-none whitespace-nowrap max-w-full truncate font-semibold">首页</span></a><a href="#" data-dom-id="nav-goals" data-nav-key="goals" data-active="false" class="min-w-0 flex flex-col items-center justify-center gap-1 h-full text-[var(--lifeflow-text-tertiary)]"><i data-lucide="target" class="w-5 h-5 shrink-0"></i><span class="text-[10.5px] leading-none whitespace-nowrap max-w-full truncate">目标</span></a><a href="#" data-dom-id="nav-schedule" data-nav-key="schedule" data-active="false" class="min-w-0 flex flex-col items-center justify-center gap-1 h-full text-[var(--lifeflow-text-tertiary)]"><i data-lucide="calendar-days" class="w-5 h-5 shrink-0"></i><span class="text-[10.5px] leading-none whitespace-nowrap max-w-full truncate">日程</span></a><a href="#" data-dom-id="nav-ideal" data-nav-key="ideal" data-active="false" class="min-w-0 flex flex-col items-center justify-center gap-1 h-full text-[var(--lifeflow-text-tertiary)]"><i data-lucide="sun" class="w-5 h-5 shrink-0"></i><span class="text-[10.5px] leading-none whitespace-nowrap max-w-full truncate">理想日</span></a></div></nav>
+
+  <script>
+  (function () {
+    'use strict';
+    var list = document.getElementById('train-list');
+    if (!list) return;
+    var rows = Array.prototype.slice.call(list.querySelectorAll('.plan-row'));
+    var fill = document.querySelector('#train-summary .progress-fill');
+    var text = document.getElementById('progress-text');
+    var numStrength = document.getElementById('sum-strength-num');
+    var numCardio = document.getElementById('sum-cardio-num');
+    var hint = document.getElementById('seg-hint');
+
+    function groupCounts() {
+      var s = 0, sd = 0, c = 0, cd = 0;
+      rows.forEach(function (r) {
+        var done = r.classList.contains('is-done');
+        var type = r.getAttribute('data-type');
+        if (type === 'strength') { s++; if (done) sd++; }
+        else if (type === 'cardio') { c++; if (done) cd++; }
+      });
+      return { s: s, sd: sd, c: c, cd: cd };
+    }
+
+    function activeSeg() {
+      var b = document.querySelector('.seg-btn.is-on');
+      return b ? b.getAttribute('data-seg') : 'strength';
+    }
+
+    function refresh() {
+      var g = groupCounts();
+      var total = rows.length;
+      var done = g.sd + g.cd;
+      var pct = total ? Math.round((done / total) * 100) : 0;
+      if (fill) fill.style.width = pct + '%';
+      if (text) text.textContent = '今日进度 · 已完成 ' + done + '/' + total;
+      if (numStrength) numStrength.textContent = String(g.sd);
+      if (numCardio) numCardio.textContent = String(g.cd);
+      var key = activeSeg();
+      if (hint) {
+        if (key === 'cardio') hint.textContent = '有氧 · 今日已完成 ' + g.cd + '/' + g.c + ' 次';
+        else if (key === 'stretch') hint.textContent = '拉伸 · 今日暂无拉伸计划';
+        else hint.textContent = '力量 · 今日已完成 ' + g.sd + '/' + g.s + ' 组';
+      }
+    }
+
+    document.addEventListener('click', function (e) {
+      var btn = e.target.closest('[data-action="check"]');
+      if (btn) {
+        var row = btn.closest('.plan-row');
+        row.classList.toggle('is-done');
+        var isDone = row.classList.contains('is-done');
+        var title = row.querySelector('.plan-title').textContent;
+        btn.setAttribute('aria-label', (isDone ? '标记 ' + title + ' 为未完成' : '标记 ' + title + ' 为已完成'));
+        btn.setAttribute('aria-pressed', isDone ? 'true' : 'false');
+        refresh();
+        return;
+      }
+      var seg = e.target.closest('.seg-btn');
+      if (seg) {
+        document.querySelectorAll('.seg-btn').forEach(function (b) {
+          var on = b === seg;
+          b.classList.toggle('is-on', on);
+          b.setAttribute('aria-selected', on ? 'true' : 'false');
+        });
+        refresh();
+      }
+    });
+  })();
+  </script>
+</main>
+<script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+<script>lucide.createIcons();</script>
+</body>
+</html>

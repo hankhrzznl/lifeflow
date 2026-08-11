@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>新建目标</title>
+    <title>愿望清单</title>
     <style id="theme-vars">
 /* LifeFlow 2.0 — 极简克制设计系统
    第一性原理：目标驱动的个人生活操作系统
@@ -436,8 +436,9 @@
     </style>
 </head>
 <body class="min-h-screen font-sans antialiased">
+<main>
 
-<!-- 主布局静态 CSS 兜底：无 Tailwind 运行时亦保证页面可渲染 -->
+<!-- 主布局静态 CSS 兜底：无 Tailwind 运行时亦保证骨架可渲染；全部颜色引用 var(--lifeflow-*) -->
 <style id="critical-layout">
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; }
@@ -450,227 +451,239 @@
     -webkit-font-smoothing: antialiased;
     overflow-x: hidden;
   }
-  button, input { font-family: inherit; }
-  .lf-page { max-width: 28rem; margin: 0 auto; padding: 12px 16px 100px; }
-  .lf-header { position: relative; display: flex; align-items: center; justify-content: center; height: 44px; }
+  button { font-family: inherit; }
+  a { -webkit-tap-highlight-color: transparent; }
+  svg[data-lucide] { display: inline-block; flex-shrink: 0; }
+
+  /* 页面容器：max-w-md + px-4 + pt-3 + pb-100px 的静态等价 */
+  .lf-page { max-width: 28rem; margin-inline: auto; padding: 12px 16px 100px; }
+
+  /* ---- 顶部：返回 + 标题 ---- */
+  .lf-header {
+    position: relative;
+    display: flex; align-items: center; justify-content: center;
+    height: 44px;
+  }
   .lf-back {
     position: absolute; left: -4px; top: 50%; transform: translateY(-50%);
     display: inline-flex; align-items: center; justify-content: center;
-    width: 40px; height: 40px; color: var(--lifeflow-text-primary);
-    background: transparent; border: 0; border-radius: var(--lifeflow-radius-full); cursor: pointer;
+    width: 40px; height: 40px;
+    color: var(--lifeflow-text-primary); text-decoration: none;
+    transition: opacity 0.15s ease;
   }
-  .lf-title { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -0.01em; color: var(--lifeflow-text-primary); }
-  .lf-section { margin-top: 32px; }
-  .lf-label { display: block; margin-bottom: 10px; font-size: 13px; font-weight: 500; color: var(--lifeflow-text-secondary); }
-  .lf-hint { margin: 8px 0 0; font-size: 12px; color: var(--lifeflow-text-tertiary); }
-  .lf-tpl-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
-  .lf-tpl {
-    position: relative; display: flex; align-items: center; justify-content: center;
-    min-height: 60px; padding: 10px 6px; font-size: 13px; line-height: 1.3; text-align: center;
-    color: var(--lifeflow-text-secondary); background: var(--lifeflow-card);
-    border: 1px solid var(--lifeflow-border-light); border-radius: var(--lifeflow-radius-lg);
-    cursor: pointer; -webkit-tap-highlight-color: transparent;
+  .lf-back:active { opacity: 0.55; }
+  .lf-back svg[data-lucide] { width: 22px; height: 22px; }
+  .lf-title {
+    margin: 0; padding: 0 44px;
+    font-size: 17px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.3;
+    color: var(--lifeflow-text-primary);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
-  .lf-tpl.is-selected { color: var(--lifeflow-text-primary); font-weight: 600; border-color: var(--lifeflow-primary); background: var(--lifeflow-primary-light); }
-  .lf-tpl-check { display: none; position: absolute; top: 6px; right: 6px; color: var(--lifeflow-primary); }
-  .lf-tpl.is-selected .lf-tpl-check { display: block; }
-  .lf-input {
-    width: 100%; height: 48px; padding: 0 16px; font-size: 15px;
-    color: var(--lifeflow-text-primary); background: var(--lifeflow-card);
-    border: 1px solid var(--lifeflow-border-light); border-radius: var(--lifeflow-radius-md);
-    outline: none; -webkit-appearance: none; appearance: none;
+
+  /* ---- 已实现摘要：小字 + 细进度条 ---- */
+  .wl-summary { margin-top: 8px; padding: 0 2px; }
+  .wl-summary-text { margin: 0 0 10px; font-size: 13px; line-height: 1.4; color: var(--lifeflow-text-secondary); }
+  .wl-sum-num { font-weight: 600; color: var(--lifeflow-text-primary); font-variant-numeric: tabular-nums; }
+  .wl-sum-total { color: var(--lifeflow-text-tertiary); font-variant-numeric: tabular-nums; }
+  .wl-track {
+    position: relative; height: 4px;
+    border-radius: var(--lifeflow-radius-full);
+    overflow: hidden; background: var(--lifeflow-knit-bg);
   }
-  .lf-input::placeholder { color: var(--lifeflow-text-tertiary); }
-  .lf-input:focus { border-color: var(--lifeflow-primary); }
-  .lf-kr-card { background: var(--lifeflow-card); border: 1px solid var(--lifeflow-border-light); border-radius: var(--lifeflow-radius-lg); overflow: hidden; }
-  .lf-kr-row { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 12px; }
-  .lf-kr-row + .lf-kr-row { border-top: 1px solid var(--lifeflow-border-light); }
-  .lf-kr-index { flex-shrink: 0; width: 34px; font-size: 13px; color: var(--lifeflow-text-tertiary); font-variant-numeric: tabular-nums; }
-  .lf-kr-input { flex: 1; min-width: 0; height: 52px; padding: 0; font-size: 15px; color: var(--lifeflow-text-primary); background: transparent; border: 0; outline: none; }
-  .lf-kr-input::placeholder { color: var(--lifeflow-text-tertiary); }
-  .lf-kr-del {
-    flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
-    width: 32px; height: 32px; color: var(--lifeflow-text-tertiary);
-    background: transparent; border: 0; border-radius: var(--lifeflow-radius-sm); cursor: pointer;
+  .wl-fill {
+    position: absolute; left: 0; top: 0; height: 100%;
+    border-radius: var(--lifeflow-radius-full);
+    background: var(--lifeflow-primary);
+    transition: width 0.5s ease;
   }
-  .lf-kr-del:hover, .lf-kr-del:active { color: var(--state-error); }
-  .lf-add-kr {
-    display: inline-flex; align-items: center; gap: 6px; margin-top: 12px; padding: 4px 0;
-    font-size: 13px; font-weight: 500; color: var(--lifeflow-primary);
+
+  /* ---- 愿望列表：卡片细边框分层 + 细线分隔 ---- */
+  .wl-list {
+    list-style: none; margin: 20px 0 0; padding: 0;
+    background: var(--lifeflow-card);
+    border: 1px solid var(--lifeflow-border-light);
+    border-radius: var(--lifeflow-radius-lg);
+    overflow: hidden;
+  }
+  .wl-row { display: flex; align-items: center; gap: 12px; padding: 14px 16px; }
+  .wl-row + .wl-row { border-top: 1px solid var(--lifeflow-border-light); }
+  .wl-row-ic {
+    width: 40px; height: 40px; flex: none;
+    display: inline-flex; align-items: center; justify-content: center;
+    border: 1px solid var(--lifeflow-border-light);
+    border-radius: var(--lifeflow-radius-full);
+    background: transparent;
+    color: var(--lifeflow-primary);
+  }
+  .wl-row-ic svg[data-lucide] { width: 18px; height: 18px; }
+  .wl-row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+  .wl-row-name {
+    margin: 0;
+    font-size: 15px; font-weight: 500; line-height: 1.4;
+    color: var(--lifeflow-text-primary);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .wl-row-name.is-done {
+    color: var(--lifeflow-text-tertiary);
+    text-decoration: line-through;
+    text-decoration-color: var(--lifeflow-border-dashed);
+  }
+  .wl-row-time { margin: 0; font-size: 12px; line-height: 1.4; color: var(--lifeflow-text-tertiary); }
+  .wl-status {
+    flex: none;
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 12px; line-height: 1.4;
+    color: var(--lifeflow-text-tertiary);
+    white-space: nowrap;
+  }
+  .wl-status svg[data-lucide] { width: 12px; height: 12px; }
+  .wl-status-dot { width: 5px; height: 5px; border-radius: var(--lifeflow-radius-full); background: currentColor; flex: none; }
+  .wl-status.is-done { color: var(--state-success); }
+
+  /* ---- 分类 chip：细线分段器 ---- */
+  .wl-seg {
+    display: flex; margin: 20px 0 0;
+    background: var(--lifeflow-card);
+    border: 1px solid var(--lifeflow-border-light);
+    border-radius: var(--lifeflow-radius-lg);
+    overflow: hidden;
+  }
+  .wl-seg-btn {
+    flex: 1 1 0; min-width: 0; height: 38px;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 400; line-height: 1;
+    color: var(--lifeflow-text-tertiary);
     background: transparent; border: 0; cursor: pointer;
+    transition: color 0.15s ease, background 0.15s ease;
   }
-  .lf-due {
-    display: flex; align-items: center; justify-content: space-between;
-    width: 100%; min-height: 52px; padding: 0 16px; font-size: 15px;
-    color: var(--lifeflow-text-primary); text-align: left; background: var(--lifeflow-card);
-    border: 1px solid var(--lifeflow-border-light); border-radius: var(--lifeflow-radius-lg);
+  .wl-seg-btn + .wl-seg-btn { border-left: 1px solid var(--lifeflow-border-light); }
+  .wl-seg-btn.is-active { color: var(--lifeflow-text-primary); font-weight: 500; background: var(--lifeflow-muted); }
+  .wl-seg-btn:active { opacity: 0.7; }
+
+  /* ---- 底部主按钮：石墨黑填充 · 圆角 8 ---- */
+  .wl-add {
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    width: 100%; height: 48px; margin: 24px 0 0;
+    font-size: 15px; font-weight: 600; line-height: 1;
+    color: var(--lifeflow-primary-foreground);
+    background: var(--lifeflow-primary);
+    border: 0; border-radius: var(--lifeflow-radius-md);
     cursor: pointer; -webkit-tap-highlight-color: transparent;
+    transition: opacity 0.15s ease;
   }
-  .lf-due-value { display: inline-flex; align-items: center; gap: 4px; color: var(--lifeflow-text-primary); font-variant-numeric: tabular-nums; }
-  .lf-btn-primary {
-    display: flex; align-items: center; justify-content: center;
-    width: 100%; height: 48px; margin-top: 40px; font-size: 15px; font-weight: 600;
-    color: var(--lifeflow-text-inverse); background: var(--lifeflow-primary);
-    border: 0; border-radius: var(--lifeflow-radius-md); cursor: pointer;
-  }
-  .lf-btn-primary:active { opacity: 0.85; }
+  .wl-add:active { opacity: 0.85; }
+  .wl-add svg[data-lucide] { width: 18px; height: 18px; }
+
+  /* ---- 底部导航静态兜底 ---- */
   #bottom-nav {
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
-    height: 60px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
-    background: var(--lifeflow-tabbar-bg); border-top: 1px solid var(--lifeflow-border);
-    padding-bottom: env(safe-area-inset-bottom, 0px);
+    width: 100%; max-width: 28rem; margin-inline: auto; height: 60px;
   }
-  #bottom-nav a { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-width: 0; color: var(--lifeflow-text-tertiary); text-decoration: none; }
+  #bottom-nav .grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); height: 100%; }
+  #bottom-nav a {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 4px; min-width: 0; height: 100%;
+    text-decoration: none; color: var(--lifeflow-text-tertiary);
+  }
   #bottom-nav a[data-active="true"] { color: var(--lifeflow-primary); }
-  #bottom-nav span { font-size: 10.5px; line-height: 1; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+  #bottom-nav a[data-active="true"] span { font-weight: 600; }
+  #bottom-nav a svg { width: 20px; height: 20px; flex-shrink: 0; }
+  #bottom-nav a span { font-size: 10.5px; line-height: 1; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+
+  /* 无障碍动效降级 */
+  @media (prefers-reduced-motion: reduce) {
+    .wl-fill, .wl-seg-btn, .wl-add, .lf-back { transition-duration: 0.01ms !important; }
+  }
 </style>
 
 <div class="lf-page mx-auto max-w-md px-4 pt-3 pb-[100px]">
 
-  <!-- 顶部：返回 + 标题 -->
+  <!-- 1 顶部：返回 + 标题 -->
   <header class="lf-header">
-    <button type="button" data-dom-id="back-goals" aria-label="返回" class="lf-back">
+    <a href="#" data-dom-id="back-more" class="lf-back" aria-label="返回">
       <i data-lucide="chevron-left" class="w-6 h-6"></i>
-    </button>
-    <h1 class="lf-title">新建目标</h1>
+    </a>
+    <h1 class="lf-title" data-dom-id="wish-title">愿望清单</h1>
   </header>
 
-  <!-- 模板选择 -->
-  <section class="lf-section">
-    <h2 class="lf-label">选择模板</h2>
-    <div class="lf-tpl-grid" role="radiogroup" aria-label="选择模板">
-      <button type="button" data-dom-id="tpl-1" role="radio" aria-checked="true" class="lf-tpl is-selected">
-        <i data-lucide="check" class="lf-tpl-check w-3 h-3"></i>
-        <span>备考冲刺</span>
-      </button>
-      <button type="button" data-dom-id="tpl-2" role="radio" aria-checked="false" class="lf-tpl">
-        <i data-lucide="check" class="lf-tpl-check w-3 h-3"></i>
-        <span>习惯养成</span>
-      </button>
-      <button type="button" data-dom-id="tpl-3" role="radio" aria-checked="false" class="lf-tpl">
-        <i data-lucide="check" class="lf-tpl-check w-3 h-3"></i>
-        <span>健康管理</span>
-      </button>
-      <button type="button" data-dom-id="tpl-4" role="radio" aria-checked="false" class="lf-tpl">
-        <i data-lucide="check" class="lf-tpl-check w-3 h-3"></i>
-        <span>自定义</span>
-      </button>
+  <!-- 2 已实现摘要：小字 + 细进度条 -->
+  <section class="wl-summary" data-dom-id="wish-summary" aria-label="已实现 2 个，共 5 个愿望">
+    <p class="wl-summary-text">已实现 <span class="wl-sum-num">2</span> / <span class="wl-sum-total">5</span> 个愿望</p>
+    <div class="wl-track" role="progressbar" aria-label="已实现愿望进度" aria-valuemin="0" aria-valuemax="100" aria-valuenow="40">
+      <div class="wl-fill" style="width:40%"></div>
     </div>
   </section>
 
-  <!-- 目标名称 -->
-  <section class="lf-section">
-    <label class="lf-label" for="goal-name">目标名称</label>
-    <input id="goal-name" data-dom-id="goal-name" type="text" class="lf-input" placeholder="如：通过 2027 省考" maxlength="30" autocomplete="off" enterkeyhint="next">
-  </section>
-
-  <!-- 关键结果（可选） -->
-  <section class="lf-section">
-    <label class="lf-label" for="kr-list">关键结果（可选）</label>
-    <div class="lf-kr-card" id="kr-list" data-dom-id="kr-list">
-      <div class="lf-kr-row" data-dom-id="kr-row-1">
-        <span class="lf-kr-index">KR 1</span>
-        <input type="text" class="lf-kr-input" placeholder="输入关键结果，如：完成真题 20 套" maxlength="60" autocomplete="off">
-        <button type="button" data-dom-id="kr-remove-1" aria-label="删除该关键结果" class="lf-kr-del"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+  <!-- 3 愿望列表：细线分隔 -->
+  <ul class="wl-list" id="wish-list" data-dom-id="wish-list">
+    <li class="wl-row" data-dom-id="wish-card-1" data-status="done">
+      <span class="wl-row-ic"><i data-lucide="star" class="w-5 h-5"></i></span>
+      <div class="wl-row-main">
+        <p class="wl-row-name is-done">环青海湖骑行</p>
+        <p class="wl-row-time">2026 夏</p>
       </div>
-      <div class="lf-kr-row" data-dom-id="kr-row-2">
-        <span class="lf-kr-index">KR 2</span>
-        <input type="text" class="lf-kr-input" placeholder="输入关键结果" maxlength="60" autocomplete="off">
-        <button type="button" data-dom-id="kr-remove-2" aria-label="删除该关键结果" class="lf-kr-del"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+      <span class="wl-status is-done"><i data-lucide="check" class="w-3.5 h-3.5"></i>已实现</span>
+    </li>
+    <li class="wl-row" data-dom-id="wish-card-2" data-status="active">
+      <span class="wl-row-ic"><i data-lucide="star" class="w-5 h-5"></i></span>
+      <div class="wl-row-main">
+        <p class="wl-row-name">去听一场演唱会</p>
+        <p class="wl-row-time">2026 冬</p>
       </div>
-      <div class="lf-kr-row" data-dom-id="kr-row-3">
-        <span class="lf-kr-index">KR 3</span>
-        <input type="text" class="lf-kr-input" placeholder="输入关键结果" maxlength="60" autocomplete="off">
-        <button type="button" data-dom-id="kr-remove-3" aria-label="删除该关键结果" class="lf-kr-del"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+      <span class="wl-status"><span class="wl-status-dot"></span>进行中</span>
+    </li>
+    <li class="wl-row" data-dom-id="wish-card-3" data-status="active">
+      <span class="wl-row-ic"><i data-lucide="star" class="w-5 h-5"></i></span>
+      <div class="wl-row-main">
+        <p class="wl-row-name">学会游泳</p>
+        <p class="wl-row-time">2026 秋</p>
       </div>
-    </div>
-    <button type="button" id="kr-add" data-dom-id="kr-add" class="lf-add-kr"><i data-lucide="plus" class="w-3.5 h-3.5"></i>添加关键结果</button>
-    <p class="lf-hint">建议 2-3 条可衡量的结果，用于追踪目标进展</p>
-  </section>
+      <span class="wl-status"><span class="wl-status-dot"></span>进行中</span>
+    </li>
+    <li class="wl-row" data-dom-id="wish-card-4" data-status="active">
+      <span class="wl-row-ic"><i data-lucide="star" class="w-5 h-5"></i></span>
+      <div class="wl-row-main">
+        <p class="wl-row-name">给爸妈买按摩椅</p>
+        <p class="wl-row-time">2027 春节</p>
+      </div>
+      <span class="wl-status"><span class="wl-status-dot"></span>进行中</span>
+    </li>
+  </ul>
 
-  <!-- 截止日期 -->
-  <section class="lf-section">
-    <span class="lf-label">截止日期</span>
-    <button type="button" data-dom-id="goal-due" class="lf-due">
-      <span>设定完成时间</span>
-      <span class="lf-due-value" id="goal-due-value" data-dom-id="goal-due-value">2027-03-31<i data-lucide="chevron-right" class="w-4 h-4 text-[var(--lifeflow-text-tertiary)]"></i></span>
-    </button>
-    <input type="date" id="goal-due-picker" hidden>
-  </section>
+  <!-- 4 分类 chip：全部 / 已实现（细线分段器） -->
+  <div class="wl-seg" data-dom-id="wish-seg" role="group" aria-label="按状态筛选愿望">
+    <button type="button" data-dom-id="seg-all" data-seg="all" data-active="true" aria-pressed="true" class="wl-seg-btn is-active">全部</button>
+    <button type="button" data-dom-id="seg-done" data-seg="done" data-active="false" aria-pressed="false" class="wl-seg-btn">已实现</button>
+  </div>
 
-  <!-- 创建目标 -->
-  <button type="button" data-dom-id="goal-submit" class="lf-btn-primary">创建目标</button>
+  <!-- 5 底部主按钮 -->
+  <button type="button" data-dom-id="wish-add" class="wl-add"><i data-lucide="plus" class="w-4 h-4"></i>许个愿望</button>
 
 </div>
 
-<!-- 底部导航 4-tab（目标激活） -->
-<nav data-mobile-nav="global" id="bottom-nav" class="lf-tabbar-glass w-full max-w-md mx-auto h-[60px]"><div class="grid grid-cols-4 h-full"><a href="#" data-dom-id="nav-home" data-nav-key="home" data-active="false" class="min-w-0 flex flex-col items-center justify-center gap-1 h-full text-[var(--lifeflow-text-tertiary)]"><i data-lucide="home" class="w-5 h-5 shrink-0"></i><span class="text-[10.5px] leading-none whitespace-nowrap max-w-full truncate">首页</span></a><a href="#" data-dom-id="nav-goals" data-nav-key="goals" data-active="true" class="min-w-0 flex flex-col items-center justify-center gap-1 h-full text-[var(--lifeflow-primary)]"><i data-lucide="target" class="w-5 h-5 shrink-0"></i><span class="text-[10.5px] leading-none whitespace-nowrap max-w-full truncate font-semibold">目标</span></a><a href="#" data-dom-id="nav-schedule" data-nav-key="schedule" data-active="false" class="min-w-0 flex flex-col items-center justify-center gap-1 h-full text-[var(--lifeflow-text-tertiary)]"><i data-lucide="calendar-days" class="w-5 h-5 shrink-0"></i><span class="text-[10.5px] leading-none whitespace-nowrap max-w-full truncate">日程</span></a><a href="#" data-dom-id="nav-ideal" data-nav-key="ideal" data-active="false" class="min-w-0 flex flex-col items-center justify-center gap-1 h-full text-[var(--lifeflow-text-tertiary)]"><i data-lucide="sun" class="w-5 h-5 shrink-0"></i><span class="text-[10.5px] leading-none whitespace-nowrap max-w-full truncate">理想日</span></a></div></nav>
+<!-- 底部导航 4-tab（home 激活） -->
+<nav data-mobile-nav="global" id="bottom-nav" class="lf-tabbar-glass w-full max-w-md mx-auto h-[60px]"><div class="grid grid-cols-4 h-full"><a href="#" data-dom-id="nav-home" data-nav-key="home" data-active="true" class="min-w-0 flex flex-col items-center justify-center gap-1 h-full text-[var(--lifeflow-primary)]"><i data-lucide="home" class="w-5 h-5 shrink-0"></i><span class="text-[10.5px] leading-none whitespace-nowrap max-w-full truncate font-semibold">首页</span></a><a href="#" data-dom-id="nav-goals" data-nav-key="goals" data-active="false" class="min-w-0 flex flex-col items-center justify-center gap-1 h-full text-[var(--lifeflow-text-tertiary)]"><i data-lucide="target" class="w-5 h-5 shrink-0"></i><span class="text-[10.5px] leading-none whitespace-nowrap max-w-full truncate">目标</span></a><a href="#" data-dom-id="nav-schedule" data-nav-key="schedule" data-active="false" class="min-w-0 flex flex-col items-center justify-center gap-1 h-full text-[var(--lifeflow-text-tertiary)]"><i data-lucide="calendar-days" class="w-5 h-5 shrink-0"></i><span class="text-[10.5px] leading-none whitespace-nowrap max-w-full truncate">日程</span></a><a href="#" data-dom-id="nav-ideal" data-nav-key="ideal" data-active="false" class="min-w-0 flex flex-col items-center justify-center gap-1 h-full text-[var(--lifeflow-text-tertiary)]"><i data-lucide="sun" class="w-5 h-5 shrink-0"></i><span class="text-[10.5px] leading-none whitespace-nowrap max-w-full truncate">理想日</span></a></div></nav>
 
 <script>
 (function () {
   'use strict';
-  function qs(s, el) { return (el || document).querySelector(s); }
-  function qsa(s, el) { return Array.prototype.slice.call((el || document).querySelectorAll(s)); }
-
-  /* 模板单选 */
-  var tplCards = qsa('.lf-tpl');
-  tplCards.forEach(function (card) {
-    card.addEventListener('click', function () {
-      tplCards.forEach(function (c) { c.classList.remove('is-selected'); c.setAttribute('aria-checked', 'false'); });
-      card.classList.add('is-selected');
-      card.setAttribute('aria-checked', 'true');
-    });
-  });
-
-  /* 关键结果：删除 + 添加 + 重新编号 */
-  var krList = qs('#kr-list');
-  function renumber() {
-    qsa('.lf-kr-row', krList).forEach(function (row, i) {
-      var index = row.querySelector('.lf-kr-index');
-      var del = row.querySelector('.lf-kr-del');
-      if (index) index.textContent = 'KR ' + (i + 1);
-      if (del) del.setAttribute('data-dom-id', 'kr-remove-' + (i + 1));
-    });
-  }
-  qsa('.lf-kr-del', krList).forEach(function (btn) {
+  /* 分类 chip：切换选中态（视觉分段器） */
+  var segBtns = document.querySelectorAll('[data-seg]');
+  segBtns.forEach(function (btn) {
     btn.addEventListener('click', function () {
-      var row = btn.closest('.lf-kr-row');
-      if (row) { row.remove(); renumber(); }
+      segBtns.forEach(function (b) {
+        var on = b === btn;
+        b.setAttribute('data-active', on ? 'true' : 'false');
+        b.setAttribute('aria-pressed', on ? 'true' : 'false');
+        b.classList.toggle('is-active', on);
+      });
     });
   });
-  var addBtn = qs('#kr-add');
-  if (addBtn) {
-    addBtn.addEventListener('click', function () {
-      if (!krList) return;
-      var row = document.createElement('div');
-      row.className = 'lf-kr-row';
-      row.innerHTML = '<span class="lf-kr-index">KR</span>' +
-        '<input type="text" class="lf-kr-input" placeholder="输入关键结果" maxlength="60" autocomplete="off">' +
-        '<button type="button" aria-label="删除该关键结果" class="lf-kr-del"><i data-lucide="trash-2" class="w-4 h-4"></i></button>';
-      row.querySelector('.lf-kr-del').addEventListener('click', function () { row.remove(); renumber(); });
-      krList.appendChild(row);
-      renumber();
-      if (window.lucide) { window.lucide.createIcons(); }
-      var input = row.querySelector('.lf-kr-input');
-      if (input) input.focus();
-    });
-  }
-  renumber();
-
-  /* 截止日期：点击唤起原生日期选择 */
-  var dueBtn = qs('#goal-due');
-  var dueValue = qs('#goal-due-value');
-  var duePicker = qs('#goal-due-picker');
-  if (dueBtn && duePicker && dueValue) {
-    dueBtn.addEventListener('click', function () {
-      try { duePicker.showPicker(); } catch (e) { duePicker.focus(); duePicker.click(); }
-    });
-    duePicker.addEventListener('change', function () {
-      if (duePicker.value) dueValue.firstChild.textContent = duePicker.value;
-    });
-  }
+  if (window.lucide) { window.lucide.createIcons(); }
 })();
 </script>
+
+</main>
 <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
 <script>lucide.createIcons();</script>
 </body>

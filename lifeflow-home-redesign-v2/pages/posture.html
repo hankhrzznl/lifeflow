@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>体态拉伸</title>
+    <style id="theme-vars">
+/* LifeFlow 2.0 — 极简克制设计系统
+   第一性原理：目标驱动的个人生活操作系统
+   视觉原则：大留白 · 细线分层 · 单主色 · 克制圆角 · 精确排版
+   表面模型：静态内容用边框/背景分层，浮动层才允许阴影
+   色彩模型：石墨黑主色 + 中性灰阶 + 语义状态色（无模块彩）
+*/
+
+/* === LIGHT MODE（日间 · 极简克制） === */
+:root {
+  /* SURFACE & TEXT */
+  --lifeflow-background: #F6F6F7;
+  --lifeflow-foreground: #1A1A1E;
+  --lifeflow-card: #FFFFFF;
+  --lifeflow-card-foreground: #1A1A1E;
+  --lifeflow-popover: #FFFFFF;
+  --lifeflow-popover-foreground: #1A1A1E;
+  --lifeflow-muted: #F0F0F2;
+  --lifeflow-muted-foreground: #6E6E76;
+  --lifeflow-border: rgba(26,26,30,0.10);
+  --lifeflow-border-light: rgba(26,26,30,0.055);
+  --lifeflow-border-dashed: rgba(26,26,30,0.16);
+  --lifeflow-input: rgba(26,26,30,0.08);
+  --lifeflow-ring: #1A1A1E;
+
+  /* BRAND — 单主色（石墨黑，克制使用） */
+  --lifeflow-primary: #1A1A1E;
+  --lifeflow-primary-hover: #000000;
+  --lifeflow-primary-light: rgba(26,26,30,0.06);
+  --lifeflow-primary-foreground: #FFFFFF;
+
+  /* PROGRESS */
+  --lifeflow-knit-thread: #1A1A1E;
+  --lifeflow-knit-thread-completed: #16A34A;
+  --lifeflow-knit-thread-partial: #D97706;
+  --lifeflow-knit-bg: #EDEDEF;
+  --lifeflow-knit-grid: rgba(26,26,30,0.07);
+
+  /* STATE — 语义状态色（仅用于状态，不用于身份标识） */
+  --state-success: #16A34A;
+  --state-success-light: rgba(22,163,74,0.08);
+  --state-warning: #D97706;
+  --state-warning-light: rgba(217,119,6,0.08);
+  --state-error: #DC2626;
+  --state-error-light: rgba(220,38,38,0.08);
+  --state-info: #2563EB;
+  --state-info-light: rgba(37,99,235,0.08);
+
+  /* TEXT */
+  --lifeflow-text-primary: #1A1A1E;
+  --lifeflow-text-secondary: #55555E;
+  --lifeflow-text-tertiary: #8A8A93;
+  --lifeflow-text-disabled: #B8B8BF;
+  --lifeflow-text-inverse: #FFFFFF;
+
+  /* SHADOWS — 静态表面走边框，浮动层才用阴影（alpha <= 0.06） */
+  --lifeflow-shadow-1: 0 1px 2px rgba(26,26,30,0.04);
+  --lifeflow-shadow-2: 0 4px 16px rgba(26,26,30,0.06);
+  --lifeflow-shadow-3: 0 12px 32px rgba(26,26,30,0.10);
+  --lifeflow-shadow-knit: none;
+
+  /* TAB BAR — 白底细顶线 */
+  --lifeflow-tabbar-bg: rgba(255,255,255,0.92);
+  --lifeflow-tabbar-blur: 16px;
+  --lifeflow-tabbar-blur-saturate: 100%;
+
+  /* AI BALL */
+  --lifeflow-ai-ball: #1A1A1E;
+
+  /* TYPOGRAPHY — 精确排版：收紧字距、克制字重 */
+  --lifeflow-font-display: -apple-system, BlinkMacSystemFont, "SF Pro SC", "PingFang SC", "Noto Sans SC", "Helvetica Neue", "Microsoft YaHei", sans-serif;
+  --lifeflow-font-body: -apple-system, BlinkMacSystemFont, "SF Pro SC", "PingFang SC", "Noto Sans SC", "Helvetica Neue", "Microsoft YaHei", sans-serif;
+  --lifeflow-font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+
+  --lifeflow-font-size-display: 32px;
+  --lifeflow-font-size-h1: 26px;
+  --lifeflow-font-size-h2: 20px;
+  --lifeflow-font-size-h3: 16px;
+  --lifeflow-font-size-body: 15px;
+  --lifeflow-font-size-sm: 13px;
+  --lifeflow-font-size-caption: 12px;
+
+  /* SPACING */
+  --lifeflow-space-xs: 4px;
+  --lifeflow-space-sm: 8px;
+  --lifeflow-space-md: 12px;
+  --lifeflow-space-lg: 16px;
+  --lifeflow-space-xl: 24px;
+  --lifeflow-space-2xl: 32px;
+
+  /* RADIUS — 克制圆角：sm 4 / md 8 / lg 12 / full */
+  --lifeflow-radius-sm: 4px;
+  --lifeflow-radius-md: 8px;
+  --lifeflow-radius-lg: 12px;
+  --lifeflow-radius-xl: 12px;
+  --lifeflow-radius-full: 9999px;
+
+  /* PORTABLE ALIASES */
+  --background: var(--lifeflow-background);
+  --foreground: var(--lifeflow-foreground);
+  --card: var(--lifeflow-card);
+  --card-foreground: var(--lifeflow-card-foreground);
+  --popover: var(--lifeflow-popover);
+  --popover-foreground: var(--lifeflow-popover-foreground);
+  --primary: var(--lifeflow-primary);
+  --primary-foreground: var(--lifeflow-primary-foreground);
+  --muted: var(--lifeflow-muted);
+  --muted-foreground: var(--lifeflow-muted-foreground);
+  --border: var(--lifeflow-border);
+  --input: var(--lifeflow-input);
+  --ring: var(--lifeflow-ring);
+  --radius-sm: var(--lifeflow-radius-sm);
+  --radius-md: var(--lifeflow-radius-md);
+  --radius-lg: var(--lifeflow-radius-lg);
+  --color-background: var(--lifeflow-background);
+  --color-foreground: var(--lifeflow-foreground);
+  --color-card: var(--lifeflow-card);
+  --color-card-foreground: var(--lifeflow-card-foreground);
+  --color-popover: var(--lifeflow-popover);
+  --color-popover-foreground: var(--lifeflow-popover-foreground);
+  --color-primary: var(--lifeflow-primary);
+  --color-primary-foreground: var(--lifeflow-primary-foreground);
+  --color-muted: var(--lifeflow-muted);
+  --color-muted-foreground: var(--lifeflow-muted-foreground);
+  --color-border: var(--lifeflow-border);
+  --color-input: var(--lifeflow-input);
+  --color-ring: var(--lifeflow-ring);
+  --color-text-primary: var(--lifeflow-text-primary);
+  --color-text-secondary: var(--lifeflow-text-secondary);
+  --color-text-tertiary: var(--lifeflow-text-tertiary);
+  --color-text-disabled: var(--lifeflow-text-disabled);
+  --color-surface-card: var(--lifeflow-card);
+  --color-surface-muted: var(--lifeflow-muted);
+}
+
+/* === DARK MODE（夜间 · 深空石墨） === */
+.dark {
+  --lifeflow-background: #0E0E11;
+  --lifeflow-foreground: #F2F2F4;
+  --lifeflow-card: #16161A;
+  --lifeflow-card-foreground: #F2F2F4;
+  --lifeflow-popover: #1C1C21;
+  --lifeflow-popover-foreground: #F2F2F4;
+  --lifeflow-muted: #1E1E23;
+  --lifeflow-muted-foreground: rgba(242,242,244,0.55);
+  --lifeflow-border: rgba(255,255,255,0.10);
+  --lifeflow-border-light: rgba(255,255,255,0.06);
+  --lifeflow-border-dashed: rgba(255,255,255,0.18);
+  --lifeflow-input: rgba(255,255,255,0.10);
+  --lifeflow-ring: #F2F2F4;
+
+  --lifeflow-primary: #F2F2F4;
+  --lifeflow-primary-hover: #FFFFFF;
+  --lifeflow-primary-light: rgba(255,255,255,0.09);
+  --lifeflow-primary-foreground: #0E0E11;
+
+  --lifeflow-knit-thread: #F2F2F4;
+  --lifeflow-knit-thread-completed: #34D399;
+  --lifeflow-knit-thread-partial: #FBBF24;
+  --lifeflow-knit-bg: rgba(255,255,255,0.10);
+  --lifeflow-knit-grid: rgba(255,255,255,0.07);
+
+  --state-success: #34D399;
+  --state-success-light: rgba(52,211,153,0.12);
+  --state-warning: #FBBF24;
+  --state-warning-light: rgba(251,191,36,0.12);
+  --state-error: #F87171;
+  --state-error-light: rgba(248,113,113,0.12);
+  --state-info: #60A5FA;
+  --state-info-light: rgba(96,165,250,0.12);
+
+  --lifeflow-text-primary: #F2F2F4;
+  --lifeflow-text-secondary: rgba(242,242,244,0.68);
+  --lifeflow-text-tertiary: rgba(242,242,244,0.42);
+  --lifeflow-text-disabled: rgba(242,242,244,0.28);
+  --lifeflow-text-inverse: #0E0E11;
+
+  --lifeflow-shadow-1: 0 1px 2px rgba(0,0,0,0.30);
+  --lifeflow-shadow-2: 0 4px 16px rgba(0,0,0,0.40);
+  --lifeflow-shadow-3: 0 12px 32px rgba(0,0,0,0.55);
+  --lifeflow-shadow-knit: none;
+
+  --lifeflow-tabbar-bg: rgba(14,14,17,0.88);
+  --lifeflow-tabbar-blur: 16px;
+  --lifeflow-tabbar-blur-saturate: 100%;
+
+  --lifeflow-ai-ball: #F2F2F4;
+}
+
+/* === TYPOGRAPHY UTILITY CLASSES === */
+.lf-display {
+  font-family: var(--lifeflow-font-display);
+  font-size: var(--lifeflow-font-size-display);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.lf-h1 {
+  font-family: var(--lifeflow-font-display);
+  font-size: var(--lifeflow-font-size-h1);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+
+.lf-h2 {
+  font-family: var(--lifeflow-font-display);
+  font-size: var(--lifeflow-font-size-h2);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 1.3;
+}
+
+.lf-h3 {
+  font-family: var(--lifeflow-font-body);
+  font-size: var(--lifeflow-font-size-h3);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.4;
+}
+
+.lf-body {
+  font-family: var(--lifeflow-font-body);
+  font-size: var(--lifeflow-font-size-body);
+  font-weight: 400;
+  line-height: 1.55;
+}
+
+.lf-body-sm {
+  font-family: var(--lifeflow-font-body);
+  font-size: var(--lifeflow-font-size-sm);
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.lf-caption {
+  font-family: var(--lifeflow-font-body);
+  font-size: var(--lifeflow-font-size-caption);
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.lf-mono {
+  font-family: var(--lifeflow-font-mono);
+  font-size: var(--lifeflow-font-size-sm);
+  font-weight: 400;
+  line-height: 1.6;
+}
+
+/* === PROGRESS BAR（细胶囊） === */
+.knit-track {
+  position: relative;
+  height: 5px;
+  border-radius: var(--lifeflow-radius-full);
+  overflow: hidden;
+  background: var(--lifeflow-knit-bg);
+}
+
+.knit-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  border-radius: var(--lifeflow-radius-full);
+  background: var(--lifeflow-knit-thread);
+  z-index: 2;
+  transition: width 0.5s ease-in-out;
+}
+
+.knit-fill--done { background: var(--lifeflow-knit-thread-completed); }
+.knit-fill--partial { background: var(--lifeflow-knit-thread-partial); }
+
+.knit-yarn { display: none; }
+
+.knit-percent {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 4;
+  font-family: var(--lifeflow-font-body);
+  font-size: var(--lifeflow-font-size-sm);
+  font-weight: 600;
+  color: var(--lifeflow-text-primary);
+  line-height: 1;
+}
+
+/* === TAB BAR（白底细顶线，跟随模式） === */
+.lf-tabbar-glass {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 40;
+  border-top: 1px solid var(--lifeflow-border);
+  background: var(--lifeflow-tabbar-bg);
+  -webkit-backdrop-filter: saturate(var(--lifeflow-tabbar-blur-saturate)) blur(var(--lifeflow-tabbar-blur));
+  backdrop-filter: saturate(var(--lifeflow-tabbar-blur-saturate)) blur(var(--lifeflow-tabbar-blur));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* === 极简通用组件 === */
+/* 细线分隔列表（克制分割线） */
+.lf-list-divider > * + * {
+  border-top: 1px solid var(--lifeflow-border-light);
+}
+
+/* 卡片：静态内容用 1px 细边框 + 极淡阴影，不靠重阴影 */
+.lf-surface {
+  background: var(--lifeflow-card);
+  border: 1px solid var(--lifeflow-border-light);
+  border-radius: var(--lifeflow-radius-lg);
+}
+
+/* 数字对齐（时间/金额/进度） */
+.lf-tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+/* 大数字（统计强调） */
+.lf-stat {
+  font-family: var(--lifeflow-font-display);
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  @theme inline {
+    --color-background: var(--lifeflow-background);
+    --color-foreground: var(--lifeflow-foreground);
+    --color-card: var(--lifeflow-card);
+    --color-card-foreground: var(--lifeflow-card-foreground);
+    --color-popover: var(--lifeflow-popover);
+    --color-popover-foreground: var(--lifeflow-popover-foreground);
+    --color-primary: var(--lifeflow-primary);
+    --color-primary-foreground: var(--lifeflow-primary-foreground);
+    --color-muted: var(--lifeflow-muted);
+    --color-muted-foreground: var(--lifeflow-muted-foreground);
+    --color-border: var(--lifeflow-border);
+    --color-input: var(--lifeflow-input);
+    --color-ring: var(--lifeflow-ring);
+    --radius-sm: var(--lifeflow-radius-sm);
+    --radius-md: var(--lifeflow-radius-md);
+    --radius-lg: var(--lifeflow-radius-lg);
+    --radius-xl: var(--lifeflow-radius-xl);
+  }
+  @layer base {
+    body { background: var(--lifeflow-background); color: var(--lifeflow-foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style id="semantic-token-fallback">
+      .bg-background { background-color: var(--lifeflow-background); }
+      .text-background { color: var(--lifeflow-background); }
+      .border-background { border-color: var(--lifeflow-background); }
+      .ring-background { --tw-ring-color: var(--lifeflow-background); }
+      .bg-foreground { background-color: var(--lifeflow-foreground); }
+      .text-foreground { color: var(--lifeflow-foreground); }
+      .border-foreground { border-color: var(--lifeflow-foreground); }
+      .ring-foreground { --tw-ring-color: var(--lifeflow-foreground); }
+      .bg-card { background-color: var(--lifeflow-card); }
+      .text-card { color: var(--lifeflow-card); }
+      .border-card { border-color: var(--lifeflow-card); }
+      .ring-card { --tw-ring-color: var(--lifeflow-card); }
+      .bg-card-foreground { background-color: var(--lifeflow-card-foreground); }
+      .text-card-foreground { color: var(--lifeflow-card-foreground); }
+      .border-card-foreground { border-color: var(--lifeflow-card-foreground); }
+      .ring-card-foreground { --tw-ring-color: var(--lifeflow-card-foreground); }
+      .bg-popover { background-color: var(--lifeflow-popover); }
+      .text-popover { color: var(--lifeflow-popover); }
+      .border-popover { border-color: var(--lifeflow-popover); }
+      .ring-popover { --tw-ring-color: var(--lifeflow-popover); }
+      .bg-popover-foreground { background-color: var(--lifeflow-popover-foreground); }
+      .text-popover-foreground { color: var(--lifeflow-popover-foreground); }
+      .border-popover-foreground { border-color: var(--lifeflow-popover-foreground); }
+      .ring-popover-foreground { --tw-ring-color: var(--lifeflow-popover-foreground); }
+      .bg-primary { background-color: var(--lifeflow-primary); }
+      .text-primary { color: var(--lifeflow-primary); }
+      .border-primary { border-color: var(--lifeflow-primary); }
+      .ring-primary { --tw-ring-color: var(--lifeflow-primary); }
+      .bg-primary-foreground { background-color: var(--lifeflow-primary-foreground); }
+      .text-primary-foreground { color: var(--lifeflow-primary-foreground); }
+      .border-primary-foreground { border-color: var(--lifeflow-primary-foreground); }
+      .ring-primary-foreground { --tw-ring-color: var(--lifeflow-primary-foreground); }
+      .bg-muted { background-color: var(--lifeflow-muted); }
+      .text-muted { color: var(--lifeflow-muted); }
+      .border-muted { border-color: var(--lifeflow-muted); }
+      .ring-muted { --tw-ring-color: var(--lifeflow-muted); }
+      .bg-muted-foreground { background-color: var(--lifeflow-muted-foreground); }
+      .text-muted-foreground { color: var(--lifeflow-muted-foreground); }
+      .border-muted-foreground { border-color: var(--lifeflow-muted-foreground); }
+      .ring-muted-foreground { --tw-ring-color: var(--lifeflow-muted-foreground); }
+      .bg-border { background-color: var(--lifeflow-border); }
+      .text-border { color: var(--lifeflow-border); }
+      .border-border { border-color: var(--lifeflow-border); }
+      .ring-border { --tw-ring-color: var(--lifeflow-border); }
+      .bg-input { background-color: var(--lifeflow-input); }
+      .text-input { color: var(--lifeflow-input); }
+      .border-input { border-color: var(--lifeflow-input); }
+      .ring-input { --tw-ring-color: var(--lifeflow-input); }
+      .bg-ring { background-color: var(--lifeflow-ring); }
+      .text-ring { color: var(--lifeflow-ring); }
+      .border-ring { border-color: var(--lifeflow-ring); }
+      .ring-ring { --tw-ring-color: var(--lifeflow-ring); }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+</head>
+<body class="min-h-screen font-sans antialiased">
+    <main>
+      <style id="critical-layout">
+        /* ============================================================
+           LifeFlow 体态拉伸 · 定时提醒 — 极简克制风
+           关键布局静态 CSS（不依赖 Tailwind 运行时编译即可渲染骨架）
+           颜色一律 var(--lifeflow-*) 引用，无硬编码色值。
+           ============================================================ */
+
+        /* ---- 基础 ---- */
+        body {
+          font-family: var(--lifeflow-font-body);
+          background: var(--lifeflow-background);
+          color: var(--lifeflow-text-primary);
+          overflow-x: hidden;
+        }
+        a:focus-visible, button:focus-visible {
+          outline: 2px solid var(--lifeflow-ring);
+          outline-offset: 2px;
+          border-radius: var(--lifeflow-radius-md);
+        }
+        svg[data-lucide] { display: inline-block; flex-shrink: 0; }
+
+        /* ---- 内容区容器（文档滚动，pb 100px 防底部导航遮挡） ---- */
+        #document-scroll {
+          max-width: 28rem;
+          margin-inline: auto;
+          padding: 0.75rem 1rem 100px;
+        }
+        #document-scroll > * + * { margin-top: 0.75rem; }
+
+        /* ---- 页面顶部：返回 + 居中标题 ---- */
+        .lf-page-hdr { display: flex; align-items: center; gap: 0.25rem; padding: 0.25rem 0 0.125rem; }
+        .lf-back-btn {
+          flex: none;
+          width: 36px; height: 36px;
+          border-radius: var(--lifeflow-radius-lg);
+          background: var(--lifeflow-card);
+          border: 1px solid var(--lifeflow-border-light);
+          display: inline-flex; align-items: center; justify-content: center;
+          color: var(--lifeflow-text-primary);
+          transition: background 0.15s ease, transform 0.15s ease;
+        }
+        .lf-back-btn:hover { background: var(--lifeflow-muted); }
+        .lf-back-btn:active { transform: scale(0.92); }
+        .lf-back-btn svg[data-lucide] { width: 20px; height: 20px; }
+        .lf-page-title {
+          flex: 1; min-width: 0; margin: 0;
+          text-align: center;
+          font-size: 17px; font-weight: 600; letter-spacing: -0.01em;
+          color: var(--lifeflow-text-primary);
+          white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .lf-hdr-spacer { flex: none; width: 36px; height: 36px; }
+
+        /* ---- 卡片基元：白底 + 1px 细边框 + 极淡阴影分层 ---- */
+        .lf-card {
+          background: var(--lifeflow-card);
+          border: 1px solid var(--lifeflow-border-light);
+          border-radius: var(--lifeflow-radius-lg);
+          box-shadow: var(--lifeflow-shadow-1);
+          padding: 1rem;
+        }
+
+        /* ---- 标题层级（单页 4 字号：17 / 15 / 13 / 12） ---- */
+        .lf-card-title { margin: 0; font-size: 15px; font-weight: 600; letter-spacing: -0.01em; color: var(--lifeflow-text-primary); line-height: 1.3; }
+        .lf-card-sub { margin: 0.125rem 0 0; font-size: 12px; color: var(--lifeflow-text-tertiary); line-height: 1.4; }
+
+        /* ---- 今日状态卡 ---- */
+        .lf-today-head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; }
+        .lf-today-label { font-size: 13px; color: var(--lifeflow-text-secondary); }
+        .lf-today-count { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; color: var(--lifeflow-text-primary); font-variant-numeric: tabular-nums; }
+        .lf-today-count b { font-weight: 700; }
+        .lf-today-card .knit-track { margin-top: 0.75rem; }
+        .lf-today-hint {
+          margin: 0.625rem 0 0;
+          display: flex; align-items: center; gap: 0.375rem;
+          font-size: 12px; color: var(--lifeflow-text-tertiary);
+        }
+        .lf-today-hint svg[data-lucide] { width: 14px; height: 14px; }
+
+        /* ---- 拉伸计划列表（细线分隔） ---- */
+        .lf-plan-head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.5rem; }
+        .lf-plan-list { margin: 0; padding: 0; list-style: none; }
+        .lf-plan-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 0; border-top: 1px solid var(--lifeflow-border-light); }
+        .lf-plan-row:first-child { border-top: 0; padding-top: 0; }
+        .lf-plan-row:last-child { padding-bottom: 0; }
+        .lf-plan-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.125rem; }
+        .lf-plan-name { font-size: 13px; font-weight: 500; color: var(--lifeflow-text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .lf-plan-name--done { color: var(--lifeflow-text-secondary); text-decoration: line-through; text-decoration-color: var(--lifeflow-border); }
+        .lf-plan-meta { font-size: 12px; color: var(--lifeflow-text-tertiary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .lf-plan-meta--ok { color: var(--state-success); }
+
+        /* ---- 开关（开启 = 石墨黑主色） ---- */
+        .lf-switch {
+          position: relative; flex: none;
+          width: 44px; height: 26px;
+          border: 0; padding: 0;
+          border-radius: var(--lifeflow-radius-full);
+          background: var(--lifeflow-muted);
+          cursor: pointer;
+          transition: background 0.2s ease;
+        }
+        .lf-switch--on { background: var(--lifeflow-primary); }
+        .lf-switch-knob {
+          position: absolute; top: 2px; left: 2px;
+          width: 22px; height: 22px;
+          border-radius: var(--lifeflow-radius-full);
+          background: var(--lifeflow-card);
+          box-shadow: var(--lifeflow-shadow-1);
+          transition: transform 0.2s cubic-bezier(0.32, 0.72, 0, 1);
+        }
+        .lf-switch--on .lf-switch-knob { transform: translateX(18px); }
+
+        /* ---- 完成勾选（语义状态色仅用于状态） ---- */
+        .lf-check {
+          flex: none;
+          width: 26px; height: 26px;
+          border-radius: var(--lifeflow-radius-full);
+          border: 1.5px solid var(--lifeflow-border-light);
+          background: transparent;
+          display: inline-flex; align-items: center; justify-content: center;
+          color: var(--lifeflow-text-inverse);
+          transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+        }
+        .lf-check svg[data-lucide] { width: 14px; height: 14px; opacity: 0; transition: opacity 0.15s ease; }
+        .lf-check--done { background: var(--state-success); border-color: var(--state-success); border-style: solid; }
+        .lf-check--done svg[data-lucide] { opacity: 1; }
+        .lf-check:active { transform: scale(0.88); }
+
+        /* ---- 提醒间隔 chips（选中 = 石墨黑填充） ---- */
+        .lf-chip-row { display: flex; gap: 0.5rem; margin-top: 0.75rem; }
+        .lf-chip-opt {
+          flex: 1;
+          height: 36px;
+          border: 1px solid var(--lifeflow-border-light);
+          border-radius: var(--lifeflow-radius-md);
+          background: var(--lifeflow-card);
+          color: var(--lifeflow-text-secondary);
+          font-size: 13px; font-weight: 500;
+          display: inline-flex; align-items: center; justify-content: center;
+          white-space: nowrap;
+          transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+        }
+        .lf-chip-opt:hover { background: var(--lifeflow-muted); }
+        .lf-chip-opt:active { transform: scale(0.97); }
+        .lf-chip-opt--on { background: var(--lifeflow-primary); border-color: var(--lifeflow-primary); color: var(--lifeflow-text-inverse); font-weight: 600; }
+
+        /* ---- 底部主按钮：石墨黑填充白字圆角 8 ---- */
+        .lf-start-btn {
+          width: 100%; height: 48px;
+          border: 0; border-radius: var(--lifeflow-radius-md);
+          background: var(--lifeflow-primary);
+          color: var(--lifeflow-text-inverse);
+          font-size: 15px; font-weight: 600; letter-spacing: 0.01em;
+          display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+          transition: transform 0.15s ease, opacity 0.15s ease;
+        }
+        .lf-start-btn:hover { opacity: 0.92; }
+        .lf-start-btn:active { transform: scale(0.98); }
+        .lf-start-btn svg[data-lucide] { width: 16px; height: 16px; }
+
+        /* ---- 底部导航兜底布局（Tailwind 未编译时保证可见） ---- */
+        #bottom-nav { height: 60px; max-width: 28rem; margin-inline: auto; width: 100%; }
+        #bottom-nav .grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); height: 100%; }
+        #bottom-nav a { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-width: 0; height: 100%; text-decoration: none; }
+        #bottom-nav a svg { width: 20px; height: 20px; flex-shrink: 0; }
+        #bottom-nav a span { font-size: 10.5px; line-height: 1; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+        #bottom-nav a[data-active="true"] { color: var(--lifeflow-primary); font-weight: 600; }
+        #bottom-nav a[data-active="false"] { color: var(--lifeflow-text-tertiary); }
+
+        /* ---- 无障碍动效降级 ---- */
+        @media (prefers-reduced-motion: reduce) {
+          .lf-back-btn, .lf-switch, .lf-switch-knob, .lf-check, .lf-chip-opt, .lf-start-btn, .knit-fill {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+          }
+        }
+      </style>
+
+      <div id="document-scroll" class="mx-auto w-full max-w-md px-4 pt-3 pb-[100px]">
+        <!-- 1 顶部：返回 + 标题 -->
+        <header class="lf-page-hdr">
+          <a href="#" data-dom-id="back-more" class="lf-back-btn" aria-label="返回"><i data-lucide="chevron-left" class="w-5 h-5"></i></a>
+          <h1 class="lf-page-title">体态拉伸</h1>
+          <span class="lf-hdr-spacer" aria-hidden="true"></span>
+        </header>
+
+        <!-- 2 今日状态卡 -->
+        <section class="lf-card lf-today-card" data-dom-id="posture-today">
+          <div class="lf-today-head">
+            <span class="lf-today-label">今日拉伸</span>
+            <span class="lf-today-count"><b id="today-done">0</b>/3 次</span>
+          </div>
+          <div class="knit-track" role="progressbar" aria-valuemin="0" aria-valuemax="3" aria-valuenow="0" aria-label="今日拉伸完成进度">
+            <div class="knit-fill" style="width:0%"></div>
+          </div>
+          <p class="lf-today-hint"><i data-lucide="clock-3" class="w-3.5 h-3.5"></i>久坐 2h 提醒已开启</p>
+        </section>
+
+        <!-- 3 拉伸计划列表（细线分隔 3 行） -->
+        <section class="lf-card" data-dom-id="posture-list">
+          <div class="lf-plan-head">
+            <h2 class="lf-card-title">拉伸计划</h2>
+            <span class="lf-card-sub">3 项</span>
+          </div>
+          <ul class="lf-plan-list">
+            <li class="lf-plan-row">
+              <div class="lf-plan-info">
+                <span class="lf-plan-name">坐姿矫正</span>
+                <span class="lf-plan-meta">每 45 分钟 · 提醒</span>
+              </div>
+              <button type="button" class="lf-switch lf-switch--on" role="switch" aria-checked="true" aria-label="坐姿矫正 定时提醒，当前开启" data-dom-id="plan-switch-01"><span class="lf-switch-knob" aria-hidden="true"></span></button>
+            </li>
+            <li class="lf-plan-row">
+              <div class="lf-plan-info">
+                <span class="lf-plan-name lf-plan-name--done">猫式拉伸</span>
+                <span class="lf-plan-meta lf-plan-meta--ok">10:00 · 完成</span>
+              </div>
+              <button type="button" class="lf-check lf-check--done" aria-label="猫式拉伸 已完成" data-dom-id="plan-check-02"><i data-lucide="check" class="w-3.5 h-3.5"></i></button>
+            </li>
+            <li class="lf-plan-row">
+              <div class="lf-plan-info">
+                <span class="lf-plan-name">肩颈放松</span>
+                <span class="lf-plan-meta">15:30 · 待做</span>
+              </div>
+              <button type="button" class="lf-check" aria-label="肩颈放松 待做" data-dom-id="plan-check-03"><i data-lucide="check" class="w-3.5 h-3.5"></i></button>
+            </li>
+          </ul>
+        </section>
+
+        <!-- 4 提醒设置：间隔选项 -->
+        <section class="lf-card" data-dom-id="posture-remind">
+          <h2 class="lf-card-title">提醒间隔</h2>
+          <p class="lf-card-sub">久坐后起身拉伸的频率</p>
+          <div class="lf-chip-row" role="group" aria-label="提醒间隔">
+            <button type="button" class="lf-chip-opt" data-interval="30" aria-pressed="false" data-dom-id="remind-chip-30">30 分钟</button>
+            <button type="button" class="lf-chip-opt lf-chip-opt--on" data-interval="60" aria-pressed="true" data-dom-id="remind-chip-60">60 分钟</button>
+            <button type="button" class="lf-chip-opt" data-interval="90" aria-pressed="false" data-dom-id="remind-chip-90">90 分钟</button>
+          </div>
+        </section>
+
+        <!-- 5 底部主按钮 -->
+        <button type="button" class="lf-start-btn" data-dom-id="posture-start"><i data-lucide="play" class="w-4 h-4"></i>开始拉伸</button>
+      </div>
+    </main>
+
+    <!-- 底部导航（home 激活） -->
+    <nav data-mobile-nav="global" id="bottom-nav" class="lf-tabbar-glass w-full max-w-md mx-auto h-[60px]"><div class="grid grid-cols-4 h-full"><a href="#" data-dom-id="nav-home" data-nav-key="home" data-active="true" class="min-w-0 flex flex-col items-center justify-center gap-1 h-full text-[var(--lifeflow-primary)]"><i data-lucide="home" class="w-5 h-5 shrink-0"></i><span class="text-[10.5px] leading-none whitespace-nowrap max-w-full truncate font-semibold">首页</span></a><a href="#" data-dom-id="nav-goals" data-nav-key="goals" data-active="false" class="min-w-0 flex flex-col items-center justify-center gap-1 h-full text-[var(--lifeflow-text-tertiary)]"><i data-lucide="target" class="w-5 h-5 shrink-0"></i><span class="text-[10.5px] leading-none whitespace-nowrap max-w-full truncate">目标</span></a><a href="#" data-dom-id="nav-schedule" data-nav-key="schedule" data-active="false" class="min-w-0 flex flex-col items-center justify-center gap-1 h-full text-[var(--lifeflow-text-tertiary)]"><i data-lucide="calendar-days" class="w-5 h-5 shrink-0"></i><span class="text-[10.5px] leading-none whitespace-nowrap max-w-full truncate">日程</span></a><a href="#" data-dom-id="nav-ideal" data-nav-key="ideal" data-active="false" class="min-w-0 flex flex-col items-center justify-center gap-1 h-full text-[var(--lifeflow-text-tertiary)]"><i data-lucide="sun" class="w-5 h-5 shrink-0"></i><span class="text-[10.5px] leading-none whitespace-nowrap max-w-full truncate">理想日</span></a></div></nav>
+
+    <script>
+      (function () {
+        'use strict';
+
+        /* 开关：坐姿矫正 定时提醒（视觉状态切换） */
+        var sw = document.getElementById('plan-switch-01');
+        if (sw) {
+          sw.addEventListener('click', function () {
+            var on = sw.getAttribute('aria-checked') === 'true';
+            sw.setAttribute('aria-checked', String(!on));
+            sw.classList.toggle('lf-switch--on', !on);
+            sw.setAttribute('aria-label', !on ? '坐姿矫正 定时提醒，当前开启' : '坐姿矫正 定时提醒，当前关闭');
+          });
+        }
+
+        /* 勾选：计划项完成状态（视觉状态切换） */
+        document.querySelectorAll('.lf-check').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            var done = btn.classList.toggle('lf-check--done');
+            var row = btn.closest('.lf-plan-row');
+            if (row) {
+              var name = row.querySelector('.lf-plan-name');
+              if (name) name.classList.toggle('lf-plan-name--done', done);
+              var meta = row.querySelector('.lf-plan-meta');
+              if (meta) meta.classList.toggle('lf-plan-meta--ok', done);
+            }
+          });
+        });
+
+        /* 提醒间隔 chips */
+        document.querySelectorAll('.lf-chip-opt').forEach(function (chip) {
+          chip.addEventListener('click', function () {
+            document.querySelectorAll('.lf-chip-opt').forEach(function (c) {
+              var on = c === chip;
+              c.classList.toggle('lf-chip-opt--on', on);
+              c.setAttribute('aria-pressed', on ? 'true' : 'false');
+            });
+          });
+        });
+
+        /* 占位链接不跳转 */
+        document.querySelectorAll('a[href="#"]').forEach(function (a) {
+          a.addEventListener('click', function (e) { e.preventDefault(); });
+        });
+      })();
+    </script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

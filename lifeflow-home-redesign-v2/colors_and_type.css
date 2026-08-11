@@ -1,0 +1,329 @@
+/* LifeFlow 2.0 — 极简克制设计系统
+   第一性原理：目标驱动的个人生活操作系统
+   视觉原则：大留白 · 细线分层 · 单主色 · 克制圆角 · 精确排版
+   表面模型：静态内容用边框/背景分层，浮动层才允许阴影
+   色彩模型：石墨黑主色 + 中性灰阶 + 语义状态色（无模块彩）
+*/
+
+/* === LIGHT MODE（日间 · 极简克制） === */
+:root {
+  /* SURFACE & TEXT */
+  --lifeflow-background: #F6F6F7;
+  --lifeflow-foreground: #1A1A1E;
+  --lifeflow-card: #FFFFFF;
+  --lifeflow-card-foreground: #1A1A1E;
+  --lifeflow-popover: #FFFFFF;
+  --lifeflow-popover-foreground: #1A1A1E;
+  --lifeflow-muted: #F0F0F2;
+  --lifeflow-muted-foreground: #6E6E76;
+  --lifeflow-border: rgba(26,26,30,0.10);
+  --lifeflow-border-light: rgba(26,26,30,0.055);
+  --lifeflow-border-dashed: rgba(26,26,30,0.16);
+  --lifeflow-input: rgba(26,26,30,0.08);
+  --lifeflow-ring: #1A1A1E;
+
+  /* BRAND — 单主色（石墨黑，克制使用） */
+  --lifeflow-primary: #1A1A1E;
+  --lifeflow-primary-hover: #000000;
+  --lifeflow-primary-light: rgba(26,26,30,0.06);
+  --lifeflow-primary-foreground: #FFFFFF;
+
+  /* PROGRESS */
+  --lifeflow-knit-thread: #1A1A1E;
+  --lifeflow-knit-thread-completed: #16A34A;
+  --lifeflow-knit-thread-partial: #D97706;
+  --lifeflow-knit-bg: #EDEDEF;
+  --lifeflow-knit-grid: rgba(26,26,30,0.07);
+
+  /* STATE — 语义状态色（仅用于状态，不用于身份标识） */
+  --state-success: #16A34A;
+  --state-success-light: rgba(22,163,74,0.08);
+  --state-warning: #D97706;
+  --state-warning-light: rgba(217,119,6,0.08);
+  --state-error: #DC2626;
+  --state-error-light: rgba(220,38,38,0.08);
+  --state-info: #2563EB;
+  --state-info-light: rgba(37,99,235,0.08);
+
+  /* TEXT */
+  --lifeflow-text-primary: #1A1A1E;
+  --lifeflow-text-secondary: #55555E;
+  --lifeflow-text-tertiary: #8A8A93;
+  --lifeflow-text-disabled: #B8B8BF;
+  --lifeflow-text-inverse: #FFFFFF;
+
+  /* SHADOWS — 静态表面走边框，浮动层才用阴影（alpha <= 0.06） */
+  --lifeflow-shadow-1: 0 1px 2px rgba(26,26,30,0.04);
+  --lifeflow-shadow-2: 0 4px 16px rgba(26,26,30,0.06);
+  --lifeflow-shadow-3: 0 12px 32px rgba(26,26,30,0.10);
+  --lifeflow-shadow-knit: none;
+
+  /* TAB BAR — 白底细顶线 */
+  --lifeflow-tabbar-bg: rgba(255,255,255,0.92);
+  --lifeflow-tabbar-blur: 16px;
+  --lifeflow-tabbar-blur-saturate: 100%;
+
+  /* AI BALL */
+  --lifeflow-ai-ball: #1A1A1E;
+
+  /* TYPOGRAPHY — 精确排版：收紧字距、克制字重 */
+  --lifeflow-font-display: -apple-system, BlinkMacSystemFont, "SF Pro SC", "PingFang SC", "Noto Sans SC", "Helvetica Neue", "Microsoft YaHei", sans-serif;
+  --lifeflow-font-body: -apple-system, BlinkMacSystemFont, "SF Pro SC", "PingFang SC", "Noto Sans SC", "Helvetica Neue", "Microsoft YaHei", sans-serif;
+  --lifeflow-font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+
+  --lifeflow-font-size-display: 32px;
+  --lifeflow-font-size-h1: 26px;
+  --lifeflow-font-size-h2: 20px;
+  --lifeflow-font-size-h3: 16px;
+  --lifeflow-font-size-body: 15px;
+  --lifeflow-font-size-sm: 13px;
+  --lifeflow-font-size-caption: 12px;
+
+  /* SPACING */
+  --lifeflow-space-xs: 4px;
+  --lifeflow-space-sm: 8px;
+  --lifeflow-space-md: 12px;
+  --lifeflow-space-lg: 16px;
+  --lifeflow-space-xl: 24px;
+  --lifeflow-space-2xl: 32px;
+
+  /* RADIUS — 克制圆角：sm 4 / md 8 / lg 12 / full */
+  --lifeflow-radius-sm: 4px;
+  --lifeflow-radius-md: 8px;
+  --lifeflow-radius-lg: 12px;
+  --lifeflow-radius-xl: 12px;
+  --lifeflow-radius-full: 9999px;
+
+  /* PORTABLE ALIASES */
+  --background: var(--lifeflow-background);
+  --foreground: var(--lifeflow-foreground);
+  --card: var(--lifeflow-card);
+  --card-foreground: var(--lifeflow-card-foreground);
+  --popover: var(--lifeflow-popover);
+  --popover-foreground: var(--lifeflow-popover-foreground);
+  --primary: var(--lifeflow-primary);
+  --primary-foreground: var(--lifeflow-primary-foreground);
+  --muted: var(--lifeflow-muted);
+  --muted-foreground: var(--lifeflow-muted-foreground);
+  --border: var(--lifeflow-border);
+  --input: var(--lifeflow-input);
+  --ring: var(--lifeflow-ring);
+  --radius-sm: var(--lifeflow-radius-sm);
+  --radius-md: var(--lifeflow-radius-md);
+  --radius-lg: var(--lifeflow-radius-lg);
+  --color-background: var(--lifeflow-background);
+  --color-foreground: var(--lifeflow-foreground);
+  --color-card: var(--lifeflow-card);
+  --color-card-foreground: var(--lifeflow-card-foreground);
+  --color-popover: var(--lifeflow-popover);
+  --color-popover-foreground: var(--lifeflow-popover-foreground);
+  --color-primary: var(--lifeflow-primary);
+  --color-primary-foreground: var(--lifeflow-primary-foreground);
+  --color-muted: var(--lifeflow-muted);
+  --color-muted-foreground: var(--lifeflow-muted-foreground);
+  --color-border: var(--lifeflow-border);
+  --color-input: var(--lifeflow-input);
+  --color-ring: var(--lifeflow-ring);
+  --color-text-primary: var(--lifeflow-text-primary);
+  --color-text-secondary: var(--lifeflow-text-secondary);
+  --color-text-tertiary: var(--lifeflow-text-tertiary);
+  --color-text-disabled: var(--lifeflow-text-disabled);
+  --color-surface-card: var(--lifeflow-card);
+  --color-surface-muted: var(--lifeflow-muted);
+}
+
+/* === DARK MODE（夜间 · 深空石墨） === */
+.dark {
+  --lifeflow-background: #0E0E11;
+  --lifeflow-foreground: #F2F2F4;
+  --lifeflow-card: #16161A;
+  --lifeflow-card-foreground: #F2F2F4;
+  --lifeflow-popover: #1C1C21;
+  --lifeflow-popover-foreground: #F2F2F4;
+  --lifeflow-muted: #1E1E23;
+  --lifeflow-muted-foreground: rgba(242,242,244,0.55);
+  --lifeflow-border: rgba(255,255,255,0.10);
+  --lifeflow-border-light: rgba(255,255,255,0.06);
+  --lifeflow-border-dashed: rgba(255,255,255,0.18);
+  --lifeflow-input: rgba(255,255,255,0.10);
+  --lifeflow-ring: #F2F2F4;
+
+  --lifeflow-primary: #F2F2F4;
+  --lifeflow-primary-hover: #FFFFFF;
+  --lifeflow-primary-light: rgba(255,255,255,0.09);
+  --lifeflow-primary-foreground: #0E0E11;
+
+  --lifeflow-knit-thread: #F2F2F4;
+  --lifeflow-knit-thread-completed: #34D399;
+  --lifeflow-knit-thread-partial: #FBBF24;
+  --lifeflow-knit-bg: rgba(255,255,255,0.10);
+  --lifeflow-knit-grid: rgba(255,255,255,0.07);
+
+  --state-success: #34D399;
+  --state-success-light: rgba(52,211,153,0.12);
+  --state-warning: #FBBF24;
+  --state-warning-light: rgba(251,191,36,0.12);
+  --state-error: #F87171;
+  --state-error-light: rgba(248,113,113,0.12);
+  --state-info: #60A5FA;
+  --state-info-light: rgba(96,165,250,0.12);
+
+  --lifeflow-text-primary: #F2F2F4;
+  --lifeflow-text-secondary: rgba(242,242,244,0.68);
+  --lifeflow-text-tertiary: rgba(242,242,244,0.42);
+  --lifeflow-text-disabled: rgba(242,242,244,0.28);
+  --lifeflow-text-inverse: #0E0E11;
+
+  --lifeflow-shadow-1: 0 1px 2px rgba(0,0,0,0.30);
+  --lifeflow-shadow-2: 0 4px 16px rgba(0,0,0,0.40);
+  --lifeflow-shadow-3: 0 12px 32px rgba(0,0,0,0.55);
+  --lifeflow-shadow-knit: none;
+
+  --lifeflow-tabbar-bg: rgba(14,14,17,0.88);
+  --lifeflow-tabbar-blur: 16px;
+  --lifeflow-tabbar-blur-saturate: 100%;
+
+  --lifeflow-ai-ball: #F2F2F4;
+}
+
+/* === TYPOGRAPHY UTILITY CLASSES === */
+.lf-display {
+  font-family: var(--lifeflow-font-display);
+  font-size: var(--lifeflow-font-size-display);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.lf-h1 {
+  font-family: var(--lifeflow-font-display);
+  font-size: var(--lifeflow-font-size-h1);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+
+.lf-h2 {
+  font-family: var(--lifeflow-font-display);
+  font-size: var(--lifeflow-font-size-h2);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 1.3;
+}
+
+.lf-h3 {
+  font-family: var(--lifeflow-font-body);
+  font-size: var(--lifeflow-font-size-h3);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.4;
+}
+
+.lf-body {
+  font-family: var(--lifeflow-font-body);
+  font-size: var(--lifeflow-font-size-body);
+  font-weight: 400;
+  line-height: 1.55;
+}
+
+.lf-body-sm {
+  font-family: var(--lifeflow-font-body);
+  font-size: var(--lifeflow-font-size-sm);
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.lf-caption {
+  font-family: var(--lifeflow-font-body);
+  font-size: var(--lifeflow-font-size-caption);
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.lf-mono {
+  font-family: var(--lifeflow-font-mono);
+  font-size: var(--lifeflow-font-size-sm);
+  font-weight: 400;
+  line-height: 1.6;
+}
+
+/* === PROGRESS BAR（细胶囊） === */
+.knit-track {
+  position: relative;
+  height: 5px;
+  border-radius: var(--lifeflow-radius-full);
+  overflow: hidden;
+  background: var(--lifeflow-knit-bg);
+}
+
+.knit-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  border-radius: var(--lifeflow-radius-full);
+  background: var(--lifeflow-knit-thread);
+  z-index: 2;
+  transition: width 0.5s ease-in-out;
+}
+
+.knit-fill--done { background: var(--lifeflow-knit-thread-completed); }
+.knit-fill--partial { background: var(--lifeflow-knit-thread-partial); }
+
+.knit-yarn { display: none; }
+
+.knit-percent {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 4;
+  font-family: var(--lifeflow-font-body);
+  font-size: var(--lifeflow-font-size-sm);
+  font-weight: 600;
+  color: var(--lifeflow-text-primary);
+  line-height: 1;
+}
+
+/* === TAB BAR（白底细顶线，跟随模式） === */
+.lf-tabbar-glass {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 40;
+  border-top: 1px solid var(--lifeflow-border);
+  background: var(--lifeflow-tabbar-bg);
+  -webkit-backdrop-filter: saturate(var(--lifeflow-tabbar-blur-saturate)) blur(var(--lifeflow-tabbar-blur));
+  backdrop-filter: saturate(var(--lifeflow-tabbar-blur-saturate)) blur(var(--lifeflow-tabbar-blur));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* === 极简通用组件 === */
+/* 细线分隔列表（克制分割线） */
+.lf-list-divider > * + * {
+  border-top: 1px solid var(--lifeflow-border-light);
+}
+
+/* 卡片：静态内容用 1px 细边框 + 极淡阴影，不靠重阴影 */
+.lf-surface {
+  background: var(--lifeflow-card);
+  border: 1px solid var(--lifeflow-border-light);
+  border-radius: var(--lifeflow-radius-lg);
+}
+
+/* 数字对齐（时间/金额/进度） */
+.lf-tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+/* 大数字（统计强调） */
+.lf-stat {
+  font-family: var(--lifeflow-font-display);
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}

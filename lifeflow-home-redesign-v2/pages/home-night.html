@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>首页 · 夜间态</title>
+    <style id="theme-vars">
+/* LifeFlow 2.0 — 极简克制设计系统
+   第一性原理：目标驱动的个人生活操作系统
+   视觉原则：大留白 · 细线分层 · 单主色 · 克制圆角 · 精确排版
+   表面模型：静态内容用边框/背景分层，浮动层才允许阴影
+   色彩模型：石墨黑主色 + 中性灰阶 + 语义状态色（无模块彩）
+*/
+
+/* === LIGHT MODE（日间 · 极简克制） === */
+:root {
+  /* SURFACE & TEXT */
+  --lifeflow-background: #F6F6F7;
+  --lifeflow-foreground: #1A1A1E;
+  --lifeflow-card: #FFFFFF;
+  --lifeflow-card-foreground: #1A1A1E;
+  --lifeflow-popover: #FFFFFF;
+  --lifeflow-popover-foreground: #1A1A1E;
+  --lifeflow-muted: #F0F0F2;
+  --lifeflow-muted-foreground: #6E6E76;
+  --lifeflow-border: rgba(26,26,30,0.10);
+  --lifeflow-border-light: rgba(26,26,30,0.055);
+  --lifeflow-border-dashed: rgba(26,26,30,0.16);
+  --lifeflow-input: rgba(26,26,30,0.08);
+  --lifeflow-ring: #1A1A1E;
+
+  /* BRAND — 单主色（石墨黑，克制使用） */
+  --lifeflow-primary: #1A1A1E;
+  --lifeflow-primary-hover: #000000;
+  --lifeflow-primary-light: rgba(26,26,30,0.06);
+  --lifeflow-primary-foreground: #FFFFFF;
+
+  /* PROGRESS */
+  --lifeflow-knit-thread: #1A1A1E;
+  --lifeflow-knit-thread-completed: #16A34A;
+  --lifeflow-knit-thread-partial: #D97706;
+  --lifeflow-knit-bg: #EDEDEF;
+  --lifeflow-knit-grid: rgba(26,26,30,0.07);
+
+  /* STATE — 语义状态色（仅用于状态，不用于身份标识） */
+  --state-success: #16A34A;
+  --state-success-light: rgba(22,163,74,0.08);
+  --state-warning: #D97706;
+  --state-warning-light: rgba(217,119,6,0.08);
+  --state-error: #DC2626;
+  --state-error-light: rgba(220,38,38,0.08);
+  --state-info: #2563EB;
+  --state-info-light: rgba(37,99,235,0.08);
+
+  /* TEXT */
+  --lifeflow-text-primary: #1A1A1E;
+  --lifeflow-text-secondary: #55555E;
+  --lifeflow-text-tertiary: #8A8A93;
+  --lifeflow-text-disabled: #B8B8BF;
+  --lifeflow-text-inverse: #FFFFFF;
+
+  /* SHADOWS — 静态表面走边框，浮动层才用阴影（alpha <= 0.06） */
+  --lifeflow-shadow-1: 0 1px 2px rgba(26,26,30,0.04);
+  --lifeflow-shadow-2: 0 4px 16px rgba(26,26,30,0.06);
+  --lifeflow-shadow-3: 0 12px 32px rgba(26,26,30,0.10);
+  --lifeflow-shadow-knit: none;
+
+  /* TAB BAR — 白底细顶线 */
+  --lifeflow-tabbar-bg: rgba(255,255,255,0.92);
+  --lifeflow-tabbar-blur: 16px;
+  --lifeflow-tabbar-blur-saturate: 100%;
+
+  /* AI BALL */
+  --lifeflow-ai-ball: #1A1A1E;
+
+  /* TYPOGRAPHY — 精确排版：收紧字距、克制字重 */
+  --lifeflow-font-display: -apple-system, BlinkMacSystemFont, "SF Pro SC", "PingFang SC", "Noto Sans SC", "Helvetica Neue", "Microsoft YaHei", sans-serif;
+  --lifeflow-font-body: -apple-system, BlinkMacSystemFont, "SF Pro SC", "PingFang SC", "Noto Sans SC", "Helvetica Neue", "Microsoft YaHei", sans-serif;
+  --lifeflow-font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+
+  --lifeflow-font-size-display: 32px;
+  --lifeflow-font-size-h1: 26px;
+  --lifeflow-font-size-h2: 20px;
+  --lifeflow-font-size-h3: 16px;
+  --lifeflow-font-size-body: 15px;
+  --lifeflow-font-size-sm: 13px;
+  --lifeflow-font-size-caption: 12px;
+
+  /* SPACING */
+  --lifeflow-space-xs: 4px;
+  --lifeflow-space-sm: 8px;
+  --lifeflow-space-md: 12px;
+  --lifeflow-space-lg: 16px;
+  --lifeflow-space-xl: 24px;
+  --lifeflow-space-2xl: 32px;
+
+  /* RADIUS — 克制圆角：sm 4 / md 8 / lg 12 / full */
+  --lifeflow-radius-sm: 4px;
+  --lifeflow-radius-md: 8px;
+  --lifeflow-radius-lg: 12px;
+  --lifeflow-radius-xl: 12px;
+  --lifeflow-radius-full: 9999px;
+
+  /* PORTABLE ALIASES */
+  --background: var(--lifeflow-background);
+  --foreground: var(--lifeflow-foreground);
+  --card: var(--lifeflow-card);
+  --card-foreground: var(--lifeflow-card-foreground);
+  --popover: var(--lifeflow-popover);
+  --popover-foreground: var(--lifeflow-popover-foreground);
+  --primary: var(--lifeflow-primary);
+  --primary-foreground: var(--lifeflow-primary-foreground);
+  --muted: var(--lifeflow-muted);
+  --muted-foreground: var(--lifeflow-muted-foreground);
+  --border: var(--lifeflow-border);
+  --input: var(--lifeflow-input);
+  --ring: var(--lifeflow-ring);
+  --radius-sm: var(--lifeflow-radius-sm);
+  --radius-md: var(--lifeflow-radius-md);
+  --radius-lg: var(--lifeflow-radius-lg);
+  --color-background: var(--lifeflow-background);
+  --color-foreground: var(--lifeflow-foreground);
+  --color-card: var(--lifeflow-card);
+  --color-card-foreground: var(--lifeflow-card-foreground);
+  --color-popover: var(--lifeflow-popover);
+  --color-popover-foreground: var(--lifeflow-popover-foreground);
+  --color-primary: var(--lifeflow-primary);
+  --color-primary-foreground: var(--lifeflow-primary-foreground);
+  --color-muted: var(--lifeflow-muted);
+  --color-muted-foreground: var(--lifeflow-muted-foreground);
+  --color-border: var(--lifeflow-border);
+  --color-input: var(--lifeflow-input);
+  --color-ring: var(--lifeflow-ring);
+  --color-text-primary: var(--lifeflow-text-primary);
+  --color-text-secondary: var(--lifeflow-text-secondary);
+  --color-text-tertiary: var(--lifeflow-text-tertiary);
+  --color-text-disabled: var(--lifeflow-text-disabled);
+  --color-surface-card: var(--lifeflow-card);
+  --color-surface-muted: var(--lifeflow-muted);
+}
+
+/* === DARK MODE（夜间 · 深空石墨） === */
+.dark {
+  --lifeflow-background: #0E0E11;
+  --lifeflow-foreground: #F2F2F4;
+  --lifeflow-card: #16161A;
+  --lifeflow-card-foreground: #F2F2F4;
+  --lifeflow-popover: #1C1C21;
+  --lifeflow-popover-foreground: #F2F2F4;
+  --lifeflow-muted: #1E1E23;
+  --lifeflow-muted-foreground: rgba(242,242,244,0.55);
+  --lifeflow-border: rgba(255,255,255,0.10);
+  --lifeflow-border-light: rgba(255,255,255,0.06);
+  --lifeflow-border-dashed: rgba(255,255,255,0.18);
+  --lifeflow-input: rgba(255,255,255,0.10);
+  --lifeflow-ring: #F2F2F4;
+
+  --lifeflow-primary: #F2F2F4;
+  --lifeflow-primary-hover: #FFFFFF;
+  --lifeflow-primary-light: rgba(255,255,255,0.09);
+  --lifeflow-primary-foreground: #0E0E11;
+
+  --lifeflow-knit-thread: #F2F2F4;
+  --lifeflow-knit-thread-completed: #34D399;
+  --lifeflow-knit-thread-partial: #FBBF24;
+  --lifeflow-knit-bg: rgba(255,255,255,0.10);
+  --lifeflow-knit-grid: rgba(255,255,255,0.07);
+
+  --state-success: #34D399;
+  --state-success-light: rgba(52,211,153,0.12);
+  --state-warning: #FBBF24;
+  --state-warning-light: rgba(251,191,36,0.12);
+  --state-error: #F87171;
+  --state-error-light: rgba(248,113,113,0.12);
+  --state-info: #60A5FA;
+  --state-info-light: rgba(96,165,250,0.12);
+
+  --lifeflow-text-primary: #F2F2F4;
+  --lifeflow-text-secondary: rgba(242,242,244,0.68);
+  --lifeflow-text-tertiary: rgba(242,242,244,0.42);
+  --lifeflow-text-disabled: rgba(242,242,244,0.28);
+  --lifeflow-text-inverse: #0E0E11;
+
+  --lifeflow-shadow-1: 0 1px 2px rgba(0,0,0,0.30);
+  --lifeflow-shadow-2: 0 4px 16px rgba(0,0,0,0.40);
+  --lifeflow-shadow-3: 0 12px 32px rgba(0,0,0,0.55);
+  --lifeflow-shadow-knit: none;
+
+  --lifeflow-tabbar-bg: rgba(14,14,17,0.88);
+  --lifeflow-tabbar-blur: 16px;
+  --lifeflow-tabbar-blur-saturate: 100%;
+
+  --lifeflow-ai-ball: #F2F2F4;
+}
+
+/* === TYPOGRAPHY UTILITY CLASSES === */
+.lf-display {
+  font-family: var(--lifeflow-font-display);
+  font-size: var(--lifeflow-font-size-display);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.lf-h1 {
+  font-family: var(--lifeflow-font-display);
+  font-size: var(--lifeflow-font-size-h1);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+
+.lf-h2 {
+  font-family: var(--lifeflow-font-display);
+  font-size: var(--lifeflow-font-size-h2);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 1.3;
+}
+
+.lf-h3 {
+  font-family: var(--lifeflow-font-body);
+  font-size: var(--lifeflow-font-size-h3);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.4;
+}
+
+.lf-body {
+  font-family: var(--lifeflow-font-body);
+  font-size: var(--lifeflow-font-size-body);
+  font-weight: 400;
+  line-height: 1.55;
+}
+
+.lf-body-sm {
+  font-family: var(--lifeflow-font-body);
+  font-size: var(--lifeflow-font-size-sm);
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.lf-caption {
+  font-family: var(--lifeflow-font-body);
+  font-size: var(--lifeflow-font-size-caption);
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.lf-mono {
+  font-family: var(--lifeflow-font-mono);
+  font-size: var(--lifeflow-font-size-sm);
+  font-weight: 400;
+  line-height: 1.6;
+}
+
+/* === PROGRESS BAR（细胶囊） === */
+.knit-track {
+  position: relative;
+  height: 5px;
+  border-radius: var(--lifeflow-radius-full);
+  overflow: hidden;
+  background: var(--lifeflow-knit-bg);
+}
+
+.knit-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  border-radius: var(--lifeflow-radius-full);
+  background: var(--lifeflow-knit-thread);
+  z-index: 2;
+  transition: width 0.5s ease-in-out;
+}
+
+.knit-fill--done { background: var(--lifeflow-knit-thread-completed); }
+.knit-fill--partial { background: var(--lifeflow-knit-thread-partial); }
+
+.knit-yarn { display: none; }
+
+.knit-percent {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 4;
+  font-family: var(--lifeflow-font-body);
+  font-size: var(--lifeflow-font-size-sm);
+  font-weight: 600;
+  color: var(--lifeflow-text-primary);
+  line-height: 1;
+}
+
+/* === TAB BAR（白底细顶线，跟随模式） === */
+.lf-tabbar-glass {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 40;
+  border-top: 1px solid var(--lifeflow-border);
+  background: var(--lifeflow-tabbar-bg);
+  -webkit-backdrop-filter: saturate(var(--lifeflow-tabbar-blur-saturate)) blur(var(--lifeflow-tabbar-blur));
+  backdrop-filter: saturate(var(--lifeflow-tabbar-blur-saturate)) blur(var(--lifeflow-tabbar-blur));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* === 极简通用组件 === */
+/* 细线分隔列表（克制分割线） */
+.lf-list-divider > * + * {
+  border-top: 1px solid var(--lifeflow-border-light);
+}
+
+/* 卡片：静态内容用 1px 细边框 + 极淡阴影，不靠重阴影 */
+.lf-surface {
+  background: var(--lifeflow-card);
+  border: 1px solid var(--lifeflow-border-light);
+  border-radius: var(--lifeflow-radius-lg);
+}
+
+/* 数字对齐（时间/金额/进度） */
+.lf-tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+/* 大数字（统计强调） */
+.lf-stat {
+  font-family: var(--lifeflow-font-display);
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  @theme inline {
+    --color-background: var(--lifeflow-background);
+    --color-foreground: var(--lifeflow-foreground);
+    --color-card: var(--lifeflow-card);
+    --color-card-foreground: var(--lifeflow-card-foreground);
+    --color-popover: var(--lifeflow-popover);
+    --color-popover-foreground: var(--lifeflow-popover-foreground);
+    --color-primary: var(--lifeflow-primary);
+    --color-primary-foreground: var(--lifeflow-primary-foreground);
+    --color-muted: var(--lifeflow-muted);
+    --color-muted-foreground: var(--lifeflow-muted-foreground);
+    --color-border: var(--lifeflow-border);
+    --color-input: var(--lifeflow-input);
+    --color-ring: var(--lifeflow-ring);
+    --radius-sm: var(--lifeflow-radius-sm);
+    --radius-md: var(--lifeflow-radius-md);
+    --radius-lg: var(--lifeflow-radius-lg);
+    --radius-xl: var(--lifeflow-radius-xl);
+  }
+  @layer base {
+    body { background: var(--lifeflow-background); color: var(--lifeflow-foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style id="semantic-token-fallback">
+      .bg-background { background-color: var(--lifeflow-background); }
+      .text-background { color: var(--lifeflow-background); }
+      .border-background { border-color: var(--lifeflow-background); }
+      .ring-background { --tw-ring-color: var(--lifeflow-background); }
+      .bg-foreground { background-color: var(--lifeflow-foreground); }
+      .text-foreground { color: var(--lifeflow-foreground); }
+      .border-foreground { border-color: var(--lifeflow-foreground); }
+      .ring-foreground { --tw-ring-color: var(--lifeflow-foreground); }
+      .bg-card { background-color: var(--lifeflow-card); }
+      .text-card { color: var(--lifeflow-card); }
+      .border-card { border-color: var(--lifeflow-card); }
+      .ring-card { --tw-ring-color: var(--lifeflow-card); }
+      .bg-card-foreground { background-color: var(--lifeflow-card-foreground); }
+      .text-card-foreground { color: var(--lifeflow-card-foreground); }
+      .border-card-foreground { border-color: var(--lifeflow-card-foreground); }
+      .ring-card-foreground { --tw-ring-color: var(--lifeflow-card-foreground); }
+      .bg-popover { background-color: var(--lifeflow-popover); }
+      .text-popover { color: var(--lifeflow-popover); }
+      .border-popover { border-color: var(--lifeflow-popover); }
+      .ring-popover { --tw-ring-color: var(--lifeflow-popover); }
+      .bg-popover-foreground { background-color: var(--lifeflow-popover-foreground); }
+      .text-popover-foreground { color: var(--lifeflow-popover-foreground); }
+      .border-popover-foreground { border-color: var(--lifeflow-popover-foreground); }
+      .ring-popover-foreground { --tw-ring-color: var(--lifeflow-popover-foreground); }
+      .bg-primary { background-color: var(--lifeflow-primary); }
+      .text-primary { color: var(--lifeflow-primary); }
+      .border-primary { border-color: var(--lifeflow-primary); }
+      .ring-primary { --tw-ring-color: var(--lifeflow-primary); }
+      .bg-primary-foreground { background-color: var(--lifeflow-primary-foreground); }
+      .text-primary-foreground { color: var(--lifeflow-primary-foreground); }
+      .border-primary-foreground { border-color: var(--lifeflow-primary-foreground); }
+      .ring-primary-foreground { --tw-ring-color: var(--lifeflow-primary-foreground); }
+      .bg-muted { background-color: var(--lifeflow-muted); }
+      .text-muted { color: var(--lifeflow-muted); }
+      .border-muted { border-color: var(--lifeflow-muted); }
+      .ring-muted { --tw-ring-color: var(--lifeflow-muted); }
+      .bg-muted-foreground { background-color: var(--lifeflow-muted-foreground); }
+      .text-muted-foreground { color: var(--lifeflow-muted-foreground); }
+      .border-muted-foreground { border-color: var(--lifeflow-muted-foreground); }
+      .ring-muted-foreground { --tw-ring-color: var(--lifeflow-muted-foreground); }
+      .bg-border { background-color: var(--lifeflow-border); }
+      .text-border { color: var(--lifeflow-border); }
+      .border-border { border-color: var(--lifeflow-border); }
+      .ring-border { --tw-ring-color: var(--lifeflow-border); }
+      .bg-input { background-color: var(--lifeflow-input); }
+      .text-input { color: var(--lifeflow-input); }
+      .border-input { border-color: var(--lifeflow-input); }
+      .ring-input { --tw-ring-color: var(--lifeflow-input); }
+      .bg-ring { background-color: var(--lifeflow-ring); }
+      .text-ring { color: var(--lifeflow-ring); }
+      .border-ring { border-color: var(--lifeflow-ring); }
+      .ring-ring { --tw-ring-color: var(--lifeflow-ring); }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+</head>
+<body class="min-h-screen font-sans antialiased">
+    <main>
+      <style id="critical-layout">
+        /* ============================================================
+           LifeFlow 首页 · 夜间态 — 关键布局静态 CSS（极简克制风）
+           主布局不依赖 Tailwind 运行时编译即可渲染；
+           一切颜色引用 var(--lifeflow-*)，无硬编码色值。
+           规则：单主色石墨黑 / 中性灰三级文字 / 语义状态色仅用于状态
+                 / 细线分隔（border-light）/ 圆角 4/8/12 / 禁 emoji
+           ============================================================ */
+
+        /* ---- 基础 ---- */
+        body {
+          font-family: var(--lifeflow-font-body);
+          background: var(--lifeflow-background);
+          color: var(--lifeflow-text-primary);
+          overflow-x: hidden;
+        }
+        a:focus-visible, button:focus-visible, input:focus-visible {
+          outline: 2px solid var(--lifeflow-ring);
+          outline-offset: 2px;
+          border-radius: 6px;
+        }
+        svg[data-lucide], svg.lucide { display: inline-block; flex-shrink: 0; }
+
+        /* ---- 页面容器（文档滚动，底部预留 100px 防导航遮挡） ---- */
+        .lf-container {
+          max-width: 28rem;
+          margin-inline: auto;
+          padding: 12px 16px 100px;
+        }
+        .lf-container > * + * { margin-top: 12px; }
+
+        /* ---- 三级文字色 ---- */
+        .lf-text-primary { color: var(--lifeflow-text-primary); }
+        .lf-text-secondary { color: var(--lifeflow-text-secondary); }
+        .lf-text-tertiary { color: var(--lifeflow-text-tertiary); }
+
+        /* ---- 卡片基元：白卡 + 1px 细边框 + 12px 圆角，无重阴影 ---- */
+        #section-night-ritual,
+        #section-review-summary,
+        #section-todo-card,
+        #section-health-strip,
+        #section-tomorrow-draft {
+          background: var(--lifeflow-card);
+          border: 1px solid var(--lifeflow-border-light);
+          border-radius: 12px;
+        }
+        .lf-card-pad { padding: 16px 16px 12px; }
+        .lf-health-pad { padding: 14px 4px; }
+
+        /* ---- 间距辅助 ---- */
+        .lf-mt3 { margin-top: 12px; }
+        .lf-ml-auto { margin-left: auto; }
+
+        /* ---- 顶部问候 ---- */
+        .lf-hdr { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+        .lf-hdr-txt { min-width: 0; flex: 1; }
+        .lf-greet { margin: 0; }
+        .lf-date { margin: 4px 0 0; font-size: 13px; color: var(--lifeflow-text-secondary); }
+        .lf-hdr-actions { display: flex; gap: 8px; flex: none; }
+        .lf-mode-btn {
+          width: 40px; height: 40px;
+          border-radius: 9999px;
+          border: 1px solid var(--lifeflow-border-light);
+          background: var(--lifeflow-card);
+          color: var(--lifeflow-text-secondary);
+          display: inline-flex; align-items: center; justify-content: center;
+          transition: transform 0.15s ease, opacity 0.15s ease;
+        }
+        .lf-mode-btn:hover { opacity: 0.85; }
+        .lf-mode-btn:active { transform: scale(0.92); }
+        .lf-mode-btn svg[data-lucide] { width: 20px; height: 20px; }
+
+        /* ---- 卡头 ---- */
+        .lf-card-hdr { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+        .lf-card-title { margin: 0; min-width: 0; }
+        .lf-badge {
+          display: inline-flex; align-items: center; gap: 4px;
+          padding: 4px 10px;
+          border-radius: 8px;
+          background: var(--lifeflow-primary-light);
+          color: var(--lifeflow-primary);
+          font-size: 13px; font-weight: 600;
+          font-variant-numeric: tabular-nums;
+          white-space: nowrap;
+          flex: none;
+        }
+        .lf-chip {
+          display: inline-flex; align-items: center;
+          padding: 4px 10px;
+          border-radius: 8px;
+          background: var(--lifeflow-muted);
+          color: var(--lifeflow-text-secondary);
+          font-family: var(--lifeflow-font-mono);
+          font-size: 13px; font-weight: 500;
+          font-variant-numeric: tabular-nums;
+          white-space: nowrap;
+        }
+
+        /* ---- 渐进式三步 ---- */
+        .lf-step { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--lifeflow-border-light); }
+        .lf-steps .lf-step:first-child { margin-top: 14px; }
+        .lf-step-hdr { display: flex; align-items: center; gap: 8px; }
+        .lf-step-no {
+          width: 22px; height: 22px; flex: none;
+          border-radius: 9999px;
+          background: var(--lifeflow-muted);
+          color: var(--lifeflow-text-secondary);
+          font-family: var(--lifeflow-font-mono);
+          font-size: 13px; font-weight: 600;
+          display: inline-flex; align-items: center; justify-content: center;
+        }
+        .lf-step-name { font-size: 15px; font-weight: 600; color: var(--lifeflow-text-primary); }
+        .lf-step-aside { margin-left: auto; flex: none; }
+
+        /* ---- 行 / 标签 / 值 ---- */
+        .lf-row { display: flex; align-items: center; gap: 10px; }
+        .lf-row + .lf-row { margin-top: 12px; }
+        .lf-label { flex: none; font-size: 13px; color: var(--lifeflow-text-secondary); }
+        .lf-value {
+          font-family: var(--lifeflow-font-mono);
+          font-size: 13px;
+          font-variant-numeric: tabular-nums;
+          color: var(--lifeflow-text-secondary);
+          white-space: nowrap;
+          flex: none;
+        }
+        .lf-icon { color: var(--lifeflow-text-tertiary); }
+        .lf-icon svg[data-lucide] { width: 16px; height: 16px; }
+
+        /* ---- 灯光滑块 ---- */
+        input[type="range"].lf-range {
+          flex: 1; min-width: 0; height: 20px;
+          accent-color: var(--lifeflow-primary);
+        }
+
+        /* ---- 开关 ---- */
+        .lf-switch {
+          position: relative;
+          display: inline-flex;
+          width: 44px; height: 28px;
+          flex: none;
+          border-radius: 9999px;
+          background: var(--lifeflow-muted);
+          border: 1px solid var(--lifeflow-border-light);
+          cursor: pointer;
+          transition: background-color 0.2s ease;
+        }
+        .lf-switch::after {
+          content: "";
+          position: absolute; top: 2px; left: 2px;
+          width: 22px; height: 22px;
+          border-radius: 9999px;
+          background: var(--lifeflow-card);
+          box-shadow: var(--lifeflow-shadow-1);
+          transition: transform 0.2s ease;
+        }
+        .lf-switch[aria-checked="true"] { background: var(--lifeflow-primary); }
+        .lf-switch[aria-checked="true"]::after { transform: translateX(16px); }
+
+        /* ---- 冥想播放钮 ---- */
+        .lf-play {
+          width: 28px; height: 28px; flex: none;
+          border-radius: 9999px;
+          background: var(--lifeflow-muted);
+          color: var(--lifeflow-primary);
+          display: inline-flex; align-items: center; justify-content: center;
+          transition: transform 0.15s ease, background-color 0.15s ease;
+        }
+        .lf-play:hover { background: var(--lifeflow-primary-light); }
+        .lf-play:active { transform: scale(0.9); }
+        .lf-play svg[data-lucide] { width: 13px; height: 13px; margin-left: 1px; }
+        .lf-relax-name { min-width: 0; flex: 1; font-size: 15px; font-weight: 500; color: var(--lifeflow-text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        /* ---- 入睡打卡主按钮 ---- */
+        .lf-btn-primary {
+          display: flex; align-items: center; justify-content: center;
+          width: 100%; padding: 12px;
+          border-radius: 10px;
+          background: var(--lifeflow-primary);
+          color: var(--lifeflow-primary-foreground);
+          font-size: 15px; font-weight: 600;
+          transition: transform 0.15s ease, background-color 0.15s ease;
+        }
+        .lf-btn-primary:hover { background: var(--lifeflow-primary-hover); }
+        .lf-btn-primary:active { transform: scale(0.98); }
+        .sleep-btn.is-done { background: var(--state-success); }
+
+        /* ---- 仪式卡底部行 ---- */
+        .lf-ritual-foot {
+          display: flex; align-items: center; gap: 8px;
+          margin-top: 14px; padding-top: 12px;
+          border-top: 1px solid var(--lifeflow-border-light);
+        }
+        .lf-ritual-foot .lf-num { font-family: var(--lifeflow-font-mono); font-variant-numeric: tabular-nums; }
+        .lf-foot-goal { margin-left: auto; flex: none; font-size: 13px; font-weight: 600; color: var(--lifeflow-text-primary); white-space: nowrap; }
+        .lf-foot-label { font-size: 13px; color: var(--lifeflow-text-secondary); min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        /* ---- 大数字统计 ---- */
+        .lf-stat-row { display: flex; align-items: flex-end; gap: 8px; margin-top: 14px; }
+        .lf-stat-label { font-size: 13px; color: var(--lifeflow-text-tertiary); padding-bottom: 5px; }
+
+        /* ---- 进度条间距 ---- */
+        .lf-track { margin-top: 12px; }
+
+        /* ---- 今日三件事（复盘内） ---- */
+        .lf-three { margin: 0; padding: 0; list-style: none; margin-top: 14px; }
+        .lf-three li { display: flex; align-items: center; gap: 8px; padding: 5px 0; min-width: 0; }
+        .lf-three li + li { border-top: 1px solid var(--lifeflow-border-light); }
+        .lf-three-dot { width: 6px; height: 6px; border-radius: 9999px; background: var(--lifeflow-primary); flex: none; }
+        .lf-three li.is-done .lf-three-dot { background: var(--state-success); }
+        .lf-three-title { min-width: 0; flex: 1; font-size: 15px; color: var(--lifeflow-text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .lf-three li.is-done .lf-three-title { color: var(--lifeflow-text-tertiary); text-decoration: line-through; text-decoration-color: var(--lifeflow-border-dashed); }
+
+        /* ---- 一句话总结输入 ---- */
+        .lf-input {
+          width: 100%; margin-top: 14px;
+          padding: 10px 12px;
+          border-radius: 8px;
+          border: 1px solid var(--lifeflow-border-light);
+          background: var(--lifeflow-muted);
+          font-size: 15px; color: var(--lifeflow-text-primary);
+          outline: none;
+        }
+        .lf-input::placeholder { color: var(--lifeflow-text-tertiary); }
+
+        /* ---- 待办执行流 ---- */
+        .lf-task-list { margin: 0; padding: 0; list-style: none; }
+        .lf-task-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--lifeflow-border-light); min-width: 0; }
+        .lf-task-row:first-child { border-top: 0; }
+        .lf-check {
+          width: 24px; height: 24px; flex: none;
+          border-radius: 9999px;
+          border: 1.5px dashed var(--lifeflow-border-dashed);
+          background: transparent; color: transparent;
+          display: inline-flex; align-items: center; justify-content: center;
+          transition: background-color 0.18s ease, border-color 0.18s ease, transform 0.15s ease;
+        }
+        .lf-check .check-icon { opacity: 0; transform: scale(0.4); transition: opacity 0.18s ease, transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .lf-check:active { transform: scale(0.88); }
+        .task-row.is-checked .lf-check { background: var(--state-success); border-color: var(--state-success); border-style: solid; color: var(--lifeflow-text-inverse); }
+        .task-row.is-checked .lf-check .check-icon { opacity: 1; transform: scale(1); }
+        .task-row.is-checked .task-title { color: var(--lifeflow-text-tertiary); text-decoration: line-through; text-decoration-color: var(--lifeflow-border-dashed); }
+        .lf-task-main { min-width: 0; flex: 1; }
+        .task-title { font-size: 15px; font-weight: 500; color: var(--lifeflow-text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .task-time { margin-top: 2px; font-family: var(--lifeflow-font-mono); font-size: 13px; color: var(--lifeflow-text-tertiary); font-variant-numeric: tabular-nums; }
+        .task-tag {
+          flex: none;
+          padding: 2px 8px;
+          border-radius: 6px;
+          background: var(--lifeflow-muted);
+          color: var(--lifeflow-text-secondary);
+          font-size: 13px;
+          white-space: nowrap;
+        }
+
+        /* ---- 矫正提醒（告警 · 语义状态色） ---- */
+        .lf-alert {
+          display: flex; align-items: center; gap: 8px;
+          margin-top: 12px; padding: 10px 12px;
+          border-radius: 8px;
+          background: var(--lifeflow-muted);
+        }
+        .lf-alert-dot { width: 6px; height: 6px; border-radius: 9999px; background: var(--state-warning); flex: none; }
+        .lf-alert-txt { min-width: 0; flex: 1; font-size: 13px; color: var(--lifeflow-text-secondary); }
+        .lf-link { flex: none; font-size: 13px; font-weight: 600; color: var(--lifeflow-primary); text-decoration: none; }
+
+        /* ---- 健康概览条：三个数据 · 细线分割 ---- */
+        .lf-health { display: flex; align-items: stretch; }
+        .lf-health-item {
+          flex: 1; min-width: 0;
+          display: flex; flex-direction: column; align-items: center; gap: 6px;
+          padding: 0 4px;
+        }
+        .lf-health-item svg[data-lucide] { width: 20px; height: 20px; color: var(--lifeflow-text-tertiary); }
+        .lf-health-val {
+          font-family: var(--lifeflow-font-mono);
+          font-size: 15px; font-weight: 600;
+          color: var(--lifeflow-text-primary);
+          font-variant-numeric: tabular-nums;
+          line-height: 1;
+          white-space: nowrap;
+          max-width: 100%;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .lf-health-label { font-size: 13px; color: var(--lifeflow-text-tertiary); line-height: 1; }
+        .lf-divider-v { width: 1px; flex: none; background: var(--lifeflow-border-light); }
+
+        /* ---- 明日草稿 ---- */
+        .lf-draft-item { display: flex; align-items: center; gap: 8px; min-width: 0; }
+        .lf-draft-item + .lf-draft-item { margin-top: 12px; }
+        .lf-draft-dot { width: 6px; height: 6px; border-radius: 9999px; background: var(--lifeflow-primary); flex: none; }
+        .lf-draft-title { min-width: 0; flex: 1; font-size: 15px; font-weight: 500; color: var(--lifeflow-text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .lf-draft-time { flex: none; font-family: var(--lifeflow-font-mono); font-size: 13px; color: var(--lifeflow-text-tertiary); font-variant-numeric: tabular-nums; white-space: nowrap; }
+        .lf-edit { flex: none; display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 600; color: var(--lifeflow-primary); text-decoration: none; }
+        .lf-edit svg[data-lucide] { width: 14px; height: 14px; }
+        .lf-draft-foot { font-size: 13px; color: var(--lifeflow-text-tertiary); margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--lifeflow-border-light); }
+        .lf-ideal { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--lifeflow-border-light); }
+        .lf-ideal-label { margin: 0; font-size: 13px; font-weight: 600; color: var(--lifeflow-text-secondary); }
+        .lf-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+        .lf-ideal-note { margin: 10px 0 0; font-size: 13px; color: var(--lifeflow-text-tertiary); }
+
+        /* ---- 底部导航兜底布局（Tailwind 未编译时保证可见） ---- */
+        #bottom-nav { height: 60px; max-width: 28rem; margin-inline: auto; width: 100%; }
+        #bottom-nav .grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); height: 100%; }
+        #bottom-nav a { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-width: 0; height: 100%; text-decoration: none; }
+        #bottom-nav a svg { width: 20px; height: 20px; flex-shrink: 0; }
+        #bottom-nav a span { font-size: 10.5px; line-height: 1; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+        #bottom-nav a[data-active="true"] { color: var(--lifeflow-primary); font-weight: 600; }
+        #bottom-nav a[data-active="false"] { color: var(--lifeflow-text-tertiary); }
+
+        /* ---- 动效降级 ---- */
+        @media (prefers-reduced-motion: reduce) {
+          .lf-mode-btn, .lf-switch, .lf-switch::after, .lf-check, .lf-check .check-icon,
+          .lf-btn-primary, .lf-play, .lf-fade-in, .knit-fill {
+            animation: none !important;
+            transition-duration: 0.01ms !important;
+          }
+        }
+      </style>
+
+      <div class="mx-auto max-w-md px-4 pt-3 pb-[100px] space-y-3 lf-container">
+        <!-- 1 顶部 · 晚安问候 -->
+        <header class="lf-hdr">
+          <div class="lf-hdr-txt">
+            <h1 class="lf-h1 lf-greet lf-text-primary">晚安，今天辛苦了</h1>
+            <p class="lf-date">8月10日 周一</p>
+          </div>
+          <div class="lf-hdr-actions">
+            <button type="button" data-dom-id="nav-more" aria-label="更多功能" class="lf-mode-btn"><i data-lucide="ellipsis" class="h-5 w-5"></i></button>
+            <button type="button" data-dom-id="mode-switch" aria-label="切换到日间" class="lf-mode-btn"><i data-lucide="sun" class="h-5 w-5"></i></button>
+          </div>
+        </header>
+
+        <!-- 2 睡前仪式 · 渐进式早睡三步 -->
+        <section id="section-night-ritual" data-dom-id="sleep-ritual" class="lf-card-pad">
+          <div class="lf-card-hdr">
+            <h2 class="lf-h2 lf-card-title lf-text-primary">睡前仪式</h2>
+            <span class="lf-badge">今晚 23:00 就寝</span>
+          </div>
+
+          <div class="lf-steps">
+            <!-- 步骤 01 · 环境营造 -->
+            <div class="lf-step">
+              <div class="lf-step-hdr">
+                <span class="lf-step-no">01</span>
+                <span class="lf-step-name">环境营造</span>
+              </div>
+              <div class="lf-row lf-mt3">
+                <span class="lf-icon"><i data-lucide="lamp" class="h-4 w-4"></i></span>
+                <span class="lf-label">灯光</span>
+                <input type="range" min="0" max="100" value="40" data-live="#light-value" data-unit="%" aria-label="灯光亮度" class="lf-range">
+                <span id="light-value" class="lf-value">40%</span>
+              </div>
+              <div class="lf-row lf-mt3">
+                <span class="lf-icon"><i data-lucide="thermometer" class="h-4 w-4"></i></span>
+                <span class="lf-label">恒温</span>
+                <span class="lf-value lf-ml-auto">26℃</span>
+                <button type="button" data-action="toggle-switch" role="switch" aria-checked="true" aria-label="恒温空调已开启" class="lf-switch"></button>
+              </div>
+            </div>
+
+            <!-- 步骤 02 · 睡前放松 -->
+            <div class="lf-step">
+              <div class="lf-step-hdr">
+                <span class="lf-step-no">02</span>
+                <span class="lf-step-name">睡前放松</span>
+                <span class="lf-chip lf-step-aside">还有 1 小时 12 分</span>
+              </div>
+              <div class="lf-row lf-mt3">
+                <button type="button" aria-label="开始冥想" class="lf-play"><i data-lucide="play" class="h-3.5 w-3.5"></i></button>
+                <span class="lf-relax-name">冥想 10 分钟 · 助眠</span>
+                <span class="lf-draft-time">21:45</span>
+              </div>
+              <div class="lf-stat-row">
+                <span class="lf-stat lf-text-primary">23:00</span>
+                <span class="lf-stat-label">目标就寝时间</span>
+              </div>
+              <div class="lf-track">
+                <div class="knit-track" role="progressbar" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100" aria-label="今晚睡前流程进度 60%">
+                  <div class="knit-fill" style="width:60%"></div>
+                </div>
+              </div>
+              <p class="lf-ideal-note lf-mt3">放下手机，准备洗漱 · 提前 10 分钟调暗灯光</p>
+            </div>
+
+            <!-- 步骤 03 · 入睡打卡 -->
+            <div class="lf-step">
+              <div class="lf-step-hdr">
+                <span class="lf-step-no">03</span>
+                <span class="lf-step-name">入睡打卡</span>
+              </div>
+              <button type="button" data-action="sleep-check" aria-label="打卡入睡" class="lf-btn-primary sleep-btn lf-mt3">
+                <span class="sleep-btn-text">打卡入睡</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="lf-ritual-foot">
+            <span class="lf-foot-label">本周按时入睡 <span class="lf-num lf-text-primary">4/7</span></span>
+            <span class="lf-foot-goal">目标 23:00 就寝</span>
+          </div>
+        </section>
+
+        <!-- 3 今日复盘总结卡 -->
+        <section id="section-review-summary" data-dom-id="review-summary" class="lf-card-pad">
+          <div class="lf-card-hdr">
+            <h2 class="lf-h2 lf-card-title lf-text-primary">今日复盘</h2>
+            <a href="#" class="lf-edit">长期主义<i data-lucide="arrow-right" class="h-3.5 w-3.5"></i></a>
+          </div>
+
+          <div class="lf-stat-row">
+            <span class="lf-stat lf-text-primary">2/3</span>
+            <span class="lf-stat-label">今日三件事完成</span>
+          </div>
+          <div class="lf-track">
+            <div class="knit-track" role="progressbar" aria-valuenow="67" aria-valuemin="0" aria-valuemax="100" aria-label="今日三件事完成度 67%">
+              <div class="knit-fill" style="width:67%"></div>
+            </div>
+          </div>
+
+          <ul class="lf-three">
+            <li class="is-done">
+              <span class="lf-three-dot"></span>
+              <span class="lf-three-title">行测·资料分析专项</span>
+            </li>
+            <li>
+              <span class="lf-three-dot"></span>
+              <span class="lf-three-title">四级听力精听 Unit 4</span>
+            </li>
+            <li class="is-done">
+              <span class="lf-three-dot"></span>
+              <span class="lf-three-title">申论大作文框架</span>
+            </li>
+          </ul>
+
+          <input type="text" class="lf-input" aria-label="今日总结一句话" value="三件事按时完成，专注 2 小时，比昨天多坚持 20 分钟" placeholder="写下一句今日总结…">
+        </section>
+
+        <!-- 4 今日待办卡 -->
+        <section id="section-todo-card" data-dom-id="todo-card" class="lf-card-pad">
+          <div class="lf-card-hdr">
+            <h2 class="lf-h2 lf-card-title lf-text-primary">今日待办</h2>
+            <span class="lf-badge">16/24 已完成</span>
+          </div>
+          <div class="lf-track">
+            <div class="knit-track" role="progressbar" aria-valuenow="67" aria-valuemin="0" aria-valuemax="100" aria-label="今日目标完成 16/24">
+              <div class="knit-fill" style="width:67%"></div>
+            </div>
+          </div>
+
+          <ul class="lf-task-list lf-mt3">
+            <li data-task-row data-task-name="行测·资料分析专项" class="task-row is-checked lf-task-row">
+              <button type="button" data-action="toggle-task" aria-label="取消完成：行测·资料分析专项" aria-pressed="true" class="lf-check">
+                <i data-lucide="check" class="check-icon h-3.5 w-3.5"></i>
+              </button>
+              <div class="lf-task-main">
+                <p class="task-title">行测·资料分析专项</p>
+                <p class="task-time">09:00</p>
+              </div>
+              <span class="task-tag">省考</span>
+            </li>
+            <li data-task-row data-task-name="判断推理 第1+2讲" class="task-row lf-task-row">
+              <button type="button" data-action="toggle-task" aria-label="标记完成：判断推理 第1+2讲" aria-pressed="false" class="lf-check">
+                <i data-lucide="check" class="check-icon h-3.5 w-3.5"></i>
+              </button>
+              <div class="lf-task-main">
+                <p class="task-title">判断推理 第1+2讲</p>
+                <p class="task-time">09:30</p>
+              </div>
+              <span class="task-tag">理想日</span>
+            </li>
+            <li data-task-row data-task-name="四级听力精听 Unit 4" class="task-row lf-task-row">
+              <button type="button" data-action="toggle-task" aria-label="标记完成：四级听力精听 Unit 4" aria-pressed="false" class="lf-check">
+                <i data-lucide="check" class="check-icon h-3.5 w-3.5"></i>
+              </button>
+              <div class="lf-task-main">
+                <p class="task-title">四级听力精听 Unit 4</p>
+                <p class="task-time">10:30</p>
+              </div>
+              <span class="task-tag">四级</span>
+            </li>
+            <li data-task-row data-task-name="申论大作文框架" class="task-row is-checked lf-task-row">
+              <button type="button" data-action="toggle-task" aria-label="取消完成：申论大作文框架" aria-pressed="true" class="lf-check">
+                <i data-lucide="check" class="check-icon h-3.5 w-3.5"></i>
+              </button>
+              <div class="lf-task-main">
+                <p class="task-title">申论大作文框架</p>
+                <p class="task-time">14:00</p>
+              </div>
+              <span class="task-tag">省考</span>
+            </li>
+            <li data-task-row data-task-name="健身·上肢力量" class="task-row is-checked lf-task-row">
+              <button type="button" data-action="toggle-task" aria-label="取消完成：健身·上肢力量" aria-pressed="true" class="lf-check">
+                <i data-lucide="check" class="check-icon h-3.5 w-3.5"></i>
+              </button>
+              <div class="lf-task-main">
+                <p class="task-title">健身·上肢力量</p>
+                <p class="task-time">16:00</p>
+              </div>
+              <span class="task-tag">习惯</span>
+            </li>
+            <li data-task-row data-task-name="今日复盘" class="task-row is-checked lf-task-row">
+              <button type="button" data-action="toggle-task" aria-label="取消完成：今日复盘" aria-pressed="true" class="lf-check">
+                <i data-lucide="check" class="check-icon h-3.5 w-3.5"></i>
+              </button>
+              <div class="lf-task-main">
+                <p class="task-title">今日复盘</p>
+                <p class="task-time">20:00</p>
+              </div>
+              <span class="task-tag">复盘</span>
+            </li>
+            <li data-task-row data-task-name="晚间饮水 500ml" class="task-row lf-task-row">
+              <button type="button" data-action="toggle-task" aria-label="标记完成：晚间饮水 500ml" aria-pressed="false" class="lf-check">
+                <i data-lucide="check" class="check-icon h-3.5 w-3.5"></i>
+              </button>
+              <div class="lf-task-main">
+                <p class="task-title">晚间饮水 500ml</p>
+                <p class="task-time">21:30</p>
+              </div>
+              <span class="task-tag">饮水</span>
+            </li>
+            <li data-task-row data-task-name="冥想 10 分钟" class="task-row lf-task-row">
+              <button type="button" data-action="toggle-task" aria-label="标记完成：冥想 10 分钟" aria-pressed="false" class="lf-check">
+                <i data-lucide="check" class="check-icon h-3.5 w-3.5"></i>
+              </button>
+              <div class="lf-task-main">
+                <p class="task-title">冥想 10 分钟</p>
+                <p class="task-time">21:45</p>
+              </div>
+              <span class="task-tag">睡眠</span>
+            </li>
+          </ul>
+
+          <div class="lf-alert">
+            <span class="lf-alert-dot"></span>
+            <span class="lf-alert-txt">还有 2 个事项待矫正</span>
+            <a href="#" class="lf-link">去矫正</a>
+          </div>
+        </section>
+
+        <!-- 5 健康概览条 · 睡眠 / 饮水 / 专注 -->
+        <section id="section-health-strip" data-dom-id="health-strip" class="lf-health-pad">
+          <div class="lf-health">
+            <button type="button" aria-label="打卡：查看睡眠" class="lf-health-item">
+              <i data-lucide="moon" class="h-5 w-5"></i>
+              <span class="lf-health-val">23:12</span>
+              <span class="lf-health-label">按时入睡</span>
+            </button>
+            <span class="lf-divider-v" aria-hidden="true"></span>
+            <button type="button" aria-label="打卡：记录饮水" class="lf-health-item">
+              <i data-lucide="droplets" class="h-5 w-5"></i>
+              <span class="lf-health-val">1350/2000ml</span>
+              <span class="lf-health-label">已饮水</span>
+            </button>
+            <span class="lf-divider-v" aria-hidden="true"></span>
+            <button type="button" aria-label="打卡：查看专注" class="lf-health-item">
+              <i data-lucide="timer" class="h-5 w-5"></i>
+              <span class="lf-health-val">2h05m</span>
+              <span class="lf-health-label">已专注</span>
+            </button>
+          </div>
+        </section>
+
+        <!-- 6 明日草稿 -->
+        <section id="section-tomorrow-draft" data-dom-id="tomorrow-draft" class="lf-card-pad">
+          <div class="lf-card-hdr">
+            <h2 class="lf-h2 lf-card-title lf-text-primary">明日三件事</h2>
+            <a href="#" data-dom-id="tomorrow-edit" aria-label="编辑明日三件事" class="lf-edit"><i data-lucide="pencil" class="h-3.5 w-3.5"></i>编辑</a>
+          </div>
+
+          <div class="lf-mt3">
+            <div class="lf-draft-item">
+              <span class="lf-draft-dot"></span>
+              <span class="lf-draft-title">判断推理 第2+3讲</span>
+              <span class="lf-draft-time">09:00</span>
+            </div>
+            <div class="lf-draft-item">
+              <span class="lf-draft-dot"></span>
+              <span class="lf-draft-title">四级真题一套</span>
+              <span class="lf-draft-time">10:00</span>
+            </div>
+            <div class="lf-draft-item">
+              <span class="lf-draft-dot"></span>
+              <span class="lf-draft-title">申论范文精读</span>
+              <span class="lf-draft-time">14:30</span>
+            </div>
+          </div>
+
+          <p class="lf-draft-foot">草稿 · 睡前再过一遍，明早直接开始</p>
+
+          <!-- 明日理想日时段提示 -->
+          <div data-dom-id="tomorrow-ideal" class="lf-ideal">
+            <p class="lf-ideal-label">明日理想日时段</p>
+            <div class="lf-chips">
+              <span class="lf-chip">08:30 学习</span>
+              <span class="lf-chip">09:00 单词</span>
+              <span class="lf-chip">22:30 入睡</span>
+            </div>
+            <p class="lf-ideal-note">节奏比今天更从容，留 30 分钟缓冲</p>
+          </div>
+        </section>
+      </div>
+
+      <!-- 7 底部导航 4-tab（固定毛玻璃，纯静态无 JS 切换） -->
+      <nav data-mobile-nav="global" id="bottom-nav" class="lf-tabbar-glass w-full max-w-md mx-auto h-[60px]"><div class="grid grid-cols-4 h-full"><a href="#" data-dom-id="nav-home" data-nav-key="home" data-active="true" class="min-w-0 flex flex-col items-center justify-center gap-1 h-full text-[var(--lifeflow-primary)]"><i data-lucide="home" class="w-5 h-5 shrink-0"></i><span class="text-[10.5px] leading-none whitespace-nowrap max-w-full truncate font-semibold">首页</span></a><a href="#" data-dom-id="nav-goals" data-nav-key="goals" data-active="false" class="min-w-0 flex flex-col items-center justify-center gap-1 h-full text-[var(--lifeflow-text-tertiary)]"><i data-lucide="target" class="w-5 h-5 shrink-0"></i><span class="text-[10.5px] leading-none whitespace-nowrap max-w-full truncate">目标</span></a><a href="#" data-dom-id="nav-schedule" data-nav-key="schedule" data-active="false" class="min-w-0 flex flex-col items-center justify-center gap-1 h-full text-[var(--lifeflow-text-tertiary)]"><i data-lucide="calendar-days" class="w-5 h-5 shrink-0"></i><span class="text-[10.5px] leading-none whitespace-nowrap max-w-full truncate">日程</span></a><a href="#" data-dom-id="nav-ideal" data-nav-key="ideal" data-active="false" class="min-w-0 flex flex-col items-center justify-center gap-1 h-full text-[var(--lifeflow-text-tertiary)]"><i data-lucide="sun" class="w-5 h-5 shrink-0"></i><span class="text-[10.5px] leading-none whitespace-nowrap max-w-full truncate">理想日</span></a></div></nav>
+
+      <script>
+        (function () {
+          /* 勾选动画：切换完成态（置灰划线 + check 弹出） */
+          document.querySelectorAll('[data-action="toggle-task"]').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+              var row = btn.closest('[data-task-row]');
+              var checked = row.classList.toggle('is-checked');
+              btn.setAttribute('aria-pressed', checked ? 'true' : 'false');
+              var title = row.getAttribute('data-task-name') || '事项';
+              btn.setAttribute('aria-label', (checked ? '取消完成：' : '标记完成：') + title);
+            });
+          });
+          /* 恒温开关 */
+          document.querySelectorAll('[data-action="toggle-switch"]').forEach(function (sw) {
+            sw.addEventListener('click', function () {
+              var on = sw.getAttribute('aria-checked') === 'true';
+              sw.setAttribute('aria-checked', on ? 'false' : 'true');
+              sw.setAttribute('aria-label', on ? '恒温空调已关闭' : '恒温空调已开启');
+            });
+          });
+          /* 灯光滑块实时值 */
+          document.querySelectorAll('input[type="range"][data-live]').forEach(function (sl) {
+            var out = document.querySelector(sl.getAttribute('data-live'));
+            if (!out) return;
+            var unit = sl.getAttribute('data-unit') || '';
+            var sync = function () { out.textContent = sl.value + unit; };
+            sl.addEventListener('input', sync);
+            sync();
+          });
+          /* 入睡打卡主按钮 */
+          var sleepBtn = document.querySelector('[data-action="sleep-check"]');
+          if (sleepBtn) {
+            sleepBtn.addEventListener('click', function () {
+              var done = sleepBtn.classList.toggle('is-done');
+              sleepBtn.setAttribute('aria-label', done ? '取消入睡打卡' : '打卡入睡');
+              var txt = sleepBtn.querySelector('.sleep-btn-text');
+              if (txt) txt.textContent = done ? '已打卡入睡' : '打卡入睡';
+            });
+          }
+        })();
+      </script>
+    </main>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

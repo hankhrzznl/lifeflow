@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="zh-CN" class="light">
+<html lang="zh-CN" class="light" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>新建目标</title>
+    <title>记账</title>
     <style id="theme-vars">
 /* LifeFlow 2.0 — 极简克制设计系统
    第一性原理：目标驱动的个人生活操作系统
@@ -435,242 +435,298 @@
       }
     </style>
 </head>
-<body class="min-h-screen font-sans antialiased">
+<body>
+<main>
+  <style id="critical-layout">
+  /* ============================================================
+     LifeFlow 记账 · 极简克制 — 关键布局静态 CSS
+     不依赖 Tailwind 运行时编译即可渲染骨架；
+     颜色一律引用 var(--lifeflow-*)，无硬编码色值。
+     表面模型：静态内容走 1px 细边框分层，无重阴影。
+     ============================================================ */
 
-<!-- 主布局静态 CSS 兜底：无 Tailwind 运行时亦保证页面可渲染 -->
-<style id="critical-layout">
-  * { box-sizing: border-box; }
-  html, body { margin: 0; padding: 0; }
+  /* ---- 基础 ---- */
   body {
+    font-family: var(--lifeflow-font-body);
     background: var(--lifeflow-background);
     color: var(--lifeflow-text-primary);
-    font-family: var(--lifeflow-font-body);
-    font-size: 15px;
-    line-height: 1.5;
-    -webkit-font-smoothing: antialiased;
     overflow-x: hidden;
   }
-  button, input { font-family: inherit; }
-  .lf-page { max-width: 28rem; margin: 0 auto; padding: 12px 16px 100px; }
-  .lf-header { position: relative; display: flex; align-items: center; justify-content: center; height: 44px; }
-  .lf-back {
-    position: absolute; left: -4px; top: 50%; transform: translateY(-50%);
+  svg[data-lucide] { display: inline-block; flex-shrink: 0; }
+  a, button { -webkit-tap-highlight-color: transparent; }
+  a:focus-visible, button:focus-visible {
+    outline: 2px solid var(--lifeflow-ring);
+    outline-offset: 2px;
+    border-radius: 8px;
+  }
+  [hidden] { display: none !important; }
+
+  /* ---- 内容容器（对应 mx-auto max-w-md px-4 pt-3 pb-[100px]） ---- */
+  .ex-wrap {
+    max-width: 28rem;
+    margin-inline: auto;
+    padding: 12px 16px 100px;
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+  }
+
+  /* ---- 顶部：返回 + 标题 ---- */
+  .ex-hdr { display: flex; align-items: center; gap: 10px; }
+  .ex-back {
+    flex: none; width: 36px; height: 36px; border-radius: 9999px;
+    background: var(--lifeflow-card);
+    border: 1px solid var(--lifeflow-border-light);
+    color: var(--lifeflow-primary);
     display: inline-flex; align-items: center; justify-content: center;
-    width: 40px; height: 40px; color: var(--lifeflow-text-primary);
-    background: transparent; border: 0; border-radius: var(--lifeflow-radius-full); cursor: pointer;
+    text-decoration: none;
+    transition: opacity 0.15s ease, transform 0.15s ease;
   }
-  .lf-title { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -0.01em; color: var(--lifeflow-text-primary); }
-  .lf-section { margin-top: 32px; }
-  .lf-label { display: block; margin-bottom: 10px; font-size: 13px; font-weight: 500; color: var(--lifeflow-text-secondary); }
-  .lf-hint { margin: 8px 0 0; font-size: 12px; color: var(--lifeflow-text-tertiary); }
-  .lf-tpl-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
-  .lf-tpl {
-    position: relative; display: flex; align-items: center; justify-content: center;
-    min-height: 60px; padding: 10px 6px; font-size: 13px; line-height: 1.3; text-align: center;
-    color: var(--lifeflow-text-secondary); background: var(--lifeflow-card);
-    border: 1px solid var(--lifeflow-border-light); border-radius: var(--lifeflow-radius-lg);
-    cursor: pointer; -webkit-tap-highlight-color: transparent;
+  .ex-back:active { transform: scale(0.92); }
+  .ex-back svg[data-lucide] { width: 20px; height: 20px; }
+  .ex-title {
+    margin: 0;
+    font-size: 20px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.25;
+    color: var(--lifeflow-text-primary);
   }
-  .lf-tpl.is-selected { color: var(--lifeflow-text-primary); font-weight: 600; border-color: var(--lifeflow-primary); background: var(--lifeflow-primary-light); }
-  .lf-tpl-check { display: none; position: absolute; top: 6px; right: 6px; color: var(--lifeflow-primary); }
-  .lf-tpl.is-selected .lf-tpl-check { display: block; }
-  .lf-input {
-    width: 100%; height: 48px; padding: 0 16px; font-size: 15px;
-    color: var(--lifeflow-text-primary); background: var(--lifeflow-card);
-    border: 1px solid var(--lifeflow-border-light); border-radius: var(--lifeflow-radius-md);
-    outline: none; -webkit-appearance: none; appearance: none;
-  }
-  .lf-input::placeholder { color: var(--lifeflow-text-tertiary); }
-  .lf-input:focus { border-color: var(--lifeflow-primary); }
-  .lf-kr-card { background: var(--lifeflow-card); border: 1px solid var(--lifeflow-border-light); border-radius: var(--lifeflow-radius-lg); overflow: hidden; }
-  .lf-kr-row { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 12px; }
-  .lf-kr-row + .lf-kr-row { border-top: 1px solid var(--lifeflow-border-light); }
-  .lf-kr-index { flex-shrink: 0; width: 34px; font-size: 13px; color: var(--lifeflow-text-tertiary); font-variant-numeric: tabular-nums; }
-  .lf-kr-input { flex: 1; min-width: 0; height: 52px; padding: 0; font-size: 15px; color: var(--lifeflow-text-primary); background: transparent; border: 0; outline: none; }
-  .lf-kr-input::placeholder { color: var(--lifeflow-text-tertiary); }
-  .lf-kr-del {
-    flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
-    width: 32px; height: 32px; color: var(--lifeflow-text-tertiary);
-    background: transparent; border: 0; border-radius: var(--lifeflow-radius-sm); cursor: pointer;
-  }
-  .lf-kr-del:hover, .lf-kr-del:active { color: var(--state-error); }
-  .lf-add-kr {
-    display: inline-flex; align-items: center; gap: 6px; margin-top: 12px; padding: 4px 0;
-    font-size: 13px; font-weight: 500; color: var(--lifeflow-primary);
-    background: transparent; border: 0; cursor: pointer;
-  }
-  .lf-due {
-    display: flex; align-items: center; justify-content: space-between;
-    width: 100%; min-height: 52px; padding: 0 16px; font-size: 15px;
-    color: var(--lifeflow-text-primary); text-align: left; background: var(--lifeflow-card);
-    border: 1px solid var(--lifeflow-border-light); border-radius: var(--lifeflow-radius-lg);
-    cursor: pointer; -webkit-tap-highlight-color: transparent;
-  }
-  .lf-due-value { display: inline-flex; align-items: center; gap: 4px; color: var(--lifeflow-text-primary); font-variant-numeric: tabular-nums; }
-  .lf-btn-primary {
-    display: flex; align-items: center; justify-content: center;
-    width: 100%; height: 48px; margin-top: 40px; font-size: 15px; font-weight: 600;
-    color: var(--lifeflow-text-inverse); background: var(--lifeflow-primary);
-    border: 0; border-radius: var(--lifeflow-radius-md); cursor: pointer;
-  }
-  .lf-btn-primary:active { opacity: 0.85; }
-  #bottom-nav {
-    position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
-    height: 60px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
-    background: var(--lifeflow-tabbar-bg); border-top: 1px solid var(--lifeflow-border);
-    padding-bottom: env(safe-area-inset-bottom, 0px);
-  }
-  #bottom-nav a { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-width: 0; color: var(--lifeflow-text-tertiary); text-decoration: none; }
-  #bottom-nav a[data-active="true"] { color: var(--lifeflow-primary); }
-  #bottom-nav span { font-size: 10.5px; line-height: 1; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
-</style>
 
-<div class="lf-page mx-auto max-w-md px-4 pt-3 pb-[100px]">
+  /* ---- 月度总览（三列细线分隔） ---- */
+  .ex-summary {
+    display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+    background: var(--lifeflow-card);
+    border: 1px solid var(--lifeflow-border-light);
+    border-radius: 12px;
+    padding: 18px 0 16px;
+  }
+  .ex-sum-col {
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    min-width: 0; padding: 0 8px;
+  }
+  .ex-sum-col + .ex-sum-col { border-left: 1px solid var(--lifeflow-border-light); }
+  .ex-sum-lbl { font-size: 12px; line-height: 1.2; color: var(--lifeflow-text-tertiary); }
+  .ex-sum-val--expense { color: var(--lifeflow-primary); }
+  .ex-cur { font-size: 0.62em; font-weight: 600; letter-spacing: 0; margin-right: 1px; }
+  .ex-sum-val--income {
+    font-size: 15px; font-weight: 600; line-height: 1.2;
+    color: var(--state-success);
+    font-variant-numeric: tabular-nums;
+  }
+  .ex-sum-val--balance {
+    font-size: 12px; font-weight: 600; line-height: 1.2;
+    color: var(--lifeflow-text-tertiary);
+    font-variant-numeric: tabular-nums;
+  }
 
-  <!-- 顶部：返回 + 标题 -->
-  <header class="lf-header">
-    <button type="button" data-dom-id="back-goals" aria-label="返回" class="lf-back">
-      <i data-lucide="chevron-left" class="w-6 h-6"></i>
-    </button>
-    <h1 class="lf-title">新建目标</h1>
-  </header>
+  /* ---- 分类快捷（横向滚动） ---- */
+  .ex-cats {
+    display: flex; gap: 14px;
+    overflow-x: auto; -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    margin-left: -16px; margin-right: -16px;
+    padding-left: 16px; padding-right: 16px;
+    padding-bottom: 2px;
+  }
+  .ex-cats::-webkit-scrollbar { display: none; }
+  .ex-cat {
+    flex: none; width: 56px;
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    padding: 0; border: 0; background: transparent; cursor: pointer;
+  }
+  .ex-cat-ic {
+    width: 48px; height: 48px; border-radius: 9999px;
+    background: var(--lifeflow-card);
+    border: 1px solid var(--lifeflow-border);
+    color: var(--lifeflow-primary);
+    display: inline-flex; align-items: center; justify-content: center;
+    transition: transform 0.15s ease;
+  }
+  .ex-cat-ic:active { transform: scale(0.94); }
+  .ex-cat-ic svg[data-lucide] { width: 20px; height: 20px; }
+  .ex-cat-lbl { font-size: 12px; line-height: 1.2; color: var(--lifeflow-text-secondary); }
 
-  <!-- 模板选择 -->
-  <section class="lf-section">
-    <h2 class="lf-label">选择模板</h2>
-    <div class="lf-tpl-grid" role="radiogroup" aria-label="选择模板">
-      <button type="button" data-dom-id="tpl-1" role="radio" aria-checked="true" class="lf-tpl is-selected">
-        <i data-lucide="check" class="lf-tpl-check w-3 h-3"></i>
-        <span>备考冲刺</span>
+  /* ---- 收支列表（按日分组 · 细线分隔） ---- */
+  .ex-day + .ex-day { margin-top: 24px; }
+  .ex-day-hdr {
+    display: flex; align-items: center; gap: 8px;
+    padding: 0 2px; margin-bottom: 8px;
+  }
+  .ex-day-date { font-size: 12px; font-weight: 600; line-height: 1.2; color: var(--lifeflow-text-secondary); }
+  .ex-day-tag {
+    font-size: 12px; line-height: 1.2; color: var(--lifeflow-text-tertiary);
+    padding: 2px 6px; border-radius: 9999px; background: var(--lifeflow-muted);
+  }
+  .ex-rows {
+    background: var(--lifeflow-card);
+    border: 1px solid var(--lifeflow-border-light);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .ex-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 14px; min-width: 0;
+  }
+  .ex-row + .ex-row { border-top: 1px solid var(--lifeflow-border-light); }
+  .ex-row-ic {
+    flex: none; width: 36px; height: 36px; border-radius: 9999px;
+    background: var(--lifeflow-muted);
+    color: var(--lifeflow-primary);
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .ex-row-ic svg[data-lucide] { width: 18px; height: 18px; }
+  .ex-row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .ex-row-name { font-size: 15px; font-weight: 500; line-height: 1.3; color: var(--lifeflow-text-primary); }
+  .ex-row-note {
+    font-size: 12px; line-height: 1.3; color: var(--lifeflow-text-tertiary);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .ex-row-amt {
+    flex: none; font-size: 15px; font-weight: 600; line-height: 1.3;
+    font-variant-numeric: tabular-nums;
+  }
+  .ex-row-amt--expense { color: var(--lifeflow-primary); }
+  .ex-row-amt--income { color: var(--state-success); }
+
+  /* ---- 底部主按钮「记一笔」（悬浮于导航上方，圆角 8） ---- */
+  .ex-add {
+    position: fixed; left: 50%;
+    bottom: calc(60px + 14px + env(safe-area-inset-bottom, 0px));
+    transform: translateX(-50%);
+    width: min(calc(100vw - 32px), calc(28rem - 32px));
+    height: 50px; border: 0; border-radius: 8px; cursor: pointer;
+    background: var(--lifeflow-primary); color: var(--lifeflow-primary-foreground);
+    font-size: 15px; font-weight: 600;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    box-shadow: var(--lifeflow-shadow-1);
+    z-index: 30;
+    transition: transform 0.15s ease, opacity 0.15s ease;
+  }
+  .ex-add:active { transform: translateX(-50%) scale(0.98); }
+  .ex-add svg[data-lucide] { width: 18px; height: 18px; }
+
+  /* ---- 底部导航兜底布局（Tailwind 未编译时保证可见） ---- */
+  #bottom-nav { height: 60px; max-width: 28rem; margin-inline: auto; width: 100%; }
+  #bottom-nav .grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); height: 100%; }
+  #bottom-nav a { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-width: 0; height: 100%; text-decoration: none; }
+  #bottom-nav a svg { width: 20px; height: 20px; flex-shrink: 0; }
+  #bottom-nav a span { font-size: 10.5px; line-height: 1; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+  #bottom-nav a[data-active="true"] { color: var(--lifeflow-primary); font-weight: 600; }
+  #bottom-nav a[data-active="false"] { color: var(--lifeflow-text-tertiary); }
+
+  /* ---- 无障碍动效降级 ---- */
+  @media (prefers-reduced-motion: reduce) {
+    .ex-back, .ex-cat-ic, .ex-add { transition-duration: 0.01ms !important; }
+  }
+  </style>
+
+  <div class="ex-wrap mx-auto max-w-md px-4 pt-3 pb-[100px]">
+    <!-- 1 顶部：返回 + 标题 -->
+    <header class="ex-hdr">
+      <a href="#" data-dom-id="back-more" class="ex-back" aria-label="返回"><i data-lucide="chevron-left" class="w-5 h-5"></i></a>
+      <h1 class="ex-title">记账</h1>
+    </header>
+
+    <!-- 2 月度总览：支出 / 收入 / 结余（三列细线分隔） -->
+    <section class="ex-summary" data-dom-id="expense-summary" aria-label="本月收支汇总">
+      <div class="ex-sum-col">
+        <span class="ex-sum-lbl">本月支出</span>
+        <span class="lf-stat lf-tabular ex-sum-val--expense"><span class="ex-cur" aria-hidden="true">¥</span>1,286</span>
+      </div>
+      <div class="ex-sum-col">
+        <span class="ex-sum-lbl">本月收入</span>
+        <span class="ex-sum-val--income">¥500</span>
+      </div>
+      <div class="ex-sum-col">
+        <span class="ex-sum-lbl">结余</span>
+        <span class="ex-sum-val--balance">-¥786</span>
+      </div>
+    </section>
+
+    <!-- 3 分类快捷：横向滚动 6 个圆形图标 -->
+    <div class="ex-cats" data-dom-id="expense-cats" role="list" aria-label="分类快捷记账">
+      <button type="button" class="ex-cat" role="listitem" aria-label="记一笔餐饮支出">
+        <span class="ex-cat-ic"><i data-lucide="utensils" class="w-5 h-5"></i></span>
+        <span class="ex-cat-lbl">餐饮</span>
       </button>
-      <button type="button" data-dom-id="tpl-2" role="radio" aria-checked="false" class="lf-tpl">
-        <i data-lucide="check" class="lf-tpl-check w-3 h-3"></i>
-        <span>习惯养成</span>
+      <button type="button" class="ex-cat" role="listitem" aria-label="记一笔交通支出">
+        <span class="ex-cat-ic"><i data-lucide="car" class="w-5 h-5"></i></span>
+        <span class="ex-cat-lbl">交通</span>
       </button>
-      <button type="button" data-dom-id="tpl-3" role="radio" aria-checked="false" class="lf-tpl">
-        <i data-lucide="check" class="lf-tpl-check w-3 h-3"></i>
-        <span>健康管理</span>
+      <button type="button" class="ex-cat" role="listitem" aria-label="记一笔学习支出">
+        <span class="ex-cat-ic"><i data-lucide="book-open" class="w-5 h-5"></i></span>
+        <span class="ex-cat-lbl">学习</span>
       </button>
-      <button type="button" data-dom-id="tpl-4" role="radio" aria-checked="false" class="lf-tpl">
-        <i data-lucide="check" class="lf-tpl-check w-3 h-3"></i>
-        <span>自定义</span>
+      <button type="button" class="ex-cat" role="listitem" aria-label="记一笔日用支出">
+        <span class="ex-cat-ic"><i data-lucide="shopping-bag" class="w-5 h-5"></i></span>
+        <span class="ex-cat-lbl">日用</span>
+      </button>
+      <button type="button" class="ex-cat" role="listitem" aria-label="记一笔娱乐支出">
+        <span class="ex-cat-ic"><i data-lucide="gamepad-2" class="w-5 h-5"></i></span>
+        <span class="ex-cat-lbl">娱乐</span>
+      </button>
+      <button type="button" class="ex-cat" role="listitem" aria-label="记一笔收入">
+        <span class="ex-cat-ic"><i data-lucide="trending-up" class="w-5 h-5"></i></span>
+        <span class="ex-cat-lbl">收入</span>
       </button>
     </div>
-  </section>
 
-  <!-- 目标名称 -->
-  <section class="lf-section">
-    <label class="lf-label" for="goal-name">目标名称</label>
-    <input id="goal-name" data-dom-id="goal-name" type="text" class="lf-input" placeholder="如：通过 2027 省考" maxlength="30" autocomplete="off" enterkeyhint="next">
-  </section>
-
-  <!-- 关键结果（可选） -->
-  <section class="lf-section">
-    <label class="lf-label" for="kr-list">关键结果（可选）</label>
-    <div class="lf-kr-card" id="kr-list" data-dom-id="kr-list">
-      <div class="lf-kr-row" data-dom-id="kr-row-1">
-        <span class="lf-kr-index">KR 1</span>
-        <input type="text" class="lf-kr-input" placeholder="输入关键结果，如：完成真题 20 套" maxlength="60" autocomplete="off">
-        <button type="button" data-dom-id="kr-remove-1" aria-label="删除该关键结果" class="lf-kr-del"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+    <!-- 4 收支列表：按日分组 · 细线分隔 -->
+    <section class="ex-list" data-dom-id="expense-list" aria-label="收支流水">
+      <div class="ex-day">
+        <div class="ex-day-hdr">
+          <span class="ex-day-date">8月11日</span>
+          <span class="ex-day-tag">今天</span>
+        </div>
+        <div class="ex-rows">
+          <div class="ex-row">
+            <span class="ex-row-ic" aria-hidden="true"><i data-lucide="utensils" class="w-[18px] h-[18px]"></i></span>
+            <div class="ex-row-main">
+              <span class="ex-row-name">餐饮</span>
+              <span class="ex-row-note">早餐 · 7:40</span>
+            </div>
+            <span class="ex-row-amt ex-row-amt--expense">-¥32</span>
+          </div>
+          <div class="ex-row">
+            <span class="ex-row-ic" aria-hidden="true"><i data-lucide="book-open" class="w-[18px] h-[18px]"></i></span>
+            <div class="ex-row-main">
+              <span class="ex-row-name">学习</span>
+              <span class="ex-row-note">无</span>
+            </div>
+            <span class="ex-row-amt ex-row-amt--income">+¥0</span>
+          </div>
+        </div>
       </div>
-      <div class="lf-kr-row" data-dom-id="kr-row-2">
-        <span class="lf-kr-index">KR 2</span>
-        <input type="text" class="lf-kr-input" placeholder="输入关键结果" maxlength="60" autocomplete="off">
-        <button type="button" data-dom-id="kr-remove-2" aria-label="删除该关键结果" class="lf-kr-del"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+      <div class="ex-day">
+        <div class="ex-day-hdr">
+          <span class="ex-day-date">8月10日</span>
+        </div>
+        <div class="ex-rows">
+          <div class="ex-row">
+            <span class="ex-row-ic" aria-hidden="true"><i data-lucide="car" class="w-[18px] h-[18px]"></i></span>
+            <div class="ex-row-main">
+              <span class="ex-row-name">交通</span>
+              <span class="ex-row-note">地铁 · 8:05</span>
+            </div>
+            <span class="ex-row-amt ex-row-amt--expense">-¥6</span>
+          </div>
+          <div class="ex-row">
+            <span class="ex-row-ic" aria-hidden="true"><i data-lucide="shopping-bag" class="w-[18px] h-[18px]"></i></span>
+            <div class="ex-row-main">
+              <span class="ex-row-name">日用</span>
+              <span class="ex-row-note">洗衣液 · 19:30</span>
+            </div>
+            <span class="ex-row-amt ex-row-amt--expense">-¥45</span>
+          </div>
+        </div>
       </div>
-      <div class="lf-kr-row" data-dom-id="kr-row-3">
-        <span class="lf-kr-index">KR 3</span>
-        <input type="text" class="lf-kr-input" placeholder="输入关键结果" maxlength="60" autocomplete="off">
-        <button type="button" data-dom-id="kr-remove-3" aria-label="删除该关键结果" class="lf-kr-del"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-      </div>
-    </div>
-    <button type="button" id="kr-add" data-dom-id="kr-add" class="lf-add-kr"><i data-lucide="plus" class="w-3.5 h-3.5"></i>添加关键结果</button>
-    <p class="lf-hint">建议 2-3 条可衡量的结果，用于追踪目标进展</p>
-  </section>
+    </section>
+  </div>
 
-  <!-- 截止日期 -->
-  <section class="lf-section">
-    <span class="lf-label">截止日期</span>
-    <button type="button" data-dom-id="goal-due" class="lf-due">
-      <span>设定完成时间</span>
-      <span class="lf-due-value" id="goal-due-value" data-dom-id="goal-due-value">2027-03-31<i data-lucide="chevron-right" class="w-4 h-4 text-[var(--lifeflow-text-tertiary)]"></i></span>
-    </button>
-    <input type="date" id="goal-due-picker" hidden>
-  </section>
+  <!-- 5 底部主按钮「记一笔」（石墨黑填充 · 白字 · 圆角 8） -->
+  <button type="button" class="ex-add" data-dom-id="expense-add"><i data-lucide="plus" class="w-[18px] h-[18px]"></i>记一笔</button>
 
-  <!-- 创建目标 -->
-  <button type="button" data-dom-id="goal-submit" class="lf-btn-primary">创建目标</button>
-
-</div>
-
-<!-- 底部导航 4-tab（目标激活） -->
-<nav data-mobile-nav="global" id="bottom-nav" class="lf-tabbar-glass w-full max-w-md mx-auto h-[60px]"><div class="grid grid-cols-4 h-full"><a href="#" data-dom-id="nav-home" data-nav-key="home" data-active="false" class="min-w-0 flex flex-col items-center justify-center gap-1 h-full text-[var(--lifeflow-text-tertiary)]"><i data-lucide="home" class="w-5 h-5 shrink-0"></i><span class="text-[10.5px] leading-none whitespace-nowrap max-w-full truncate">首页</span></a><a href="#" data-dom-id="nav-goals" data-nav-key="goals" data-active="true" class="min-w-0 flex flex-col items-center justify-center gap-1 h-full text-[var(--lifeflow-primary)]"><i data-lucide="target" class="w-5 h-5 shrink-0"></i><span class="text-[10.5px] leading-none whitespace-nowrap max-w-full truncate font-semibold">目标</span></a><a href="#" data-dom-id="nav-schedule" data-nav-key="schedule" data-active="false" class="min-w-0 flex flex-col items-center justify-center gap-1 h-full text-[var(--lifeflow-text-tertiary)]"><i data-lucide="calendar-days" class="w-5 h-5 shrink-0"></i><span class="text-[10.5px] leading-none whitespace-nowrap max-w-full truncate">日程</span></a><a href="#" data-dom-id="nav-ideal" data-nav-key="ideal" data-active="false" class="min-w-0 flex flex-col items-center justify-center gap-1 h-full text-[var(--lifeflow-text-tertiary)]"><i data-lucide="sun" class="w-5 h-5 shrink-0"></i><span class="text-[10.5px] leading-none whitespace-nowrap max-w-full truncate">理想日</span></a></div></nav>
-
-<script>
-(function () {
-  'use strict';
-  function qs(s, el) { return (el || document).querySelector(s); }
-  function qsa(s, el) { return Array.prototype.slice.call((el || document).querySelectorAll(s)); }
-
-  /* 模板单选 */
-  var tplCards = qsa('.lf-tpl');
-  tplCards.forEach(function (card) {
-    card.addEventListener('click', function () {
-      tplCards.forEach(function (c) { c.classList.remove('is-selected'); c.setAttribute('aria-checked', 'false'); });
-      card.classList.add('is-selected');
-      card.setAttribute('aria-checked', 'true');
-    });
-  });
-
-  /* 关键结果：删除 + 添加 + 重新编号 */
-  var krList = qs('#kr-list');
-  function renumber() {
-    qsa('.lf-kr-row', krList).forEach(function (row, i) {
-      var index = row.querySelector('.lf-kr-index');
-      var del = row.querySelector('.lf-kr-del');
-      if (index) index.textContent = 'KR ' + (i + 1);
-      if (del) del.setAttribute('data-dom-id', 'kr-remove-' + (i + 1));
-    });
-  }
-  qsa('.lf-kr-del', krList).forEach(function (btn) {
-    btn.addEventListener('click', function () {
-      var row = btn.closest('.lf-kr-row');
-      if (row) { row.remove(); renumber(); }
-    });
-  });
-  var addBtn = qs('#kr-add');
-  if (addBtn) {
-    addBtn.addEventListener('click', function () {
-      if (!krList) return;
-      var row = document.createElement('div');
-      row.className = 'lf-kr-row';
-      row.innerHTML = '<span class="lf-kr-index">KR</span>' +
-        '<input type="text" class="lf-kr-input" placeholder="输入关键结果" maxlength="60" autocomplete="off">' +
-        '<button type="button" aria-label="删除该关键结果" class="lf-kr-del"><i data-lucide="trash-2" class="w-4 h-4"></i></button>';
-      row.querySelector('.lf-kr-del').addEventListener('click', function () { row.remove(); renumber(); });
-      krList.appendChild(row);
-      renumber();
-      if (window.lucide) { window.lucide.createIcons(); }
-      var input = row.querySelector('.lf-kr-input');
-      if (input) input.focus();
-    });
-  }
-  renumber();
-
-  /* 截止日期：点击唤起原生日期选择 */
-  var dueBtn = qs('#goal-due');
-  var dueValue = qs('#goal-due-value');
-  var duePicker = qs('#goal-due-picker');
-  if (dueBtn && duePicker && dueValue) {
-    dueBtn.addEventListener('click', function () {
-      try { duePicker.showPicker(); } catch (e) { duePicker.focus(); duePicker.click(); }
-    });
-    duePicker.addEventListener('change', function () {
-      if (duePicker.value) dueValue.firstChild.textContent = duePicker.value;
-    });
-  }
-})();
-</script>
+  <!-- 底部导航 4-tab（home 激活） -->
+  <nav data-mobile-nav="global" id="bottom-nav" class="lf-tabbar-glass w-full max-w-md mx-auto h-[60px]"><div class="grid grid-cols-4 h-full"><a href="#" data-dom-id="nav-home" data-nav-key="home" data-active="true" class="min-w-0 flex flex-col items-center justify-center gap-1 h-full text-[var(--lifeflow-primary)]"><i data-lucide="home" class="w-5 h-5 shrink-0"></i><span class="text-[10.5px] leading-none whitespace-nowrap max-w-full truncate font-semibold">首页</span></a><a href="#" data-dom-id="nav-goals" data-nav-key="goals" data-active="false" class="min-w-0 flex flex-col items-center justify-center gap-1 h-full text-[var(--lifeflow-text-tertiary)]"><i data-lucide="target" class="w-5 h-5 shrink-0"></i><span class="text-[10.5px] leading-none whitespace-nowrap max-w-full truncate">目标</span></a><a href="#" data-dom-id="nav-schedule" data-nav-key="schedule" data-active="false" class="min-w-0 flex flex-col items-center justify-center gap-1 h-full text-[var(--lifeflow-text-tertiary)]"><i data-lucide="calendar-days" class="w-5 h-5 shrink-0"></i><span class="text-[10.5px] leading-none whitespace-nowrap max-w-full truncate">日程</span></a><a href="#" data-dom-id="nav-ideal" data-nav-key="ideal" data-active="false" class="min-w-0 flex flex-col items-center justify-center gap-1 h-full text-[var(--lifeflow-text-tertiary)]"><i data-lucide="sun" class="w-5 h-5 shrink-0"></i><span class="text-[10.5px] leading-none whitespace-nowrap max-w-full truncate">理想日</span></a></div></nav>
+</main>
 <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
 <script>lucide.createIcons();</script>
 </body>

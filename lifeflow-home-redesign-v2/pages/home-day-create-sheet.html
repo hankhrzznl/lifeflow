@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="zh-CN" class="light">
+<html lang="zh-CN" class="light" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>新建目标</title>
+    <title>新建事项</title>
     <style id="theme-vars">
 /* LifeFlow 2.0 — 极简克制设计系统
    第一性原理：目标驱动的个人生活操作系统
@@ -436,242 +436,374 @@
     </style>
 </head>
 <body class="min-h-screen font-sans antialiased">
+    <style id="critical-layout">
+      /* ============================================================
+         LifeFlow「新建事项」半屏表单 — 极简克制风 · 静态 CSS 兜底
+         不依赖 Tailwind 运行时；所有布局与色彩均取自设计令牌
+         ============================================================ */
+      *, *::before, *::after { box-sizing: border-box; }
 
-<!-- 主布局静态 CSS 兜底：无 Tailwind 运行时亦保证页面可渲染 -->
-<style id="critical-layout">
-  * { box-sizing: border-box; }
-  html, body { margin: 0; padding: 0; }
-  body {
-    background: var(--lifeflow-background);
-    color: var(--lifeflow-text-primary);
-    font-family: var(--lifeflow-font-body);
-    font-size: 15px;
-    line-height: 1.5;
-    -webkit-font-smoothing: antialiased;
-    overflow-x: hidden;
-  }
-  button, input { font-family: inherit; }
-  .lf-page { max-width: 28rem; margin: 0 auto; padding: 12px 16px 100px; }
-  .lf-header { position: relative; display: flex; align-items: center; justify-content: center; height: 44px; }
-  .lf-back {
-    position: absolute; left: -4px; top: 50%; transform: translateY(-50%);
-    display: inline-flex; align-items: center; justify-content: center;
-    width: 40px; height: 40px; color: var(--lifeflow-text-primary);
-    background: transparent; border: 0; border-radius: var(--lifeflow-radius-full); cursor: pointer;
-  }
-  .lf-title { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -0.01em; color: var(--lifeflow-text-primary); }
-  .lf-section { margin-top: 32px; }
-  .lf-label { display: block; margin-bottom: 10px; font-size: 13px; font-weight: 500; color: var(--lifeflow-text-secondary); }
-  .lf-hint { margin: 8px 0 0; font-size: 12px; color: var(--lifeflow-text-tertiary); }
-  .lf-tpl-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
-  .lf-tpl {
-    position: relative; display: flex; align-items: center; justify-content: center;
-    min-height: 60px; padding: 10px 6px; font-size: 13px; line-height: 1.3; text-align: center;
-    color: var(--lifeflow-text-secondary); background: var(--lifeflow-card);
-    border: 1px solid var(--lifeflow-border-light); border-radius: var(--lifeflow-radius-lg);
-    cursor: pointer; -webkit-tap-highlight-color: transparent;
-  }
-  .lf-tpl.is-selected { color: var(--lifeflow-text-primary); font-weight: 600; border-color: var(--lifeflow-primary); background: var(--lifeflow-primary-light); }
-  .lf-tpl-check { display: none; position: absolute; top: 6px; right: 6px; color: var(--lifeflow-primary); }
-  .lf-tpl.is-selected .lf-tpl-check { display: block; }
-  .lf-input {
-    width: 100%; height: 48px; padding: 0 16px; font-size: 15px;
-    color: var(--lifeflow-text-primary); background: var(--lifeflow-card);
-    border: 1px solid var(--lifeflow-border-light); border-radius: var(--lifeflow-radius-md);
-    outline: none; -webkit-appearance: none; appearance: none;
-  }
-  .lf-input::placeholder { color: var(--lifeflow-text-tertiary); }
-  .lf-input:focus { border-color: var(--lifeflow-primary); }
-  .lf-kr-card { background: var(--lifeflow-card); border: 1px solid var(--lifeflow-border-light); border-radius: var(--lifeflow-radius-lg); overflow: hidden; }
-  .lf-kr-row { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 12px; }
-  .lf-kr-row + .lf-kr-row { border-top: 1px solid var(--lifeflow-border-light); }
-  .lf-kr-index { flex-shrink: 0; width: 34px; font-size: 13px; color: var(--lifeflow-text-tertiary); font-variant-numeric: tabular-nums; }
-  .lf-kr-input { flex: 1; min-width: 0; height: 52px; padding: 0; font-size: 15px; color: var(--lifeflow-text-primary); background: transparent; border: 0; outline: none; }
-  .lf-kr-input::placeholder { color: var(--lifeflow-text-tertiary); }
-  .lf-kr-del {
-    flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
-    width: 32px; height: 32px; color: var(--lifeflow-text-tertiary);
-    background: transparent; border: 0; border-radius: var(--lifeflow-radius-sm); cursor: pointer;
-  }
-  .lf-kr-del:hover, .lf-kr-del:active { color: var(--state-error); }
-  .lf-add-kr {
-    display: inline-flex; align-items: center; gap: 6px; margin-top: 12px; padding: 4px 0;
-    font-size: 13px; font-weight: 500; color: var(--lifeflow-primary);
-    background: transparent; border: 0; cursor: pointer;
-  }
-  .lf-due {
-    display: flex; align-items: center; justify-content: space-between;
-    width: 100%; min-height: 52px; padding: 0 16px; font-size: 15px;
-    color: var(--lifeflow-text-primary); text-align: left; background: var(--lifeflow-card);
-    border: 1px solid var(--lifeflow-border-light); border-radius: var(--lifeflow-radius-lg);
-    cursor: pointer; -webkit-tap-highlight-color: transparent;
-  }
-  .lf-due-value { display: inline-flex; align-items: center; gap: 4px; color: var(--lifeflow-text-primary); font-variant-numeric: tabular-nums; }
-  .lf-btn-primary {
-    display: flex; align-items: center; justify-content: center;
-    width: 100%; height: 48px; margin-top: 40px; font-size: 15px; font-weight: 600;
-    color: var(--lifeflow-text-inverse); background: var(--lifeflow-primary);
-    border: 0; border-radius: var(--lifeflow-radius-md); cursor: pointer;
-  }
-  .lf-btn-primary:active { opacity: 0.85; }
-  #bottom-nav {
-    position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
-    height: 60px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
-    background: var(--lifeflow-tabbar-bg); border-top: 1px solid var(--lifeflow-border);
-    padding-bottom: env(safe-area-inset-bottom, 0px);
-  }
-  #bottom-nav a { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-width: 0; color: var(--lifeflow-text-tertiary); text-decoration: none; }
-  #bottom-nav a[data-active="true"] { color: var(--lifeflow-primary); }
-  #bottom-nav span { font-size: 10.5px; line-height: 1; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
-</style>
+      html, body { min-height: 100%; }
 
-<div class="lf-page mx-auto max-w-md px-4 pt-3 pb-[100px]">
+      body {
+        margin: 0;
+        background: var(--lifeflow-background);
+        color: var(--lifeflow-text-primary);
+        font-family: var(--lifeflow-font-body);
+        -webkit-font-smoothing: antialiased;
+        overflow-x: hidden;
+      }
 
-  <!-- 顶部：返回 + 标题 -->
-  <header class="lf-header">
-    <button type="button" data-dom-id="back-goals" aria-label="返回" class="lf-back">
-      <i data-lucide="chevron-left" class="w-6 h-6"></i>
-    </button>
-    <h1 class="lf-title">新建目标</h1>
-  </header>
+      /* 底部半屏表单面板（浮动层：细顶线 + 极淡投影 alpha<=0.05） */
+      .create-sheet {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 40;
+        max-width: 28rem;
+        margin: 0 auto;
+        border-top: 1px solid var(--lifeflow-border-light);
+        border-radius: var(--lifeflow-radius-lg) var(--lifeflow-radius-lg) 0 0;
+        background: var(--lifeflow-card);
+        box-shadow: 0 -8px 32px color-mix(in srgb, var(--lifeflow-foreground) 5%, transparent);
+        max-height: 92vh;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+        font-family: var(--lifeflow-font-body);
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
+      }
 
-  <!-- 模板选择 -->
-  <section class="lf-section">
-    <h2 class="lf-label">选择模板</h2>
-    <div class="lf-tpl-grid" role="radiogroup" aria-label="选择模板">
-      <button type="button" data-dom-id="tpl-1" role="radio" aria-checked="true" class="lf-tpl is-selected">
-        <i data-lucide="check" class="lf-tpl-check w-3 h-3"></i>
-        <span>备考冲刺</span>
-      </button>
-      <button type="button" data-dom-id="tpl-2" role="radio" aria-checked="false" class="lf-tpl">
-        <i data-lucide="check" class="lf-tpl-check w-3 h-3"></i>
-        <span>习惯养成</span>
-      </button>
-      <button type="button" data-dom-id="tpl-3" role="radio" aria-checked="false" class="lf-tpl">
-        <i data-lucide="check" class="lf-tpl-check w-3 h-3"></i>
-        <span>健康管理</span>
-      </button>
-      <button type="button" data-dom-id="tpl-4" role="radio" aria-checked="false" class="lf-tpl">
-        <i data-lucide="check" class="lf-tpl-check w-3 h-3"></i>
-        <span>自定义</span>
-      </button>
-    </div>
-  </section>
+      /* drag handle 细横条 */
+      .sheet-handle {
+        width: 36px;
+        height: 4px;
+        margin: 8px auto 0;
+        border-radius: var(--lifeflow-radius-full);
+        background: var(--lifeflow-border);
+      }
 
-  <!-- 目标名称 -->
-  <section class="lf-section">
-    <label class="lf-label" for="goal-name">目标名称</label>
-    <input id="goal-name" data-dom-id="goal-name" type="text" class="lf-input" placeholder="如：通过 2027 省考" maxlength="30" autocomplete="off" enterkeyhint="next">
-  </section>
+      /* 标题行：居中标题 + 右上角关闭 */
+      .sheet-head {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 44px;
+        padding: 4px 12px 0;
+      }
+      .sheet-title {
+        margin: 0;
+        font-size: 18px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        line-height: 1.3;
+        color: var(--lifeflow-text-primary);
+      }
+      .sheet-close {
+        position: absolute;
+        top: 50%;
+        right: 8px;
+        transform: translateY(-50%);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        padding: 0;
+        border: none;
+        border-radius: var(--lifeflow-radius-md);
+        background: transparent;
+        color: var(--lifeflow-text-secondary);
+        cursor: pointer;
+        transition: background-color 0.15s ease, color 0.15s ease;
+      }
+      .sheet-close:active { background: var(--lifeflow-primary-light); }
 
-  <!-- 关键结果（可选） -->
-  <section class="lf-section">
-    <label class="lf-label" for="kr-list">关键结果（可选）</label>
-    <div class="lf-kr-card" id="kr-list" data-dom-id="kr-list">
-      <div class="lf-kr-row" data-dom-id="kr-row-1">
-        <span class="lf-kr-index">KR 1</span>
-        <input type="text" class="lf-kr-input" placeholder="输入关键结果，如：完成真题 20 套" maxlength="60" autocomplete="off">
-        <button type="button" data-dom-id="kr-remove-1" aria-label="删除该关键结果" class="lf-kr-del"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-      </div>
-      <div class="lf-kr-row" data-dom-id="kr-row-2">
-        <span class="lf-kr-index">KR 2</span>
-        <input type="text" class="lf-kr-input" placeholder="输入关键结果" maxlength="60" autocomplete="off">
-        <button type="button" data-dom-id="kr-remove-2" aria-label="删除该关键结果" class="lf-kr-del"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-      </div>
-      <div class="lf-kr-row" data-dom-id="kr-row-3">
-        <span class="lf-kr-index">KR 3</span>
-        <input type="text" class="lf-kr-input" placeholder="输入关键结果" maxlength="60" autocomplete="off">
-        <button type="button" data-dom-id="kr-remove-3" aria-label="删除该关键结果" class="lf-kr-del"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-      </div>
-    </div>
-    <button type="button" id="kr-add" data-dom-id="kr-add" class="lf-add-kr"><i data-lucide="plus" class="w-3.5 h-3.5"></i>添加关键结果</button>
-    <p class="lf-hint">建议 2-3 条可衡量的结果，用于追踪目标进展</p>
-  </section>
+      /* 内容容器：mx-auto max-w-md px-4 pt-3 pb-[40px]（safe-area 由 inline 兜底） */
+      .sheet-inner {
+        max-width: 28rem;
+        margin: 0 auto;
+        padding: 12px 16px 40px;
+      }
 
-  <!-- 截止日期 -->
-  <section class="lf-section">
-    <span class="lf-label">截止日期</span>
-    <button type="button" data-dom-id="goal-due" class="lf-due">
-      <span>设定完成时间</span>
-      <span class="lf-due-value" id="goal-due-value" data-dom-id="goal-due-value">2027-03-31<i data-lucide="chevron-right" class="w-4 h-4 text-[var(--lifeflow-text-tertiary)]"></i></span>
-    </button>
-    <input type="date" id="goal-due-picker" hidden>
-  </section>
+      /* 标题输入：1px 细边框 / 圆角 8 */
+      .title-input {
+        display: block;
+        width: 100%;
+        margin-top: 12px;
+        padding: 12px 14px;
+        border: 1px solid var(--lifeflow-border-light);
+        border-radius: var(--lifeflow-radius-md);
+        background: transparent;
+        color: var(--lifeflow-text-primary);
+        font-family: var(--lifeflow-font-body);
+        font-size: var(--lifeflow-font-size-body);
+        line-height: 1.5;
+        -webkit-appearance: none;
+        appearance: none;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease;
+      }
+      .title-input::placeholder { color: var(--lifeflow-text-tertiary); }
+      .title-input:focus {
+        outline: none;
+        border-color: var(--lifeflow-ring);
+        box-shadow: 0 0 0 3px var(--lifeflow-primary-light);
+      }
 
-  <!-- 创建目标 -->
-  <button type="button" data-dom-id="goal-submit" class="lf-btn-primary">创建目标</button>
+      /* 分区小标题（次级 13） */
+      .section-caption {
+        margin: 20px 0 8px;
+        font-size: var(--lifeflow-font-size-sm);
+        font-weight: 500;
+        letter-spacing: 0.01em;
+        color: var(--lifeflow-text-secondary);
+      }
 
-</div>
+      /* 时间卡片：白底 1px 细边框，行间细线分隔 */
+      .field-card {
+        border: 1px solid var(--lifeflow-border-light);
+        border-radius: var(--lifeflow-radius-lg);
+        background: var(--lifeflow-card);
+        overflow: hidden;
+      }
+      .field-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+        padding: 14px 16px;
+        border: none;
+        background: transparent;
+        color: var(--lifeflow-text-primary);
+        font-family: var(--lifeflow-font-body);
+        text-align: left;
+        cursor: pointer;
+      }
+      .field-row + .field-row { border-top: 1px solid var(--lifeflow-border-light); }
+      .field-row:active { background: var(--lifeflow-muted); }
+      .field-row-icon { width: 16px; height: 16px; color: var(--lifeflow-text-tertiary); flex-shrink: 0; }
+      .field-row-label { font-size: var(--lifeflow-font-size-sm); color: var(--lifeflow-text-secondary); }
+      .field-row-spacer { flex: 1; min-width: 8px; }
+      .field-row-value {
+        font-size: var(--lifeflow-font-size-body);
+        color: var(--lifeflow-text-primary);
+        font-variant-numeric: tabular-nums;
+        font-feature-settings: "tnum";
+      }
+      .field-row-chevron { width: 16px; height: 16px; color: var(--lifeflow-text-tertiary); flex-shrink: 0; }
 
-<!-- 底部导航 4-tab（目标激活） -->
-<nav data-mobile-nav="global" id="bottom-nav" class="lf-tabbar-glass w-full max-w-md mx-auto h-[60px]"><div class="grid grid-cols-4 h-full"><a href="#" data-dom-id="nav-home" data-nav-key="home" data-active="false" class="min-w-0 flex flex-col items-center justify-center gap-1 h-full text-[var(--lifeflow-text-tertiary)]"><i data-lucide="home" class="w-5 h-5 shrink-0"></i><span class="text-[10.5px] leading-none whitespace-nowrap max-w-full truncate">首页</span></a><a href="#" data-dom-id="nav-goals" data-nav-key="goals" data-active="true" class="min-w-0 flex flex-col items-center justify-center gap-1 h-full text-[var(--lifeflow-primary)]"><i data-lucide="target" class="w-5 h-5 shrink-0"></i><span class="text-[10.5px] leading-none whitespace-nowrap max-w-full truncate font-semibold">目标</span></a><a href="#" data-dom-id="nav-schedule" data-nav-key="schedule" data-active="false" class="min-w-0 flex flex-col items-center justify-center gap-1 h-full text-[var(--lifeflow-text-tertiary)]"><i data-lucide="calendar-days" class="w-5 h-5 shrink-0"></i><span class="text-[10.5px] leading-none whitespace-nowrap max-w-full truncate">日程</span></a><a href="#" data-dom-id="nav-ideal" data-nav-key="ideal" data-active="false" class="min-w-0 flex flex-col items-center justify-center gap-1 h-full text-[var(--lifeflow-text-tertiary)]"><i data-lucide="sun" class="w-5 h-5 shrink-0"></i><span class="text-[10.5px] leading-none whitespace-nowrap max-w-full truncate">理想日</span></a></div></nav>
+      /* 归属：细线分段器，激活项石墨黑底白字 */
+      .seg {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 2px;
+        padding: 2px;
+        border: 1px solid var(--lifeflow-border-light);
+        border-radius: var(--lifeflow-radius-md);
+        background: var(--lifeflow-muted);
+      }
+      .seg-item {
+        min-width: 0;
+        height: 34px;
+        padding: 0 2px;
+        border: none;
+        border-radius: 4px;
+        background: transparent;
+        color: var(--lifeflow-text-secondary);
+        font-family: var(--lifeflow-font-body);
+        font-size: var(--lifeflow-font-size-sm);
+        font-weight: 500;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        cursor: pointer;
+        transition: background-color 0.15s ease, color 0.15s ease;
+      }
+      .seg-item.is-active {
+        background: var(--lifeflow-primary);
+        color: var(--lifeflow-primary-foreground);
+      }
 
-<script>
-(function () {
-  'use strict';
-  function qs(s, el) { return (el || document).querySelector(s); }
-  function qsa(s, el) { return Array.prototype.slice.call((el || document).querySelectorAll(s)); }
+      /* 挂靠目标：折叠行 + 展开面板 */
+      .goal-block { margin-top: 20px; }
+      .goal-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+        padding: 12px 14px;
+        border: 1px solid var(--lifeflow-border-light);
+        border-radius: var(--lifeflow-radius-md);
+        background: var(--lifeflow-card);
+        color: var(--lifeflow-text-primary);
+        font-family: var(--lifeflow-font-body);
+        text-align: left;
+        cursor: pointer;
+      }
+      .goal-row:active { background: var(--lifeflow-muted); }
+      .goal-row-main { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+      .goal-row-label { font-size: var(--lifeflow-font-size-sm); color: var(--lifeflow-text-secondary); }
+      .goal-row-value { font-size: var(--lifeflow-font-size-body); color: var(--lifeflow-text-primary); }
+      .goal-chevron { width: 16px; height: 16px; color: var(--lifeflow-text-tertiary); flex-shrink: 0; transition: transform 0.18s ease; }
+      .goal-row.is-open .goal-chevron { transform: rotate(90deg); }
+      .goal-panel {
+        margin-top: 6px;
+        border: 1px solid var(--lifeflow-border-light);
+        border-radius: var(--lifeflow-radius-md);
+        background: var(--lifeflow-card);
+        overflow: hidden;
+      }
+      .goal-opt {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+        padding: 11px 14px;
+        border: none;
+        background: transparent;
+        color: var(--lifeflow-text-primary);
+        font-family: var(--lifeflow-font-body);
+        font-size: var(--lifeflow-font-size-body);
+        text-align: left;
+        cursor: pointer;
+      }
+      .goal-opt + .goal-opt { border-top: 1px solid var(--lifeflow-border-light); }
+      .goal-opt-icon { width: 16px; height: 16px; color: var(--lifeflow-text-tertiary); flex-shrink: 0; }
+      .goal-opt.is-selected { font-weight: 500; }
+      .goal-opt.is-selected .goal-opt-icon { color: var(--lifeflow-primary); }
 
-  /* 模板单选 */
-  var tplCards = qsa('.lf-tpl');
-  tplCards.forEach(function (card) {
-    card.addEventListener('click', function () {
-      tplCards.forEach(function (c) { c.classList.remove('is-selected'); c.setAttribute('aria-checked', 'false'); });
-      card.classList.add('is-selected');
-      card.setAttribute('aria-checked', 'true');
-    });
-  });
+      /* 主按钮：石墨黑填充 / 圆角 8 / 白字 */
+      .submit-btn {
+        width: 100%;
+        height: 48px;
+        margin-top: 24px;
+        border: none;
+        border-radius: var(--lifeflow-radius-md);
+        background: var(--lifeflow-primary);
+        color: var(--lifeflow-primary-foreground);
+        font-family: var(--lifeflow-font-body);
+        font-size: var(--lifeflow-font-size-body);
+        font-weight: 600;
+        letter-spacing: 0.01em;
+        cursor: pointer;
+        transition: background-color 0.15s ease;
+      }
+      .submit-btn:active { background: var(--lifeflow-primary-hover); }
 
-  /* 关键结果：删除 + 添加 + 重新编号 */
-  var krList = qs('#kr-list');
-  function renumber() {
-    qsa('.lf-kr-row', krList).forEach(function (row, i) {
-      var index = row.querySelector('.lf-kr-index');
-      var del = row.querySelector('.lf-kr-del');
-      if (index) index.textContent = 'KR ' + (i + 1);
-      if (del) del.setAttribute('data-dom-id', 'kr-remove-' + (i + 1));
-    });
-  }
-  qsa('.lf-kr-del', krList).forEach(function (btn) {
-    btn.addEventListener('click', function () {
-      var row = btn.closest('.lf-kr-row');
-      if (row) { row.remove(); renumber(); }
-    });
-  });
-  var addBtn = qs('#kr-add');
-  if (addBtn) {
-    addBtn.addEventListener('click', function () {
-      if (!krList) return;
-      var row = document.createElement('div');
-      row.className = 'lf-kr-row';
-      row.innerHTML = '<span class="lf-kr-index">KR</span>' +
-        '<input type="text" class="lf-kr-input" placeholder="输入关键结果" maxlength="60" autocomplete="off">' +
-        '<button type="button" aria-label="删除该关键结果" class="lf-kr-del"><i data-lucide="trash-2" class="w-4 h-4"></i></button>';
-      row.querySelector('.lf-kr-del').addEventListener('click', function () { row.remove(); renumber(); });
-      krList.appendChild(row);
-      renumber();
-      if (window.lucide) { window.lucide.createIcons(); }
-      var input = row.querySelector('.lf-kr-input');
-      if (input) input.focus();
-    });
-  }
-  renumber();
+      /* 折叠面板显隐 */
+      [hidden] { display: none !important; }
 
-  /* 截止日期：点击唤起原生日期选择 */
-  var dueBtn = qs('#goal-due');
-  var dueValue = qs('#goal-due-value');
-  var duePicker = qs('#goal-due-picker');
-  if (dueBtn && duePicker && dueValue) {
-    dueBtn.addEventListener('click', function () {
-      try { duePicker.showPicker(); } catch (e) { duePicker.focus(); duePicker.click(); }
-    });
-    duePicker.addEventListener('change', function () {
-      if (duePicker.value) dueValue.firstChild.textContent = duePicker.value;
-    });
-  }
-})();
-</script>
-<script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
-<script>lucide.createIcons();</script>
+      /* 图标尺寸 */
+      .icon-md { width: 18px; height: 18px; }
+    </style>
+
+    <main>
+      <!-- 新建事项 · 底部半屏表单 -->
+      <section class="create-sheet" data-dom-id="sheet-create" role="dialog" aria-modal="true" aria-label="新建事项">
+        <div class="sheet-handle" aria-hidden="true"></div>
+
+        <div class="sheet-head">
+          <h1 class="sheet-title" id="title-create" data-dom-id="title-create">新建事项</h1>
+          <button type="button" class="sheet-close" data-dom-id="sheet-close" aria-label="关闭" title="关闭"><i data-lucide="x" class="icon-md" aria-hidden="true"></i></button>
+        </div>
+
+        <div class="sheet-inner mx-auto max-w-md px-4 pt-3 pb-[40px]" style="padding-bottom: calc(40px + env(safe-area-inset-bottom, 0px))">
+
+          <input id="input-create" data-dom-id="input-create" type="text" class="title-input" placeholder="今天最重要的一件事…" aria-label="事项名称" autocomplete="off" enterkeyhint="done">
+
+          <div class="section-caption">时间</div>
+          <div class="field-card" data-dom-id="task-time-fields">
+            <button type="button" class="field-row" data-dom-id="task-start-time" aria-label="开始时间：09:00">
+              <i data-lucide="clock" class="field-row-icon" aria-hidden="true"></i>
+              <span class="field-row-label">开始时间</span>
+              <span class="field-row-spacer"></span>
+              <span class="field-row-value">09:00</span>
+              <i data-lucide="chevron-right" class="field-row-chevron" aria-hidden="true"></i>
+            </button>
+            <button type="button" class="field-row" data-dom-id="task-end-time" aria-label="结束时间：10:00">
+              <i data-lucide="clock" class="field-row-icon" aria-hidden="true"></i>
+              <span class="field-row-label">结束时间</span>
+              <span class="field-row-spacer"></span>
+              <span class="field-row-value">10:00</span>
+              <i data-lucide="chevron-right" class="field-row-chevron" aria-hidden="true"></i>
+            </button>
+          </div>
+
+          <div class="section-caption">归属</div>
+          <div class="seg" role="radiogroup" aria-label="事项归属" data-dom-id="task-scope">
+            <button type="button" role="radio" aria-checked="true" class="seg-item is-active" data-dom-id="task-scope-top3">今日三件事</button>
+            <button type="button" role="radio" aria-checked="false" class="seg-item" data-dom-id="task-scope-goal">目标行动</button>
+            <button type="button" role="radio" aria-checked="false" class="seg-item" data-dom-id="task-scope-habit">习惯打卡</button>
+            <button type="button" role="radio" aria-checked="false" class="seg-item" data-dom-id="task-scope-schedule">日程</button>
+          </div>
+
+          <div class="goal-block">
+            <button type="button" class="goal-row" data-dom-id="task-goal-attach" aria-expanded="false" aria-controls="goal-panel">
+              <span class="goal-row-main">
+                <span class="goal-row-label">挂靠目标</span>
+                <span class="goal-row-value" id="goal-selected">省考 · 判断推理</span>
+              </span>
+              <i data-lucide="chevron-right" class="goal-chevron" aria-hidden="true"></i>
+            </button>
+            <div class="goal-panel" id="goal-panel" data-dom-id="task-goal-panel" hidden>
+              <button type="button" class="goal-opt is-selected" data-goal="省考 · 判断推理"><i data-lucide="target" class="goal-opt-icon" aria-hidden="true"></i>省考 · 判断推理</button>
+              <button type="button" class="goal-opt" data-goal="省考 · 言语理解"><i data-lucide="target" class="goal-opt-icon" aria-hidden="true"></i>省考 · 言语理解</button>
+              <button type="button" class="goal-opt" data-goal="申论 · 大作文框架"><i data-lucide="target" class="goal-opt-icon" aria-hidden="true"></i>申论 · 大作文框架</button>
+              <button type="button" class="goal-opt" data-goal="不挂靠"><i data-lucide="target" class="goal-opt-icon" aria-hidden="true"></i>不挂靠</button>
+            </div>
+          </div>
+
+          <button type="button" class="submit-btn" data-dom-id="submit-create">添加事项</button>
+
+        </div>
+      </section>
+    </main>
+
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <script>lucide.createIcons();</script>
+    <script>
+    (function () {
+      /* 归属分段器：细线分段单选（静态示意） */
+      document.querySelectorAll('.seg-item').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          document.querySelectorAll('.seg-item').forEach(function (x) {
+            x.classList.remove('is-active');
+            x.setAttribute('aria-checked', 'false');
+          });
+          btn.classList.add('is-active');
+          btn.setAttribute('aria-checked', 'true');
+        });
+      });
+
+      /* 挂靠目标：折叠展开 + 选项选择 */
+      var goalRow = document.querySelector('[data-dom-id="task-goal-attach"]');
+      var goalPanel = document.getElementById('goal-panel');
+      if (goalRow && goalPanel) {
+        goalRow.addEventListener('click', function () {
+          var willOpen = goalPanel.hidden;
+          goalPanel.hidden = !willOpen;
+          goalRow.classList.toggle('is-open', willOpen);
+          goalRow.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+        });
+      }
+      document.querySelectorAll('.goal-opt').forEach(function (opt) {
+        opt.addEventListener('click', function () {
+          document.querySelectorAll('.goal-opt').forEach(function (x) { x.classList.remove('is-selected'); });
+          opt.classList.add('is-selected');
+          var label = opt.getAttribute('data-goal') || opt.textContent.trim();
+          var target = document.getElementById('goal-selected');
+          if (target) target.textContent = label;
+          if (goalPanel) goalPanel.hidden = true;
+          if (goalRow) {
+            goalRow.classList.remove('is-open');
+            goalRow.setAttribute('aria-expanded', 'false');
+          }
+        });
+      });
+    })();
+    </script>
 </body>
 </html>

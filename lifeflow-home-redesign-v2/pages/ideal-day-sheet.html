@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>理想日 · 段落配置</title>
+    <style id="theme-vars">
+/* LifeFlow 2.0 — 极简克制设计系统
+   第一性原理：目标驱动的个人生活操作系统
+   视觉原则：大留白 · 细线分层 · 单主色 · 克制圆角 · 精确排版
+   表面模型：静态内容用边框/背景分层，浮动层才允许阴影
+   色彩模型：石墨黑主色 + 中性灰阶 + 语义状态色（无模块彩）
+*/
+
+/* === LIGHT MODE（日间 · 极简克制） === */
+:root {
+  /* SURFACE & TEXT */
+  --lifeflow-background: #F6F6F7;
+  --lifeflow-foreground: #1A1A1E;
+  --lifeflow-card: #FFFFFF;
+  --lifeflow-card-foreground: #1A1A1E;
+  --lifeflow-popover: #FFFFFF;
+  --lifeflow-popover-foreground: #1A1A1E;
+  --lifeflow-muted: #F0F0F2;
+  --lifeflow-muted-foreground: #6E6E76;
+  --lifeflow-border: rgba(26,26,30,0.10);
+  --lifeflow-border-light: rgba(26,26,30,0.055);
+  --lifeflow-border-dashed: rgba(26,26,30,0.16);
+  --lifeflow-input: rgba(26,26,30,0.08);
+  --lifeflow-ring: #1A1A1E;
+
+  /* BRAND — 单主色（石墨黑，克制使用） */
+  --lifeflow-primary: #1A1A1E;
+  --lifeflow-primary-hover: #000000;
+  --lifeflow-primary-light: rgba(26,26,30,0.06);
+  --lifeflow-primary-foreground: #FFFFFF;
+
+  /* PROGRESS */
+  --lifeflow-knit-thread: #1A1A1E;
+  --lifeflow-knit-thread-completed: #16A34A;
+  --lifeflow-knit-thread-partial: #D97706;
+  --lifeflow-knit-bg: #EDEDEF;
+  --lifeflow-knit-grid: rgba(26,26,30,0.07);
+
+  /* STATE — 语义状态色（仅用于状态，不用于身份标识） */
+  --state-success: #16A34A;
+  --state-success-light: rgba(22,163,74,0.08);
+  --state-warning: #D97706;
+  --state-warning-light: rgba(217,119,6,0.08);
+  --state-error: #DC2626;
+  --state-error-light: rgba(220,38,38,0.08);
+  --state-info: #2563EB;
+  --state-info-light: rgba(37,99,235,0.08);
+
+  /* TEXT */
+  --lifeflow-text-primary: #1A1A1E;
+  --lifeflow-text-secondary: #55555E;
+  --lifeflow-text-tertiary: #8A8A93;
+  --lifeflow-text-disabled: #B8B8BF;
+  --lifeflow-text-inverse: #FFFFFF;
+
+  /* SHADOWS — 静态表面走边框，浮动层才用阴影（alpha <= 0.06） */
+  --lifeflow-shadow-1: 0 1px 2px rgba(26,26,30,0.04);
+  --lifeflow-shadow-2: 0 4px 16px rgba(26,26,30,0.06);
+  --lifeflow-shadow-3: 0 12px 32px rgba(26,26,30,0.10);
+  --lifeflow-shadow-knit: none;
+
+  /* TAB BAR — 白底细顶线 */
+  --lifeflow-tabbar-bg: rgba(255,255,255,0.92);
+  --lifeflow-tabbar-blur: 16px;
+  --lifeflow-tabbar-blur-saturate: 100%;
+
+  /* AI BALL */
+  --lifeflow-ai-ball: #1A1A1E;
+
+  /* TYPOGRAPHY — 精确排版：收紧字距、克制字重 */
+  --lifeflow-font-display: -apple-system, BlinkMacSystemFont, "SF Pro SC", "PingFang SC", "Noto Sans SC", "Helvetica Neue", "Microsoft YaHei", sans-serif;
+  --lifeflow-font-body: -apple-system, BlinkMacSystemFont, "SF Pro SC", "PingFang SC", "Noto Sans SC", "Helvetica Neue", "Microsoft YaHei", sans-serif;
+  --lifeflow-font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+
+  --lifeflow-font-size-display: 32px;
+  --lifeflow-font-size-h1: 26px;
+  --lifeflow-font-size-h2: 20px;
+  --lifeflow-font-size-h3: 16px;
+  --lifeflow-font-size-body: 15px;
+  --lifeflow-font-size-sm: 13px;
+  --lifeflow-font-size-caption: 12px;
+
+  /* SPACING */
+  --lifeflow-space-xs: 4px;
+  --lifeflow-space-sm: 8px;
+  --lifeflow-space-md: 12px;
+  --lifeflow-space-lg: 16px;
+  --lifeflow-space-xl: 24px;
+  --lifeflow-space-2xl: 32px;
+
+  /* RADIUS — 克制圆角：sm 4 / md 8 / lg 12 / full */
+  --lifeflow-radius-sm: 4px;
+  --lifeflow-radius-md: 8px;
+  --lifeflow-radius-lg: 12px;
+  --lifeflow-radius-xl: 12px;
+  --lifeflow-radius-full: 9999px;
+
+  /* PORTABLE ALIASES */
+  --background: var(--lifeflow-background);
+  --foreground: var(--lifeflow-foreground);
+  --card: var(--lifeflow-card);
+  --card-foreground: var(--lifeflow-card-foreground);
+  --popover: var(--lifeflow-popover);
+  --popover-foreground: var(--lifeflow-popover-foreground);
+  --primary: var(--lifeflow-primary);
+  --primary-foreground: var(--lifeflow-primary-foreground);
+  --muted: var(--lifeflow-muted);
+  --muted-foreground: var(--lifeflow-muted-foreground);
+  --border: var(--lifeflow-border);
+  --input: var(--lifeflow-input);
+  --ring: var(--lifeflow-ring);
+  --radius-sm: var(--lifeflow-radius-sm);
+  --radius-md: var(--lifeflow-radius-md);
+  --radius-lg: var(--lifeflow-radius-lg);
+  --color-background: var(--lifeflow-background);
+  --color-foreground: var(--lifeflow-foreground);
+  --color-card: var(--lifeflow-card);
+  --color-card-foreground: var(--lifeflow-card-foreground);
+  --color-popover: var(--lifeflow-popover);
+  --color-popover-foreground: var(--lifeflow-popover-foreground);
+  --color-primary: var(--lifeflow-primary);
+  --color-primary-foreground: var(--lifeflow-primary-foreground);
+  --color-muted: var(--lifeflow-muted);
+  --color-muted-foreground: var(--lifeflow-muted-foreground);
+  --color-border: var(--lifeflow-border);
+  --color-input: var(--lifeflow-input);
+  --color-ring: var(--lifeflow-ring);
+  --color-text-primary: var(--lifeflow-text-primary);
+  --color-text-secondary: var(--lifeflow-text-secondary);
+  --color-text-tertiary: var(--lifeflow-text-tertiary);
+  --color-text-disabled: var(--lifeflow-text-disabled);
+  --color-surface-card: var(--lifeflow-card);
+  --color-surface-muted: var(--lifeflow-muted);
+}
+
+/* === DARK MODE（夜间 · 深空石墨） === */
+.dark {
+  --lifeflow-background: #0E0E11;
+  --lifeflow-foreground: #F2F2F4;
+  --lifeflow-card: #16161A;
+  --lifeflow-card-foreground: #F2F2F4;
+  --lifeflow-popover: #1C1C21;
+  --lifeflow-popover-foreground: #F2F2F4;
+  --lifeflow-muted: #1E1E23;
+  --lifeflow-muted-foreground: rgba(242,242,244,0.55);
+  --lifeflow-border: rgba(255,255,255,0.10);
+  --lifeflow-border-light: rgba(255,255,255,0.06);
+  --lifeflow-border-dashed: rgba(255,255,255,0.18);
+  --lifeflow-input: rgba(255,255,255,0.10);
+  --lifeflow-ring: #F2F2F4;
+
+  --lifeflow-primary: #F2F2F4;
+  --lifeflow-primary-hover: #FFFFFF;
+  --lifeflow-primary-light: rgba(255,255,255,0.09);
+  --lifeflow-primary-foreground: #0E0E11;
+
+  --lifeflow-knit-thread: #F2F2F4;
+  --lifeflow-knit-thread-completed: #34D399;
+  --lifeflow-knit-thread-partial: #FBBF24;
+  --lifeflow-knit-bg: rgba(255,255,255,0.10);
+  --lifeflow-knit-grid: rgba(255,255,255,0.07);
+
+  --state-success: #34D399;
+  --state-success-light: rgba(52,211,153,0.12);
+  --state-warning: #FBBF24;
+  --state-warning-light: rgba(251,191,36,0.12);
+  --state-error: #F87171;
+  --state-error-light: rgba(248,113,113,0.12);
+  --state-info: #60A5FA;
+  --state-info-light: rgba(96,165,250,0.12);
+
+  --lifeflow-text-primary: #F2F2F4;
+  --lifeflow-text-secondary: rgba(242,242,244,0.68);
+  --lifeflow-text-tertiary: rgba(242,242,244,0.42);
+  --lifeflow-text-disabled: rgba(242,242,244,0.28);
+  --lifeflow-text-inverse: #0E0E11;
+
+  --lifeflow-shadow-1: 0 1px 2px rgba(0,0,0,0.30);
+  --lifeflow-shadow-2: 0 4px 16px rgba(0,0,0,0.40);
+  --lifeflow-shadow-3: 0 12px 32px rgba(0,0,0,0.55);
+  --lifeflow-shadow-knit: none;
+
+  --lifeflow-tabbar-bg: rgba(14,14,17,0.88);
+  --lifeflow-tabbar-blur: 16px;
+  --lifeflow-tabbar-blur-saturate: 100%;
+
+  --lifeflow-ai-ball: #F2F2F4;
+}
+
+/* === TYPOGRAPHY UTILITY CLASSES === */
+.lf-display {
+  font-family: var(--lifeflow-font-display);
+  font-size: var(--lifeflow-font-size-display);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.lf-h1 {
+  font-family: var(--lifeflow-font-display);
+  font-size: var(--lifeflow-font-size-h1);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+
+.lf-h2 {
+  font-family: var(--lifeflow-font-display);
+  font-size: var(--lifeflow-font-size-h2);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 1.3;
+}
+
+.lf-h3 {
+  font-family: var(--lifeflow-font-body);
+  font-size: var(--lifeflow-font-size-h3);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.4;
+}
+
+.lf-body {
+  font-family: var(--lifeflow-font-body);
+  font-size: var(--lifeflow-font-size-body);
+  font-weight: 400;
+  line-height: 1.55;
+}
+
+.lf-body-sm {
+  font-family: var(--lifeflow-font-body);
+  font-size: var(--lifeflow-font-size-sm);
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.lf-caption {
+  font-family: var(--lifeflow-font-body);
+  font-size: var(--lifeflow-font-size-caption);
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.lf-mono {
+  font-family: var(--lifeflow-font-mono);
+  font-size: var(--lifeflow-font-size-sm);
+  font-weight: 400;
+  line-height: 1.6;
+}
+
+/* === PROGRESS BAR（细胶囊） === */
+.knit-track {
+  position: relative;
+  height: 5px;
+  border-radius: var(--lifeflow-radius-full);
+  overflow: hidden;
+  background: var(--lifeflow-knit-bg);
+}
+
+.knit-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  border-radius: var(--lifeflow-radius-full);
+  background: var(--lifeflow-knit-thread);
+  z-index: 2;
+  transition: width 0.5s ease-in-out;
+}
+
+.knit-fill--done { background: var(--lifeflow-knit-thread-completed); }
+.knit-fill--partial { background: var(--lifeflow-knit-thread-partial); }
+
+.knit-yarn { display: none; }
+
+.knit-percent {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 4;
+  font-family: var(--lifeflow-font-body);
+  font-size: var(--lifeflow-font-size-sm);
+  font-weight: 600;
+  color: var(--lifeflow-text-primary);
+  line-height: 1;
+}
+
+/* === TAB BAR（白底细顶线，跟随模式） === */
+.lf-tabbar-glass {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 40;
+  border-top: 1px solid var(--lifeflow-border);
+  background: var(--lifeflow-tabbar-bg);
+  -webkit-backdrop-filter: saturate(var(--lifeflow-tabbar-blur-saturate)) blur(var(--lifeflow-tabbar-blur));
+  backdrop-filter: saturate(var(--lifeflow-tabbar-blur-saturate)) blur(var(--lifeflow-tabbar-blur));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* === 极简通用组件 === */
+/* 细线分隔列表（克制分割线） */
+.lf-list-divider > * + * {
+  border-top: 1px solid var(--lifeflow-border-light);
+}
+
+/* 卡片：静态内容用 1px 细边框 + 极淡阴影，不靠重阴影 */
+.lf-surface {
+  background: var(--lifeflow-card);
+  border: 1px solid var(--lifeflow-border-light);
+  border-radius: var(--lifeflow-radius-lg);
+}
+
+/* 数字对齐（时间/金额/进度） */
+.lf-tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+/* 大数字（统计强调） */
+.lf-stat {
+  font-family: var(--lifeflow-font-display);
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  @theme inline {
+    --color-background: var(--lifeflow-background);
+    --color-foreground: var(--lifeflow-foreground);
+    --color-card: var(--lifeflow-card);
+    --color-card-foreground: var(--lifeflow-card-foreground);
+    --color-popover: var(--lifeflow-popover);
+    --color-popover-foreground: var(--lifeflow-popover-foreground);
+    --color-primary: var(--lifeflow-primary);
+    --color-primary-foreground: var(--lifeflow-primary-foreground);
+    --color-muted: var(--lifeflow-muted);
+    --color-muted-foreground: var(--lifeflow-muted-foreground);
+    --color-border: var(--lifeflow-border);
+    --color-input: var(--lifeflow-input);
+    --color-ring: var(--lifeflow-ring);
+    --radius-sm: var(--lifeflow-radius-sm);
+    --radius-md: var(--lifeflow-radius-md);
+    --radius-lg: var(--lifeflow-radius-lg);
+    --radius-xl: var(--lifeflow-radius-xl);
+  }
+  @layer base {
+    body { background: var(--lifeflow-background); color: var(--lifeflow-foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style id="semantic-token-fallback">
+      .bg-background { background-color: var(--lifeflow-background); }
+      .text-background { color: var(--lifeflow-background); }
+      .border-background { border-color: var(--lifeflow-background); }
+      .ring-background { --tw-ring-color: var(--lifeflow-background); }
+      .bg-foreground { background-color: var(--lifeflow-foreground); }
+      .text-foreground { color: var(--lifeflow-foreground); }
+      .border-foreground { border-color: var(--lifeflow-foreground); }
+      .ring-foreground { --tw-ring-color: var(--lifeflow-foreground); }
+      .bg-card { background-color: var(--lifeflow-card); }
+      .text-card { color: var(--lifeflow-card); }
+      .border-card { border-color: var(--lifeflow-card); }
+      .ring-card { --tw-ring-color: var(--lifeflow-card); }
+      .bg-card-foreground { background-color: var(--lifeflow-card-foreground); }
+      .text-card-foreground { color: var(--lifeflow-card-foreground); }
+      .border-card-foreground { border-color: var(--lifeflow-card-foreground); }
+      .ring-card-foreground { --tw-ring-color: var(--lifeflow-card-foreground); }
+      .bg-popover { background-color: var(--lifeflow-popover); }
+      .text-popover { color: var(--lifeflow-popover); }
+      .border-popover { border-color: var(--lifeflow-popover); }
+      .ring-popover { --tw-ring-color: var(--lifeflow-popover); }
+      .bg-popover-foreground { background-color: var(--lifeflow-popover-foreground); }
+      .text-popover-foreground { color: var(--lifeflow-popover-foreground); }
+      .border-popover-foreground { border-color: var(--lifeflow-popover-foreground); }
+      .ring-popover-foreground { --tw-ring-color: var(--lifeflow-popover-foreground); }
+      .bg-primary { background-color: var(--lifeflow-primary); }
+      .text-primary { color: var(--lifeflow-primary); }
+      .border-primary { border-color: var(--lifeflow-primary); }
+      .ring-primary { --tw-ring-color: var(--lifeflow-primary); }
+      .bg-primary-foreground { background-color: var(--lifeflow-primary-foreground); }
+      .text-primary-foreground { color: var(--lifeflow-primary-foreground); }
+      .border-primary-foreground { border-color: var(--lifeflow-primary-foreground); }
+      .ring-primary-foreground { --tw-ring-color: var(--lifeflow-primary-foreground); }
+      .bg-muted { background-color: var(--lifeflow-muted); }
+      .text-muted { color: var(--lifeflow-muted); }
+      .border-muted { border-color: var(--lifeflow-muted); }
+      .ring-muted { --tw-ring-color: var(--lifeflow-muted); }
+      .bg-muted-foreground { background-color: var(--lifeflow-muted-foreground); }
+      .text-muted-foreground { color: var(--lifeflow-muted-foreground); }
+      .border-muted-foreground { border-color: var(--lifeflow-muted-foreground); }
+      .ring-muted-foreground { --tw-ring-color: var(--lifeflow-muted-foreground); }
+      .bg-border { background-color: var(--lifeflow-border); }
+      .text-border { color: var(--lifeflow-border); }
+      .border-border { border-color: var(--lifeflow-border); }
+      .ring-border { --tw-ring-color: var(--lifeflow-border); }
+      .bg-input { background-color: var(--lifeflow-input); }
+      .text-input { color: var(--lifeflow-input); }
+      .border-input { border-color: var(--lifeflow-input); }
+      .ring-input { --tw-ring-color: var(--lifeflow-input); }
+      .bg-ring { background-color: var(--lifeflow-ring); }
+      .text-ring { color: var(--lifeflow-ring); }
+      .border-ring { border-color: var(--lifeflow-ring); }
+      .ring-ring { --tw-ring-color: var(--lifeflow-ring); }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+</head>
+<body class="min-h-screen font-sans antialiased">
+    <style id="critical-layout">
+      /* ============================================================
+         LifeFlow「理想日 · 底部表单」— 极简克制风 · 静态 CSS 兜底
+         不依赖 Tailwind 运行时；布局与色彩全部取自设计令牌
+         ============================================================ */
+      *, *::before, *::after { box-sizing: border-box; }
+
+      html, body { min-height: 100%; }
+
+      body {
+        margin: 0;
+        background: var(--lifeflow-background);
+        color: var(--lifeflow-text-primary);
+        font-family: var(--lifeflow-font-body);
+        -webkit-font-smoothing: antialiased;
+        overflow-x: hidden;
+      }
+
+      /* 底部半屏表单面板（浮动层：细顶线 + 极淡投影 alpha<=0.05，静态表面走边框） */
+      .seg-sheet {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 40;
+        max-width: 28rem;
+        margin: 0 auto;
+        border-top: 1px solid var(--lifeflow-border-light);
+        border-radius: var(--lifeflow-radius-lg) var(--lifeflow-radius-lg) 0 0;
+        background: var(--lifeflow-card);
+        box-shadow: 0 -8px 32px color-mix(in srgb, var(--lifeflow-foreground) 5%, transparent);
+        max-height: 88vh;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+        font-family: var(--lifeflow-font-body);
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      /* drag handle 细横条 */
+      .sheet-handle {
+        width: 36px;
+        height: 4px;
+        margin: 8px auto 0;
+        border-radius: var(--lifeflow-radius-full);
+        background: var(--lifeflow-border);
+      }
+
+      /* 标题行：居中标题 + 右上角关闭 */
+      .sheet-head {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 48px;
+        padding: 4px 12px 0;
+      }
+      .sheet-title {
+        margin: 0;
+        font-size: 18px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        line-height: 1.3;
+        color: var(--lifeflow-text-primary);
+      }
+      .sheet-close {
+        position: absolute;
+        top: 50%;
+        right: 8px;
+        transform: translateY(-50%);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        padding: 0;
+        border: none;
+        border-radius: var(--lifeflow-radius-md);
+        background: transparent;
+        color: var(--lifeflow-text-secondary);
+        cursor: pointer;
+        transition: background-color 0.15s ease, color 0.15s ease;
+      }
+      .sheet-close:active { background: var(--lifeflow-primary-light); }
+      .sheet-close:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--lifeflow-primary-light); }
+
+      /* 内容容器：mx-auto max-w-md px-4 pt-3 pb-[40px]（safe-area 由 inline 兜底） */
+      .sheet-inner {
+        max-width: 28rem;
+        margin: 0 auto;
+        padding: 12px 16px 40px;
+      }
+
+      /* 事项标题输入：1px 细边框 / 圆角 8 */
+      .title-input {
+        display: block;
+        width: 100%;
+        margin-top: 12px;
+        padding: 12px 14px;
+        border: 1px solid var(--lifeflow-border-light);
+        border-radius: var(--lifeflow-radius-md);
+        background: transparent;
+        color: var(--lifeflow-text-primary);
+        font-family: var(--lifeflow-font-body);
+        font-size: var(--lifeflow-font-size-body);
+        line-height: 1.5;
+        -webkit-appearance: none;
+        appearance: none;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease;
+      }
+      .title-input::placeholder { color: var(--lifeflow-text-tertiary); }
+      .title-input:focus {
+        outline: none;
+        border-color: var(--lifeflow-ring);
+        box-shadow: 0 0 0 3px var(--lifeflow-primary-light);
+      }
+
+      /* 分区小标题（次级 13） */
+      .section-caption {
+        margin: 20px 0 8px;
+        font-size: var(--lifeflow-font-size-sm);
+        font-weight: 500;
+        letter-spacing: 0.01em;
+        color: var(--lifeflow-text-secondary);
+      }
+
+      /* 时间卡片：白底 1px 细边框，行间细线分隔 */
+      .field-card {
+        border: 1px solid var(--lifeflow-border-light);
+        border-radius: var(--lifeflow-radius-lg);
+        background: var(--lifeflow-card);
+        overflow: hidden;
+      }
+      .field-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+        padding: 14px 16px;
+        border: none;
+        background: transparent;
+        color: var(--lifeflow-text-primary);
+        font-family: var(--lifeflow-font-body);
+        text-align: left;
+        cursor: pointer;
+      }
+      .field-row + .field-row { border-top: 1px solid var(--lifeflow-border-light); }
+      .field-row:active { background: var(--lifeflow-muted); }
+      .field-row:focus-visible { outline: none; box-shadow: inset 0 0 0 3px var(--lifeflow-primary-light); }
+      .field-row-icon { width: 16px; height: 16px; color: var(--lifeflow-text-tertiary); flex-shrink: 0; }
+      .field-row-label { font-size: var(--lifeflow-font-size-sm); color: var(--lifeflow-text-secondary); flex-shrink: 0; }
+      .field-row-spacer { flex: 1; min-width: 8px; }
+      .field-row-value {
+        font-size: var(--lifeflow-font-size-body);
+        color: var(--lifeflow-text-primary);
+        font-variant-numeric: tabular-nums;
+        font-feature-settings: "tnum";
+      }
+      .field-row-chevron { width: 16px; height: 16px; color: var(--lifeflow-text-tertiary); flex-shrink: 0; }
+
+      /* 目标挂靠：折叠行 + 展开面板 + 由目标生成入口 */
+      .goal-block { margin-top: 20px; }
+      .goal-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+        padding: 12px 14px;
+        border: 1px solid var(--lifeflow-border-light);
+        border-radius: var(--lifeflow-radius-md);
+        background: var(--lifeflow-card);
+        color: var(--lifeflow-text-primary);
+        font-family: var(--lifeflow-font-body);
+        text-align: left;
+        cursor: pointer;
+      }
+      .goal-row:active { background: var(--lifeflow-muted); }
+      .goal-row:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--lifeflow-primary-light); }
+      .goal-row-icon { width: 16px; height: 16px; color: var(--lifeflow-text-tertiary); flex-shrink: 0; }
+      .goal-row-main {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        flex: 1;
+        min-width: 0;
+      }
+      .goal-row-label { font-size: var(--lifeflow-font-size-sm); color: var(--lifeflow-text-secondary); }
+      .goal-row-value {
+        font-size: var(--lifeflow-font-size-body);
+        color: var(--lifeflow-text-primary);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .goal-chevron { width: 16px; height: 16px; color: var(--lifeflow-text-tertiary); flex-shrink: 0; transition: transform 0.18s ease; }
+      .goal-row.is-open .goal-chevron { transform: rotate(90deg); }
+
+      /* 由目标生成：次级入口，虚线细边框 */
+      .goal-from {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+        height: 44px;
+        margin-top: 8px;
+        padding: 0 14px;
+        border: 1px dashed var(--lifeflow-border-dashed);
+        border-radius: var(--lifeflow-radius-md);
+        background: transparent;
+        color: var(--lifeflow-text-secondary);
+        font-family: var(--lifeflow-font-body);
+        font-size: var(--lifeflow-font-size-sm);
+        text-align: left;
+        cursor: pointer;
+        transition: background-color 0.15s ease, color 0.15s ease;
+      }
+      .goal-from:active { background: var(--lifeflow-muted); color: var(--lifeflow-text-primary); }
+      .goal-from:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--lifeflow-primary-light); }
+      .goal-from-icon { width: 16px; height: 16px; color: var(--lifeflow-text-tertiary); flex-shrink: 0; }
+
+      .goal-panel {
+        margin-top: 6px;
+        border: 1px solid var(--lifeflow-border-light);
+        border-radius: var(--lifeflow-radius-md);
+        background: var(--lifeflow-card);
+        overflow: hidden;
+      }
+      .goal-opt {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+        padding: 11px 14px;
+        border: none;
+        background: transparent;
+        color: var(--lifeflow-text-primary);
+        font-family: var(--lifeflow-font-body);
+        font-size: var(--lifeflow-font-size-body);
+        text-align: left;
+        cursor: pointer;
+      }
+      .goal-opt + .goal-opt { border-top: 1px solid var(--lifeflow-border-light); }
+      .goal-opt:active { background: var(--lifeflow-muted); }
+      .goal-opt-icon { width: 16px; height: 16px; color: var(--lifeflow-text-tertiary); flex-shrink: 0; }
+      .goal-opt-check { width: 16px; height: 16px; margin-left: auto; color: var(--lifeflow-primary); flex-shrink: 0; display: none; }
+      .goal-opt.is-selected { font-weight: 500; }
+      .goal-opt.is-selected .goal-opt-icon { color: var(--lifeflow-primary); }
+      .goal-opt.is-selected .goal-opt-check { display: inline-block; }
+
+      /* 详细备注 textarea：细边框 / 圆角 8 */
+      .notes-input {
+        display: block;
+        width: 100%;
+        min-height: 96px;
+        padding: 12px 14px;
+        border: 1px solid var(--lifeflow-border-light);
+        border-radius: var(--lifeflow-radius-md);
+        background: transparent;
+        color: var(--lifeflow-text-primary);
+        font-family: var(--lifeflow-font-body);
+        font-size: var(--lifeflow-font-size-body);
+        line-height: 1.6;
+        resize: vertical;
+        -webkit-appearance: none;
+        appearance: none;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease;
+      }
+      .notes-input::placeholder { color: var(--lifeflow-text-tertiary); }
+      .notes-input:focus {
+        outline: none;
+        border-color: var(--lifeflow-ring);
+        box-shadow: 0 0 0 3px var(--lifeflow-primary-light);
+      }
+
+      /* 底部按钮行：次级「删除」细边框 + 主按钮「保存」石墨黑填充白字圆角 8 */
+      .sheet-actions {
+        display: flex;
+        align-items: stretch;
+        gap: 8px;
+        margin-top: 24px;
+      }
+      .btn-delete {
+        flex: 0 0 auto;
+        min-width: 88px;
+        height: 48px;
+        padding: 0 24px;
+        border: 1px solid var(--lifeflow-border);
+        border-radius: var(--lifeflow-radius-md);
+        background: transparent;
+        color: var(--lifeflow-text-secondary);
+        font-family: var(--lifeflow-font-body);
+        font-size: var(--lifeflow-font-size-body);
+        font-weight: 500;
+        cursor: pointer;
+        transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+      }
+      .btn-delete:active { background: var(--lifeflow-primary-light); color: var(--lifeflow-text-primary); }
+      .btn-delete:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--lifeflow-primary-light); }
+      .btn-save {
+        flex: 1 1 auto;
+        height: 48px;
+        border: none;
+        border-radius: var(--lifeflow-radius-md);
+        background: var(--lifeflow-primary);
+        color: var(--lifeflow-primary-foreground);
+        font-family: var(--lifeflow-font-body);
+        font-size: var(--lifeflow-font-size-body);
+        font-weight: 600;
+        letter-spacing: 0.01em;
+        cursor: pointer;
+        transition: background-color 0.15s ease;
+      }
+      .btn-save:active { background: var(--lifeflow-primary-hover); }
+      .btn-save:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--lifeflow-primary-light); }
+
+      /* Toast（轻量反馈） */
+      #lf-toast {
+        position: fixed;
+        top: 16px;
+        left: 50%;
+        transform: translateX(-50%) translateY(-8px);
+        z-index: 60;
+        padding: 9px 18px;
+        border-radius: var(--lifeflow-radius-full);
+        background: var(--lifeflow-foreground);
+        color: var(--lifeflow-text-inverse);
+        font-family: var(--lifeflow-font-body);
+        font-size: var(--lifeflow-font-size-sm);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.18s ease, transform 0.18s ease;
+      }
+      #lf-toast[data-show="true"] { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+      /* 图标尺寸 */
+      .icon-md { width: 18px; height: 18px; }
+
+      /* 折叠面板显隐 */
+      [hidden] { display: none !important; }
+    </style>
+
+    <main>
+      <!-- 理想日 · 底部表单（段落配置 · 半屏） -->
+      <section class="seg-sheet" data-dom-id="sheet-panel" role="dialog" aria-modal="true" aria-label="上午 · 学习">
+        <div class="sheet-handle" aria-hidden="true"></div>
+
+        <div class="sheet-head">
+          <h1 class="sheet-title" id="sheet-title" data-dom-id="sheet-title">上午 · 学习</h1>
+          <button type="button" class="sheet-close" data-dom-id="sheet-close" aria-label="关闭" title="关闭"><i data-lucide="x" class="icon-md" aria-hidden="true"></i></button>
+        </div>
+
+        <div class="sheet-inner mx-auto max-w-md px-4 pt-3 pb-[40px]" style="padding-bottom: calc(40px + env(safe-area-inset-bottom, 0px))">
+
+          <!-- 1. 事项标题 -->
+          <input id="sheet-title-input" data-dom-id="sheet-title-input" type="text" class="title-input" placeholder="如：判断推理 第3讲" aria-label="事项标题" autocomplete="off" enterkeyhint="next">
+
+          <!-- 2. 时间：开始 / 结束（tabular-nums HH:mm + chevron） -->
+          <div class="section-caption">时间</div>
+          <div class="field-card" data-dom-id="task-time-fields">
+            <button type="button" class="field-row" data-dom-id="task-start-time" aria-label="开始时间：09:00">
+              <i data-lucide="clock" class="field-row-icon" aria-hidden="true"></i>
+              <span class="field-row-label">开始时间</span>
+              <span class="field-row-spacer"></span>
+              <span class="field-row-value">09:00</span>
+              <i data-lucide="chevron-right" class="field-row-chevron" aria-hidden="true"></i>
+            </button>
+            <button type="button" class="field-row" data-dom-id="task-end-time" aria-label="结束时间：10:30">
+              <i data-lucide="clock" class="field-row-icon" aria-hidden="true"></i>
+              <span class="field-row-label">结束时间</span>
+              <span class="field-row-spacer"></span>
+              <span class="field-row-value">10:30</span>
+              <i data-lucide="chevron-right" class="field-row-chevron" aria-hidden="true"></i>
+            </button>
+          </div>
+
+          <!-- 3. 目标挂靠（学习段） -->
+          <div class="section-caption">目标挂靠</div>
+          <div class="goal-block">
+            <button type="button" class="goal-row" data-dom-id="task-goal-attach" aria-expanded="false" aria-controls="goal-panel">
+              <i data-lucide="target" class="goal-row-icon" aria-hidden="true"></i>
+              <span class="goal-row-main">
+                <span class="goal-row-label">已挂目标</span>
+                <span class="goal-row-value" id="goal-selected">省考 · 判断推理</span>
+              </span>
+              <i data-lucide="chevron-right" class="goal-chevron" aria-hidden="true"></i>
+            </button>
+
+            <div class="goal-panel" id="goal-panel" data-dom-id="task-goal-panel" hidden>
+              <button type="button" class="goal-opt is-selected" data-goal="省考 · 判断推理"><i data-lucide="target" class="goal-opt-icon" aria-hidden="true"></i><span>省考 · 判断推理</span><i data-lucide="check" class="goal-opt-check" aria-hidden="true"></i></button>
+              <button type="button" class="goal-opt" data-goal="省考 · 言语理解"><i data-lucide="target" class="goal-opt-icon" aria-hidden="true"></i><span>省考 · 言语理解</span></button>
+              <button type="button" class="goal-opt" data-goal="申论 · 大作文框架"><i data-lucide="target" class="goal-opt-icon" aria-hidden="true"></i><span>申论 · 大作文框架</span></button>
+              <button type="button" class="goal-opt" data-goal="不挂靠"><i data-lucide="target" class="goal-opt-icon" aria-hidden="true"></i><span>不挂靠</span></button>
+            </div>
+
+            <button type="button" class="goal-from" data-dom-id="sheet-from-goal">
+              <i data-lucide="wand-2" class="goal-from-icon" aria-hidden="true"></i>
+              <span>由目标生成</span>
+            </button>
+          </div>
+
+          <!-- 4. 详细备注 -->
+          <div class="section-caption">详细备注</div>
+          <textarea id="sheet-notes" data-dom-id="sheet-notes" class="notes-input" rows="4" placeholder="如：先做例题，再限时刷 30 道，错题记录到本段末尾…" aria-label="详细备注"></textarea>
+
+          <!-- 底部按钮行：次级「删除」+ 主按钮「保存」 -->
+          <div class="sheet-actions">
+            <button type="button" class="btn-delete" data-dom-id="sheet-delete">删除</button>
+            <button type="button" class="btn-save" data-dom-id="sheet-save">保存</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Toast（轻量反馈） -->
+      <div id="lf-toast" role="status" aria-live="polite"><span id="lf-toast-text">已保存至理想日</span></div>
+    </main>
+
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <script>lucide.createIcons();</script>
+    <script>
+    (function () {
+      'use strict';
+      /* 轻量交互：目标挂靠折叠 / 选择 / 按钮反馈（静态示意，无外部依赖） */
+      var toast = document.getElementById('lf-toast');
+      var toastText = document.getElementById('lf-toast-text');
+      var toastTimer = null;
+
+      function showToast(msg) {
+        if (!toast) return;
+        toastText.textContent = msg;
+        toast.setAttribute('data-show', 'true');
+        if (toastTimer) { clearTimeout(toastTimer); }
+        toastTimer = setTimeout(function () { toast.setAttribute('data-show', 'false'); }, 1600);
+      }
+
+      var saveBtn = document.querySelector('[data-dom-id="sheet-save"]');
+      if (saveBtn) { saveBtn.addEventListener('click', function () { showToast('已保存至理想日'); }); }
+
+      var deleteBtn = document.querySelector('[data-dom-id="sheet-delete"]');
+      if (deleteBtn) { deleteBtn.addEventListener('click', function () { showToast('已删除该段落'); }); }
+
+      var fromGoal = document.querySelector('[data-dom-id="sheet-from-goal"]');
+      if (fromGoal) { fromGoal.addEventListener('click', function () { showToast('已按目标生成段落建议'); }); }
+
+      var goalRow = document.querySelector('[data-dom-id="task-goal-attach"]');
+      var goalPanel = document.getElementById('goal-panel');
+      if (goalRow && goalPanel) {
+        goalRow.addEventListener('click', function () {
+          var open = goalPanel.hidden;
+          goalPanel.hidden = !open;
+          goalRow.setAttribute('aria-expanded', String(open));
+          goalRow.classList.toggle('is-open', open);
+        });
+        goalPanel.querySelectorAll('.goal-opt').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            goalPanel.querySelectorAll('.goal-opt').forEach(function (x) { x.classList.remove('is-selected'); });
+            btn.classList.add('is-selected');
+            var sel = document.getElementById('goal-selected');
+            if (sel) { sel.textContent = btn.getAttribute('data-goal'); }
+            goalPanel.hidden = true;
+            goalRow.setAttribute('aria-expanded', 'false');
+            goalRow.classList.remove('is-open');
+          });
+        });
+      }
+    })();
+    </script>
+</body>
+</html>

@@ -1,0 +1,2206 @@
+{
+  "data": [
+    {
+      "id": "page-home-day-create-sheet",
+      "title": "首页 · 新建事项-优化版",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786358000000,
+      "canvasData": {
+        "x": 0,
+        "y": 0,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 1276,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-f25971a3",
+          "measuredAt": 1786365439677
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/home-day-create-sheet.html",
+        "interactions": [
+          {
+            "domId": "sheet-close",
+            "targetPageId": "page-home-night",
+            "hideEdge": true,
+            "transitionLabel": "关闭"
+          },
+          {
+            "domId": "mode-switch",
+            "targetPageId": "page-home-night",
+            "hideEdge": true,
+            "transitionLabel": "切换晚间形态"
+          },
+          {
+            "domId": "nav-more",
+            "targetPageId": "page-more",
+            "hideEdge": true,
+            "transitionLabel": "更多功能"
+          },
+          {
+            "domId": "nav-goals",
+            "targetPageId": "page-goals-quick-create",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 目标"
+          },
+          {
+            "domId": "nav-schedule",
+            "targetPageId": "page-schedule",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 日程"
+          },
+          {
+            "domId": "nav-ideal",
+            "targetPageId": "page-ideal-day-templates",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 理想日"
+          },
+          {
+            "domId": "review-entry",
+            "targetPageId": "page-more",
+            "hideEdge": true,
+            "transitionLabel": "今日一句话 · 长期主义"
+          },
+          {
+            "domId": "achievement-mini",
+            "targetPageId": "page-achievements",
+            "hideEdge": true,
+            "transitionLabel": "成就徽章迷你行"
+          },
+          {
+            "domId": "health-sleep",
+            "targetPageId": "page-plan-sleep",
+            "hideEdge": true,
+            "transitionLabel": "健康概览 · 睡眠"
+          },
+          {
+            "domId": "health-water",
+            "targetPageId": "page-more",
+            "hideEdge": true,
+            "transitionLabel": "健康概览 · 饮水"
+          },
+          {
+            "domId": "health-habit",
+            "targetPageId": "page-more",
+            "hideEdge": true,
+            "transitionLabel": "健康概览 · 习惯"
+          },
+          {
+            "domId": "health-focus",
+            "targetPageId": "page-more",
+            "hideEdge": true,
+            "transitionLabel": "健康概览 · 专注"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-home-night",
+      "title": "首页 · 夜间态",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786339000000,
+      "canvasData": {
+        "x": 309,
+        "y": 0,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 2055,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-dc666989",
+          "measuredAt": 1786362113606
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/home-night.html",
+        "interactions": [
+          {
+            "domId": "nav-goals",
+            "targetPageId": "page-goals-quick-create",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 目标"
+          },
+          {
+            "domId": "nav-schedule",
+            "targetPageId": "page-schedule",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 日程"
+          },
+          {
+            "domId": "nav-ideal",
+            "targetPageId": "page-ideal-day-templates",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 理想日"
+          },
+          {
+            "domId": "mode-switch",
+            "targetPageId": "page-home-day-create-sheet",
+            "hideEdge": true,
+            "transitionLabel": "切换日间形态"
+          },
+          {
+            "domId": "review-night",
+            "targetPageId": "page-more",
+            "hideEdge": true,
+            "transitionLabel": "今日复盘总结 · 长期主义"
+          },
+          {
+            "domId": "sleep-ritual",
+            "targetPageId": "page-reminders",
+            "hideEdge": true,
+            "transitionLabel": "睡前仪式 · 渐进式早睡"
+          },
+          {
+            "domId": "nav-more",
+            "targetPageId": "page-more",
+            "hideEdge": true,
+            "transitionLabel": "更多功能"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-goals-quick-create",
+      "title": "目标 · 快速创建对比稿",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786358000000,
+      "canvasData": {
+        "x": 618,
+        "y": 0,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 1012,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-93724590",
+          "measuredAt": 1786452743531
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/goals-quick-create.html",
+        "interactions": [
+          {
+            "domId": "nav-home",
+            "targetPageId": "page-home-day-create-sheet",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 首页"
+          },
+          {
+            "domId": "nav-schedule",
+            "targetPageId": "page-schedule",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 日程"
+          },
+          {
+            "domId": "nav-ideal",
+            "targetPageId": "page-ideal-day-templates",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 理想日"
+          },
+          {
+            "domId": "back-goals",
+            "targetPageId": "page-goals-quick-create",
+            "hideEdge": true,
+            "transitionLabel": "返回"
+          },
+          {
+            "domId": "achievement-summary",
+            "targetPageId": "page-achievements",
+            "hideEdge": true,
+            "transitionLabel": "成就徽章行"
+          },
+          {
+            "domId": "goal-card-1",
+            "targetPageId": "page-goal-detail",
+            "hideEdge": true,
+            "transitionLabel": "目标详情 · 考研英语"
+          },
+          {
+            "domId": "goal-card-2",
+            "targetPageId": "page-goal-detail",
+            "hideEdge": true,
+            "transitionLabel": "目标详情 · 健康体态"
+          },
+          {
+            "domId": "goal-card-3",
+            "targetPageId": "page-goal-detail",
+            "hideEdge": true,
+            "transitionLabel": "目标详情 · 习惯养成"
+          },
+          {
+            "domId": "sun-goal-1",
+            "targetPageId": "page-ideal-day-templates",
+            "hideEdge": true,
+            "transitionLabel": "理想日定位 · 考研英语"
+          },
+          {
+            "domId": "sun-goal-2",
+            "targetPageId": "page-ideal-day-templates",
+            "hideEdge": true,
+            "transitionLabel": "理想日定位 · 健康体态"
+          },
+          {
+            "domId": "sun-goal-3",
+            "targetPageId": "page-ideal-day-templates",
+            "hideEdge": true,
+            "transitionLabel": "理想日定位 · 习惯养成"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-goal-detail",
+      "title": "目标详情 · 五层拆解",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786339000000,
+      "canvasData": {
+        "x": 927,
+        "y": 0,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 2072,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-8ecd4291",
+          "measuredAt": 1786452743531
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/goal-detail.html",
+        "interactions": [
+          {
+            "domId": "nav-home",
+            "targetPageId": "page-home-day-create-sheet",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 首页"
+          },
+          {
+            "domId": "nav-schedule",
+            "targetPageId": "page-schedule",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 日程"
+          },
+          {
+            "domId": "nav-ideal",
+            "targetPageId": "page-ideal-day-templates",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 理想日"
+          },
+          {
+            "domId": "back-goals",
+            "targetPageId": "page-goals-quick-create",
+            "hideEdge": true,
+            "transitionLabel": "返回"
+          },
+          {
+            "domId": "nav-goals",
+            "targetPageId": "page-goals-quick-create",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 目标"
+          },
+          {
+            "domId": "back-goal",
+            "targetPageId": "page-goals-quick-create",
+            "hideEdge": true,
+            "transitionLabel": "返回目标列表"
+          },
+          {
+            "domId": "sun-locate",
+            "targetPageId": "page-ideal-day-templates",
+            "hideEdge": true,
+            "transitionLabel": "今日理想日推进"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-schedule",
+      "title": "日程 · 时间轴",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786339000000,
+      "canvasData": {
+        "x": 1236,
+        "y": 0,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 1316,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-f517734f",
+          "measuredAt": 1786452743531
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/schedule.html",
+        "interactions": [
+          {
+            "domId": "nav-home",
+            "targetPageId": "page-home-day-create-sheet",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 首页"
+          },
+          {
+            "domId": "nav-goals",
+            "targetPageId": "page-goals-quick-create",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 目标"
+          },
+          {
+            "domId": "nav-ideal",
+            "targetPageId": "page-ideal-day-templates",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 理想日"
+          },
+          {
+            "domId": "routines-entry",
+            "targetPageId": "page-more",
+            "hideEdge": true,
+            "transitionLabel": "作息表入口"
+          },
+          {
+            "domId": "courses-entry",
+            "targetPageId": "page-more",
+            "hideEdge": true,
+            "transitionLabel": "课程表入口"
+          },
+          {
+            "domId": "timer-1",
+            "targetPageId": "page-meditation",
+            "hideEdge": true,
+            "transitionLabel": "快捷专注 · 判断推理"
+          },
+          {
+            "domId": "timer-2",
+            "targetPageId": "page-meditation",
+            "hideEdge": true,
+            "transitionLabel": "快捷专注 · 英语阅读"
+          },
+          {
+            "domId": "timer-3",
+            "targetPageId": "page-meditation",
+            "hideEdge": true,
+            "transitionLabel": "快捷专注 · 单词背诵"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-more",
+      "title": "更多 · 功能目录",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786339000000,
+      "canvasData": {
+        "x": 1545,
+        "y": 0,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 1689,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-5be9f8af",
+          "measuredAt": 1786362113606
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/more.html",
+        "interactions": [
+          {
+            "domId": "nav-goals",
+            "targetPageId": "page-goals-quick-create",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 目标"
+          },
+          {
+            "domId": "nav-schedule",
+            "targetPageId": "page-schedule",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 日程"
+          },
+          {
+            "domId": "nav-ideal",
+            "targetPageId": "page-ideal-day-templates",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 理想日"
+          },
+          {
+            "domId": "entry-home",
+            "targetPageId": "page-home-day-create-sheet",
+            "hideEdge": true,
+            "transitionLabel": "返回首页"
+          },
+          {
+            "domId": "entry-goals",
+            "targetPageId": "page-goals-quick-create",
+            "hideEdge": true,
+            "transitionLabel": "模块 · 目标"
+          },
+          {
+            "domId": "entry-schedule",
+            "targetPageId": "page-schedule",
+            "hideEdge": true,
+            "transitionLabel": "模块 · 日程"
+          },
+          {
+            "domId": "entry-ideal",
+            "targetPageId": "page-ideal-day-templates",
+            "hideEdge": true,
+            "transitionLabel": "模块 · 理想日"
+          },
+          {
+            "domId": "entry-study",
+            "targetPageId": "page-plan-study",
+            "hideEdge": true,
+            "transitionLabel": "模块 · 学习规划"
+          },
+          {
+            "domId": "entry-sleep",
+            "targetPageId": "page-plan-sleep",
+            "hideEdge": true,
+            "transitionLabel": "模块 · 睡眠规划"
+          },
+          {
+            "domId": "entry-medication",
+            "targetPageId": "page-plan-medication",
+            "hideEdge": true,
+            "transitionLabel": "模块 · 吃药规划"
+          },
+          {
+            "domId": "entry-meditation",
+            "targetPageId": "page-meditation",
+            "hideEdge": true,
+            "transitionLabel": "模块 · 冥想放松"
+          },
+          {
+            "domId": "entry-weekly",
+            "targetPageId": "page-weekly-report",
+            "hideEdge": true,
+            "transitionLabel": "模块 · 周报汇总"
+          },
+          {
+            "domId": "entry-achievements",
+            "targetPageId": "page-achievements",
+            "hideEdge": true,
+            "transitionLabel": "模块 · 成就中心"
+          },
+          {
+            "domId": "entry-insights",
+            "targetPageId": "page-insights",
+            "hideEdge": true,
+            "transitionLabel": "模块 · 数据洞察"
+          },
+          {
+            "domId": "entry-reminders",
+            "targetPageId": "page-reminders",
+            "hideEdge": true,
+            "transitionLabel": "模块 · 提醒与仪式"
+          },
+          {
+            "domId": "entry-daily-review",
+            "targetPageId": "page-daily-review",
+            "hideEdge": true,
+            "transitionLabel": "模块 · daily-review"
+          },
+          {
+            "domId": "entry-sleep-health",
+            "targetPageId": "page-plan-sleep",
+            "hideEdge": true,
+            "transitionLabel": "模块 · sleep-health"
+          },
+          {
+            "domId": "entry-water",
+            "targetPageId": "page-water",
+            "hideEdge": true,
+            "transitionLabel": "模块 · water"
+          },
+          {
+            "domId": "entry-training",
+            "targetPageId": "page-training",
+            "hideEdge": true,
+            "transitionLabel": "模块 · training"
+          },
+          {
+            "domId": "entry-posture",
+            "targetPageId": "page-posture",
+            "hideEdge": true,
+            "transitionLabel": "模块 · posture"
+          },
+          {
+            "domId": "entry-wellness",
+            "targetPageId": "page-wellness",
+            "hideEdge": true,
+            "transitionLabel": "模块 · wellness"
+          },
+          {
+            "domId": "entry-expense",
+            "targetPageId": "page-expense",
+            "hideEdge": true,
+            "transitionLabel": "模块 · expense"
+          },
+          {
+            "domId": "entry-habit",
+            "targetPageId": "page-habit",
+            "hideEdge": true,
+            "transitionLabel": "模块 · habit"
+          },
+          {
+            "domId": "entry-notes",
+            "targetPageId": "page-notes",
+            "hideEdge": true,
+            "transitionLabel": "模块 · notes"
+          },
+          {
+            "domId": "entry-countdown",
+            "targetPageId": "page-countdown",
+            "hideEdge": true,
+            "transitionLabel": "模块 · countdown"
+          },
+          {
+            "domId": "entry-wishlist",
+            "targetPageId": "page-wishlist",
+            "hideEdge": true,
+            "transitionLabel": "模块 · wishlist"
+          },
+          {
+            "domId": "entry-settings",
+            "targetPageId": "page-settings",
+            "hideEdge": true,
+            "transitionLabel": "模块 · settings"
+          },
+          {
+            "domId": "entry-export",
+            "targetPageId": "page-export",
+            "hideEdge": true,
+            "transitionLabel": "模块 · export"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-ideal-day-templates",
+      "title": "理想日 · 模板自定义版",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786358000000,
+      "canvasData": {
+        "x": 1854,
+        "y": 0,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 2093,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-818c5767",
+          "measuredAt": 1786452743531
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/ideal-day-templates.html",
+        "interactions": [
+          {
+            "domId": "nav-home",
+            "targetPageId": "page-home-day-create-sheet",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 首页"
+          },
+          {
+            "domId": "nav-goals",
+            "targetPageId": "page-goals-quick-create",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 目标"
+          },
+          {
+            "domId": "nav-schedule",
+            "targetPageId": "page-schedule",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 日程"
+          },
+          {
+            "domId": "block-sleep",
+            "targetPageId": "page-plan-sleep",
+            "hideEdge": true,
+            "transitionLabel": "睡眠段 · 睡眠规划"
+          },
+          {
+            "domId": "block-morning",
+            "targetPageId": "page-plan-study",
+            "hideEdge": true,
+            "transitionLabel": "上午段 · 目标规划"
+          },
+          {
+            "domId": "block-noon",
+            "targetPageId": "page-plan-study",
+            "hideEdge": true,
+            "transitionLabel": "中午段 · 目标规划"
+          },
+          {
+            "domId": "block-afternoon",
+            "targetPageId": "page-plan-study",
+            "hideEdge": true,
+            "transitionLabel": "下午段 · 目标规划"
+          },
+          {
+            "domId": "block-evening",
+            "targetPageId": "page-plan-study",
+            "hideEdge": true,
+            "transitionLabel": "晚上段 · 目标规划"
+          },
+          {
+            "domId": "fn-study",
+            "targetPageId": "page-plan-study",
+            "hideEdge": true,
+            "transitionLabel": "功能 · 学习"
+          },
+          {
+            "domId": "fn-sleep",
+            "targetPageId": "page-plan-sleep",
+            "hideEdge": true,
+            "transitionLabel": "功能 · 睡眠"
+          },
+          {
+            "domId": "fn-medication",
+            "targetPageId": "page-plan-medication",
+            "hideEdge": true,
+            "transitionLabel": "功能 · 吃药"
+          },
+          {
+            "domId": "fn-workout",
+            "targetPageId": "page-ideal-day-sheet",
+            "hideEdge": true,
+            "transitionLabel": "功能 · 训练"
+          },
+          {
+            "domId": "fn-wellness",
+            "targetPageId": "page-ideal-day-sheet",
+            "hideEdge": true,
+            "transitionLabel": "功能 · 功法养生"
+          },
+          {
+            "domId": "fn-posture",
+            "targetPageId": "page-ideal-day-sheet",
+            "hideEdge": true,
+            "transitionLabel": "功能 · 体态拉伸"
+          },
+          {
+            "domId": "fn-routine",
+            "targetPageId": "page-ideal-day-sheet",
+            "hideEdge": true,
+            "transitionLabel": "功能 · 作息例行"
+          },
+          {
+            "domId": "edit-entry",
+            "targetPageId": "page-ideal-day-edit-step1",
+            "hideEdge": true,
+            "transitionLabel": "编辑理想日向导"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-ideal-day-sheet",
+      "title": "理想日 · 底部表单",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786339000000,
+      "canvasData": {
+        "x": 2163,
+        "y": 0,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 900,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-fc98dfc8",
+          "measuredAt": 1786452743531
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/ideal-day-sheet.html",
+        "interactions": [
+          {
+            "domId": "sheet-close",
+            "targetPageId": "page-ideal-day-templates",
+            "hideEdge": true,
+            "transitionLabel": "关闭"
+          },
+          {
+            "domId": "nav-home",
+            "targetPageId": "page-home-day-create-sheet",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 首页"
+          },
+          {
+            "domId": "nav-goals",
+            "targetPageId": "page-goals-quick-create",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 目标"
+          },
+          {
+            "domId": "nav-schedule",
+            "targetPageId": "page-schedule",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 日程"
+          },
+          {
+            "domId": "nav-ideal",
+            "targetPageId": "page-ideal-day-templates",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 理想日"
+          },
+          {
+            "domId": "sheet-back",
+            "targetPageId": "page-ideal-day-templates",
+            "hideEdge": true,
+            "transitionLabel": "关闭表单 · 返回理想日"
+          },
+          {
+            "domId": "sheet-save",
+            "targetPageId": "page-ideal-day-templates",
+            "hideEdge": true,
+            "transitionLabel": "保存清单 · 返回理想日"
+          },
+          {
+            "domId": "sheet-edit",
+            "targetPageId": "page-ideal-day-edit-step1",
+            "hideEdge": true,
+            "transitionLabel": "进入理想日编辑向导"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-ideal-day-edit-step1",
+      "title": "理想日编辑 · 第 1 步",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786339000000,
+      "canvasData": {
+        "x": 2472,
+        "y": 0,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 900,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-12ee4e37",
+          "measuredAt": 1786452743531
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/ideal-day-edit-step1.html",
+        "interactions": [
+          {
+            "domId": "nav-home",
+            "targetPageId": "page-home-day-create-sheet",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 首页"
+          },
+          {
+            "domId": "nav-goals",
+            "targetPageId": "page-goals-quick-create",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 目标"
+          },
+          {
+            "domId": "nav-schedule",
+            "targetPageId": "page-schedule",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 日程"
+          },
+          {
+            "domId": "back-ideal",
+            "targetPageId": "page-ideal-day-templates",
+            "hideEdge": true,
+            "transitionLabel": "返回"
+          },
+          {
+            "domId": "nav-ideal",
+            "targetPageId": "page-ideal-day-templates",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 理想日"
+          },
+          {
+            "domId": "edit-back",
+            "targetPageId": "page-ideal-day-templates",
+            "hideEdge": true,
+            "transitionLabel": "返回理想日"
+          },
+          {
+            "domId": "edit-next",
+            "targetPageId": "page-ideal-day-edit-step2",
+            "hideEdge": true,
+            "transitionLabel": "下一步 · 配置时间与次数"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-ideal-day-edit-step2",
+      "title": "理想日编辑 · 第 2 步",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786339000000,
+      "canvasData": {
+        "x": 2781,
+        "y": 0,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 3448,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-1623a96d",
+          "measuredAt": 1786452743531
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/ideal-day-edit-step2.html",
+        "interactions": [
+          {
+            "domId": "nav-home",
+            "targetPageId": "page-home-day-create-sheet",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 首页"
+          },
+          {
+            "domId": "nav-goals",
+            "targetPageId": "page-goals-quick-create",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 目标"
+          },
+          {
+            "domId": "nav-schedule",
+            "targetPageId": "page-schedule",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 日程"
+          },
+          {
+            "domId": "back-step1",
+            "targetPageId": "page-ideal-day-edit-step1",
+            "hideEdge": true,
+            "transitionLabel": "返回第 1 步"
+          },
+          {
+            "domId": "nav-ideal",
+            "targetPageId": "page-ideal-day-templates",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 理想日"
+          },
+          {
+            "domId": "step2-back",
+            "targetPageId": "page-ideal-day-edit-step1",
+            "hideEdge": true,
+            "transitionLabel": "返回第 1 步"
+          },
+          {
+            "domId": "step2-save",
+            "targetPageId": "page-ideal-day-templates",
+            "hideEdge": true,
+            "transitionLabel": "保存理想日"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-plan-study",
+      "title": "目标规划 · 安排学习",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786339000000,
+      "canvasData": {
+        "x": 3090,
+        "y": 0,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 1151,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-9d610953",
+          "measuredAt": 1786363910066
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/plan-study.html",
+        "interactions": [
+          {
+            "domId": "nav-home",
+            "targetPageId": "page-home-day-create-sheet",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 首页"
+          },
+          {
+            "domId": "nav-goals",
+            "targetPageId": "page-goals-quick-create",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 目标"
+          },
+          {
+            "domId": "nav-schedule",
+            "targetPageId": "page-schedule",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 日程"
+          },
+          {
+            "domId": "back-ideal",
+            "targetPageId": "page-ideal-day-templates",
+            "hideEdge": true,
+            "transitionLabel": "返回理想日"
+          },
+          {
+            "domId": "nav-ideal",
+            "targetPageId": "page-ideal-day-templates",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 理想日"
+          },
+          {
+            "domId": "linkage-entry",
+            "targetPageId": "page-linkage-flow",
+            "hideEdge": true,
+            "transitionLabel": "查看联动机制"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-plan-sleep",
+      "title": "睡眠规划 · 入睡打卡",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786339000000,
+      "canvasData": {
+        "x": 3399,
+        "y": 0,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 1006,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-97c8818b",
+          "measuredAt": 1786362113606
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/plan-sleep.html",
+        "interactions": [
+          {
+            "domId": "nav-home",
+            "targetPageId": "page-home-day-create-sheet",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 首页"
+          },
+          {
+            "domId": "nav-goals",
+            "targetPageId": "page-goals-quick-create",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 目标"
+          },
+          {
+            "domId": "nav-schedule",
+            "targetPageId": "page-schedule",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 日程"
+          },
+          {
+            "domId": "back-ideal",
+            "targetPageId": "page-ideal-day-templates",
+            "hideEdge": true,
+            "transitionLabel": "返回理想日"
+          },
+          {
+            "domId": "nav-ideal",
+            "targetPageId": "page-ideal-day-templates",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 理想日"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-plan-medication",
+      "title": "吃药规划 · 按时段服药",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786339000000,
+      "canvasData": {
+        "x": 3708,
+        "y": 0,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 900,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-b6cb96ac",
+          "measuredAt": 1786362113606
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/plan-medication.html",
+        "interactions": [
+          {
+            "domId": "nav-home",
+            "targetPageId": "page-home-day-create-sheet",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 首页"
+          },
+          {
+            "domId": "nav-goals",
+            "targetPageId": "page-goals-quick-create",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 目标"
+          },
+          {
+            "domId": "nav-schedule",
+            "targetPageId": "page-schedule",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 日程"
+          },
+          {
+            "domId": "back-ideal",
+            "targetPageId": "page-ideal-day-templates",
+            "hideEdge": true,
+            "transitionLabel": "返回理想日"
+          },
+          {
+            "domId": "nav-ideal",
+            "targetPageId": "page-ideal-day-templates",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 理想日"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-meditation",
+      "title": "冥想放松 · 正念计时",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786339000000,
+      "canvasData": {
+        "x": 4017,
+        "y": 0,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 1052,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-b2bda056",
+          "measuredAt": 1786362113606
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/meditation.html",
+        "interactions": [
+          {
+            "domId": "nav-goals",
+            "targetPageId": "page-goals-quick-create",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 目标"
+          },
+          {
+            "domId": "nav-schedule",
+            "targetPageId": "page-schedule",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 日程"
+          },
+          {
+            "domId": "nav-ideal",
+            "targetPageId": "page-ideal-day-templates",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 理想日"
+          },
+          {
+            "domId": "back-more",
+            "targetPageId": "page-more",
+            "hideEdge": true,
+            "transitionLabel": "返回更多目录"
+          },
+          {
+            "domId": "nav-home",
+            "targetPageId": "page-home-day-create-sheet",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 首页"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-weekly-report",
+      "title": "周报汇总 · 数据洞察",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786339000000,
+      "canvasData": {
+        "x": 4326,
+        "y": 0,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 1405,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-14e951dc",
+          "measuredAt": 1786362113606
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/weekly-report.html",
+        "interactions": [
+          {
+            "domId": "nav-goals",
+            "targetPageId": "page-goals-quick-create",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 目标"
+          },
+          {
+            "domId": "nav-schedule",
+            "targetPageId": "page-schedule",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 日程"
+          },
+          {
+            "domId": "nav-ideal",
+            "targetPageId": "page-ideal-day-templates",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 理想日"
+          },
+          {
+            "domId": "back-more",
+            "targetPageId": "page-more",
+            "hideEdge": true,
+            "transitionLabel": "返回更多目录"
+          },
+          {
+            "domId": "nav-home",
+            "targetPageId": "page-home-day-create-sheet",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 首页"
+          },
+          {
+            "domId": "goal-progress-1",
+            "targetPageId": "page-goal-detail",
+            "hideEdge": true,
+            "transitionLabel": "目标进度 · 考研英语"
+          },
+          {
+            "domId": "goal-progress-2",
+            "targetPageId": "page-goal-detail",
+            "hideEdge": true,
+            "transitionLabel": "目标进度 · 健康体态"
+          },
+          {
+            "domId": "insights-entry",
+            "targetPageId": "page-insights",
+            "hideEdge": true,
+            "transitionLabel": "进入数据洞察"
+          },
+          {
+            "domId": "achievement-entry",
+            "targetPageId": "page-achievements",
+            "hideEdge": true,
+            "transitionLabel": "进入成就中心"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-achievements",
+      "title": "成就中心 · 勋章与热力图",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786339000000,
+      "canvasData": {
+        "x": 4635,
+        "y": 0,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 1298,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-d575a73e",
+          "measuredAt": 1786362113606
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/achievements.html",
+        "interactions": [
+          {
+            "domId": "nav-goals",
+            "targetPageId": "page-goals-quick-create",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 目标"
+          },
+          {
+            "domId": "nav-schedule",
+            "targetPageId": "page-schedule",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 日程"
+          },
+          {
+            "domId": "nav-ideal",
+            "targetPageId": "page-ideal-day-templates",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 理想日"
+          },
+          {
+            "domId": "back-more",
+            "targetPageId": "page-more",
+            "hideEdge": true,
+            "transitionLabel": "返回更多目录"
+          },
+          {
+            "domId": "nav-home",
+            "targetPageId": "page-home-day-create-sheet",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 首页"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-insights",
+      "title": "数据洞察 · 趋势分析",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786339000000,
+      "canvasData": {
+        "x": 4944,
+        "y": 0,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 2369,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-a54f0cfb",
+          "measuredAt": 1786362113606
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/insights.html",
+        "interactions": [
+          {
+            "domId": "nav-goals",
+            "targetPageId": "page-goals-quick-create",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 目标"
+          },
+          {
+            "domId": "nav-schedule",
+            "targetPageId": "page-schedule",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 日程"
+          },
+          {
+            "domId": "nav-ideal",
+            "targetPageId": "page-ideal-day-templates",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 理想日"
+          },
+          {
+            "domId": "back-more",
+            "targetPageId": "page-more",
+            "hideEdge": true,
+            "transitionLabel": "返回更多目录"
+          },
+          {
+            "domId": "nav-home",
+            "targetPageId": "page-home-day-create-sheet",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 首页"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-reminders",
+      "title": "提醒与仪式 · 渐进式早睡",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786339000000,
+      "canvasData": {
+        "x": 5253,
+        "y": 0,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 1323,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-f0f264e8",
+          "measuredAt": 1786362113606
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/reminders.html",
+        "interactions": [
+          {
+            "domId": "nav-goals",
+            "targetPageId": "page-goals-quick-create",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 目标"
+          },
+          {
+            "domId": "nav-schedule",
+            "targetPageId": "page-schedule",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 日程"
+          },
+          {
+            "domId": "nav-ideal",
+            "targetPageId": "page-ideal-day-templates",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 理想日"
+          },
+          {
+            "domId": "back-more",
+            "targetPageId": "page-more",
+            "hideEdge": true,
+            "transitionLabel": "返回更多目录"
+          },
+          {
+            "domId": "nav-home",
+            "targetPageId": "page-home-day-create-sheet",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 首页"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-daily-review",
+      "title": "每日复盘 · 一句话与三段式",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786360078959,
+      "canvasData": {
+        "x": 5562,
+        "y": 0,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 1047,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-aae66983",
+          "measuredAt": 1786362113606
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/daily-review.html",
+        "interactions": [
+          {
+            "domId": "nav-goals",
+            "targetPageId": "page-goals-quick-create",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 目标"
+          },
+          {
+            "domId": "nav-schedule",
+            "targetPageId": "page-schedule",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 日程"
+          },
+          {
+            "domId": "nav-ideal",
+            "targetPageId": "page-ideal-day-templates",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 理想日"
+          },
+          {
+            "domId": "back-more",
+            "targetPageId": "page-more",
+            "hideEdge": true,
+            "transitionLabel": "返回更多目录"
+          },
+          {
+            "domId": "nav-home",
+            "targetPageId": "page-home-day-create-sheet",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 首页"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-water",
+      "title": "饮水 · 每日目标",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786360078959,
+      "canvasData": {
+        "x": 5871,
+        "y": 0,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 1031,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-3da0ea3b",
+          "measuredAt": 1786362113606
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/water.html",
+        "interactions": [
+          {
+            "domId": "nav-goals",
+            "targetPageId": "page-goals-quick-create",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 目标"
+          },
+          {
+            "domId": "nav-schedule",
+            "targetPageId": "page-schedule",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 日程"
+          },
+          {
+            "domId": "nav-ideal",
+            "targetPageId": "page-ideal-day-templates",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 理想日"
+          },
+          {
+            "domId": "back-more",
+            "targetPageId": "page-more",
+            "hideEdge": true,
+            "transitionLabel": "返回更多目录"
+          },
+          {
+            "domId": "nav-home",
+            "targetPageId": "page-home-day-create-sheet",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 首页"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-training",
+      "title": "训练 · 今日计划",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786360078959,
+      "canvasData": {
+        "x": 6180,
+        "y": 0,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 2164,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-bb5f9d96",
+          "measuredAt": 1786368997069
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/training.html",
+        "interactions": [
+          {
+            "domId": "nav-goals",
+            "targetPageId": "page-goals-quick-create",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 目标"
+          },
+          {
+            "domId": "nav-schedule",
+            "targetPageId": "page-schedule",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 日程"
+          },
+          {
+            "domId": "nav-ideal",
+            "targetPageId": "page-ideal-day-templates",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 理想日"
+          },
+          {
+            "domId": "back-more",
+            "targetPageId": "page-more",
+            "hideEdge": true,
+            "transitionLabel": "返回更多目录"
+          },
+          {
+            "domId": "nav-home",
+            "targetPageId": "page-home-day-create-sheet",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 首页"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-posture",
+      "title": "体态拉伸 · 定时提醒",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786360078959,
+      "canvasData": {
+        "x": 6489,
+        "y": 0,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 1330,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-cab1f37d",
+          "measuredAt": 1786368997069
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/posture.html",
+        "interactions": [
+          {
+            "domId": "nav-goals",
+            "targetPageId": "page-goals-quick-create",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 目标"
+          },
+          {
+            "domId": "nav-schedule",
+            "targetPageId": "page-schedule",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 日程"
+          },
+          {
+            "domId": "nav-ideal",
+            "targetPageId": "page-ideal-day-templates",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 理想日"
+          },
+          {
+            "domId": "back-more",
+            "targetPageId": "page-more",
+            "hideEdge": true,
+            "transitionLabel": "返回更多目录"
+          },
+          {
+            "domId": "nav-home",
+            "targetPageId": "page-home-day-create-sheet",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 首页"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-wellness",
+      "title": "功法养生 · 每日功法",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786360078959,
+      "canvasData": {
+        "x": 6798,
+        "y": 0,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 900,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-cede87f0",
+          "measuredAt": 1786368997069
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/wellness.html",
+        "interactions": [
+          {
+            "domId": "nav-goals",
+            "targetPageId": "page-goals-quick-create",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 目标"
+          },
+          {
+            "domId": "nav-schedule",
+            "targetPageId": "page-schedule",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 日程"
+          },
+          {
+            "domId": "nav-ideal",
+            "targetPageId": "page-ideal-day-templates",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 理想日"
+          },
+          {
+            "domId": "back-more",
+            "targetPageId": "page-more",
+            "hideEdge": true,
+            "transitionLabel": "返回更多目录"
+          },
+          {
+            "domId": "nav-home",
+            "targetPageId": "page-home-day-create-sheet",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 首页"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-expense",
+      "title": "记账 · 收支流水",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786360078959,
+      "canvasData": {
+        "x": 7107,
+        "y": 0,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 1682,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-646f432c",
+          "measuredAt": 1786368997069
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/expense.html",
+        "interactions": [
+          {
+            "domId": "nav-goals",
+            "targetPageId": "page-goals-quick-create",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 目标"
+          },
+          {
+            "domId": "nav-schedule",
+            "targetPageId": "page-schedule",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 日程"
+          },
+          {
+            "domId": "nav-ideal",
+            "targetPageId": "page-ideal-day-templates",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 理想日"
+          },
+          {
+            "domId": "back-more",
+            "targetPageId": "page-more",
+            "hideEdge": true,
+            "transitionLabel": "返回更多目录"
+          },
+          {
+            "domId": "nav-home",
+            "targetPageId": "page-home-day-create-sheet",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 首页"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-habit",
+      "title": "习惯 · 每日打卡",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786360078959,
+      "canvasData": {
+        "x": 7416,
+        "y": 0,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 979,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-ef137a2b",
+          "measuredAt": 1786362113606
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/habit.html",
+        "interactions": [
+          {
+            "domId": "nav-goals",
+            "targetPageId": "page-goals-quick-create",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 目标"
+          },
+          {
+            "domId": "nav-schedule",
+            "targetPageId": "page-schedule",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 日程"
+          },
+          {
+            "domId": "nav-ideal",
+            "targetPageId": "page-ideal-day-templates",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 理想日"
+          },
+          {
+            "domId": "back-more",
+            "targetPageId": "page-more",
+            "hideEdge": true,
+            "transitionLabel": "返回更多目录"
+          },
+          {
+            "domId": "nav-home",
+            "targetPageId": "page-home-day-create-sheet",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 首页"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-notes",
+      "title": "备忘 · 随手记录",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786360078959,
+      "canvasData": {
+        "x": 7725,
+        "y": 0,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 900,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-72bc5619",
+          "measuredAt": 1786362113606
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/notes.html",
+        "interactions": [
+          {
+            "domId": "nav-goals",
+            "targetPageId": "page-goals-quick-create",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 目标"
+          },
+          {
+            "domId": "nav-schedule",
+            "targetPageId": "page-schedule",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 日程"
+          },
+          {
+            "domId": "nav-ideal",
+            "targetPageId": "page-ideal-day-templates",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 理想日"
+          },
+          {
+            "domId": "back-more",
+            "targetPageId": "page-more",
+            "hideEdge": true,
+            "transitionLabel": "返回更多目录"
+          },
+          {
+            "domId": "nav-home",
+            "targetPageId": "page-home-day-create-sheet",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 首页"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-countdown",
+      "title": "倒数日 · 重要日子",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786360078959,
+      "canvasData": {
+        "x": 8034,
+        "y": 0,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 900,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-b1a635ee",
+          "measuredAt": 1786362113606
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/countdown.html",
+        "interactions": [
+          {
+            "domId": "nav-goals",
+            "targetPageId": "page-goals-quick-create",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 目标"
+          },
+          {
+            "domId": "nav-schedule",
+            "targetPageId": "page-schedule",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 日程"
+          },
+          {
+            "domId": "nav-ideal",
+            "targetPageId": "page-ideal-day-templates",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 理想日"
+          },
+          {
+            "domId": "back-more",
+            "targetPageId": "page-more",
+            "hideEdge": true,
+            "transitionLabel": "返回更多目录"
+          },
+          {
+            "domId": "nav-home",
+            "targetPageId": "page-home-day-create-sheet",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 首页"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-wishlist",
+      "title": "愿望清单 · 长期心愿",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786360078959,
+      "canvasData": {
+        "x": 8343,
+        "y": 0,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 902,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-d7f21dcd",
+          "measuredAt": 1786362113606
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/wishlist.html",
+        "interactions": [
+          {
+            "domId": "nav-goals",
+            "targetPageId": "page-goals-quick-create",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 目标"
+          },
+          {
+            "domId": "nav-schedule",
+            "targetPageId": "page-schedule",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 日程"
+          },
+          {
+            "domId": "nav-ideal",
+            "targetPageId": "page-ideal-day-templates",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 理想日"
+          },
+          {
+            "domId": "back-more",
+            "targetPageId": "page-more",
+            "hideEdge": true,
+            "transitionLabel": "返回更多目录"
+          },
+          {
+            "domId": "nav-home",
+            "targetPageId": "page-home-day-create-sheet",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 首页"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-settings",
+      "title": "设置 · 应用偏好",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786360078959,
+      "canvasData": {
+        "x": 8652,
+        "y": 0,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 1216,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-069bb894",
+          "measuredAt": 1786362113606
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/settings.html",
+        "interactions": [
+          {
+            "domId": "nav-goals",
+            "targetPageId": "page-goals-quick-create",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 目标"
+          },
+          {
+            "domId": "nav-schedule",
+            "targetPageId": "page-schedule",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 日程"
+          },
+          {
+            "domId": "nav-ideal",
+            "targetPageId": "page-ideal-day-templates",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 理想日"
+          },
+          {
+            "domId": "back-more",
+            "targetPageId": "page-more",
+            "hideEdge": true,
+            "transitionLabel": "返回更多目录"
+          },
+          {
+            "domId": "nav-home",
+            "targetPageId": "page-home-day-create-sheet",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 首页"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-export",
+      "title": "数据导出 · 本地备份",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786360078959,
+      "canvasData": {
+        "x": 8961,
+        "y": 0,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 904,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-c1f30c93",
+          "measuredAt": 1786362113606
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/export.html",
+        "interactions": [
+          {
+            "domId": "nav-goals",
+            "targetPageId": "page-goals-quick-create",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 目标"
+          },
+          {
+            "domId": "nav-schedule",
+            "targetPageId": "page-schedule",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 日程"
+          },
+          {
+            "domId": "nav-ideal",
+            "targetPageId": "page-ideal-day-templates",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 理想日"
+          },
+          {
+            "domId": "back-more",
+            "targetPageId": "page-more",
+            "hideEdge": true,
+            "transitionLabel": "返回更多目录"
+          },
+          {
+            "domId": "nav-home",
+            "targetPageId": "page-home-day-create-sheet",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 首页"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-routines",
+      "title": "作息表 · 每周作息",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786360078959,
+      "canvasData": {
+        "x": 9270,
+        "y": 0,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 1053,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-24484a1a",
+          "measuredAt": 1786362113606
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/routines.html",
+        "interactions": [
+          {
+            "domId": "nav-goals",
+            "targetPageId": "page-goals-quick-create",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 目标"
+          },
+          {
+            "domId": "nav-schedule",
+            "targetPageId": "page-schedule",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 日程"
+          },
+          {
+            "domId": "nav-ideal",
+            "targetPageId": "page-ideal-day-templates",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 理想日"
+          },
+          {
+            "domId": "back-more",
+            "targetPageId": "page-more",
+            "hideEdge": true,
+            "transitionLabel": "返回"
+          },
+          {
+            "domId": "back-schedule",
+            "targetPageId": "page-schedule",
+            "hideEdge": true,
+            "transitionLabel": "返回日程"
+          },
+          {
+            "domId": "nav-home",
+            "targetPageId": "page-home-day-create-sheet",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 首页"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-courses",
+      "title": "课程表 · 每周课程",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786360078959,
+      "canvasData": {
+        "x": 9579,
+        "y": 0,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 950,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-a2e81855",
+          "measuredAt": 1786368997069
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/courses.html",
+        "interactions": [
+          {
+            "domId": "nav-goals",
+            "targetPageId": "page-goals-quick-create",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 目标"
+          },
+          {
+            "domId": "nav-schedule",
+            "targetPageId": "page-schedule",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 日程"
+          },
+          {
+            "domId": "nav-ideal",
+            "targetPageId": "page-ideal-day-templates",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 理想日"
+          },
+          {
+            "domId": "back-more",
+            "targetPageId": "page-more",
+            "hideEdge": true,
+            "transitionLabel": "返回"
+          },
+          {
+            "domId": "back-schedule",
+            "targetPageId": "page-schedule",
+            "hideEdge": true,
+            "transitionLabel": "返回日程"
+          },
+          {
+            "domId": "nav-home",
+            "targetPageId": "page-home-day-create-sheet",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 首页"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-linkage-flow",
+      "title": "联动示意 · 目标→理想日→日程",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786362829452,
+      "canvasData": {
+        "x": 9888,
+        "y": 0,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 1608,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-8fa317d7",
+          "measuredAt": 1786363910066
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/linkage-flow.html",
+        "interactions": [
+          {
+            "domId": "nav-home",
+            "targetPageId": "page-home-day-create-sheet",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 首页"
+          },
+          {
+            "domId": "nav-goals",
+            "targetPageId": "page-goals-quick-create",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 目标"
+          },
+          {
+            "domId": "nav-schedule",
+            "targetPageId": "page-schedule",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 日程"
+          },
+          {
+            "domId": "back-ideal",
+            "targetPageId": "page-ideal-day-templates",
+            "hideEdge": true,
+            "transitionLabel": "返回"
+          },
+          {
+            "domId": "back-more",
+            "targetPageId": "page-more",
+            "hideEdge": true,
+            "transitionLabel": "返回更多目录"
+          },
+          {
+            "domId": "nav-ideal",
+            "targetPageId": "page-ideal-day-templates",
+            "hideEdge": true,
+            "transitionLabel": "底部导航 · 理想日"
+          }
+        ]
+      }
+    }
+  ],
+  "config": {
+    "autoLayout": false,
+    "deviceType": "mobile",
+    "projectName": "LifeFlow 2.0",
+    "visualEditorEnabled": false
+  }
+}

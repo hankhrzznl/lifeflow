@@ -11,6 +11,10 @@ import type { StrategyTemplate } from "@/lib/goal-v2-engine";
 import type { ImportedGoal } from "@/lib/goal-v2-import-parser";
 import { detectTimeConflicts } from "@/lib/conflict-detector";
 import type { ConflictItem } from "@/lib/conflict-detector";
+import { CATEGORY_META, FEATURE_CATEGORY, getFeatureMeta, getAllFeatures } from "@/lib/ideal-day-templates";
+import type { GoalCategory } from "@/lib/ideal-day-templates";
+import { showToast } from "@/components/ui/Toast";
+import type { IdealDayFeature } from "@/lib/types";
 
 // ============================================================
 // 常量与类型
@@ -180,6 +184,11 @@ export default function NewGoalV2Page() {
   const [title, setTitle] = useState("");
   const [vision, setVision] = useState("");
   const [color, setColor] = useState(PRESET_COLORS[0]);
+  // T25 — 目标三分类 + 挂靠功能
+  const [goalCategory, setGoalCategory] = useState<GoalCategory>("workStudy");
+  const [attachedFeatures, setAttachedFeatures] = useState<string[]>([]);
+  // T25 — 导入的理想日模板（双结构导入包）
+  const [importedIdealTemplate, setImportedIdealTemplate] = useState<{ name: string; sleepBedTime?: string; sleepWakeTime?: string; blocks: { id: string; label: string; start: string; end: string; group: string; features: string[] }[] } | null>(null);
 
   // Step 2 — 关键结果
   const [keyResults, setKeyResults] = useState<KeyResultFormItem[]>([
@@ -348,6 +357,20 @@ export default function NewGoalV2Page() {
 
         setDailyActions(importActions);
         setStep(5);
+      }
+
+      // T25：读取导入的理想日模板（双结构导入包）
+      const importTplRaw = sessionStorage.getItem('import_ideal_template');
+      sessionStorage.removeItem('import_ideal_template');
+      if (importTplRaw) {
+        try {
+          const tpl = JSON.parse(importTplRaw);
+          if (tpl && tpl.name && Array.isArray(tpl.blocks)) {
+            setImportedIdealTemplate(tpl);
+          }
+        } catch {
+          // 模板解析失败不影响目标导入
+        }
       }
     } catch (e) {
       console.error('导入数据解析失败:', e);
@@ -614,6 +637,8 @@ export default function NewGoalV2Page() {
         vision,
         color,
         status: "active",
+        goalCategory,
+        attachedFeatures,
       });
 
       // 2. 创建 KeyResults
@@ -695,9 +720,8 @@ export default function NewGoalV2Page() {
         // 计算需要生成的周数
         const startDate = new Date(s.startDate + 'T00:00:00');
         const endDate = new Date(s.endDate + 'T00:00:00');
-        let cursor = new Date(startDate);
+        const cursor = new Date(startDate);
         let weekIdx = 0;
-
         while (cursor <= endDate) {
           const ws = getWeekStart(cursor);
           // 跳过已创建的那一周
@@ -737,6 +761,38 @@ export default function NewGoalV2Page() {
 
       // 7. 重算进度
       await recalculateGoalProgress(goalId);
+
+      // 7.5 T25：若导入包含理想日模板 → 追加写入 userSettings.templates（multi 模式，不覆盖 dayTemplates）
+      if (importedIdealTemplate) {
+        try {
+          const { getIdealDayConfig, saveIdealDayConfig } = await import("@/lib/ideal-day");
+          const config = await getIdealDayConfig();
+          const blockDefs = importedIdealTemplate.blocks.map((b) => ({
+            id: b.id,
+            label: b.label,
+            start: b.start,
+            end: b.end,
+            group: b.group as "sleep" | "morning" | "noon" | "afternoon" | "evening",
+            features: b.features as IdealDayFeature[],
+          }));
+          const tpl = {
+            id: `imp_${Date.now()}`,
+            name: importedIdealTemplate.name,
+            daysOfWeek: undefined as number[] | undefined,
+            blocks: blockDefs,
+          };
+          const nextTemplates = Array.isArray(config.templates) ? [...config.templates, tpl] : [tpl];
+          await saveIdealDayConfig({
+            ...config,
+            templates: nextTemplates,
+            sleepBedTime: importedIdealTemplate.sleepBedTime || config.sleepBedTime || "22:30",
+            sleepWakeTime: importedIdealTemplate.sleepWakeTime || config.sleepWakeTime || "06:00",
+          });
+          showToast({ type: "success", message: `已导入理想日模板「${importedIdealTemplate.name}」` });
+        } catch {
+          showToast({ type: "warning", message: "目标已创建，但理想日模板写入失败" });
+        }
+      }
 
       // 8. 跳转
       router.push(`/efficiency-v2/goals/${goalId}`);
@@ -810,6 +866,78 @@ export default function NewGoalV2Page() {
             caretColor: "var(--lifeflow-primary)",
           }}
         />
+      </div>
+
+      {/* T25 目标三分类（8+8+8） */}
+      <div
+        className="rounded-[10px] p-4"
+        style={{ backgroundColor: "var(--color-surface-card)", border: "1px solid var(--lifeflow-border)" }}
+      >
+        <p className="text-[13px] mb-2 font-medium" style={{ color: "var(--color-text-secondary)" }}>
+          目标分类 · 8+8+8
+        </p>
+        <div className="flex gap-2">
+          {(Object.keys(CATEGORY_META) as GoalCategory[]).map((cat) => {
+            const meta = CATEGORY_META[cat];
+            const selected = goalCategory === cat;
+            return (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => setGoalCategory(cat)}
+                className="flex-1 flex flex-col items-center gap-1 py-2.5 rounded-[10px] transition-all active:scale-95"
+                style={{
+                  background: selected ? `${meta.color}1A` : "var(--lifeflow-muted)",
+                  border: `1.5px solid ${selected ? meta.color : "var(--lifeflow-border)"}`,
+                }}
+              >
+                <span className="text-[13px] font-semibold" style={{ color: selected ? meta.color : "var(--color-text-secondary)" }}>
+                  {meta.label}
+                </span>
+                <span className="text-[10px]" style={{ color: "var(--color-text-disabled)" }}>{meta.hint}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* T25 挂靠功能（0~多个；未挂靠 → 日程显示目标图标） */}
+      <div
+        className="rounded-[10px] p-4"
+        style={{ backgroundColor: "var(--color-surface-card)", border: "1px solid var(--lifeflow-border)" }}
+      >
+        <p className="text-[13px] mb-1 font-medium" style={{ color: "var(--color-text-secondary)" }}>
+          挂靠功能 <span style={{ fontSize: 11, color: "var(--color-text-disabled)" }}>（选填 · 日程将显示功能图标）</span>
+        </p>
+        <div className="flex flex-wrap gap-1.5 mt-2">
+          {getAllFeatures().map((f) => {
+            const meta = getFeatureMeta(f);
+            const selected = attachedFeatures.includes(f);
+            return (
+              <button
+                key={f}
+                type="button"
+                onClick={() =>
+                  setAttachedFeatures((prev) =>
+                    selected ? prev.filter((x) => x !== f) : [...prev, f],
+                  )
+                }
+                className="inline-flex items-center gap-1 px-2.5 h-8 rounded-full text-[12px] font-medium transition-all active:scale-95"
+                style={{
+                  background: selected ? `${meta.color}1A` : "var(--lifeflow-muted)",
+                  border: `1px solid ${selected ? meta.color : "var(--lifeflow-border)"}`,
+                  color: selected ? meta.color : "var(--color-text-secondary)",
+                }}
+              >
+                <span className="w-1.5 h-1.5 rounded-full" style={{ background: meta.color }} />
+                {meta.label}
+              </button>
+            );
+          })}
+        </div>
+        <p className="mt-2 text-[11px]" style={{ color: "var(--color-text-disabled)" }}>
+          挂靠后该目标行动在日程上显示对应功能图标；不挂靠则显示目标图标
+        </p>
       </div>
     </motion.div>
   );

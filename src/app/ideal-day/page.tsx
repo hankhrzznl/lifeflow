@@ -10,8 +10,11 @@ import {
 import { getIdealDayConfig, saveIdealDayConfig, applyIdealDayBlueprint } from "@/lib/ideal-day";
 import {
   ensureTemplates, ensureDayTemplates, selectTemplateV2, DAY_LABELS, getFeatureMeta, getAllFeatures,
-  getIdealDayPlans, SEGMENT_META, SEGMENT_ORDER,
+  getIdealDayPlans, SEGMENT_META, SEGMENT_ORDER, allocateQuota, matchGoalActionToBlock, QUOTA_MINUTES, CATEGORY_META,
 } from "@/lib/ideal-day-templates";
+import type { GoalCategory, ScheduleDecision } from "@/lib/ideal-day-templates";
+import { getAllGoalsV2 } from "@/lib/db/goal-v2.db";
+import type { GoalV2 } from "@/lib/db/goal-v2.db";
 import type {
   IdealDayConfig, IdealDayTemplate, IdealDayFeature, IdealDayBlockGroup,
 } from "@/lib/types";
@@ -342,6 +345,11 @@ export default function IdealDayHomePage() {
     const dow = d.getDay();
     return dow === 0 ? 6 : dow - 1;
   });
+  // T25：由目标生成（理想日桥）
+  const [showGoalGen, setShowGoalGen] = useState(false);
+  const [goalGenSelected, setGoalGenSelected] = useState<string[]>([]);
+  const [goalGenDecisions, setGoalGenDecisions] = useState<ScheduleDecision[] | null>(null);
+  const [goalGenGoals, setGoalGenGoals] = useState<GoalV2[]>([]);
   const [copyOpen, setCopyOpen] = useState(false);
   const [copySel, setCopySel] = useState<number[]>([]);
   const [renameOpen, setRenameOpen] = useState(false);
@@ -399,6 +407,93 @@ export default function IdealDayHomePage() {
     return dayTemplates?.[currentDay] ?? dayTemplates?.[0] ?? null;
   }, [config, editMode, editing, derived, dayTemplates, currentDay, today]);
 
+  // ── T25 由目标生成（理想日桥）：打开面板加载目标 ──
+  const openGoalGen = useCallback(async () => {
+    const goals = await getAllGoalsV2();
+    setGoalGenGoals(goals.filter((g) => g.status === "active"));
+    setGoalGenSelected([]);
+    setGoalGenDecisions(null);
+    setShowGoalGen(true);
+  }, []);
+
+  // ── T25 生成预览：选目标 → 行动配额分配决策 ──
+  const computeGoalGen = useCallback(async () => {
+    if (goalGenSelected.length === 0) {
+      showToast({ type: "warning", message: "请先选择目标" });
+      return;
+    }
+    const { getDailyActionsV2 } = await import("@/lib/db/goal-v2.db");
+    const todayDate = todayStr();
+    const actions: Parameters<typeof allocateQuota>[0] = [];
+    for (const gid of goalGenSelected) {
+      const goal = goalGenGoals.find((g) => g.id === gid);
+      if (!goal) continue;
+      const das = await getDailyActionsV2(gid);
+      // 今日起（含今日）的目标行动，取 date >= today 的（未完成优先）
+      const todayActions = das
+        .filter((da) => !da.isCompleted && da.date >= todayDate)
+        .slice(0, 12); // 上限 12 条防溢出
+      for (const da of todayActions) {
+        actions.push({
+          id: da.id,
+          goalId: gid,
+          title: da.title,
+          category: (goal.goalCategory as GoalCategory) ?? "workStudy",
+          duration: da.duration || 30,
+          priority: goal.progress >= 50 ? 3 : goal.progress >= 20 ? 2 : 1,
+          attachedFeature: goal.attachedFeatures?.[0],
+        });
+      }
+    }
+    const { decisions, overQuota } = allocateQuota(actions);
+    setGoalGenDecisions(decisions);
+    // 展示超配警告
+    const over = (Object.keys(overQuota) as GoalCategory[]).filter((k) => overQuota[k] > 0);
+    if (over.length > 0) {
+      showToast({
+        type: "warning",
+        message: `超配提示：${over.map((k) => `${CATEGORY_META[k].label} +${Math.round(overQuota[k] / 60 * 10) / 10}h`).join("、")}`,
+      });
+    }
+  }, [goalGenSelected, goalGenGoals]);
+
+  // ── T25 确认生成：写入模板槽位 + 落日程 ──
+  const confirmGoalGen = useCallback(async () => {
+    if (!goalGenDecisions) return;
+    const base = activeTemplate;
+    if (!base) return;
+    // 用默认模板作为骨架（保留睡眠/生活段，目标行动填充匹配段）
+    const skeleton = base;
+    const keep = goalGenDecisions.filter((d) => d.decision !== "defer") ?? [];
+    if (keep.length === 0) {
+      showToast({ type: "error", message: "没有可安排的行动（全部顺延）" });
+      return;
+    }
+    // 将目标行动按匹配段写入理想日 plans（L2 规划层）
+    const { saveIdealDayPlans } = await import("@/lib/ideal-day-templates");
+    const { generateIdealDayItems } = await import("@/lib/ideal-day");
+    const plansForDay: Parameters<typeof saveIdealDayPlans>[1] = [];
+    for (const d of keep) {
+      const block = matchGoalActionToBlock(d.action, skeleton.blocks);
+      if (!block) continue;
+      plansForDay.push({
+        blockId: block.id,
+        feature: (d.action.attachedFeature as IdealDayFeature) ?? (d.action.category === "workStudy" ? "study" : "leisure"),
+        content: d.action.title,
+        detail: d.decision === "compress" ? "已压缩入段（配额优化）" : undefined,
+        start: block.start,
+        end: block.end,
+        isCompleted: false,
+      });
+    }
+    await saveIdealDayPlans(today, plansForDay);
+    await generateIdealDayItems(today);
+    const deferred = goalGenDecisions.filter((d) => d.decision === "defer").length;
+    showToast({ type: "success", message: deferred > 0 ? `已生成 · ${deferred} 项顺延次日` : "已按目标生成理想日" });
+    setShowGoalGen(false);
+    setGoalGenDecisions(null);
+  }, [goalGenDecisions, activeTemplate, today]);
+
   // ── 开始编辑 ──
   const startEdit = (tpl: IdealDayTemplate) => {
     setEditing(tpl);
@@ -451,12 +546,18 @@ export default function IdealDayHomePage() {
         features: [s.feature] as IdealDayFeature[],
       }));
       const nextTpl: IdealDayTemplate = { ...editing, blocks };
+      // T25：睡眠段边界同步到 config.sleepBedTime/sleepWakeTime（双入口一致）
+      const sleepSeg = segments.find((s) => s.group === 'sleep');
+      const nextConfigBase: IdealDayConfig = {
+        ...config,
+        ...(sleepSeg ? { sleepBedTime: sleepSeg.start, sleepWakeTime: sleepSeg.end } : {}),
+      };
       // T24：daily 写回 dayTemplates[7]（选中天）；multi 写回 templates + currentTplId
       const nextConfig: IdealDayConfig =
         (config.templateMode ?? "daily") === "daily"
-          ? { ...config, dayTemplates: dayTemplates!.map((t, i) => (i === currentDay ? nextTpl : t)) }
+          ? { ...nextConfigBase, dayTemplates: dayTemplates!.map((t, i) => (i === currentDay ? nextTpl : t)) }
           : {
-              ...config,
+              ...nextConfigBase,
               templates: derived!.templates.map((t) => (t.id === nextTpl.id ? nextTpl : t)),
               currentTplId: nextTpl.id,
               activeTemplateId: nextTpl.id, // 兼容旧 selectTemplate 链路
@@ -1031,6 +1132,11 @@ export default function IdealDayHomePage() {
                         style={{ background: "var(--lifeflow-brand-50)", color: "var(--lifeflow-primary)" }}>
                         <SlidersHorizontal className="h-3.5 w-3.5" /> 编辑模板
                       </button>
+                      <button type="button" onClick={openGoalGen}
+                        className="flex h-[34px] shrink-0 items-center gap-1 rounded-[10px] px-3 text-[12px] font-medium active:opacity-80"
+                        style={{ background: `${CATEGORY_META.workStudy.color}1A`, color: CATEGORY_META.workStudy.color }}>
+                        <Sparkles className="h-3.5 w-3.5" /> 由目标生成
+                      </button>
                     </div>
                   ) : (
                     <div className="flex items-center gap-2 rounded-[10px] p-1.5" style={{ background: "var(--lifeflow-muted)" }}>
@@ -1273,13 +1379,15 @@ export default function IdealDayHomePage() {
                         <p className="text-[11px] mt-0.5" style={{ color: "var(--color-text-tertiary)" }}>{meta.quotaHint}</p>
                       </div>
                       <div className="flex items-center gap-1 shrink-0">
-                        <input type="time" value={seg.start} disabled={isSleep}
+                        <input type="time" value={seg.start}
                           onChange={(e) => updateSegment(g, { start: e.target.value })}
-                          className="bg-transparent outline-none text-[12px] tabular-nums w-[74px] text-right disabled:opacity-60" style={{ color: "var(--color-text-primary)" }} />
+                          aria-label="睡眠段入睡时间"
+                          className="bg-transparent outline-none text-[12px] tabular-nums w-[74px] text-right" style={{ color: "var(--color-text-primary)" }} />
                         <span className="text-[12px]" style={{ color: "var(--color-text-tertiary)" }}>—</span>
-                        <input type="time" value={seg.end} disabled={isSleep}
+                        <input type="time" value={seg.end}
                           onChange={(e) => updateSegment(g, { end: e.target.value })}
-                          className="bg-transparent outline-none text-[12px] tabular-nums w-[74px] disabled:opacity-60" style={{ color: "var(--color-text-primary)" }} />
+                          aria-label="睡眠段起床时间"
+                          className="bg-transparent outline-none text-[12px] tabular-nums w-[74px]" style={{ color: "var(--color-text-primary)" }} />
                       </div>
                     </div>
                     <div className="px-4 pb-4">
@@ -1831,6 +1939,117 @@ export default function IdealDayHomePage() {
                 保存后打开「日程」页，该时段自动显示安排的具体内容
               </p>
             </div>
+          </div>
+        </>
+      )}
+
+      {/* ── T25 由目标生成 Sheet（理想日桥：选目标 → 配额决策预览 → 确认落日程） ── */}
+      {showGoalGen && (
+        <>
+          <div
+            onClick={() => setShowGoalGen(false)}
+            className="fixed inset-0 z-50 bg-black/40"
+          />
+          <div
+            className="fixed left-0 right-0 bottom-0 z-[60] rounded-t-[20px] max-w-[430px] mx-auto px-5 pt-2 pb-[calc(env(safe-area-inset-bottom)+20px)]"
+            style={{ backgroundColor: "var(--color-surface-card)", animation: "lf-sheet-up 0.28s cubic-bezier(0.32,0.72,0,1)" }}
+          >
+            <div className="flex justify-center pt-1 pb-3"><div className="w-9 h-1 rounded-full" style={{ background: "var(--lifeflow-border)" }} /></div>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-[17px] font-bold" style={{ color: "var(--color-text-primary)" }}>
+                由目标生成理想日
+              </h3>
+              <button type="button" onClick={() => setShowGoalGen(false)} className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: "var(--lifeflow-muted)" }}>
+                <X className="w-4 h-4" style={{ color: "var(--color-text-secondary)" }} />
+              </button>
+            </div>
+
+            {/* 第一步：选择目标 */}
+            {!goalGenDecisions ? (
+              <>
+                <p className="text-[13px] mb-2" style={{ color: "var(--color-text-secondary)" }}>
+                  选择目标，系统将按其挂靠功能与分类分配到理想日对应 8h 时段
+                </p>
+                <div className="flex flex-col gap-2 mb-4 max-h-[40vh] overflow-y-auto">
+                  {goalGenGoals.length === 0 && (
+                    <p className="text-[13px] text-center py-6" style={{ color: "var(--color-text-disabled)" }}>
+                      暂无进行中的目标，请先在「目标」页创建
+                    </p>
+                  )}
+                  {goalGenGoals.map((g) => {
+                    const cat = (g.goalCategory as GoalCategory) ?? "workStudy";
+                    const selected = goalGenSelected.includes(g.id);
+                    return (
+                      <button
+                        key={g.id} type="button"
+                        onClick={() => setGoalGenSelected((prev) => selected ? prev.filter((x) => x !== g.id) : [...prev, g.id])}
+                        className="flex items-center gap-2.5 px-3.5 py-3 rounded-[14px] text-left transition-all active:scale-[0.98]"
+                        style={{
+                          background: selected ? `${CATEGORY_META[cat].color}14` : "var(--lifeflow-muted)",
+                          border: `1.5px solid ${selected ? CATEGORY_META[cat].color : "var(--lifeflow-border)"}`,
+                        }}
+                      >
+                        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: CATEGORY_META[cat].color }} />
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-[14px] font-semibold truncate" style={{ color: "var(--color-text-primary)" }}>{g.title}</span>
+                          <span className="block text-[11px]" style={{ color: "var(--color-text-disabled)" }}>
+                            {CATEGORY_META[cat].label} · {(g.attachedFeatures ?? []).length > 0 ? `挂靠 ${g.attachedFeatures!.length} 功能` : "未挂靠功能"}
+                          </span>
+                        </span>
+                        {selected && <Check className="w-4 h-4 shrink-0" style={{ color: CATEGORY_META[cat].color }} />}
+                      </button>
+                    );
+                  })}
+                </div>
+                <button
+                  type="button" onClick={computeGoalGen} disabled={goalGenSelected.length === 0}
+                  className="w-full h-11 rounded-full text-white text-[15px] font-semibold active:opacity-90 disabled:opacity-40"
+                  style={{ background: "var(--lifeflow-primary)" }}
+                >
+                  生成预览
+                </button>
+              </>
+            ) : (
+              /* 第二步：配额决策预览 */
+              <>
+                <p className="text-[13px] mb-2" style={{ color: "var(--color-text-secondary)" }}>
+                  8+8+8 配额分配结果（方案 E 智能融合）
+                </p>
+                <div className="flex flex-col gap-1.5 mb-4 max-h-[40vh] overflow-y-auto">
+                  {goalGenDecisions.map((d, i) => {
+                    const cat = d.action.category;
+                    const catColor = CATEGORY_META[cat].color;
+                    const badge = d.decision === "keep" ? { text: "保留", bg: `${catColor}1A`, fg: catColor }
+                      : d.decision === "compress" ? { text: `压缩至 ${d.assignedMinutes}min`, bg: "rgba(255,149,0,0.14)", fg: "#FF9500" }
+                        : { text: "顺延次日", bg: "rgba(142,142,147,0.14)", fg: "#8E8E93" };
+                    return (
+                      <div key={d.action.id} className="flex items-center gap-2.5 px-3 py-2.5 rounded-[12px]" style={{ background: "var(--lifeflow-muted)" }}>
+                        <span className="w-2 h-2 rounded-full shrink-0" style={{ background: catColor }} />
+                        <span className="min-w-0 flex-1 text-[13px] font-medium truncate" style={{ color: "var(--color-text-primary)" }}>{d.action.title}</span>
+                        <span className="text-[11px] shrink-0" style={{ color: "var(--color-text-disabled)" }}>{d.action.duration}min</span>
+                        <span className="shrink-0 h-[20px] px-2 rounded-md text-[10.5px] font-semibold" style={{ background: badge.bg, color: badge.fg }}>{badge.text}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="flex items-center gap-2">
+                  <button type="button" onClick={() => setGoalGenDecisions(null)}
+                    className="h-11 px-4 rounded-full text-[14px] font-medium shrink-0" style={{ background: "var(--lifeflow-muted)", color: "var(--color-text-secondary)" }}>
+                    返回
+                  </button>
+                  <button
+                    type="button" onClick={confirmGoalGen}
+                    className="flex-1 h-11 rounded-full text-white text-[15px] font-semibold active:opacity-90"
+                    style={{ background: "var(--lifeflow-primary)" }}
+                  >
+                    确认生成并落日程
+                  </button>
+                </div>
+                <p className="text-[11px] text-center mt-2" style={{ color: "var(--color-text-tertiary)" }}>
+                  保留时长=完整入段 · 压缩=配额优化 · 顺延=次日同段优先排
+                </p>
+              </>
+            )}
           </div>
         </>
       )}

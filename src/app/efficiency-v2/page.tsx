@@ -11,7 +11,7 @@ import {
   goalV2DB,
   deleteGoalV2,
 } from "@/lib/db/goal-v2.db";
-import { GOAL_V2_AI_PROMPT, parseImportedGoal, validateImportedGoal } from "@/lib/goal-v2-import-parser";
+import { GOAL_V2_AI_PROMPT_V2, parseImportedGoalV2, validateImportedGoalV2 } from "@/lib/goal-v2-import-parser";
 import { showToast } from "@/components/ui/Toast";
 import { useTodayExecution } from "@/lib/today-execution";
 
@@ -186,30 +186,36 @@ export default function EfficiencyV2Page() {
     return out;
   }, [allKeyResults]);
 
-  // ── 复制提示词 ──
+  // ── 复制提示词（T25：V2 含理想日模板契约） ──
   const handleCopyPrompt = useCallback(async () => {
     try {
-      await navigator.clipboard.writeText(GOAL_V2_AI_PROMPT);
-      showToast({ type: "success", message: "提示词已复制，发送给 AI 获取导入计划" });
+      await navigator.clipboard.writeText(GOAL_V2_AI_PROMPT_V2);
+      showToast({ type: "success", message: "提示词已复制，发送给 AI 获取「目标 + 理想日模板」导入包" });
     } catch {
       showToast({ type: "error", message: "复制失败，请手动复制" });
     }
   }, []);
 
-  // ── 导入解析 ──
+  // ── 导入解析（T25：双结构兼容 — 目标 + 理想日模板） ──
   const handleImport = useCallback(async () => {
     setImportError("");
     setImporting(true);
     try {
-      const data = parseImportedGoal(importText);
-      const validation = validateImportedGoal(data);
-      if (!validation.valid) {
-        setImportError(validation.errors.join("\n"));
+      const bundle = parseImportedGoalV2(importText);
+      const validation = validateImportedGoalV2(bundle);
+      const errs: string[] = [];
+      if (!validation.goalValid) errs.push(...validation.goalErrors);
+      if (bundle.idealDayTemplate && !validation.templateValid) errs.push(...validation.templateErrors);
+      if (errs.length > 0) {
+        setImportError(errs.join("\n"));
         setImporting(false);
         return;
       }
       // 跳转到创建页面，通过 sessionStorage 传递数据（避免 URL 长度限制截断）
-      sessionStorage.setItem('import_goal', JSON.stringify(data));
+      sessionStorage.setItem('import_goal', JSON.stringify(bundle.goal));
+      if (bundle.idealDayTemplate) {
+        sessionStorage.setItem('import_ideal_template', JSON.stringify(bundle.idealDayTemplate));
+      }
       window.location.href = '/efficiency-v2/new';
     } catch (e: any) {
       setImportError(`解析失败：${e.message || '格式错误，请检查 AI 返回的 JSON'}`);

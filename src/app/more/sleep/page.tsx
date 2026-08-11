@@ -220,7 +220,20 @@ export default function SleepPage() {
       if (total < min || total > max) return;
       const newH = Math.floor((total % 1440) / 60);
       const newM = total % 60;
-      updateSleepGoalV2({ targetTime: `${String(newH).padStart(2, "0")}:${String(newM).padStart(2, "0")}` });
+      const newTime = `${String(newH).padStart(2, "0")}:${String(newM).padStart(2, "0")}`;
+      updateSleepGoalV2({ targetTime: newTime });
+      // T25 双入口一致：同步理想日 sleepBedTime（不阻塞）
+      (async () => {
+        try {
+          const { getIdealDayConfig, saveIdealDayConfig } = await import("@/lib/ideal-day");
+          const cfg = await getIdealDayConfig();
+          if (cfg.sleepBedTime !== newTime) {
+            await saveIdealDayConfig({ ...cfg, sleepBedTime: newTime });
+          }
+        } catch {
+          /* 同步失败不影响睡眠目标保存 */
+        }
+      })();
     },
     [targetTime, updateSleepGoalV2],
   );

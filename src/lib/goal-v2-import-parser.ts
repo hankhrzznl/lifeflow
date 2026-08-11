@@ -269,3 +269,225 @@ export function validateImportedGoal(data: ImportedGoal): { valid: boolean; erro
 
   return { valid: errors.length === 0, errors };
 }
+
+// ============================================================
+// T25：一键导入「目标 + 理想日模板」双结构（V2 提示词）
+// ============================================================
+
+/** 导入的理想日模板结构（AI 输出契约） */
+export interface ImportedIdealDayTemplate {
+  name: string;
+  daysOfWeek?: number[];            // 周索引（0=周一）可空
+  sleepBedTime?: string;            // HH:MM，默认 22:30
+  sleepWakeTime?: string;           // HH:MM，默认 06:00
+  blocks: {
+    id: string;                     // 槽位 id（目标 dailyActions 挂靠）
+    label: string;
+    start: string;
+    end: string;
+    group: string;                  // sleep/morning/noon/afternoon/evening
+    features: string[];             // 功能白名单
+  }[];
+}
+
+/** AI 输出双结构根对象 */
+export interface ImportedGoalV2Bundle {
+  goal: ImportedGoal;
+  idealDayTemplate?: ImportedIdealDayTemplate;
+}
+
+/**
+ * T25：V2 提示词 — 一次生成「五层目标 + 理想日模板」
+ * 目标 dailyActions 挂靠 blockId（时间由模板分配，禁止自由写 time → 物理防冲突）
+ */
+export const GOAL_V2_AI_PROMPT_V2 = `# 目标五层拆解法 + 理想日模板 — AI 创建指引
+
+## 你的任务
+
+用户将告诉你他想实现的目标。请基于「8+8+8 理想日架构」（睡眠 8h / 工作学习 8h / 生活 8h）生成一份完整导入包：
+**一份五层目标（goal）+ 一份理想日模板（idealDayTemplate）**。
+
+## 8+8+8 三分类
+
+目标分为三类，对应一天中的三个 8 小时时段：
+- **sleep** 睡眠（8h 恢复精力）
+- **workStudy** 工作学习（8h 目标推进）
+- **life** 生活（8h 留给自己）
+
+功能也归属三类：
+- 睡眠类：sleep
+- 工作学习类：study / focus / routine / medication
+- 生活类：leisure / water / diet / posture / wellness / workout / notes
+
+## 挂靠规则（核心）
+
+每个目标可挂靠 0~多个功能（attachedFeatures），挂靠后该目标的行动在日程上显示功能图标；
+不挂靠则显示目标图标。目标行动（dailyActions）**必须挂靠 idealDayTemplate 中的 blockId**，
+由模板分配时段，禁止自行填写 time —— 这样目标与理想日物理上不可能冲突。
+
+## 输出格式
+
+请**严格**按以下 JSON 输出，不要包含任何额外说明文字：
+
+\`\`\`json
+{
+  "goal": {
+    "title": "目标名称",
+    "vision": "愿景画面描述（50-100字）",
+    "color": "#6366F1",
+    "goalCategory": "workStudy（sleep / workStudy / life 三选一）",
+    "attachedFeatures": ["study", "focus"],
+    "keyResults": [
+      { "description": "可量化指标", "targetValue": 数值, "unit": "单位", "deadline": "YYYY-MM-DD" }
+    ],
+    "strategies": [
+      {
+        "name": "策略名称",
+        "description": "策略描述",
+        "startDate": "YYYY-MM-DD",
+        "endDate": "YYYY-MM-DD",
+        "cycleType": "daily 或 weekly",
+        "dailyActions": [
+          { "title": "行动内容", "blockId": "block-study-morning（从 idealDayTemplate.blocks 中选）", "duration": 时长分钟数 }
+        ],
+        "weeklyTasks": [
+          { "title": "本周任务标题", "deliverable": "本周交付成果" }
+        ]
+      }
+    ]
+  },
+  "idealDayTemplate": {
+    "name": "工作日模板",
+    "sleepBedTime": "22:30",
+    "sleepWakeTime": "06:00",
+    "blocks": [
+      { "id": "block-sleep", "label": "睡眠", "start": "22:30", "end": "06:30", "group": "sleep", "features": ["sleep"] },
+      { "id": "block-morning", "label": "上午学习", "start": "08:00", "end": "12:00", "group": "morning", "features": ["study", "focus"] },
+      { "id": "block-noon", "label": "午间生活", "start": "12:00", "end": "14:00", "group": "noon", "features": ["water", "diet", "leisure"] },
+      { "id": "block-afternoon", "label": "下午学习", "start": "14:00", "end": "18:00", "group": "afternoon", "features": ["study", "focus"] },
+      { "id": "block-evening", "label": "晚间生活", "start": "19:00", "end": "22:00", "group": "evening", "features": ["workout", "posture", "wellness", "leisure"] }
+    ]
+  }
+}
+\`\`\`
+
+## 重要规则
+
+1. dailyActions 的 **blockId 必须来自 idealDayTemplate.blocks 的 id**，且该 block 的 features 白名单
+   必须包含该行动挂靠的功能（如 blockId=block-morning 只放 study/focus 类行动）；**禁止把非 sleep
+   行动挂到 sleep 段**（睡眠段物理排除）
+2. dailyActions 不填写 time，时间由模板块边界决定；duration 为行动时长（分钟）
+3. 目标行动合计时长应大致匹配对应 8h 配额（工作学习类目标 8h 内、生活类 8h 内）
+4. attachedFeatures 为空数组时表示目标不挂靠功能（日程显示目标图标）
+5. 睡眠时间可调：sleepBedTime/sleepWakeTime 按用户作息填写（默认 22:30 / 06:00）
+6. 所有日期格式必须为 YYYY-MM-DD，时间为 HH:MM
+7. 直接在代码块中输出 JSON，不要包含额外说明文字
+
+现在，请为用户的目标生成上述 JSON 格式的完整导入包。`;
+
+/**
+ * T25：解析 AI 返回的双结构导入包
+ * 兼容：仅目标（旧格式）→ goal 顶层；双结构 → { goal, idealDayTemplate }
+ */
+export function parseImportedGoalV2(text: string): ImportedGoalV2Bundle {
+  // 剥壳容错：去除 ```json 代码块标记
+  const codeBlockMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+  const jsonStr = codeBlockMatch ? codeBlockMatch[1].trim() : text.trim();
+  const parsed = JSON.parse(jsonStr);
+
+  // 双结构：{ goal: {...}, idealDayTemplate: {...} }
+  if (parsed.goal && typeof parsed.goal === 'object') {
+    const goal = parseImportedGoal(JSON.stringify(parsed.goal));
+    const idealDayTemplate = parsed.idealDayTemplate
+      ? parseImportedIdealDayTemplate(JSON.stringify(parsed.idealDayTemplate))
+      : undefined;
+    return { goal, idealDayTemplate };
+  }
+  // 兼容旧格式：顶层即目标
+  return { goal: parseImportedGoal(text), idealDayTemplate: undefined };
+}
+
+/** 解析并校验理想日模板 */
+export function parseImportedIdealDayTemplate(text: string): ImportedIdealDayTemplate {
+  const codeBlockMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+  const jsonStr = codeBlockMatch ? codeBlockMatch[1].trim() : text.trim();
+  const parsed = JSON.parse(jsonStr);
+
+  if (!parsed.name || typeof parsed.name !== 'string') {
+    throw new Error('缺少必要字段：name（模板名称）');
+  }
+  if (!Array.isArray(parsed.blocks) || parsed.blocks.length === 0) {
+    throw new Error('缺少模板块（blocks）');
+  }
+
+  const blocks: { id: string; label: string; start: string; end: string; group: string; features: string[] }[] = parsed.blocks.map((b: Record<string, unknown>, i: number) => {
+    if (!b.id || !b.label || !b.start || !b.end) {
+      throw new Error(`第 ${i + 1} 个模板块缺少 id/label/start/end`);
+    }
+    if (!/^\d{2}:\d{2}$/.test(String(b.start)) || !/^\d{2}:\d{2}$/.test(String(b.end))) {
+      throw new Error(`第 ${i + 1} 个模板块时间格式错误（需 HH:MM）`);
+    }
+    return {
+      id: String(b.id),
+      label: String(b.label),
+      start: String(b.start),
+      end: String(b.end),
+      group: String(b.group || 'morning'),
+      features: Array.isArray(b.features) ? b.features.map((f: unknown) => String(f)) : [],
+    };
+  });
+
+  // 睡眠段约束：含 sleep 功能的块必须只有 sleep
+  for (const b of blocks) {
+    if (b.features.includes('sleep') && b.features.some((f) => f !== 'sleep')) {
+      throw new Error(`模板块「${b.label}」睡眠段不能包含非 sleep 功能`);
+    }
+  }
+
+  return {
+    name: parsed.name.trim(),
+    daysOfWeek: Array.isArray(parsed.daysOfWeek) ? parsed.daysOfWeek : undefined,
+    sleepBedTime: /^\d{2}:\d{2}$/.test(parsed.sleepBedTime || '') ? parsed.sleepBedTime : '22:30',
+    sleepWakeTime: /^\d{2}:\d{2}$/.test(parsed.sleepWakeTime || '') ? parsed.sleepWakeTime : '06:00',
+    blocks,
+  };
+}
+
+/** 校验导入包（目标 + 模板），返回分块错误 */
+export function validateImportedGoalV2(data: ImportedGoalV2Bundle): {
+  goalValid: boolean;
+  goalErrors: string[];
+  templateValid: boolean;
+  templateErrors: string[];
+} {
+  const gv = validateImportedGoal(data.goal);
+
+  // 模板校验
+  const templateErrors: string[] = [];
+  let templateValid = true;
+  const tpl = data.idealDayTemplate;
+  if (tpl) {
+    const groups = ['sleep', 'morning', 'noon', 'afternoon', 'evening'];
+    const hasSleep = tpl.blocks.some((b) => b.group === 'sleep' || b.features.includes('sleep'));
+    if (!hasSleep) templateErrors.push('模板缺少睡眠段');
+    const blockIds = new Set(tpl.blocks.map((b) => b.id));
+    // 校验 dailyActions 的 blockId 挂靠
+    for (const s of data.goal.strategies) {
+      for (const da of s.dailyActions) {
+        const bid = (da as unknown as { blockId?: string }).blockId;
+        if (bid && !blockIds.has(bid)) {
+          templateErrors.push(`行动「${da.title}」挂靠的 blockId「${bid}」不存在于模板`);
+        }
+      }
+    }
+    if (templateErrors.length > 0) templateValid = false;
+    void groups;
+  }
+
+  return {
+    goalValid: gv.valid,
+    goalErrors: gv.errors,
+    templateValid,
+    templateErrors,
+  };
+}

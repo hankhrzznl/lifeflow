@@ -1,0 +1,2065 @@
+{
+  "success": false,
+  "outcome": "validation_failed",
+  "repairable": true,
+  "terminalViolations": [],
+  "terminalBlockingSummary": null,
+  "skillProvenance": {
+    "name": "solo-design",
+    "version": "2026.08.06.19.15.08",
+    "version_source": "skill-release-manifest.json",
+    "runtime_skill_dir": "c:\\Users\\86189\\.trae-cn\\builtin\\design\\default\\skills\\solo-design",
+    "recorded_at": null,
+    "expected_version": "2026.08.06.19.15.08",
+    "status": "manifest_fallback",
+    "read_status": "ok",
+    "reason": "runtime-orchestration-summary.json missing skillProvenance; used skill-release-manifest.json"
+  },
+  "operatingMode": "free-explore",
+  "renderBlockingErrorCount": 37,
+  "softWarningCount": 34,
+  "renderBlockingErrors": [
+    "[mobile-navigation-consistency] pages/goals.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/goal-detail.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/sleep.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/water.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/diet.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/training.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/focus.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/routine.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/exam.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/expense.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/notes.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/habit.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/countdown.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/medication.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/weekly.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/review.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/profile.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/settings.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/reminders.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/schedule.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/more.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/quick-note.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/countdown-create.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/sleep-plan-create.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/med-add.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/expense-create.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/expense-detail.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/habit-create.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/habit-detail.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/note-create.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/note-detail.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/study-item-create.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/training-big3.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/posture.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/wellness.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/mood.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/training-plan.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments."
+  ],
+  "errorSignatures": [
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "normalized": "[mobile-navigation-consistency] pages/goals.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "signature": "f8b9d83ebad526c38307d5c64eb1df239ee100c35b1a385974fd5de3fd5b9035"
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "normalized": "[mobile-navigation-consistency] pages/goal-detail.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "signature": "2e9bd4f87ddeab9aeb7056145a8b3f0249697cf711fe6cb5a54a614d1c171355"
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "normalized": "[mobile-navigation-consistency] pages/sleep.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "signature": "8e4f26bf83ebffb2e49dcfec5cbc9fccdb094cb924a92e42531d3fe98c2c87f1"
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "normalized": "[mobile-navigation-consistency] pages/water.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "signature": "eec49b85fab57b301712dccb397c15618432ad886320141f406b68e36ab7e48e"
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "normalized": "[mobile-navigation-consistency] pages/diet.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "signature": "44530e637f0dbef026571de9285a3a4caaf7647261da7568e975d5f60838b3af"
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "normalized": "[mobile-navigation-consistency] pages/training.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "signature": "a67fea9e28191a044a74876b1e25b3b1ba82361ea6f72f73ed3b202ab05f1fb1"
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "normalized": "[mobile-navigation-consistency] pages/focus.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "signature": "dd5c0838a2036e9bef7ef5649927626d66c2724fa88321767d4989433f3f97f3"
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "normalized": "[mobile-navigation-consistency] pages/routine.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "signature": "47fdade90bced05effac171f82c92e83af5c1dca558b34a084d1dc2d4b8067c8"
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "normalized": "[mobile-navigation-consistency] pages/exam.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "signature": "98f8f822fad9da601d0b740580fa004d8f3672c9a844da423b53ae5976f904a7"
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "normalized": "[mobile-navigation-consistency] pages/expense.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "signature": "157fe4a5305699cd9e0163c148cba50b592197940ca9328fdc85b8a985657e53"
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "normalized": "[mobile-navigation-consistency] pages/notes.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "signature": "35617dbc0114f8974705527e97fda31a01d50588c388962aca1b8b2ba97ef3e6"
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "normalized": "[mobile-navigation-consistency] pages/habit.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "signature": "06fae472f801ed8e4be4d91ff36ba1361beb1a4bf5c11ffe5e7d9e990840e0bc"
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "normalized": "[mobile-navigation-consistency] pages/countdown.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "signature": "255d3d44f533272d5ce075b1308ae45d480f33392ef090afaac89f4dee75440a"
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "normalized": "[mobile-navigation-consistency] pages/medication.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "signature": "d05669d5eaab94ed83167a4537cf1c08dfa52ea1becb840f514f34ff91c1d61f"
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "normalized": "[mobile-navigation-consistency] pages/weekly.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "signature": "24e26b5dd079d8ff4190260509e32dbbbb141f5e38145aefee81550ef5709cbf"
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "normalized": "[mobile-navigation-consistency] pages/review.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "signature": "f0ef2185e08d042602c8ee8787fd5aca72133c0f0f5782edb8c100b39c819535"
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "normalized": "[mobile-navigation-consistency] pages/profile.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "signature": "a56e834a8ac8a709e539b8f8e5dc266d90b5688afe83fd8697730736c7b6519e"
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "normalized": "[mobile-navigation-consistency] pages/settings.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "signature": "999cfbc5dd7eee2724d1b9fade08e49a6646e6ff672530e91e94d82ee5c32de8"
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "normalized": "[mobile-navigation-consistency] pages/reminders.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "signature": "57b1c2962afdafdf5b16f7146d79b40dcd5ebcc2989ff254cfe88ec3207b1506"
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "normalized": "[mobile-navigation-consistency] pages/schedule.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "signature": "ad6237dd729fc2b80c94ed404fae581bb1b5eaf29f965ba99c76f64bafa838e4"
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "normalized": "[mobile-navigation-consistency] pages/more.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "signature": "ea46177f5b25e2caca85843b395e7da518932cf153b697c35616232c0f3b0e89"
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "normalized": "[mobile-navigation-consistency] pages/quick-note.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "signature": "482dd83f1b506e51825dbe614c68c9adbebfbf355196b54c8c7901f6513747f0"
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "normalized": "[mobile-navigation-consistency] pages/countdown-create.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "signature": "5b921334015b8b35af39185fb1fee4839d28a64d2931b6064ff5512a2897ecc4"
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "normalized": "[mobile-navigation-consistency] pages/sleep-plan-create.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "signature": "1ce97ffb174cbb467a12e1db0dc1373d58cf260011f24860f96edb9b12598573"
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "normalized": "[mobile-navigation-consistency] pages/med-add.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "signature": "b6f88d79efac0a2f87f48e2c6ff6406bda3bc4a924f3456048d9317403ae4eab"
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "normalized": "[mobile-navigation-consistency] pages/expense-create.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "signature": "bf6c0ecd8cc20657eec3b7d44a9cbf370f0a27e793b63ad73bcf959dcdb8359e"
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "normalized": "[mobile-navigation-consistency] pages/expense-detail.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "signature": "90a09cb23ad128db726dc52afec02226c267172fc27e2f85efa3931218f3a8d0"
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "normalized": "[mobile-navigation-consistency] pages/habit-create.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "signature": "ba50fb6238f1454eac022b2307dae630877fbf5ef5cf3c79a4c30b3d6bae55c2"
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "normalized": "[mobile-navigation-consistency] pages/habit-detail.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "signature": "6bea15cc403d0e14f3a81c59db6cd51d8aac14f06ec778442c42c1ffdf4210c9"
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "normalized": "[mobile-navigation-consistency] pages/note-create.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "signature": "f8b608665a9074dec638684bf8146f9cc56b905eed17f53e85522f2b8eaa1d57"
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "normalized": "[mobile-navigation-consistency] pages/note-detail.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "signature": "b26969bcbf421e99b8599b2ddee3a51016a7bffb7eb1893b9a8e01b99604c66b"
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "normalized": "[mobile-navigation-consistency] pages/study-item-create.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "signature": "06109d63b33e934de94adf807550556f0625c579f86264611620e6e49f0bc04f"
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "normalized": "[mobile-navigation-consistency] pages/training-big3.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "signature": "5b49f40c0fb8c7a093cd17139441d4469d0d241f377913e49d14275b38cda993"
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "normalized": "[mobile-navigation-consistency] pages/posture.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "signature": "770a70520cb59f2ff67effad94ae8b4f0c4f01a58a594c009adfe4ec293ebb6a"
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "normalized": "[mobile-navigation-consistency] pages/wellness.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "signature": "3d37cd42da2bf792d064d84f624d175f8469e6cc2eafd54ec4b483348c54c70a"
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "normalized": "[mobile-navigation-consistency] pages/mood.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "signature": "f66828abdaf0fb975dab8beed009567284d0a0dac4477494ee87ea047ebe6f49"
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "normalized": "[mobile-navigation-consistency] pages/training-plan.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "signature": "f076959b4b9c7a71059cbe4cc2f98b21aa86c8825d8a44c090bdbb8eacef9c83"
+    }
+  ],
+  "softWarnings": [
+    "[mobile-navigation-consistency] 3 mobile page(s) do not expose a 3+ item data-nav-key nav cluster while sibling pages do. This is acceptable for detail/reward/modal pages only when planned explicitly.",
+    "[html-quality] colors_and_type.css: ordinary/static shadow tokens must keep every shadow alpha <= 0.05; deeper shadows are allowed only for floating-layer tokens such as modal/popover/dropdown/drawer/overlay (--shadow-md: 0 8px 24px rgba(38, 34, 30, 0.08), --shadow-lg: 0 18px 44px rgba(38, 34, 30, 0.12), --shadow-card: 0 1px 2px rgba(38, 34, 30, 0.04), 0 10px 30px rgba(38, 34, 30, 0.06), --shadow-primary: 0 8px 22px rgba(0, 47, 167, 0.20)).",
+    "[html-quality] assistant.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] countdown-create.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] diet.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] exam.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] expense-create.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] expense-detail.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] expense.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] focus.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] goal-create.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] goal-detail.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] habit-create.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] habit-detail.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] habit.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] med-add.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] mood.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] more.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] note-create.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] note-detail.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] posture.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] profile.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] review.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] schedule.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] settings.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] sleep-plan-create.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] sleep.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] study-item-create.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] training-big3.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] training-plan.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] training.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] water.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] weekly.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] wellness.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference."
+  ],
+  "repairPlanHints": [
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "owner": "main-agent",
+      "repairScope": "all-pages-with-mobile-nav",
+      "strategy": "run_repair_mobile_navigation_once",
+      "affectedFiles": [
+        "pages/goals.html"
+      ],
+      "repairReportPath": "mobile-nav-repair-report.json",
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 3
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "owner": "main-agent",
+      "repairScope": "all-pages-with-mobile-nav",
+      "strategy": "run_repair_mobile_navigation_once",
+      "affectedFiles": [
+        "pages/goal-detail.html"
+      ],
+      "repairReportPath": "mobile-nav-repair-report.json",
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 3
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "owner": "main-agent",
+      "repairScope": "all-pages-with-mobile-nav",
+      "strategy": "run_repair_mobile_navigation_once",
+      "affectedFiles": [
+        "pages/sleep.html"
+      ],
+      "repairReportPath": "mobile-nav-repair-report.json",
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 3
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "owner": "main-agent",
+      "repairScope": "all-pages-with-mobile-nav",
+      "strategy": "run_repair_mobile_navigation_once",
+      "affectedFiles": [
+        "pages/water.html"
+      ],
+      "repairReportPath": "mobile-nav-repair-report.json",
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 3
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "owner": "main-agent",
+      "repairScope": "all-pages-with-mobile-nav",
+      "strategy": "run_repair_mobile_navigation_once",
+      "affectedFiles": [
+        "pages/diet.html"
+      ],
+      "repairReportPath": "mobile-nav-repair-report.json",
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 3
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "owner": "main-agent",
+      "repairScope": "all-pages-with-mobile-nav",
+      "strategy": "run_repair_mobile_navigation_once",
+      "affectedFiles": [
+        "pages/training.html"
+      ],
+      "repairReportPath": "mobile-nav-repair-report.json",
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 3
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "owner": "main-agent",
+      "repairScope": "all-pages-with-mobile-nav",
+      "strategy": "run_repair_mobile_navigation_once",
+      "affectedFiles": [
+        "pages/focus.html"
+      ],
+      "repairReportPath": "mobile-nav-repair-report.json",
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 3
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "owner": "main-agent",
+      "repairScope": "all-pages-with-mobile-nav",
+      "strategy": "run_repair_mobile_navigation_once",
+      "affectedFiles": [
+        "pages/routine.html"
+      ],
+      "repairReportPath": "mobile-nav-repair-report.json",
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 3
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "owner": "main-agent",
+      "repairScope": "all-pages-with-mobile-nav",
+      "strategy": "run_repair_mobile_navigation_once",
+      "affectedFiles": [
+        "pages/exam.html"
+      ],
+      "repairReportPath": "mobile-nav-repair-report.json",
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 3
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "owner": "main-agent",
+      "repairScope": "all-pages-with-mobile-nav",
+      "strategy": "run_repair_mobile_navigation_once",
+      "affectedFiles": [
+        "pages/expense.html"
+      ],
+      "repairReportPath": "mobile-nav-repair-report.json",
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 3
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "owner": "main-agent",
+      "repairScope": "all-pages-with-mobile-nav",
+      "strategy": "run_repair_mobile_navigation_once",
+      "affectedFiles": [
+        "pages/notes.html"
+      ],
+      "repairReportPath": "mobile-nav-repair-report.json",
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 3
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "owner": "main-agent",
+      "repairScope": "all-pages-with-mobile-nav",
+      "strategy": "run_repair_mobile_navigation_once",
+      "affectedFiles": [
+        "pages/habit.html"
+      ],
+      "repairReportPath": "mobile-nav-repair-report.json",
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 3
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "owner": "main-agent",
+      "repairScope": "all-pages-with-mobile-nav",
+      "strategy": "run_repair_mobile_navigation_once",
+      "affectedFiles": [
+        "pages/countdown.html"
+      ],
+      "repairReportPath": "mobile-nav-repair-report.json",
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 3
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "owner": "main-agent",
+      "repairScope": "all-pages-with-mobile-nav",
+      "strategy": "run_repair_mobile_navigation_once",
+      "affectedFiles": [
+        "pages/medication.html"
+      ],
+      "repairReportPath": "mobile-nav-repair-report.json",
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 3
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "owner": "main-agent",
+      "repairScope": "all-pages-with-mobile-nav",
+      "strategy": "run_repair_mobile_navigation_once",
+      "affectedFiles": [
+        "pages/weekly.html"
+      ],
+      "repairReportPath": "mobile-nav-repair-report.json",
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 3
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "owner": "main-agent",
+      "repairScope": "all-pages-with-mobile-nav",
+      "strategy": "run_repair_mobile_navigation_once",
+      "affectedFiles": [
+        "pages/review.html"
+      ],
+      "repairReportPath": "mobile-nav-repair-report.json",
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 3
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "owner": "main-agent",
+      "repairScope": "all-pages-with-mobile-nav",
+      "strategy": "run_repair_mobile_navigation_once",
+      "affectedFiles": [
+        "pages/profile.html"
+      ],
+      "repairReportPath": "mobile-nav-repair-report.json",
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 3
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "owner": "main-agent",
+      "repairScope": "all-pages-with-mobile-nav",
+      "strategy": "run_repair_mobile_navigation_once",
+      "affectedFiles": [
+        "pages/settings.html"
+      ],
+      "repairReportPath": "mobile-nav-repair-report.json",
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 3
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "owner": "main-agent",
+      "repairScope": "all-pages-with-mobile-nav",
+      "strategy": "run_repair_mobile_navigation_once",
+      "affectedFiles": [
+        "pages/reminders.html"
+      ],
+      "repairReportPath": "mobile-nav-repair-report.json",
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 3
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "owner": "main-agent",
+      "repairScope": "all-pages-with-mobile-nav",
+      "strategy": "run_repair_mobile_navigation_once",
+      "affectedFiles": [
+        "pages/schedule.html"
+      ],
+      "repairReportPath": "mobile-nav-repair-report.json",
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 3
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "owner": "main-agent",
+      "repairScope": "all-pages-with-mobile-nav",
+      "strategy": "run_repair_mobile_navigation_once",
+      "affectedFiles": [
+        "pages/more.html"
+      ],
+      "repairReportPath": "mobile-nav-repair-report.json",
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 3
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "owner": "main-agent",
+      "repairScope": "all-pages-with-mobile-nav",
+      "strategy": "run_repair_mobile_navigation_once",
+      "affectedFiles": [
+        "pages/quick-note.html"
+      ],
+      "repairReportPath": "mobile-nav-repair-report.json",
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 3
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "owner": "main-agent",
+      "repairScope": "all-pages-with-mobile-nav",
+      "strategy": "run_repair_mobile_navigation_once",
+      "affectedFiles": [
+        "pages/countdown-create.html"
+      ],
+      "repairReportPath": "mobile-nav-repair-report.json",
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 3
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "owner": "main-agent",
+      "repairScope": "all-pages-with-mobile-nav",
+      "strategy": "run_repair_mobile_navigation_once",
+      "affectedFiles": [
+        "pages/sleep-plan-create.html"
+      ],
+      "repairReportPath": "mobile-nav-repair-report.json",
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 3
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "owner": "main-agent",
+      "repairScope": "all-pages-with-mobile-nav",
+      "strategy": "run_repair_mobile_navigation_once",
+      "affectedFiles": [
+        "pages/med-add.html"
+      ],
+      "repairReportPath": "mobile-nav-repair-report.json",
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 3
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "owner": "main-agent",
+      "repairScope": "all-pages-with-mobile-nav",
+      "strategy": "run_repair_mobile_navigation_once",
+      "affectedFiles": [
+        "pages/expense-create.html"
+      ],
+      "repairReportPath": "mobile-nav-repair-report.json",
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 3
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "owner": "main-agent",
+      "repairScope": "all-pages-with-mobile-nav",
+      "strategy": "run_repair_mobile_navigation_once",
+      "affectedFiles": [
+        "pages/expense-detail.html"
+      ],
+      "repairReportPath": "mobile-nav-repair-report.json",
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 3
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "owner": "main-agent",
+      "repairScope": "all-pages-with-mobile-nav",
+      "strategy": "run_repair_mobile_navigation_once",
+      "affectedFiles": [
+        "pages/habit-create.html"
+      ],
+      "repairReportPath": "mobile-nav-repair-report.json",
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 3
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "owner": "main-agent",
+      "repairScope": "all-pages-with-mobile-nav",
+      "strategy": "run_repair_mobile_navigation_once",
+      "affectedFiles": [
+        "pages/habit-detail.html"
+      ],
+      "repairReportPath": "mobile-nav-repair-report.json",
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 3
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "owner": "main-agent",
+      "repairScope": "all-pages-with-mobile-nav",
+      "strategy": "run_repair_mobile_navigation_once",
+      "affectedFiles": [
+        "pages/note-create.html"
+      ],
+      "repairReportPath": "mobile-nav-repair-report.json",
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 3
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "owner": "main-agent",
+      "repairScope": "all-pages-with-mobile-nav",
+      "strategy": "run_repair_mobile_navigation_once",
+      "affectedFiles": [
+        "pages/note-detail.html"
+      ],
+      "repairReportPath": "mobile-nav-repair-report.json",
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 3
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "owner": "main-agent",
+      "repairScope": "all-pages-with-mobile-nav",
+      "strategy": "run_repair_mobile_navigation_once",
+      "affectedFiles": [
+        "pages/study-item-create.html"
+      ],
+      "repairReportPath": "mobile-nav-repair-report.json",
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 3
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "owner": "main-agent",
+      "repairScope": "all-pages-with-mobile-nav",
+      "strategy": "run_repair_mobile_navigation_once",
+      "affectedFiles": [
+        "pages/training-big3.html"
+      ],
+      "repairReportPath": "mobile-nav-repair-report.json",
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 3
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "owner": "main-agent",
+      "repairScope": "all-pages-with-mobile-nav",
+      "strategy": "run_repair_mobile_navigation_once",
+      "affectedFiles": [
+        "pages/posture.html"
+      ],
+      "repairReportPath": "mobile-nav-repair-report.json",
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 3
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "owner": "main-agent",
+      "repairScope": "all-pages-with-mobile-nav",
+      "strategy": "run_repair_mobile_navigation_once",
+      "affectedFiles": [
+        "pages/wellness.html"
+      ],
+      "repairReportPath": "mobile-nav-repair-report.json",
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 3
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "owner": "main-agent",
+      "repairScope": "all-pages-with-mobile-nav",
+      "strategy": "run_repair_mobile_navigation_once",
+      "affectedFiles": [
+        "pages/mood.html"
+      ],
+      "repairReportPath": "mobile-nav-repair-report.json",
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 3
+    },
+    {
+      "errorClass": "mobile-navigation-consistency",
+      "owner": "main-agent",
+      "repairScope": "all-pages-with-mobile-nav",
+      "strategy": "run_repair_mobile_navigation_once",
+      "affectedFiles": [
+        "pages/training-plan.html"
+      ],
+      "repairReportPath": "mobile-nav-repair-report.json",
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 3
+    },
+    {
+      "errorClass": "hardcoded-color-in-body",
+      "owner": "sub-agent",
+      "repairScope": "targeted-token-replace",
+      "strategy": "targeted_token_replace_once",
+      "affectedFiles": [
+        "assistant.html"
+      ],
+      "repairReportPath": null,
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 2
+    },
+    {
+      "errorClass": "hardcoded-color-in-body",
+      "owner": "sub-agent",
+      "repairScope": "targeted-token-replace",
+      "strategy": "targeted_token_replace_once",
+      "affectedFiles": [
+        "countdown-create.html"
+      ],
+      "repairReportPath": null,
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 2
+    },
+    {
+      "errorClass": "hardcoded-color-in-body",
+      "owner": "sub-agent",
+      "repairScope": "targeted-token-replace",
+      "strategy": "targeted_token_replace_once",
+      "affectedFiles": [
+        "diet.html"
+      ],
+      "repairReportPath": null,
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 2
+    },
+    {
+      "errorClass": "hardcoded-color-in-body",
+      "owner": "sub-agent",
+      "repairScope": "targeted-token-replace",
+      "strategy": "targeted_token_replace_once",
+      "affectedFiles": [
+        "exam.html"
+      ],
+      "repairReportPath": null,
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 2
+    },
+    {
+      "errorClass": "hardcoded-color-in-body",
+      "owner": "sub-agent",
+      "repairScope": "targeted-token-replace",
+      "strategy": "targeted_token_replace_once",
+      "affectedFiles": [
+        "expense-create.html"
+      ],
+      "repairReportPath": null,
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 2
+    },
+    {
+      "errorClass": "hardcoded-color-in-body",
+      "owner": "sub-agent",
+      "repairScope": "targeted-token-replace",
+      "strategy": "targeted_token_replace_once",
+      "affectedFiles": [
+        "expense-detail.html"
+      ],
+      "repairReportPath": null,
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 2
+    },
+    {
+      "errorClass": "hardcoded-color-in-body",
+      "owner": "sub-agent",
+      "repairScope": "targeted-token-replace",
+      "strategy": "targeted_token_replace_once",
+      "affectedFiles": [
+        "expense.html"
+      ],
+      "repairReportPath": null,
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 2
+    },
+    {
+      "errorClass": "hardcoded-color-in-body",
+      "owner": "sub-agent",
+      "repairScope": "targeted-token-replace",
+      "strategy": "targeted_token_replace_once",
+      "affectedFiles": [
+        "focus.html"
+      ],
+      "repairReportPath": null,
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 2
+    },
+    {
+      "errorClass": "hardcoded-color-in-body",
+      "owner": "sub-agent",
+      "repairScope": "targeted-token-replace",
+      "strategy": "targeted_token_replace_once",
+      "affectedFiles": [
+        "goal-create.html"
+      ],
+      "repairReportPath": null,
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 2
+    },
+    {
+      "errorClass": "hardcoded-color-in-body",
+      "owner": "sub-agent",
+      "repairScope": "targeted-token-replace",
+      "strategy": "targeted_token_replace_once",
+      "affectedFiles": [
+        "goal-detail.html"
+      ],
+      "repairReportPath": null,
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 2
+    },
+    {
+      "errorClass": "hardcoded-color-in-body",
+      "owner": "sub-agent",
+      "repairScope": "targeted-token-replace",
+      "strategy": "targeted_token_replace_once",
+      "affectedFiles": [
+        "habit-create.html"
+      ],
+      "repairReportPath": null,
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 2
+    },
+    {
+      "errorClass": "hardcoded-color-in-body",
+      "owner": "sub-agent",
+      "repairScope": "targeted-token-replace",
+      "strategy": "targeted_token_replace_once",
+      "affectedFiles": [
+        "habit-detail.html"
+      ],
+      "repairReportPath": null,
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 2
+    },
+    {
+      "errorClass": "hardcoded-color-in-body",
+      "owner": "sub-agent",
+      "repairScope": "targeted-token-replace",
+      "strategy": "targeted_token_replace_once",
+      "affectedFiles": [
+        "habit.html"
+      ],
+      "repairReportPath": null,
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 2
+    },
+    {
+      "errorClass": "hardcoded-color-in-body",
+      "owner": "sub-agent",
+      "repairScope": "targeted-token-replace",
+      "strategy": "targeted_token_replace_once",
+      "affectedFiles": [
+        "med-add.html"
+      ],
+      "repairReportPath": null,
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 2
+    },
+    {
+      "errorClass": "hardcoded-color-in-body",
+      "owner": "sub-agent",
+      "repairScope": "targeted-token-replace",
+      "strategy": "targeted_token_replace_once",
+      "affectedFiles": [
+        "mood.html"
+      ],
+      "repairReportPath": null,
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 2
+    },
+    {
+      "errorClass": "hardcoded-color-in-body",
+      "owner": "sub-agent",
+      "repairScope": "targeted-token-replace",
+      "strategy": "targeted_token_replace_once",
+      "affectedFiles": [
+        "more.html"
+      ],
+      "repairReportPath": null,
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 2
+    },
+    {
+      "errorClass": "hardcoded-color-in-body",
+      "owner": "sub-agent",
+      "repairScope": "targeted-token-replace",
+      "strategy": "targeted_token_replace_once",
+      "affectedFiles": [
+        "note-create.html"
+      ],
+      "repairReportPath": null,
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 2
+    },
+    {
+      "errorClass": "hardcoded-color-in-body",
+      "owner": "sub-agent",
+      "repairScope": "targeted-token-replace",
+      "strategy": "targeted_token_replace_once",
+      "affectedFiles": [
+        "note-detail.html"
+      ],
+      "repairReportPath": null,
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 2
+    },
+    {
+      "errorClass": "hardcoded-color-in-body",
+      "owner": "sub-agent",
+      "repairScope": "targeted-token-replace",
+      "strategy": "targeted_token_replace_once",
+      "affectedFiles": [
+        "posture.html"
+      ],
+      "repairReportPath": null,
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 2
+    },
+    {
+      "errorClass": "hardcoded-color-in-body",
+      "owner": "sub-agent",
+      "repairScope": "targeted-token-replace",
+      "strategy": "targeted_token_replace_once",
+      "affectedFiles": [
+        "profile.html"
+      ],
+      "repairReportPath": null,
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 2
+    },
+    {
+      "errorClass": "hardcoded-color-in-body",
+      "owner": "sub-agent",
+      "repairScope": "targeted-token-replace",
+      "strategy": "targeted_token_replace_once",
+      "affectedFiles": [
+        "review.html"
+      ],
+      "repairReportPath": null,
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 2
+    },
+    {
+      "errorClass": "hardcoded-color-in-body",
+      "owner": "sub-agent",
+      "repairScope": "targeted-token-replace",
+      "strategy": "targeted_token_replace_once",
+      "affectedFiles": [
+        "schedule.html"
+      ],
+      "repairReportPath": null,
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 2
+    },
+    {
+      "errorClass": "hardcoded-color-in-body",
+      "owner": "sub-agent",
+      "repairScope": "targeted-token-replace",
+      "strategy": "targeted_token_replace_once",
+      "affectedFiles": [
+        "settings.html"
+      ],
+      "repairReportPath": null,
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 2
+    },
+    {
+      "errorClass": "hardcoded-color-in-body",
+      "owner": "sub-agent",
+      "repairScope": "targeted-token-replace",
+      "strategy": "targeted_token_replace_once",
+      "affectedFiles": [
+        "sleep-plan-create.html"
+      ],
+      "repairReportPath": null,
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 2
+    },
+    {
+      "errorClass": "hardcoded-color-in-body",
+      "owner": "sub-agent",
+      "repairScope": "targeted-token-replace",
+      "strategy": "targeted_token_replace_once",
+      "affectedFiles": [
+        "sleep.html"
+      ],
+      "repairReportPath": null,
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 2
+    },
+    {
+      "errorClass": "hardcoded-color-in-body",
+      "owner": "sub-agent",
+      "repairScope": "targeted-token-replace",
+      "strategy": "targeted_token_replace_once",
+      "affectedFiles": [
+        "study-item-create.html"
+      ],
+      "repairReportPath": null,
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 2
+    },
+    {
+      "errorClass": "hardcoded-color-in-body",
+      "owner": "sub-agent",
+      "repairScope": "targeted-token-replace",
+      "strategy": "targeted_token_replace_once",
+      "affectedFiles": [
+        "training-big3.html"
+      ],
+      "repairReportPath": null,
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 2
+    },
+    {
+      "errorClass": "hardcoded-color-in-body",
+      "owner": "sub-agent",
+      "repairScope": "targeted-token-replace",
+      "strategy": "targeted_token_replace_once",
+      "affectedFiles": [
+        "training-plan.html"
+      ],
+      "repairReportPath": null,
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 2
+    },
+    {
+      "errorClass": "hardcoded-color-in-body",
+      "owner": "sub-agent",
+      "repairScope": "targeted-token-replace",
+      "strategy": "targeted_token_replace_once",
+      "affectedFiles": [
+        "training.html"
+      ],
+      "repairReportPath": null,
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 2
+    },
+    {
+      "errorClass": "hardcoded-color-in-body",
+      "owner": "sub-agent",
+      "repairScope": "targeted-token-replace",
+      "strategy": "targeted_token_replace_once",
+      "affectedFiles": [
+        "water.html"
+      ],
+      "repairReportPath": null,
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 2
+    },
+    {
+      "errorClass": "hardcoded-color-in-body",
+      "owner": "sub-agent",
+      "repairScope": "targeted-token-replace",
+      "strategy": "targeted_token_replace_once",
+      "affectedFiles": [
+        "weekly.html"
+      ],
+      "repairReportPath": null,
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 2
+    },
+    {
+      "errorClass": "hardcoded-color-in-body",
+      "owner": "sub-agent",
+      "repairScope": "targeted-token-replace",
+      "strategy": "targeted_token_replace_once",
+      "affectedFiles": [
+        "wellness.html"
+      ],
+      "repairReportPath": null,
+      "repairAlreadyAttempted": false,
+      "allowSourceRead": "no-full-html-read",
+      "maxValidationRuns": 2
+    }
+  ],
+  "repairActionTable": [
+    {
+      "error": "[mobile-navigation-consistency] pages/goals.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/goal-detail.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/sleep.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/water.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/diet.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/training.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/focus.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/routine.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/exam.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/expense.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/notes.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/habit.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/countdown.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/medication.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/weekly.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/review.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/profile.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/settings.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/reminders.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/schedule.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/more.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/quick-note.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/countdown-create.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/sleep-plan-create.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/med-add.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/expense-create.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/expense-detail.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/habit-create.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/habit-detail.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/note-create.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/note-detail.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/study-item-create.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/training-big3.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/posture.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/wellness.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/mood.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/training-plan.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    }
+  ],
+  "errorCount": 37,
+  "warningCount": 34,
+  "errors": [
+    "[mobile-navigation-consistency] pages/goals.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/goal-detail.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/sleep.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/water.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/diet.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/training.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/focus.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/routine.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/exam.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/expense.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/notes.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/habit.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/countdown.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/medication.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/weekly.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/review.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/profile.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/settings.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/reminders.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/schedule.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/more.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/quick-note.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/countdown-create.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/sleep-plan-create.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/med-add.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/expense-create.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/expense-detail.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/habit-create.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/habit-detail.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/note-create.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/note-detail.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/study-item-create.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/training-big3.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/posture.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/wellness.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/mood.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+    "[mobile-navigation-consistency] pages/training-plan.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments."
+  ],
+  "warnings": [
+    "[mobile-navigation-consistency] 3 mobile page(s) do not expose a 3+ item data-nav-key nav cluster while sibling pages do. This is acceptable for detail/reward/modal pages only when planned explicitly.",
+    "[html-quality] colors_and_type.css: ordinary/static shadow tokens must keep every shadow alpha <= 0.05; deeper shadows are allowed only for floating-layer tokens such as modal/popover/dropdown/drawer/overlay (--shadow-md: 0 8px 24px rgba(38, 34, 30, 0.08), --shadow-lg: 0 18px 44px rgba(38, 34, 30, 0.12), --shadow-card: 0 1px 2px rgba(38, 34, 30, 0.04), 0 10px 30px rgba(38, 34, 30, 0.06), --shadow-primary: 0 8px 22px rgba(0, 47, 167, 0.20)).",
+    "[html-quality] assistant.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] countdown-create.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] diet.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] exam.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] expense-create.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] expense-detail.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] expense.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] focus.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] goal-create.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] goal-detail.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] habit-create.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] habit-detail.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] habit.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] med-add.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] mood.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] more.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] note-create.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] note-detail.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] posture.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] profile.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] review.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] schedule.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] settings.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] sleep-plan-create.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] sleep.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] study-item-create.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] training-big3.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] training-plan.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] training.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] water.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] weekly.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference.",
+    "[html-quality] wellness.html: hardcoded colors are forbidden outside <style id=\"theme-vars\">. Use brand CSS variables from the token reference."
+  ],
+  "validationRunDisciplineStatus": {
+    "declared": false,
+    "restoreMode": false,
+    "maxFullValidationRuns": null,
+    "validationHistoryCount": 0,
+    "repairLedgerCount": 0,
+    "softWarningsTriggerRepair": null,
+    "terminalState": null,
+    "nextAction": null,
+    "violations": [],
+    "success": true
+  },
+  "terminalState": null,
+  "nextCheck": {
+    "type": "full",
+    "command": "node \"c:\\Users\\86189\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\validate-design-workspace.mjs\" \"c:\\还原自备份\\hankkk\\lifeflow\\lifeflow-goals-v3\\lifeflow-v3\" --report-json=\"c:\\还原自备份\\hankkk\\lifeflow\\lifeflow-goals-v3\\lifeflow-v3\\validation-report.json\"",
+    "fullValidationAllowed": true,
+    "reason": "no narrower deterministic targeted check is available for the current failure class"
+  },
+  "repairBatch": [
+    {
+      "error": "[mobile-navigation-consistency] pages/goals.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/goal-detail.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/sleep.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/water.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/diet.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/training.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/focus.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/routine.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/exam.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/expense.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/notes.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/habit.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/countdown.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/medication.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/weekly.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/review.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/profile.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/settings.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/reminders.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/schedule.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/more.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/quick-note.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/countdown-create.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/sleep-plan-create.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/med-add.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/expense-create.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/expense-detail.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/habit-create.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/habit-detail.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/note-create.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/note-detail.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/study-item-create.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/training-big3.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/posture.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/wellness.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/mood.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    },
+    {
+      "error": "[mobile-navigation-consistency] pages/training-plan.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "errorClass": "unknown-blocking",
+      "severity": "blocking",
+      "action": "read validation report, classify owner, then use the narrowest targeted repair",
+      "owner": "main-agent",
+      "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+    }
+  ],
+  "repairContextPacket": {
+    "schema_version": "1.0",
+    "purpose": "small-context repair packet; read this before full validation-report.json",
+    "success": false,
+    "terminalState": null,
+    "skillProvenance": {
+      "name": "solo-design",
+      "version": "2026.08.06.19.15.08",
+      "version_source": "skill-release-manifest.json",
+      "runtime_skill_dir": "c:\\Users\\86189\\.trae-cn\\builtin\\design\\default\\skills\\solo-design",
+      "recorded_at": null,
+      "expected_version": "2026.08.06.19.15.08",
+      "status": "manifest_fallback",
+      "read_status": "ok",
+      "reason": "runtime-orchestration-summary.json missing skillProvenance; used skill-release-manifest.json"
+    },
+    "renderBlockingErrorCount": 37,
+    "softWarningCount": 34,
+    "renderBlockingErrors": [
+      "[mobile-navigation-consistency] pages/goals.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "[mobile-navigation-consistency] pages/goal-detail.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "[mobile-navigation-consistency] pages/sleep.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "[mobile-navigation-consistency] pages/water.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "[mobile-navigation-consistency] pages/diet.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "[mobile-navigation-consistency] pages/training.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "[mobile-navigation-consistency] pages/focus.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "[mobile-navigation-consistency] pages/routine.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "[mobile-navigation-consistency] pages/exam.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "[mobile-navigation-consistency] pages/expense.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "[mobile-navigation-consistency] pages/notes.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments.",
+      "[mobile-navigation-consistency] pages/habit.html: mobile nav cluster is only detectable from data-dom-id/id. Add stable data-nav-key=\"<key>\" to every tab item; data-dom-id is only for click wiring and must not define active-state structure. Repair: rebuild the Page Packet with Mobile Navigation Contract and copy canonicalNavHtml. If this is post-validation repair, run repair-mobile-navigation-flow.mjs once; do not patch individual span/data-dom-id/class fragments."
+    ],
+    "repairActionTable": [
+      {
+        "errorClass": "unknown-blocking",
+        "owner": "main-agent",
+        "severity": "blocking",
+        "action": "read validation report, classify owner, then use the narrowest targeted repair",
+        "affectedFiles": [],
+        "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+      },
+      {
+        "errorClass": "unknown-blocking",
+        "owner": "main-agent",
+        "severity": "blocking",
+        "action": "read validation report, classify owner, then use the narrowest targeted repair",
+        "affectedFiles": [],
+        "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+      },
+      {
+        "errorClass": "unknown-blocking",
+        "owner": "main-agent",
+        "severity": "blocking",
+        "action": "read validation report, classify owner, then use the narrowest targeted repair",
+        "affectedFiles": [],
+        "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+      },
+      {
+        "errorClass": "unknown-blocking",
+        "owner": "main-agent",
+        "severity": "blocking",
+        "action": "read validation report, classify owner, then use the narrowest targeted repair",
+        "affectedFiles": [],
+        "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+      },
+      {
+        "errorClass": "unknown-blocking",
+        "owner": "main-agent",
+        "severity": "blocking",
+        "action": "read validation report, classify owner, then use the narrowest targeted repair",
+        "affectedFiles": [],
+        "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+      },
+      {
+        "errorClass": "unknown-blocking",
+        "owner": "main-agent",
+        "severity": "blocking",
+        "action": "read validation report, classify owner, then use the narrowest targeted repair",
+        "affectedFiles": [],
+        "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+      },
+      {
+        "errorClass": "unknown-blocking",
+        "owner": "main-agent",
+        "severity": "blocking",
+        "action": "read validation report, classify owner, then use the narrowest targeted repair",
+        "affectedFiles": [],
+        "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+      },
+      {
+        "errorClass": "unknown-blocking",
+        "owner": "main-agent",
+        "severity": "blocking",
+        "action": "read validation report, classify owner, then use the narrowest targeted repair",
+        "affectedFiles": [],
+        "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+      },
+      {
+        "errorClass": "unknown-blocking",
+        "owner": "main-agent",
+        "severity": "blocking",
+        "action": "read validation report, classify owner, then use the narrowest targeted repair",
+        "affectedFiles": [],
+        "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+      },
+      {
+        "errorClass": "unknown-blocking",
+        "owner": "main-agent",
+        "severity": "blocking",
+        "action": "read validation report, classify owner, then use the narrowest targeted repair",
+        "affectedFiles": [],
+        "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+      },
+      {
+        "errorClass": "unknown-blocking",
+        "owner": "main-agent",
+        "severity": "blocking",
+        "action": "read validation report, classify owner, then use the narrowest targeted repair",
+        "affectedFiles": [],
+        "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+      },
+      {
+        "errorClass": "unknown-blocking",
+        "owner": "main-agent",
+        "severity": "blocking",
+        "action": "read validation report, classify owner, then use the narrowest targeted repair",
+        "affectedFiles": [],
+        "sourceReadPolicy": "no validator source read; targeted affected-file excerpt only"
+      }
+    ],
+    "nextCheck": {
+      "type": "full",
+      "command": "node \"c:\\Users\\86189\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\validate-design-workspace.mjs\" \"c:\\还原自备份\\hankkk\\lifeflow\\lifeflow-goals-v3\\lifeflow-v3\" --report-json=\"c:\\还原自备份\\hankkk\\lifeflow\\lifeflow-goals-v3\\lifeflow-v3\\validation-report.json\"",
+      "fullValidationAllowed": true,
+      "reason": "no narrower deterministic targeted check is available for the current failure class"
+    },
+    "forbidden": [
+      "do not read validator source",
+      "do not rerun full validation when nextCheck.fullValidationAllowed=false",
+      "do not start preview/browser unless user explicitly asks",
+      "do not hand-edit repair ledger fields"
+    ]
+  },
+  "projectFileHashes": {
+    "lifeflow-v3.design": "6e7f5f595414f449fb9289705fe89f58af0a464d44dd0d475171315a3d0812f1",
+    "colors_and_type.css": "4223aaa7e748adf67207cec323e58c01942f6e0b68312fc665c3544cf24cb80b",
+    "pages/assistant.html": "3f004cd1e721090396d8dbef8f977d4bcf10bd3ad921a8f890367cecdb717578",
+    "pages/countdown-create.html": "fc7f8d404d3dc744fc6ed2bd46af6862c4ced6873d8c59a8f51280f3e8f14356",
+    "pages/countdown.html": "b654014c86ccb409d85138fc8b4d709ebef1fb4ff0690945173e0607fb8010d8",
+    "pages/diet.html": "48377503257523ede777e3ae6c2e17b1ba2c892b74348e46c846af141f5f9bf0",
+    "pages/exam.html": "1ec91dd4ce91c1f03bf59443ce43128718fe860e0ffa3135ab18915bc11e51f2",
+    "pages/expense-create.html": "43c62aa5a45d6ffcac3884cb06f2d4507dbe6813beee0ec7cf0224203d5d659e",
+    "pages/expense-detail.html": "b27dfc63650f467ca522706bb7f3834eae363be2f7eff815ad13f898b8237c11",
+    "pages/expense.html": "088572a420b2e213f1bdc9e848fff45cdc8e0c791030bee6c81ae3e83299d555",
+    "pages/focus.html": "5840fdf64b822098121360b0407b2ff7cefa996524a544988d67b06293cd6758",
+    "pages/goal-create.html": "ba5ae74fd6cfb7204d0a84b29050f615f0f0f71038dfffc000e876aafbabee32",
+    "pages/goal-detail.html": "82f5ea573d0f2b93db0718b9c1d6dbef914bf75de1b470cfe2cc84d7e083596b",
+    "pages/goals.html": "23f358eb6adbf986e8009d8307b94ac4eb663f5016bfefaef2063802833beee6",
+    "pages/habit-create.html": "c3351a28d823b5bbfec99fad3ac3b9ee1dbcf873701e05fa92a8369575971e6b",
+    "pages/habit-detail.html": "86c5c9bc3c0838cfff57367a3d63b957a77bbd96a9b0270a967108a0704e0e99",
+    "pages/habit.html": "4eefaea5c2501fe0868d76645dbd93e0025249ca38a8dc37dc0af422d73d77a9",
+    "pages/med-add.html": "a17080f76a63b9afd84924a9d77a6cbcc0b1a4875859985b3053620970b7a196",
+    "pages/medication.html": "8cf5061f5a4138f9b2630584164f392be0e40dc25df0ef11ff995e9873d45de6",
+    "pages/mood.html": "05a248abf77a127af5d2944dff1d5c50e7caca55e181b433f0245c61a956eab8",
+    "pages/more.html": "52337a4469e35fc3c2e9666b37480e7d2744fdaf901a827d1e63145725211e40",
+    "pages/note-create.html": "76e0f970184a046f12376c3231506d8c816ff1c60aae2b08d0d9886e91f8eede",
+    "pages/note-detail.html": "0a54e6a2aed5c40d2fe5ffc98f9e919a2fa3943f7533922cdcd736d22afff145",
+    "pages/notes.html": "60b63ed2db94bf1792c628d5c7210a809eb40d86ab8b6b201bff351c21555c02",
+    "pages/onboarding.html": "54f8998c6575be1d02cc31eff43e0a126a1e79f148b984f253159a02b5199a6b",
+    "pages/posture.html": "e2473ad540607130225ee135d9f5c8789c8365ce9ba6fb86c67edf9d3491ff42",
+    "pages/profile.html": "35ae577a36a4e80c1ce89b2162ef7c383da72aef950a761a398c8c463ad124de",
+    "pages/quick-note.html": "354737a53a85ea9a37520e2531fd73606af7696342cf64e09b15ec094f87c782",
+    "pages/reminders.html": "78a80c34b294039b15943f2f9a15c727857dadb15dc6b7ef655c9ab544008710",
+    "pages/review.html": "edd6f4ffff31afb1b79faf9b3b73396212e2d889e4f0391209dba00d0d09024d",
+    "pages/routine.html": "8ff68c77925eb947ebbe1344af0ad1d95c6911446f466317da593820e5fb35b6",
+    "pages/schedule.html": "7a7a11ee4328510f49dad1e150c9dac5f80a7dc8813b0e76b3c8d2fbe43e53d9",
+    "pages/settings.html": "73834960a4c10de408d1f7c88b23b35122de58a66af1356bb29d30211bb8f8b4",
+    "pages/sleep-plan-create.html": "ac50a81f5bfcb24f40763796d20dc432d39700bcd2dffdda3896f3267ff6ef99",
+    "pages/sleep.html": "1a78326a53f4aef4e29a18ebd4f14769226219bd578fd806a9063886ea032fd3",
+    "pages/study-item-create.html": "4b54a1eb3b8a7a15595c29bfe6d467637a6933bbc5c8d9c189257dd17d606779",
+    "pages/training-big3.html": "89b9a1a00712101692c5d1e5ef1363cf10e6bf76deef767e759e60e9d0adc3a8",
+    "pages/training-plan.html": "10befa88ebbb80a6c4b4fa3688d526f5967f1370e00e5570058dbb28763e1790",
+    "pages/training.html": "a420c8766894adb339aa6212615c7b87c3f7c419cabbb623e24767a26aa730ac",
+    "pages/water.html": "fc65aa7a2a8cdc6327ea70534a777f8f743317c6ea807ecb19d3b165726540f3",
+    "pages/weekly.html": "a51fd0febbd07f83744ab2682a966635fae38b976fd2e145b16b6bcc5f441c67",
+    "pages/wellness.html": "d2d70fc28aed37c7e822122183427d9ed874a9bfa75c2f9eede8d396af5a3193"
+  },
+  "designDir": "c:\\还原自备份\\hankkk\\lifeflow\\lifeflow-goals-v3\\lifeflow-v3",
+  "expectedPages": null,
+  "requireInteractions": null,
+  "checkedAt": "2026-08-22T16:19:42.033Z"
+}

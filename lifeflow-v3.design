@@ -1,0 +1,929 @@
+{
+  "data": [
+    {
+      "id": "page-goals",
+      "title": "目标 · 列表",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786685840000,
+      "canvasData": {
+        "x": 454.5,
+        "y": 0,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 1769,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-a3b337cf",
+          "measuredAt": 1787456437388
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/goals.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-goal-detail",
+      "title": "目标详情 · 三层视图",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786685840000,
+      "canvasData": {
+        "x": 636,
+        "y": 12,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 900,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-c8a0d6e4",
+          "measuredAt": 1787456437388
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/goal-detail.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-goal-create",
+      "title": "新建目标 · 对话式",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786685840000,
+      "canvasData": {
+        "x": 804,
+        "y": 0,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 900,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-30b628ce",
+          "measuredAt": 1787456437388
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/goal-create.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-assistant",
+      "title": "AI 助手 · 对话",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786685840000,
+      "canvasData": {
+        "x": 1188,
+        "y": 0,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 900,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-0237a0a0",
+          "measuredAt": 1787456437388
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/assistant.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-sleep",
+      "title": "睡眠 · 记录",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786685840000,
+      "canvasData": {
+        "x": -252,
+        "y": 257,
+        "group": 1,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 2446,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-2c952c41",
+          "measuredAt": 1787456437388
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/sleep.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-water",
+      "title": "饮水 · 记录",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786685840000,
+      "canvasData": {
+        "x": 400,
+        "y": 520,
+        "group": 1,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 2231,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-c9dc2a21",
+          "measuredAt": 1787456437388
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/water.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-diet",
+      "title": "饮食 · 记录",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786685840000,
+      "canvasData": {
+        "x": 1609,
+        "y": 507.5,
+        "group": 1,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 2352,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-67514fc2",
+          "measuredAt": 1787456437388
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/diet.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-training",
+      "title": "训练 · 记录",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786685840000,
+      "canvasData": {
+        "x": -12,
+        "y": 1045.5,
+        "group": 2,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 1118,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-2d135547",
+          "measuredAt": 1787456437388
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/training.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-focus",
+      "title": "专注 · 记录",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786685840000,
+      "canvasData": {
+        "x": 400,
+        "y": 1040,
+        "group": 2,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 947,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-652d52dd",
+          "measuredAt": 1787456437388
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/focus.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-routine",
+      "title": "作息 · 记录",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786685840000,
+      "canvasData": {
+        "x": 800,
+        "y": 1040,
+        "group": 2,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 900,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-89ef611e",
+          "measuredAt": 1787456437388
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/routine.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-exam",
+      "title": "备考 · 记录",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786685840000,
+      "canvasData": {
+        "x": 1200,
+        "y": 1040,
+        "group": 2,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 1760,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-165a524f",
+          "measuredAt": 1787456437388
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/exam.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-expense",
+      "title": "记账 · 记录",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786685840000,
+      "canvasData": {
+        "x": 156,
+        "y": 1644,
+        "group": 3,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 1810,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-135773db",
+          "measuredAt": 1787456437388
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/expense.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-notes",
+      "title": "备忘 · 记录",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786685840000,
+      "canvasData": {
+        "x": 400,
+        "y": 1560,
+        "group": 3,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 1220,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-6af20265",
+          "measuredAt": 1787456437388
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/notes.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-habit",
+      "title": "习惯 · 记录",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786685840000,
+      "canvasData": {
+        "x": 800,
+        "y": 1560,
+        "group": 3,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 1168,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-30d4bb01",
+          "measuredAt": 1787456437388
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/habit.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-countdown",
+      "title": "倒数日 · 记录",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786685840000,
+      "canvasData": {
+        "x": 1200,
+        "y": 1560,
+        "group": 3,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 1048,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-2d47dd98",
+          "measuredAt": 1787456437388
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/countdown.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-medication",
+      "title": "吃药 · 记录",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786685840000,
+      "canvasData": {
+        "x": 0,
+        "y": 2080,
+        "group": 3,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 1208,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-959db311",
+          "measuredAt": 1787456437388
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/medication.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-weekly",
+      "title": "周报汇总",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786685840000,
+      "canvasData": {
+        "x": 509,
+        "y": 2600,
+        "group": 4,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 2013,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-8af48452",
+          "measuredAt": 1787456437388
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/weekly.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-review",
+      "title": "回顾 · 推进记分牌",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786685840000,
+      "canvasData": {
+        "x": 941.5,
+        "y": 2600,
+        "group": 4,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 992,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-478a8cba",
+          "measuredAt": 1787456437388
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/review.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-profile",
+      "title": "个人中心",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786685840000,
+      "canvasData": {
+        "x": 47,
+        "y": 3144,
+        "group": 5,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 1159,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-83993933",
+          "measuredAt": 1787456437388
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/profile.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-settings",
+      "title": "设置",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786685840000,
+      "canvasData": {
+        "x": 624,
+        "y": 3234,
+        "group": 5,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 1279,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-059aaa3c",
+          "measuredAt": 1787456437388
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/settings.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-reminders",
+      "title": "到点提醒 · 今日时间线",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786685840000,
+      "canvasData": {
+        "x": 941.5,
+        "y": 3093.5,
+        "group": 5,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 2248,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-3ae01326",
+          "measuredAt": 1787456437388
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/reminders.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-schedule",
+      "title": "今日安排 · 首页",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786731391450,
+      "canvasData": {
+        "x": 1500,
+        "y": 2615,
+        "group": 6,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 2817,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-d21ce761",
+          "measuredAt": 1787456437388
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/schedule.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-more",
+      "title": "我的",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786731391450,
+      "canvasData": {
+        "x": 2015,
+        "y": 3044,
+        "group": 6,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 1709,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-22ac0991",
+          "measuredAt": 1787456437388
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/more.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-quick-note",
+      "title": "快速记录",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786731391450,
+      "canvasData": {
+        "x": 2532,
+        "y": 3129,
+        "group": 6,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 900,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-82624fb9",
+          "measuredAt": 1787456437388
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/quick-note.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-countdown-create",
+      "title": "新建倒计时",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786731391450,
+      "canvasData": {
+        "x": 1200,
+        "y": 3120,
+        "group": 6,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 900,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-b9735441",
+          "measuredAt": 1787456437388
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/countdown-create.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-sleep-plan-create",
+      "title": "新建睡眠安排",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786731391450,
+      "canvasData": {
+        "x": 0,
+        "y": 3640,
+        "group": 7,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 900,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-b7905706",
+          "measuredAt": 1787456437388
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/sleep-plan-create.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-med-add",
+      "title": "添加药品",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786731391450,
+      "canvasData": {
+        "x": 400,
+        "y": 3640,
+        "group": 7,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 998,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-f7d674fd",
+          "measuredAt": 1787456437388
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/med-add.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-expense-create",
+      "title": "记一笔",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786731391450,
+      "canvasData": {
+        "x": 800,
+        "y": 3640,
+        "group": 7,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 900,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-a11132c0",
+          "measuredAt": 1787469371104
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/expense-create.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-expense-detail",
+      "title": "记账明细",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786731391450,
+      "canvasData": {
+        "x": 1200,
+        "y": 3640,
+        "group": 7,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 900,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-ef064bf8",
+          "measuredAt": 1787456437388
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/expense-detail.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-habit-create",
+      "title": "添加习惯",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786731391450,
+      "canvasData": {
+        "x": 0,
+        "y": 4160,
+        "group": 8,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 900,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-9ac61637",
+          "measuredAt": 1787469371104
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/habit-create.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-habit-detail",
+      "title": "习惯详情",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786731391450,
+      "canvasData": {
+        "x": 400,
+        "y": 4160,
+        "group": 8,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 900,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-d69a6014",
+          "measuredAt": 1787469371104
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/habit-detail.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-note-create",
+      "title": "新建笔记",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786731391450,
+      "canvasData": {
+        "x": 780,
+        "y": 4150.999999999999,
+        "group": 8,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 900,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-58b95889",
+          "measuredAt": 1787456437388
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/note-create.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-note-detail",
+      "title": "笔记详情",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786731391450,
+      "canvasData": {
+        "x": 1200,
+        "y": 4160,
+        "group": 8,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 900,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-ab872dd5",
+          "measuredAt": 1787456437388
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/note-detail.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-study-item-create",
+      "title": "添加学习项",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786731391450,
+      "canvasData": {
+        "x": 0,
+        "y": 4680,
+        "group": 9,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 900,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-a9e40dcc",
+          "measuredAt": 1787456437388
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/study-item-create.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-training-big3",
+      "title": "训练三大项",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786731391450,
+      "canvasData": {
+        "x": 400,
+        "y": 4680,
+        "group": 9,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 2564,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-3a0f96ef",
+          "measuredAt": 1787469371104
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/training-big3.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-posture",
+      "title": "体态拉伸",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786731391450,
+      "canvasData": {
+        "x": 832.5,
+        "y": 4668,
+        "group": 9,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 5298,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-c02a41a5",
+          "measuredAt": 1787469371104
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/posture.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-wellness",
+      "title": "功法养生",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786731391450,
+      "canvasData": {
+        "x": 1224,
+        "y": 4656,
+        "group": 9,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 10123,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-cd8a23a2",
+          "measuredAt": 1787469371104
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/wellness.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-onboarding",
+      "title": "冷启动 · 四步引导",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1787072894033,
+      "canvasData": {
+        "x": 2960,
+        "y": 0,
+        "group": 6,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 900,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-00c3a225",
+          "measuredAt": 1787456437388
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/onboarding.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-mood",
+      "title": "情绪 · 记录",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1787414327122,
+      "canvasData": {
+        "x": 4236,
+        "y": 3446.5,
+        "group": 14,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 3896,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-fbabe304",
+          "measuredAt": 1787469371104
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/mood.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-training-plan",
+      "title": "训练计划",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1787414327130,
+      "canvasData": {
+        "x": 4788,
+        "y": 3516,
+        "group": 14,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 900,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-44ce39bf",
+          "measuredAt": 1787469371104
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/training-plan.html",
+        "interactions": []
+      }
+    }
+  ],
+  "config": {
+    "autoLayout": false,
+    "deviceType": "mobile",
+    "projectName": "LifeFlow v3 · 旧版全量"
+  }
+}

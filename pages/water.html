@@ -1,0 +1,1836 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light" class="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>饮水 · LifeFlow</title>
+<meta name="theme-color" content="#F7F4EF">
+<style id="theme-vars">/* ============================================================
+   LifeFlow · 目标系统 UI 基座（v3 · 平静 / 高级 / 被温柔对待）
+   ------------------------------------------------------------
+   设计哲学：降噪、升温、变柔软。保留品牌蓝身份，但让整体像一间
+   被温柔照料的私人空间，而非功能密集的控制台。
+   铁律：全 App 禁用纯黑 #000 与纯白 #FFF；阴影用彩色叠加，禁灰阴影。
+   ============================================================ */
+
+/* ============ 1. RESET ============ */
+*, *::before, *::after { box-sizing: border-box; }
+* { margin: 0; padding: 0; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+body { min-height: 100vh;  background: var(--bg); }
+
+button { font-family: inherit; font-size: inherit; cursor: pointer; border: 0; background: none; color: inherit; }
+input, textarea, select { font-family: inherit; font-size: inherit; color: inherit; }
+a { color: inherit; text-decoration: none; }
+ul, ol { list-style: none; }
+img, svg { display: block; max-width: 100%; }
+
+/* ============ 2. LIGHT TOKENS（日间 · 暖中性 + 品牌蓝） ============ */
+:root {
+  color-scheme: light;
+
+  /* —— 表面 —— */
+  --bg: #FAF6F0;            /* 页面底 · 暖白（Headspace 暖底） */
+  --bg-glow-1: rgba(0, 47, 167, 0.07);     /* 顶部克莱因蓝光晕 */
+  --bg-glow-2: rgba(139, 126, 200, 0.06);  /* 顶部柔和紫光晕 */
+  --bg-glow-warm: rgba(255, 138, 92, 0.05); /* 暖橙光晕（珊瑚橙补暖） */
+  --card: #FFFFFF;          /* 卡片底 · 白 */
+  --surface-2: #F3EFE8;     /* 次级表面 · 暖灰米 */
+  --surface-3: #EAE5DB;     /* 三级表面 */
+  --scrim: rgba(38, 34, 30, 0.32);
+
+  /* —— 文字 —— */
+  --text-1: #26221E;        /* 主文字 · 暖墨（非纯黑） */
+  --text-2: #7A746C;        /* 次文字 · 暖灰 */
+  --text-3: #A69F94;        /* 弱文字 */
+  --text-inverse: #FDFBF7;
+
+  /* —— 边框 —— */
+  --border: #EAE6DF;
+  --border-strong: #DCD6CB;
+
+  /* —— 品牌 —— */
+  --brand: #002FA7;         /* 克莱因蓝 · 学习/专注/目标主色 */
+  --brand-strong: #001F6E;
+  --brand-soft: rgba(0, 47, 167, 0.10);
+  --brand-softer: rgba(0, 47, 167, 0.06);
+  --purple: #8B7EC8;        /* 柔和紫 · 养生/冥想/用药 */
+  --purple-soft: rgba(139, 126, 200, 0.12);
+  --gradient: linear-gradient(135deg, #002FA7 0%, #8B7EC8 100%);
+
+  /* —— 语义色 —— */
+  --goal-blue: #4169E1;     /* 宝蓝 · 进度/饮水 */
+  --goal-blue-soft: rgba(65, 105, 225, 0.12);
+  --life-green: #7BAE7F;    /* 鼠尾草绿 · 生活/习惯/饮食/收入 */
+  --life-green-soft: rgba(123, 174, 127, 0.14);
+  --expense-red: #FF8A5C;   /* 珊瑚橙 · 训练/支出 */
+  --expense-red-soft: rgba(255, 138, 92, 0.12);
+  --pause-amber: #D99A2B;
+  --pause-amber-soft: rgba(217, 154, 43, 0.14);
+  --emotion: #E8849A;         /* 暖粉玫红 · 情绪 */
+  --emotion-soft: rgba(232, 132, 154, 0.14);
+
+  /* —— 睡眠（深夜蓝系，入睡仪式 / 三段分色） —— */
+  --sleep-night: #1B2A4A;    /* 深夜蓝 · 入睡仪式深色背景 */
+  --sleep-seg-deep: #6E5BB8; /* 深睡 */
+  --sleep-seg-mid: #8B7EC8;  /* 浅睡 */
+  --sleep-seg-light: #BAB0E2;/* REM */
+
+  /* —— 阴影（中性暖灰，去蓝调） —— */
+  --shadow-xs: 0 1px 2px rgba(38, 34, 30, 0.05);
+  --shadow-sm: 0 2px 10px rgba(38, 34, 30, 0.05);
+  --shadow-md: 0 8px 24px rgba(38, 34, 30, 0.08);
+  --shadow-lg: 0 18px 44px rgba(38, 34, 30, 0.12);
+  --shadow-card: 0 1px 2px rgba(38, 34, 30, 0.04), 0 10px 30px rgba(38, 34, 30, 0.06);
+  --shadow-primary: 0 8px 22px rgba(0, 47, 167, 0.20);
+
+  /* —— 圆角 —— */
+  --r-sm: 12px;
+  --r-md: 16px;
+  --r-lg: 20px;
+  --r-xl: 24px;
+  --r-pill: 999px;
+
+  /* —— 字体 —— */
+  --font-sans: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", "Helvetica Neue", sans-serif;
+  --font-num: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "PingFang SC", monospace;
+
+  /* —— 字号 / 行高 —— */
+  --fs-display: 34px;
+  --fs-h1: 28px;
+  --fs-h2: 20px;
+  --fs-h3: 17px;
+  --fs-body: 15px;
+  --fs-sm: 13px;
+  --fs-caption: 12px;
+
+  /* —— 间距 —— */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-8: 32px;
+
+  /* ============ 18. 尺寸 token（全局内容区规范） ============ */
+  --icon-sm: 32px;   /* 紧凑小图标 */
+  --icon-md: 38px;   /* 标准条目图标容器 */
+  --icon-lg: 44px;   /* 概览/量化头大图标 */
+  --pad-card: 18px 20px;      /* 标准卡片内边距 */
+  --pad-card-sm: 14px 20px;   /* 紧凑卡（设置区/说明卡） */
+  --gap-list: 10px;           /* 条目纵向间距 */
+  --h-title: 18px;  --h-name: 16px;  --fs-meta: 12px;
+  --r-icon: var(--r-lg);      /* 图标容器圆角 20px */
+
+  /* —— 动效 —— */
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-fast: 200ms;
+  --dur: 300ms;
+  --dur-slow: 400ms;
+}
+
+/* ============ 3. DARK TOKENS（夜间 · SleepCore 高级感） ============ */
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* —— 表面（深海军蓝 → 靛蓝 → 深紫渐变，非纯黑） —— */
+  --bg: #0D1117;
+  --bg-glow-1: rgba(74, 108, 240, 0.16);
+  --bg-glow-2: rgba(91, 84, 200, 0.14);
+  --card: rgba(255, 255, 255, 0.05);       /* 玻璃拟态 */
+  --surface-2: rgba(255, 255, 255, 0.06);
+  --surface-3: rgba(255, 255, 255, 0.10);
+  --scrim: rgba(4, 6, 12, 0.60);
+
+  /* —— 文字 —— */
+  --text-1: #EDEAE4;        /* 暖白 */
+  --text-2: #8A8AA0;
+  --text-3: #5E5F73;
+  --text-inverse: #0D1117;
+
+  /* —— 边框 —— */
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.14);
+
+  /* —— 品牌（暗色下提亮以保证对比，光晕用低透明度） —— */
+  --brand: #4A6CF0;
+  --brand-strong: #7A9CF8;
+  --brand-soft: rgba(74, 108, 240, 0.16);
+  --brand-softer: rgba(74, 108, 240, 0.10);
+  --purple: #A79BD8;
+  --purple-soft: rgba(167, 155, 216, 0.16);
+  --gradient: linear-gradient(135deg, #3B5BDB 0%, #8A7ED0 100%);
+
+  /* —— 语义色 —— */
+  --goal-blue: #6E8FE8;
+  --goal-blue-soft: rgba(110, 143, 232, 0.16);
+  --life-green: #8CBE8E;
+  --life-green-soft: rgba(140, 190, 142, 0.16);
+  --expense-red: #FF9A75;
+  --expense-red-soft: rgba(255, 154, 117, 0.16);
+  --pause-amber: #E0AF52;
+  --pause-amber-soft: rgba(224, 175, 82, 0.16);
+  --emotion: #EFA6BC;
+  --emotion-soft: rgba(239, 166, 188, 0.16);
+
+  /* —— 阴影（暗色光晕） —— */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.30);
+  --shadow-sm: 0 2px 12px rgba(0, 0, 0, 0.40);
+  --shadow-md: 0 8px 28px rgba(0, 0, 0, 0.50);
+  --shadow-lg: 0 18px 48px rgba(0, 0, 0, 0.60);
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.28), 0 10px 32px rgba(0, 0, 0, 0.42);
+  --shadow-primary: 0 8px 26px rgba(62, 107, 224, 0.36);
+}
+
+/* ============ 4. 全局基础 ============ */
+body {
+  font-family: var(--font-sans);
+  font-size: var(--fs-body);
+  line-height: 1.6;
+  color: var(--text-1);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+/* 环境光晕背景（柔和 · 非纯色） */
+.app-stage {
+  position: relative;
+  min-height: 100vh;
+  background:
+    radial-gradient(1100px 560px at 50% -12%, var(--bg-glow-1), transparent 62%),
+    radial-gradient(760px 420px at 88% -4%, var(--bg-glow-2), transparent 58%),
+    radial-gradient(900px 520px at -12% 100%, var(--bg-glow-warm), transparent 62%),
+    var(--bg);
+}
+
+[data-theme="dark"] .app-stage {
+  background:
+    radial-gradient(1000px 560px at 18% -8%, var(--bg-glow-1), transparent 58%),
+    radial-gradient(900px 520px at 88% 8%, var(--bg-glow-2), transparent 58%),
+    linear-gradient(180deg, #0D1117 0%, #141A2E 58%, #1A1530 100%);
+}
+
+/* 430px 容器 · 移动端优先 */
+.app {
+  position: relative;
+  max-width: 430px;
+  margin: 0 auto;
+  min-height: 100vh;
+  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+}
+
+/* 桌面呈现：居中 + 侧边框 + 柔和投影，像一台安静的设备 */
+@media (min-width: 768px) {
+  body { background: #0C0F16; }
+  .app-stage {
+    background: #0C0F16;
+    padding: 32px 0;
+  }
+  .app {
+    min-height: calc(100vh - 64px);
+    border-radius: 40px;
+    overflow: hidden;
+    box-shadow: 0 40px 120px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.06);
+    background:
+      radial-gradient(1000px 520px at 50% -10%, var(--bg-glow-1), transparent 60%),
+      radial-gradient(800px 420px at 88% -4%, var(--bg-glow-2), transparent 56%),
+      radial-gradient(900px 520px at -12% 100%, var(--bg-glow-warm), transparent 62%),
+      var(--bg);
+  }
+  [data-theme="dark"] .app {
+    background:
+      radial-gradient(1000px 560px at 18% -8%, var(--bg-glow-1), transparent 58%),
+      radial-gradient(900px 520px at 88% 8%, var(--bg-glow-2), transparent 58%),
+      linear-gradient(180deg, #0D1117 0%, #141A2E 58%, #1A1530 100%);
+  }
+}
+
+/* ============ 5. 排版工具 ============ */
+.t-display {
+  font-size: var(--fs-display);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.18;
+}
+.t-h1 { font-size: var(--fs-h1); font-weight: 700; letter-spacing: -0.02em; line-height: 1.24; }
+.t-h2 { font-size: var(--fs-h2); font-weight: 650; letter-spacing: -0.01em; line-height: 1.3; }
+.t-h3 { font-size: var(--fs-h3); font-weight: 600; line-height: 1.4; }
+.t-body { font-size: var(--fs-body); font-weight: 400; line-height: 1.6; }
+.t-sm { font-size: var(--fs-sm); font-weight: 400; line-height: 1.55; }
+.t-caption { font-size: var(--fs-caption); font-weight: 400; line-height: 1.5; }
+.t-num { font-variant-numeric: tabular-nums; font-family: var(--font-num); }
+.t-muted { color: var(--text-2); }
+.t-faint { color: var(--text-3); }
+.t-brand { color: var(--brand); }
+
+/* ============ 6. 布局工具 ============ */
+.page { padding: 0 var(--sp-4); }
+.stack { display: flex; flex-direction: column; }
+.row { display: flex; align-items: center; }
+.grow { flex: 1; min-width: 0; }
+.gap-2 { gap: var(--sp-2); }
+.gap-3 { gap: var(--sp-3); }
+.gap-4 { gap: var(--sp-4); }
+.space-y-4 > * + * { margin-top: var(--sp-4); }
+.space-y-3 > * + * { margin-top: var(--sp-3); }
+
+/* 区块标题（跨页通用 · 标题左 / 计数右） */
+.section-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 12px; }
+.section-head__title { font-size: 18px; font-weight: 700; letter-spacing: -0.01em; color: var(--text-1); }
+.section-head__hint { font-size: 12px; color: var(--text-3); font-variant-numeric: tabular-nums; }
+.section-head__meta { font-size: 13px; color: var(--text-3); font-variant-numeric: tabular-nums; }
+
+/* ============ 7. 顶栏 ============ */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: 14px 16px;
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  backdrop-filter: blur(18px) saturate(160%);
+}
+.topbar__title { flex: 1; text-align: center; font-size: var(--fs-h3); font-weight: 650; }
+.topbar__side { width: 36px; display: flex; justify-content: flex-start; }
+.topbar__side--right { justify-content: flex-end; }
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--r-pill);
+  color: var(--text-1);
+  transition: background var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
+}
+.icon-btn:active { transform: scale(0.92); background: var(--surface-2); }
+.icon-btn svg { width: 20px; height: 20px; }
+
+/* ============ 8. 按钮 ============ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 52px;
+  padding: 0 22px;
+  border-radius: var(--r-pill);
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  transition: transform var(--dur-fast) var(--ease), box-shadow var(--dur) var(--ease), opacity var(--dur-fast) var(--ease);
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+.btn:active { transform: scale(0.97); }
+.btn svg { width: 20px; height: 20px; }
+
+.btn--primary {
+  background: var(--gradient);
+  color: #FFFFFF;
+  box-shadow: var(--shadow-primary);
+}
+.btn--primary:hover { box-shadow: 0 10px 28px rgba(0, 47, 167, 0.25); }
+
+.btn--soft {
+  background: var(--brand-soft);
+  color: var(--brand);
+  height: 44px;
+  padding: 0 18px;
+  font-size: 15px;
+}
+[data-theme="dark"] .btn--soft { color: var(--brand-strong); }
+
+.btn--ghost {
+  background: var(--surface-2);
+  color: var(--text-1);
+  height: 44px;
+  padding: 0 18px;
+  font-size: 15px;
+}
+
+.btn--sm { height: 38px; padding: 0 16px; font-size: 13px; border-radius: var(--r-pill); }
+.btn--sm svg { width: 16px; height: 16px; }
+.btn--block { width: 100%; }
+.btn:disabled { opacity: 0.45; pointer-events: none; }
+
+/* ============ 9. 输入框 ============ */
+.field { display: flex; flex-direction: column; gap: 8px; }
+.field__label { font-size: var(--fs-sm); font-weight: 600; color: var(--text-2); }
+
+.input {
+  width: 100%;
+  height: 50px;
+  padding: 0 16px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  font-size: 15px;
+  color: var(--text-1);
+  outline: none;
+  transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
+}
+.input::placeholder { color: var(--text-3); }
+.input:focus {
+  border-color: var(--brand);
+  background: var(--card);
+  box-shadow: 0 0 0 4px var(--brand-softer);
+}
+
+.textarea {
+  width: 100%;
+  min-height: 88px;
+  padding: 14px 16px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--text-1);
+  outline: none;
+  resize: vertical;
+  transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
+}
+.textarea::placeholder { color: var(--text-3); }
+.textarea:focus { border-color: var(--brand); background: var(--card); box-shadow: 0 0 0 4px var(--brand-softer); }
+
+/* ============ 10. 卡片 ============ */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xl);
+  padding: var(--pad-card);
+  box-shadow: var(--shadow-card);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+.card--inset { background: var(--surface-2); border: 1px solid var(--border); box-shadow: none; }
+
+/* ============ 11. 进度条 ============ */
+.progress {
+  position: relative;
+  height: 8px;
+  border-radius: var(--r-pill);
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.progress--thin { height: 6px; }
+.progress--lg { height: 12px; }
+.progress__fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0;
+  border-radius: var(--r-pill);
+  background: var(--gradient);
+  transition: width 0.6s var(--ease-out);
+}
+.progress__fill--green { background: linear-gradient(135deg, #7BAE7F, #5E9A62); }
+.progress__fill--blue { background: linear-gradient(135deg, #4169E1, #002FA7); }
+.progress__fill--amber { background: linear-gradient(135deg, #E0AF52, #D99A2B); }
+[data-theme="dark"] .progress { background: rgba(255, 255, 255, 0.08); }
+
+/* ============ 12. 标签 / 状态 ============ */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: var(--r-pill);
+  font-size: var(--fs-caption);
+  font-weight: 600;
+  line-height: 1;
+}
+.tag__dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.tag--active { background: var(--life-green-soft); color: #1F9D5C; }
+[data-theme="dark"] .tag--active { color: var(--life-green); }
+.tag--paused { background: var(--pause-amber-soft); color: var(--pause-amber); }
+.tag--done { background: var(--brand-soft); color: var(--brand); }
+[data-theme="dark"] .tag--done { color: var(--brand-strong); }
+
+/* 过滤胶囊 */
+.chips {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 2px 0;
+}
+.chips::-webkit-scrollbar { display: none; }
+.chip {
+  flex: 0 0 auto;
+  height: 38px;
+  padding: 0 18px;
+  border-radius: var(--r-pill);
+  font-size: 14px;
+  font-weight: 550;
+  color: var(--text-2);
+  background: var(--surface-2);
+  border: 1px solid transparent;
+  transition: all var(--dur-fast) var(--ease);
+}
+.chip.is-active {
+  color: #FFFFFF;
+  background: var(--gradient);
+  box-shadow: var(--shadow-primary);
+}
+
+/* ============ 13. 底部导航 ============ */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 430px;
+  z-index: 40;
+  display: flex;
+  padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 0px));
+  background: color-mix(in srgb, var(--bg) 78%, transparent);
+  border-top: 1px solid var(--border);
+  -webkit-backdrop-filter: blur(22px) saturate(180%);
+  backdrop-filter: blur(22px) saturate(180%);
+}
+@media (min-width: 768px) {
+  .bottom-nav { bottom: 32px; border-radius: 0 0 40px 40px; }
+}
+.nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 0;
+  border-radius: var(--r-md);
+  color: var(--text-3);
+  transition: color var(--dur) var(--ease);
+  -webkit-tap-highlight-color: transparent;
+}
+.nav-item svg { width: 22px; height: 22px; }
+.nav-item__label { font-size: 11px; font-weight: 550; line-height: 1; }
+.nav-item.is-active { color: var(--brand); }
+.nav-item.is-active .nav-item__icon {
+  position: relative;
+}
+.nav-item.is-active .nav-item__icon::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -7px;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--gradient);
+}
+
+/* ============ 13.5 全局悬浮球（AI 助手入口） ============ */
+.fab-wrap {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 430px;
+  bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 16px;
+  pointer-events: none;
+  z-index: 45;
+}
+@media (min-width: 768px) {
+  .fab-wrap { bottom: 116px; }
+}
+.fab {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--gradient);
+  color: #FFFFFF;
+  box-shadow: 0 8px 24px rgba(0, 47, 167, 0.28);
+  animation: breath 3.2s var(--ease) infinite;
+  transition: transform var(--dur-fast) var(--ease);
+  -webkit-tap-highlight-color: transparent;
+}
+.fab:active { transform: scale(0.88); }
+.fab svg { width: 24px; height: 24px; }
+
+/* ============ 14. 弹层 ============ */
+.sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  pointer-events: none;
+}
+.sheet.is-open { pointer-events: auto; }
+.sheet__scrim {
+  position: absolute;
+  inset: 0;
+  background: var(--scrim);
+  opacity: 0;
+  transition: opacity var(--dur) var(--ease);
+  -webkit-backdrop-filter: blur(8px) saturate(1.15);
+  backdrop-filter: blur(8px) saturate(1.15);
+}
+.sheet__panel {
+  position: relative;
+  width: 100%;
+  max-width: 430px;
+  max-height: 88vh;
+  overflow-y: auto;
+  background: var(--card);
+  border-radius: 24px 24px 0 0;
+  border-top: 1px solid var(--border);
+  padding: 16px 20px calc(20px + env(safe-area-inset-bottom, 0px));
+  box-shadow: 0 -8px 32px rgba(15, 23, 42, 0.10), var(--shadow-lg);
+  transform: translateY(100%);
+  transition: transform var(--dur-slow) cubic-bezier(0.32, 0.72, 0, 1);
+}
+.sheet.is-open .sheet__panel { transform: translateY(0) scale(1); }
+[data-theme="dark"] .sheet__panel {
+  box-shadow: 0 -8px 32px rgba(15, 23, 42, 0.18), var(--shadow-lg);
+}
+.sheet__grip {
+  width: 48px;
+  height: 5px;
+  border-radius: var(--r-pill);
+  background: var(--text-3);
+  opacity: 0.55;
+  margin: 0 auto 14px;
+}
+.sheet__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.sheet__title {
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text-1);
+}
+.sheet__close {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-3);
+  background: var(--surface-2);
+  -webkit-tap-highlight-color: transparent;
+}
+.sheet__close svg { width: 17px; height: 17px; }
+.sheet__actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+.sheet__actions .btn { flex: 1; }
+.sheet.is-open .sheet__scrim { opacity: 1; }
+.sheet.is-open .sheet__panel { transform: translateY(0) scale(1); }
+
+/* ============ 15. 空状态 ============ */
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 72px 28px;
+  gap: 16px;
+}
+.empty__art {
+  width: 108px;
+  height: 108px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--brand-softer);
+  color: var(--brand);
+  margin-bottom: 4px;
+}
+.empty__art svg { width: 44px; height: 44px; }
+.empty__title { font-size: var(--fs-h3); font-weight: 650; color: var(--text-1); }
+.empty__desc { font-size: var(--fs-sm); color: var(--text-2); max-width: 260px; line-height: 1.7; }
+.empty .btn { margin-top: 8px; }
+
+/* ============ 16. 光晕 / 玻璃 ============ */
+.glow-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(64px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.glass {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+
+/* ============ 17. 动效 ============ */
+@keyframes breath {
+  0%, 100% { transform: scale(1); opacity: 0.85; }
+  50% { transform: scale(1.06); opacity: 1; }
+}
+@keyframes breathe-dots {
+  0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+  40% { transform: scale(1); opacity: 1; }
+}
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes shimmer {
+  0% { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+.breath { animation: breath 2.4s var(--ease) infinite; }
+
+/* AI 生成呼吸状态 */
+.ai-generating { display: flex; align-items: center; gap: 6px; }
+.ai-generating__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--brand);
+  animation: breathe-dots 1.2s var(--ease) infinite;
+}
+.ai-generating__dot:nth-child(2) { animation-delay: 0.15s; }
+.ai-generating__dot:nth-child(3) { animation-delay: 0.3s; }
+
+/* 骨架屏 */
+.skeleton {
+  border-radius: var(--r-md);
+  background: linear-gradient(90deg, var(--surface-2) 25%, var(--surface-3) 50%, var(--surface-2) 75%);
+  background-size: 400px 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+.fade-up { animation: fade-up 0.5s var(--ease-out) both; }
+.fade-up--1 { animation-delay: 0.03s; }
+.fade-up--2 { animation-delay: 0.08s; }
+.fade-up--3 { animation-delay: 0.13s; }
+
+/* 折叠区 */
+.collapse__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 4px 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.collapse__chevron {
+  transition: transform var(--dur) var(--ease);
+  color: var(--text-3);
+}
+.collapse__chevron svg { width: 18px; height: 18px; }
+.collapse.is-open .collapse__chevron { transform: rotate(180deg); }
+.collapse__body {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--dur-slow) var(--ease);
+}
+.collapse__body > div { overflow: hidden; }
+.collapse.is-open .collapse__body { grid-template-rows: 1fr; }
+
+/* 开关 */
+.switch {
+  position: relative;
+  width: 48px;
+  height: 28px;
+  border-radius: var(--r-pill);
+  background: var(--surface-3);
+  transition: background var(--dur) var(--ease);
+  flex: 0 0 auto;
+}
+.switch::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #FFFFFF;
+  box-shadow: 0 2px 6px rgba(38, 34, 30, 0.14);
+  transition: transform var(--dur) var(--ease-out);
+}
+.switch.is-on { background: var(--gradient); }
+.switch.is-on::after { transform: translateX(20px); }
+
+/* 复选框（圆润） */
+.check {
+  width: 26px;
+  height: 26px;
+  border-radius: 9px;
+  border: 2px solid var(--border-strong);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  color: transparent;
+  transition: all var(--dur-fast) var(--ease);
+  -webkit-tap-highlight-color: transparent;
+}
+.check svg { width: 15px; height: 15px; }
+.check.is-done {
+  background: var(--gradient);
+  border-color: transparent;
+  color: #FFFFFF;
+}
+
+/* stepper 步进器 */
+.stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+  padding: 3px;
+}
+.stepper__btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-2);
+  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+.stepper__btn:active { background: var(--surface-3); color: var(--text-1); }
+.stepper__btn svg { width: 16px; height: 16px; }
+.stepper__val { min-width: 40px; text-align: center; font-weight: 650; font-variant-numeric: tabular-nums; }
+
+/* Toast */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 110px;
+  transform: translateX(-50%) translateY(16px);
+  padding: 11px 22px;
+  border-radius: var(--r-pill);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: #FFFFFF;
+  background: var(--gradient);
+  box-shadow: var(--shadow-primary);
+  opacity: 0;
+  pointer-events: none;
+  transition: all var(--dur) var(--ease-out);
+  z-index: 100;
+  white-space: nowrap;
+}
+.toast.is-show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* 分割线 */
+.divider { height: 1px; background: var(--border); border: 0; }
+
+/* 工具 */
+.is-hidden { display: none !important; }
+.sr-only {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+}
+
+/* ============ 18.5 语义色分工规范（跨模块统一） ============ */
+/*
+  模块色：
+    训练 = --expense-red（珊瑚橙）
+    饮水 = --goal-blue（宝蓝）
+    睡眠 = --purple（柔和紫）
+    饮食 = --life-green（鼠尾草绿）
+    久坐/姿态 = --purple（柔和紫）
+    养生/功法 = --life-green（鼠尾草绿）
+    吃药 = --purple（柔和紫）
+    记账 = --goal-blue（宝蓝）
+    专注/品牌 = --brand（克莱因蓝）
+  状态色（跨模块统一）：
+    达标/完成 = --life-green
+    预警/超支 = --pause-amber
+    品牌/主按钮 = --brand
+*/
+
+/* ============ 19. 条目/图标组件（全局唯一标准） ============ */
+/* 图标容器：.icon-box 为全局唯一图标容器标准 */
+.icon-box {
+  width: var(--icon-md);
+  height: var(--icon-md);
+  border-radius: var(--r-icon);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  background: var(--surface-2);
+  color: var(--text-2);
+}
+.icon-box svg { width: 19px; height: 19px; }
+.icon-box--lg { width: var(--icon-lg); height: var(--icon-lg); }
+.icon-box--lg svg { width: 22px; height: 22px; }
+.icon-box--sm { width: var(--icon-sm); height: var(--icon-sm); }
+.icon-box--sm svg { width: 16px; height: 16px; }
+/* 语义色变体 */
+.icon-box--strength { background: var(--expense-red-soft); color: var(--expense-red); }
+.icon-box--water { background: var(--goal-blue-soft); color: var(--goal-blue); }
+.icon-box--sleep { background: var(--purple-soft); color: var(--purple); }
+.icon-box--life { background: var(--life-green-soft); color: var(--life-green); }
+.icon-box--brand { background: var(--brand-soft); color: var(--brand); }
+.icon-box--amber { background: var(--pause-amber-soft); color: var(--pause-amber); }
+.icon-box--emotion { background: var(--emotion-soft); color: var(--emotion); }
+[data-theme="dark"] .icon-box--strength { color: var(--expense-red); }
+[data-theme="dark"] .icon-box--water { color: var(--goal-blue); }
+[data-theme="dark"] .icon-box--sleep { color: var(--purple); }
+[data-theme="dark"] .icon-box--life { color: var(--life-green); }
+[data-theme="dark"] .icon-box--brand { color: var(--brand-strong); }
+[data-theme="dark"] .icon-box--amber { color: var(--pause-amber); }
+[data-theme="dark"] .icon-box--emotion { color: var(--emotion); }
+
+/* 通用条目骨架：.item-row 为全局唯一条目标准 */
+.item-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 0;
+}
+.item-row__main { flex: 1; min-width: 0; }
+.item-row__name {
+  font-size: var(--h-name);
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  color: var(--text-1);
+}
+.item-row__meta {
+  font-size: var(--fs-meta);
+  color: var(--text-3);
+  margin-top: 2px;
+  line-height: 1.5;
+}
+.item-row__val {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-1);
+  font-variant-numeric: tabular-nums;
+  flex: 0 0 auto;
+}
+
+/* ============ 20. 状态/交互类（跨页统一） ============ */
+/* 完成态工具类：左侧色条变浅绿 + 绿图标 + 绿文字 + opacity 0.6 */
+.is-done { opacity: 0.6; }
+.is-done::before { background: var(--life-green) !important; }
+.is-done > .icon-box,
+.is-done .icon-box {
+  background: var(--life-green-soft) !important;
+  color: var(--life-green) !important;
+}
+.is-done .item-row__name { color: var(--life-green) !important; }
+.is-done .ev__focus { background: var(--life-green-soft) !important; color: var(--life-green) !important; }
+.is-done__note {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  color: var(--life-green);
+  margin-top: 2px;
+}
+.is-done__note svg { width: 11px; height: 11px; }
+
+/* chip 扩展变体 */
+.chip--custom { border-style: dashed; }
+.chip--custom.is-active {
+  background: var(--brand-soft);
+  border-color: var(--brand);
+  border-style: solid;
+  color: var(--brand);
+}
+[data-theme="dark"] .chip--custom.is-active { color: var(--brand-strong); }
+.chips--my .chip { position: relative; }
+.chips--my .chip.is-longpress::after {
+  content: '×';
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--expense-red);
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  line-height: 1;
+}
+
+/* ============ 21. 跨页联动模式（规范注释） ============ */
+/*
+  跨页状态同步统一模式：
+  1. 数据源：localStorage.setItem('lifeflow-<mod>-<key>', JSON.stringify({date, ...}))
+  2. 写入：保存后立即 dispatchEvent(new CustomEvent('<mod>-updated', { detail }))
+  3. 读取：消费方 read → 按 date 校验今天 → 应用状态
+  4. 监听：addEventListener('<mod>-updated') + addEventListener('storage' 按 key)
+     + addEventListener('visibilitychange')（切回页面刷新，防漏事件）
+  5. 事件命名：<mod>-updated（train-updated / water-updated / habit-updated）
+  6. 数据结构：跨页状态用 {date, typesDone:[类型名], typeTimes:{类型名:HH:MM}, ...}
+     代替单纯 {done:[项目名]}（typesDone 适合"按类型聚合"——一个类型完成一次即标完成）
+*/
+
+/* 无障碍：减少动效 */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+<style type="text/tailwindcss">
+@theme inline {
+  --color-background: var(--bg);
+  --color-foreground: var(--text-1);
+  --color-card: var(--card);
+  --color-muted: var(--text-2);
+  --color-brand: var(--brand);
+  --color-primary: var(--brand);
+  --radius-sm: var(--r-sm);
+  --radius-md: var(--r-md);
+  --radius-lg: var(--r-lg);
+}
+@layer base {
+  body {
+    background: var(--bg);
+    color: var(--text-1);
+    font-family: var(--font-sans);
+  }
+}
+</style>
+</head>
+<body>
+<div class="app-stage">
+  <main class="app">
+
+    <!-- 顶栏 -->
+    <header class="topbar">
+      <div class="topbar__side">
+        <button type="button" class="icon-btn" data-dom-id="back-home" data-href="schedule.html" aria-label="返回今天"><i data-lucide="arrow-left"></i></button>
+      </div>
+      <div class="topbar__title">饮水</div>
+      <div class="topbar__side topbar__side--right">
+        <button type="button" class="icon-btn" id="theme-toggle" aria-label="切换深浅主题"><i data-lucide="moon"></i></button>
+      </div>
+    </header>
+
+    <div class="water-body">
+
+      <!-- ① 量化头：环形进度 + 连续达标 + 教练下一步 -->
+      <section class="card" aria-label="今日饮水">
+        <div class="water-head">
+          <span class="water-head__title"><i data-lucide="droplets"></i>今日饮水</span>
+          <span class="tag tag--active"><span class="tag__dot"></span>连续达标 5 天</span>
+        </div>
+
+        <div class="ring-wrap">
+          <div class="ring">
+            <svg class="water-ring" viewBox="0 0 148 148" aria-hidden="true">
+              <circle class="ring-bg" cx="74" cy="74" r="61"></circle>
+              <circle class="ring-fg" id="water-ring-fg" cx="74" cy="74" r="61" transform="rotate(-90 74 74)" stroke-dasharray="383.3" stroke-dashoffset="123"></circle>
+            </svg>
+            <div class="ring-inner">
+              <span class="ring-val" id="water-total">1350</span>
+              <span class="ring-unit">/ 2000 ml</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="progress progress--lg" style="margin-top:12px" aria-hidden="true">
+          <span class="progress__fill" id="water-fill" style="width:68%;background:var(--w-grad)"></span>
+        </div>
+        <div class="goal-meta">
+          <span id="water-drank">已喝 <b>1350</b> ml</span>
+          <span id="water-remain">还差 <b>650</b> ml</span>
+        </div>
+        <p class="t-caption t-faint" style="margin-top:10px">白天喝够、晚间少量 · 下一步：18 点前再喝 1 杯</p>
+      </section>
+
+      <!-- ② 记录区：杯量可调 + 喝一杯 + 撤销 -->
+      <section class="card" aria-label="记录饮水">
+        <div class="section-head">
+          <h2 class="section-head__title">记录饮水</h2>
+          <span class="section-head__hint">选杯量，点一下记录</span>
+        </div>
+
+        <div class="chips" id="cup-chips" role="radiogroup" aria-label="选择杯量">
+          <button type="button" class="chip is-active" data-cup="150" role="radio" aria-checked="true">小杯 150ml</button>
+          <button type="button" class="chip" data-cup="250" role="radio" aria-checked="false">一杯 250ml</button>
+          <button type="button" class="chip" data-cup="330" role="radio" aria-checked="false">易拉罐 330ml</button>
+          <button type="button" class="chip" data-cup="500" role="radio" aria-checked="false">一瓶 500ml</button>
+          <button type="button" class="chip" data-cup="750" role="radio" aria-checked="false">大杯 750ml</button>
+          <button type="button" class="chip chip--custom" id="custom-cup-btn" data-cup="custom" role="radio" aria-checked="false">自定义</button>
+        </div>
+
+        <!-- 自定义杯量输入区 -->
+        <div class="custom-cup" id="custom-cup-row" style="display:none">
+          <div class="custom-cup__inner">
+            <span class="custom-cup__label">自定义杯量</span>
+            <div class="stepper stepper--compact" role="group" aria-label="自定义杯量毫升数">
+              <button type="button" class="stepper__btn" id="custom-dec" aria-label="减少"><i data-lucide="minus"></i></button>
+              <span class="stepper__val" id="custom-cup-val">300 ml</span>
+              <button type="button" class="stepper__btn" id="custom-inc" aria-label="增加"><i data-lucide="plus"></i></button>
+            </div>
+            <button type="button" class="btn btn--ghost btn--sm" id="custom-cup-save">保存为我的杯量</button>
+          </div>
+        </div>
+
+        <button type="button" class="drink-btn" id="water-drink" aria-label="喝了一杯 250 毫升">
+          <span class="drop-icon" id="wave-droplet"><i data-lucide="droplets"></i></span>
+          <span id="drink-label">喝了一杯 · +250ml</span>
+        </button>
+
+        <div class="undo-row">
+          <button type="button" class="undo-btn is-disabled" id="water-undo" aria-label="撤销上次记录"><i data-lucide="undo-2"></i>撤销上次</button>
+        </div>
+      </section>
+
+      <!-- ③ 三时段进度（动态：记录时当前时段涨） -->
+      <section class="card" aria-label="三时段进度">
+        <div class="section-head">
+          <h2 class="section-head__title">三时段进度</h2>
+          <span class="section-head__hint">记录后，当前时段涨进度</span>
+        </div>
+
+        <div class="period-row is-done" data-period="morning">
+          <div class="period-head">
+            <span class="period-name">上午</span>
+            <span class="period-quota">40% · 800ml</span>
+            <span class="period-state period-state--done"><i data-lucide="check"></i><span class="pv">800 / 800</span></span>
+          </div>
+          <div class="period-track period-track--1"><span class="period-fill" data-fill style="width:100%"></span></div>
+        </div>
+
+        <div class="period-row is-current" data-period="afternoon">
+          <div class="period-head">
+            <span class="period-name">下午</span>
+            <span class="period-quota">45% · 900ml</span>
+            <span class="period-state period-state--now"><span class="pv">550 / 900</span></span>
+          </div>
+          <div class="period-track period-track--2"><span class="period-fill" data-fill style="width:61%"></span></div>
+        </div>
+
+        <div class="period-row is-todo" data-period="evening">
+          <div class="period-head">
+            <span class="period-name">晚上</span>
+            <span class="period-quota">15% · 300ml · 20:00 后少量</span>
+            <span class="period-state period-state--todo"><i data-lucide="moon"></i><span class="pv">0 / 300</span></span>
+          </div>
+          <div class="period-track period-track--3"><span class="period-fill" data-fill style="width:0%"></span></div>
+        </div>
+      </section>
+
+      <!-- ④ 定时提醒（上午/下午/晚上三次，进日程） -->
+      <section class="card" aria-label="定时提醒">
+        <div class="section-head">
+          <h2 class="section-head__title">定时提醒</h2>
+          <span class="section-head__hint">三次 · 进今日安排</span>
+        </div>
+
+        <div class="remind-row item-row">
+          <span class="icon-box icon-box--water"><i data-lucide="sunrise"></i></span>
+          <div class="item-row__main">
+            <div class="item-row__name">上午提醒</div>
+            <div class="item-row__meta">补水起步 · 进日程锚点</div>
+          </div>
+          <input class="remind-time-input" type="time" value="10:30" data-remind-time="morning" aria-label="上午提醒时间">
+          <button type="button" class="switch is-on" data-remind="morning" role="switch" aria-checked="true" aria-label="上午提醒开关"></button>
+        </div>
+        <div class="remind-row item-row">
+          <span class="icon-box icon-box--water"><i data-lucide="sun"></i></span>
+          <div class="item-row__main">
+            <div class="item-row__name">下午提醒</div>
+            <div class="item-row__meta">补水高峰 · 进日程锚点</div>
+          </div>
+          <input class="remind-time-input" type="time" value="15:00" data-remind-time="afternoon" aria-label="下午提醒时间">
+          <button type="button" class="switch is-on" data-remind="afternoon" role="switch" aria-checked="true" aria-label="下午提醒开关"></button>
+        </div>
+        <div class="remind-row item-row">
+          <span class="icon-box icon-box--water"><i data-lucide="moon-star"></i></span>
+          <div class="item-row__main">
+            <div class="item-row__name">晚上提醒</div>
+            <div class="item-row__meta">少量收尾 · 20:00 后静默</div>
+          </div>
+          <input class="remind-time-input" type="time" value="19:00" data-remind-time="evening" aria-label="晚上提醒时间">
+          <button type="button" class="switch is-on" data-remind="evening" role="switch" aria-checked="true" aria-label="晚上提醒开关"></button>
+        </div>
+      </section>
+
+      <!-- ⑤ 历史记录（按天） -->
+      <section class="card" aria-label="历史记录">
+        <div class="section-head">
+          <h2 class="section-head__title">历史记录</h2>
+          <span class="section-head__hint">近 7 天 · 按天</span>
+        </div>
+
+        <div class="hist-row">
+          <div class="hist-date"><b>今天</b><span>8/19</span></div>
+          <div class="progress progress--thin hist-bar" aria-hidden="true"><span class="progress__fill" style="width:68%;background:var(--w-2)"></span></div>
+          <span class="hist-vol">1350<small>ml · 进行中</small></span>
+        </div>
+        <div class="hist-row">
+          <div class="hist-date"><b>昨天</b><span>8/18</span></div>
+          <div class="progress progress--thin hist-bar" aria-hidden="true"><span class="progress__fill" style="width:99%;background:var(--w-2)"></span></div>
+          <span class="hist-vol">1980<small>ml · 达标</small></span>
+        </div>
+        <div class="hist-row">
+          <div class="hist-date"><b>8/17</b><span>周日</span></div>
+          <div class="progress progress--thin hist-bar" aria-hidden="true"><span class="progress__fill" style="width:100%;background:var(--w-2)"></span></div>
+          <span class="hist-vol">2050<small>ml · 达标</small></span>
+        </div>
+        <div class="hist-row">
+          <div class="hist-date"><b>8/16</b><span>周六</span></div>
+          <div class="progress progress--thin hist-bar" aria-hidden="true"><span class="progress__fill" style="width:86%;background:var(--w-2)"></span></div>
+          <span class="hist-vol">1720<small>ml · 差 280</small></span>
+        </div>
+        <div class="hist-row">
+          <div class="hist-date"><b>8/15</b><span>周五</span></div>
+          <div class="progress progress--thin hist-bar" aria-hidden="true"><span class="progress__fill" style="width:100%;background:var(--w-2)"></span></div>
+          <span class="hist-vol">2150<small>ml · 达标</small></span>
+        </div>
+        <div class="hist-row">
+          <div class="hist-date"><b>8/14</b><span>周四</span></div>
+          <div class="progress progress--thin hist-bar" aria-hidden="true"><span class="progress__fill" style="width:94%;background:var(--w-2)"></span></div>
+          <span class="hist-vol">1890<small>ml · 差 110</small></span>
+        </div>
+        <div class="hist-row">
+          <div class="hist-date"><b>8/13</b><span>周三</span></div>
+          <div class="progress progress--thin hist-bar" aria-hidden="true"><span class="progress__fill" style="width:100%;background:var(--w-2)"></span></div>
+          <span class="hist-vol">2240<small>ml · 达标</small></span>
+        </div>
+      </section>
+
+      <!-- ⑥ 饮水设置 -->
+      <section class="card" aria-label="饮水设置">
+        <div class="section-head">
+          <h2 class="section-head__title">饮水设置</h2>
+          <span class="section-head__hint">目标与杯量</span>
+        </div>
+
+        <div class="set-row">
+          <span class="set-label">每日目标<small>白天喝够、晚间少量</small></span>
+          <div class="stepper" role="group" aria-label="每日目标毫升数">
+            <button type="button" class="stepper__btn" id="goal-dec" aria-label="减少"><i data-lucide="minus"></i></button>
+            <span class="stepper__val" id="goal-val">2000</span>
+            <button type="button" class="stepper__btn" id="goal-inc" aria-label="增加"><i data-lucide="plus"></i></button>
+          </div>
+        </div>
+        <div class="set-row">
+          <span class="set-label">默认杯量<small>记录饮水时的一杯</small></span>
+          <div class="stepper" role="group" aria-label="默认杯量毫升数">
+            <button type="button" class="stepper__btn" id="cup-dec" aria-label="减少杯量"><i data-lucide="minus"></i></button>
+            <span class="stepper__val" id="cup-val">250 ml</span>
+            <button type="button" class="stepper__btn" id="cup-inc" aria-label="增加杯量"><i data-lucide="plus"></i></button>
+          </div>
+        </div>
+
+        <!-- 我的杯量 -->
+        <div class="set-row set-row--top">
+          <span class="set-label">我的杯量<small>长按删除自定义杯量 · 最多 5 个</small></span>
+        </div>
+        <div class="chips chips--my" id="my-cup-chips" role="radiogroup" aria-label="我的杯量"></div>
+      </section>
+
+      <!-- 页尾说明 -->
+      <div class="flow-note" aria-label="饮水说明">
+        <i data-lucide="droplets"></i>
+        <span>每日目标 2000ml · 三次提醒进日程 · 睡前猛喝容易起夜</span>
+      </div>
+
+    </div>
+
+    <!-- 底部导航 -->
+    <nav class="bottom-nav" aria-label="底部导航">
+      <a class="nav-item is-active" data-dom-id="nav-home" href="schedule.html" aria-label="今日安排" aria-current="page">
+        <span class="nav-item__icon"><i data-lucide="calendar-days"></i></span>
+        <span class="nav-item__label">今日安排</span>
+      </a>
+      <a class="nav-item" data-dom-id="nav-goals" href="goals.html" aria-label="目标">
+        <span class="nav-item__icon"><i data-lucide="target"></i></span>
+        <span class="nav-item__label">目标</span>
+      </a>
+      <a class="nav-item" data-dom-id="nav-habit" href="habit.html" aria-label="习惯">
+        <span class="nav-item__icon"><i data-lucide="repeat"></i></span>
+        <span class="nav-item__label">习惯</span>
+      </a>
+      <a class="nav-item" data-dom-id="nav-review" href="review.html" aria-label="回顾">
+        <span class="nav-item__icon"><i data-lucide="bar-chart-3"></i></span>
+        <span class="nav-item__label">回顾</span>
+      </a>
+      <a class="nav-item" data-dom-id="nav-more" href="more.html" aria-label="我的">
+        <span class="nav-item__icon"><i data-lucide="user"></i></span>
+        <span class="nav-item__label">我的</span>
+      </a>
+    </nav>
+
+    <div class="fab-wrap">
+      <button type="button" class="fab" data-dom-id="fab" data-href="assistant.html" aria-label="打开 LifeFlow 陪练">
+        <i data-lucide="sparkles"></i>
+      </button>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </main>
+</div>
+
+<script src="../assets/lucide.min.js"></script>
+<script>
+(function () {
+  'use strict';
+  var $ = function (id) { return document.getElementById(id); };
+  var toast = $('toast');
+  var toastTimer;
+  function showToast(msg) {
+    toast.textContent = msg;
+    toast.classList.add('is-show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toast.classList.remove('is-show'); }, 1800);
+  }
+
+  /* 主题切换 */
+  var LS_THEME = 'lifeflow-theme';
+  var root = document.documentElement;
+  function applyTheme(t) {
+    root.setAttribute('data-theme', t);
+    var meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) { meta.setAttribute('content', t === 'dark' ? '#0D1117' : '#F7F4EF'); }
+    var icon = document.querySelector('#theme-toggle i');
+    if (icon) { icon.setAttribute('data-lucide', t === 'dark' ? 'sun' : 'moon'); }
+    if (window.lucide) { window.lucide.createIcons(); }
+  }
+  var saved = null;
+  try { saved = localStorage.getItem(LS_THEME); } catch (e) {}
+  if (saved) { applyTheme(saved); }
+  var themeToggle = $('theme-toggle');
+  if (themeToggle) {
+    themeToggle.addEventListener('click', function () {
+      var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      applyTheme(next);
+      try { localStorage.setItem(LS_THEME, next); } catch (e) {}
+    });
+  }
+
+  /* data-href 跳转 */
+  document.addEventListener('click', function (e) {
+    var h = e.target.closest('[data-href]');
+    if (h) {
+      var href = h.getAttribute('data-href');
+      if (href && href.charAt(0) !== '#') { location.href = href; }
+    }
+  });
+
+  /* ===== 饮水状态 ===== */
+  var GOAL = 2000;
+  var CUP = 250;
+  var CIRC = 383.3;
+  var total = 1350;
+
+  /* 三时段配额与累计 */
+  var periods = {
+    morning:   { quota: 800, acc: 800 },
+    afternoon: { quota: 900, acc: 550 },
+    evening:   { quota: 300, acc: 0 }
+  };
+  var records = []; // 记录栈，用于撤销
+
+  /* 原型快照：固定"当前时段 = 下午"，便于验收"记录→当前时段涨"。
+     src 阶段改为按真实时间判断当前时段。 */
+  function currentPeriod() { return 'afternoon'; }
+
+  function render() {
+    var pct = Math.min(100, Math.round(total / GOAL * 100));
+    var totalEl = $('water-total');
+    var fillEl = $('water-fill');
+    var ringEl = $('water-ring-fg');
+    var drankEl = $('water-drank');
+    var remainEl = $('water-remain');
+
+    if (totalEl) { totalEl.textContent = total; }
+    if (fillEl) { fillEl.style.width = pct + '%'; }
+    if (ringEl) {
+      var offset = CIRC * (1 - pct / 100);
+      ringEl.style.strokeDashoffset = offset.toFixed(1);
+    }
+    if (drankEl) { drankEl.innerHTML = '已喝 <b>' + total + '</b> ml'; }
+    if (remainEl) { remainEl.innerHTML = '还差 <b>' + Math.max(0, GOAL - total) + '</b> ml'; }
+
+    /* 三时段 */
+    Object.keys(periods).forEach(function (key) {
+      var p = periods[key];
+      var row = document.querySelector('[data-period="' + key + '"]');
+      if (!row) { return; }
+      var pv = row.querySelector('.pv');
+      var fill = row.querySelector('[data-fill]');
+      if (pv) { pv.textContent = p.acc + ' / ' + p.quota; }
+      if (fill) { fill.style.width = Math.min(100, Math.round(p.acc / p.quota * 100)) + '%'; }
+    });
+  }
+
+  function triggerWave() {
+    var drop = $('wave-droplet');
+    if (drop) { drop.classList.remove('wave'); void drop.offsetWidth; drop.classList.add('wave'); }
+    var num = $('water-total');
+    if (num) { num.classList.remove('num-pop'); void num.offsetWidth; num.classList.add('num-pop'); }
+  }
+
+  function updateUndo() {
+    var btn = $('water-undo');
+    if (btn) { btn.classList.toggle('is-disabled', records.length === 0); }
+  }
+
+  /* 杯量选择 */
+  function bindChips(container, onChange) {
+    if (!container) { return; }
+    container.addEventListener('click', function (e) {
+      var chip = e.target.closest('.chip');
+      if (!chip) { return; }
+      container.querySelectorAll('.chip').forEach(function (c) {
+        c.classList.remove('is-active');
+        c.setAttribute('aria-checked', 'false');
+      });
+      chip.classList.add('is-active');
+      chip.setAttribute('aria-checked', 'true');
+      onChange(chip);
+    });
+  }
+
+  /* 记录区杯量：预设 + 自定义 */
+  var cupChips = $('cup-chips');
+  var cupVal = $('cup-val');
+  var drinkLabel = $('drink-label');
+  var customCupRow = $('custom-cup-row');
+  var customCupBtn = $('custom-cup-btn');
+  var customCupVal = $('custom-cup-val');
+  var customDec = $('custom-dec');
+  var customInc = $('custom-inc');
+  var customSave = $('custom-cup-save');
+  var myCupChips = $('my-cup-chips');
+  var customCup = 300;
+  var LS_MY_CUPS = 'lifeflow-water-my-cups';
+  var myCups = [];
+  try {
+    var rawMyCups = localStorage.getItem(LS_MY_CUPS);
+    if (rawMyCups) { myCups = JSON.parse(rawMyCups) || []; }
+  } catch (e) {}
+  if (!Array.isArray(myCups)) { myCups = []; }
+
+  function renderMyCups() {
+    if (!myCupChips) { return; }
+    myCupChips.innerHTML = '';
+    if (myCups.length === 0) {
+      myCupChips.innerHTML = '<span class="t-caption t-faint">还没有自定义杯量</span>';
+      return;
+    }
+    myCups.forEach(function (v) {
+      var chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'chip chip--custom' + (CUP === v ? ' is-active' : '');
+      chip.setAttribute('data-cup', v);
+      chip.setAttribute('role', 'radio');
+      chip.setAttribute('aria-checked', CUP === v ? 'true' : 'false');
+      chip.textContent = v + 'ml';
+      myCupChips.appendChild(chip);
+    });
+  }
+
+  function saveMyCups() {
+    try { localStorage.setItem(LS_MY_CUPS, JSON.stringify(myCups)); } catch (e) {}
+    renderMyCups();
+  }
+
+  function updateCustomDisplay() {
+    if (customCupVal) { customCupVal.textContent = customCup + ' ml'; }
+  }
+
+  /* 统一更新杯量：主按钮文字 + 设置区 stepper 显示 + chips 选中态 */
+  function applyCup(v, fromCustomPanel) {
+    CUP = v;
+    if (drinkLabel) { drinkLabel.textContent = '喝了一杯 · +' + CUP + 'ml'; }
+    if (cupVal) { cupVal.textContent = CUP + ' ml'; }
+    var isCustomSaved = myCups.indexOf(CUP) >= 0;
+    if (cupChips) {
+      cupChips.querySelectorAll('.chip').forEach(function (c) {
+        var cv = c.getAttribute('data-cup');
+        var on = cv === 'custom' ? !!fromCustomPanel : parseInt(cv, 10) === CUP;
+        c.classList.toggle('is-active', on);
+        c.setAttribute('aria-checked', on ? 'true' : 'false');
+      });
+    }
+    if (myCupChips) {
+      myCupChips.querySelectorAll('.chip').forEach(function (c) {
+        var on = parseInt(c.getAttribute('data-cup'), 10) === CUP;
+        c.classList.toggle('is-active', on);
+        c.setAttribute('aria-checked', on ? 'true' : 'false');
+      });
+    }
+    if (customCupRow) {
+      customCupRow.style.display = fromCustomPanel ? '' : 'none';
+    }
+  }
+
+  /* 记录区预设 + 自定义按钮 */
+  cupChips.addEventListener('click', function (e) {
+    var chip = e.target.closest('.chip');
+    if (!chip) { return; }
+    var cv = chip.getAttribute('data-cup');
+    if (cv === 'custom') {
+      applyCup(customCup, true);
+      updateCustomDisplay();
+    } else {
+      applyCup(parseInt(cv, 10));
+    }
+  });
+
+  /* 我的杯量：点击使用 */
+  myCupChips.addEventListener('click', function (e) {
+    var chip = e.target.closest('.chip');
+    if (!chip) { return; }
+    applyCup(parseInt(chip.getAttribute('data-cup'), 10));
+  });
+
+  /* 长按删除我的杯量 */
+  var longPressTimer;
+  function startLongPress(e) {
+    var chip = e.target.closest('.chip');
+    if (!chip) { return; }
+    var v = parseInt(chip.getAttribute('data-cup'), 10);
+    longPressTimer = setTimeout(function () {
+      var i = myCups.indexOf(v);
+      if (i >= 0) {
+        myCups.splice(i, 1);
+        saveMyCups();
+        showToast('已删除 ' + v + 'ml 杯量');
+        if (CUP === v) { applyCup(250); }
+      }
+    }, 600);
+  }
+  function cancelLongPress() { clearTimeout(longPressTimer); }
+  myCupChips.addEventListener('mousedown', startLongPress);
+  myCupChips.addEventListener('touchstart', startLongPress, { passive: true });
+  myCupChips.addEventListener('mouseup', cancelLongPress);
+  myCupChips.addEventListener('mouseleave', cancelLongPress);
+  myCupChips.addEventListener('touchend', cancelLongPress);
+
+  /* 自定义杯量 stepper（10-1500，步进 10） */
+  if (customDec) {
+    customDec.addEventListener('click', function () {
+      customCup = Math.max(10, customCup - 10);
+      updateCustomDisplay();
+    });
+  }
+  if (customInc) {
+    customInc.addEventListener('click', function () {
+      customCup = Math.min(1500, customCup + 10);
+      updateCustomDisplay();
+    });
+  }
+
+  /* 保存自定义杯量 */
+  if (customSave) {
+    customSave.addEventListener('click', function () {
+      if (myCups.indexOf(customCup) >= 0) {
+        showToast(customCup + 'ml 已在「我的杯量」里');
+        applyCup(customCup);
+        return;
+      }
+      if (myCups.length >= 5) {
+        showToast('最多保存 5 个自定义杯量'); return;
+      }
+      myCups.push(customCup);
+      myCups.sort(function (a, b) { return a - b; });
+      saveMyCups();
+      applyCup(customCup);
+      showToast('已保存 ' + customCup + 'ml 到「我的杯量」');
+    });
+  }
+
+  /* 设置区默认杯量 stepper（步进 50，范围 100-1500） */
+  var cupDec = $('cup-dec');
+  var cupInc = $('cup-inc');
+  if (cupDec) {
+    cupDec.addEventListener('click', function () { applyCup(Math.max(100, CUP - 50)); });
+  }
+  if (cupInc) {
+    cupInc.addEventListener('click', function () { applyCup(Math.min(1500, CUP + 50)); });
+  }
+
+  /* 喝一杯 */
+  var drink = $('water-drink');
+  if (drink) {
+    drink.addEventListener('click', function () {
+      var cp = currentPeriod();
+      var p = periods[cp];
+      var beforeTotal = total;
+      var beforeAcc = p.acc;
+
+      total = Math.min(GOAL, total + CUP);
+      p.acc = Math.min(p.quota, p.acc + CUP);
+
+      records.push({ amount: CUP, period: cp, beforeTotal: beforeTotal, beforeAcc: beforeAcc });
+
+      triggerWave();
+      render();
+      updateUndo();
+      showToast(total >= GOAL ? '今日饮水已达标' : '已喝 +' + CUP + ' ml');
+    });
+  }
+
+  /* 撤销 */
+  var undo = $('water-undo');
+  if (undo) {
+    undo.addEventListener('click', function () {
+      var last = records.pop();
+      if (!last) { showToast('还没有可撤销的记录'); return; }
+      total = last.beforeTotal;
+      periods[last.period].acc = last.beforeAcc;
+      render();
+      updateUndo();
+      showToast('已撤销 +' + last.amount + ' ml');
+    });
+  }
+
+  /* 定时提醒开关 */
+  document.querySelectorAll('[data-remind]').forEach(function (sw) {
+    sw.addEventListener('click', function () {
+      var on = sw.classList.toggle('is-on');
+      sw.setAttribute('aria-checked', on ? 'true' : 'false');
+      showToast(on ? '提醒已开启' : '提醒已关闭');
+    });
+  });
+
+  /* 定时提醒时间修改 */
+  document.querySelectorAll('[data-remind-time]').forEach(function (inp) {
+    inp.addEventListener('change', function () {
+      showToast('提醒时间已改为 ' + inp.value);
+    });
+  });
+
+  /* 每日目标 stepper（步进 250） */
+  var goalVal = $('goal-val');
+  function setGoal(v) {
+    GOAL = v;
+    goalVal.textContent = v;
+    render();
+  }
+  var dec = $('goal-dec');
+  var inc = $('goal-inc');
+  if (dec) {
+    dec.addEventListener('click', function () {
+      setGoal(Math.max(1000, GOAL - 250));
+    });
+  }
+  if (inc) {
+    inc.addEventListener('click', function () {
+      setGoal(Math.min(4000, GOAL + 250));
+    });
+  }
+
+  render();
+  updateUndo();
+  renderMyCups();
+  if (window.lucide) { window.lucide.createIcons(); }
+})();
+</script>
+<style>
+  /* ===== 饮水记录页 · 杯量可调 + 三时段动态进度 + 三次提醒 + 历史(按天) + 设置 ===== */
+  .water-body {
+    padding: 8px 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  /* 饮水语义色：宝蓝 + 三档深浅（上午深 / 下午中 / 晚上浅，深浅表达时段配额的"量感"） */
+  .water-body {
+    --w: var(--goal-blue);
+    --w-soft: var(--goal-blue-soft);
+    --w-grad: linear-gradient(135deg, #4A7CFF 0%, #2E5FE8 100%);
+    --w-1: #2E45A8;   /* 上午 · 深 */
+    --w-2: #4169E1;   /* 下午 · 中 */
+    --w-3: #7D97EA;   /* 晚上 · 浅 */
+  }
+  [data-theme="dark"] .water-body {
+    --w: #6E8FE8;
+    --w-grad: linear-gradient(135deg, #6E8FE8 0%, #4C6FD6 100%);
+    --w-1: #8AA0FF;
+    --w-2: #6C8CFF;
+    --w-3: #A8B9FF;
+  }
+
+  /* —— 量化头卡 —— */
+  .water-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .water-head__title { display: inline-flex; align-items: center; gap: 7px; font-size: 15px; font-weight: 700; color: var(--text-1); }
+  .water-head__title svg { width: 18px; height: 18px; color: var(--w); }
+
+  /* 环形进度 */
+  .ring-wrap { display: flex; justify-content: center; margin: 18px 0 4px; }
+  .ring { position: relative; width: 148px; height: 148px; }
+  .water-ring { width: 148px; height: 148px; }
+  .water-ring .ring-bg { fill: none; stroke: var(--surface-2); stroke-width: 13; }
+  .water-ring .ring-fg {
+    fill: none; stroke: var(--w); stroke-width: 13; stroke-linecap: round;
+    transition: stroke-dashoffset 0.5s var(--ease-out);
+  }
+  .ring-inner { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+  .ring-val { font-family: var(--font-num); font-size: 32px; font-weight: 800; letter-spacing: -0.03em; line-height: 1; color: var(--text-1); font-variant-numeric: tabular-nums; }
+  .ring-unit { font-size: 12px; color: var(--text-3); }
+
+  .goal-meta { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 8px; font-size: 12px; color: var(--text-3); }
+  .goal-meta b { color: var(--w); font-weight: 700; font-variant-numeric: tabular-nums; }
+
+  /* 喝了一杯（宝蓝主操作） */
+  .drink-btn {
+    width: 100%; margin-top: 14px;
+    display: flex; align-items: center; justify-content: center; gap: 9px;
+    height: 52px; border-radius: var(--r-pill);
+    font-size: 16px; font-weight: 650; color: #FFFFFF;
+    background: var(--w-grad); box-shadow: 0 10px 26px rgba(65, 105, 225, 0.30);
+    transition: transform var(--dur-fast) var(--ease);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .drink-btn:active { transform: scale(0.97); }
+  .drink-btn svg { width: 20px; height: 20px; }
+
+  /* 撤销 */
+  .undo-row { display: flex; justify-content: center; margin-top: 8px; }
+  .undo-btn {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 12px; font-weight: 600; color: var(--text-3);
+    padding: 4px 10px; border-radius: var(--r-pill);
+    transition: color var(--dur-fast) var(--ease);
+  }
+  .undo-btn svg { width: 13px; height: 13px; }
+  .undo-btn:not(.is-disabled):active { color: var(--text-1); }
+  .undo-btn.is-disabled { opacity: 0.4; pointer-events: none; }
+
+  /* 水波微动 + 数字弹跳 */
+  @keyframes dropWave {
+    0%   { transform: rotate(0deg); }
+    25%  { transform: rotate(-12deg); }
+    50%  { transform: rotate(10deg); }
+    75%  { transform: rotate(-6deg); }
+    100% { transform: rotate(0deg); }
+  }
+  .drop-icon.wave { animation: dropWave 0.5s ease-in-out; }
+  @keyframes numPop {
+    0%   { transform: scale(1); }
+    40%  { transform: scale(1.14); }
+    100% { transform: scale(1); }
+  }
+  .num-pop { animation: numPop 0.3s ease-out; }
+
+  /* —— 三时段进度（动态） —— */
+  .period-row { padding: 10px 2px; }
+  .period-row + .period-row { border-top: 1px solid var(--border); }
+  .period-row.is-current {
+    background: var(--w-soft); border-radius: 14px;
+    margin: 0 -6px; padding: 10px 8px;
+  }
+  .period-row.is-current + .period-row { border-top: 0; }
+  .period-head { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .period-name { flex-shrink: 0; font-size: 13px; font-weight: 700; color: var(--text-1); }
+  .period-quota { flex: 1; min-width: 0; font-size: 11px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .period-state { flex-shrink: 0; display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .period-state svg { width: 12px; height: 12px; }
+  .period-state--done { color: var(--w); }
+  .period-state--now { color: var(--w); }
+  .period-state--todo { color: var(--text-3); font-weight: 500; }
+
+  .period-track { height: 6px; margin-top: 10px; border-radius: var(--r-pill); background: var(--surface-2); overflow: hidden; }
+  .period-fill { display: block; height: 100%; border-radius: var(--r-pill); width: 0; transition: width 0.5s var(--ease-out); }
+  .period-track--1 .period-fill { background: var(--w-1); }
+  .period-track--2 .period-fill { background: var(--w-2); }
+  .period-track--3 .period-fill { background: var(--w-3); }
+
+  /* —— 定时提醒（三次） —— */
+  .remind-row { padding: 11px 0; }
+  .remind-row + .remind-row { border-top: 1px solid var(--border); }
+  .remind-time-input {
+    flex: 0 0 auto;
+    width: 82px; height: 36px; padding: 0 8px;
+    border-radius: var(--r-pill);
+    border: 1px solid var(--border);
+    background: var(--surface-2);
+    font-family: var(--font-num);
+    font-size: 15px; font-weight: 700;
+    color: var(--text-1); text-align: center;
+    font-variant-numeric: tabular-nums;
+    outline: none;
+    transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
+  }
+  .remind-time-input:focus { border-color: var(--w); box-shadow: 0 0 0 3px var(--w-soft); }
+  .remind-time-input::-webkit-calendar-picker-indicator { opacity: 0.45; cursor: pointer; }
+
+  /* —— 历史记录（按天） —— */
+  .hist-row { display: flex; align-items: center; gap: 12px; padding: 11px 2px; }
+  .hist-row + .hist-row { border-top: 1px solid var(--border); }
+  .hist-date { flex: 0 0 64px; display: flex; flex-direction: column; }
+  .hist-date b { font-size: 13px; font-weight: 700; color: var(--text-1); }
+  .hist-date span { font-size: 11px; color: var(--text-3); font-variant-numeric: tabular-nums; }
+  .hist-bar { flex: 1; min-width: 0; }
+  .hist-vol { flex: 0 0 auto; font-family: var(--font-num); font-size: 13px; font-weight: 650; color: var(--text-1); font-variant-numeric: tabular-nums; text-align: right; }
+  .hist-vol small { font-size: 11px; color: var(--text-3); font-weight: 500; margin-left: 3px; }
+
+  /* —— 设置 —— */
+  .set-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; }
+  .set-row + .set-row { border-top: 1px solid var(--border); }
+  .set-row--top { align-items: flex-start; padding-bottom: 6px; }
+  .set-row--top + .chips { margin-top: -4px; padding-bottom: 4px; }
+  .set-label { font-size: 14px; font-weight: 550; color: var(--text-1); }
+  .set-label small { display: block; font-size: 11px; color: var(--text-3); font-weight: 400; margin-top: 2px; }
+
+  /* 自定义杯量：使用全局 .chip--custom 与 .chips--my */
+  .water-body .chip--custom.is-active { background: var(--goal-blue-soft); border-color: var(--goal-blue); color: var(--goal-blue); }
+  [data-theme="dark"] .water-body .chip--custom.is-active { color: var(--goal-blue); }
+  .chips--my .chip.is-active { background: var(--goal-blue-soft); color: var(--goal-blue); border-color: var(--goal-blue); }
+
+  .custom-cup { margin-top: 10px; }
+  .custom-cup__inner {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+    padding: var(--pad-card-sm);
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+  }
+  .custom-cup__label { font-size: 13px; font-weight: 600; color: var(--text-1); }
+  .custom-cup .stepper { flex: 1; min-width: 120px; }
+  .stepper--compact .stepper__val { font-size: 14px; min-width: 70px; }
+
+  /* 页尾说明 */
+  .flow-note { margin: 4px 4px 0; display: flex; align-items: flex-start; justify-content: center; gap: 7px; font-size: 12px; line-height: 1.6; text-align: center; color: var(--text-3); }
+  .flow-note svg { flex-shrink: 0; width: 14px; height: 14px; margin-top: 2px; color: var(--w); }
+</style>
+</body>
+</html>

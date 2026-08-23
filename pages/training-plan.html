@@ -1,0 +1,1838 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light" class="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>训练计划 · LifeFlow</title>
+<meta name="theme-color" content="#F7F4EF">
+<style id="theme-vars">/* ============================================================
+   LifeFlow · 目标系统 UI 基座（v3 · 平静 / 高级 / 被温柔对待）
+   ------------------------------------------------------------
+   设计哲学：降噪、升温、变柔软。保留品牌蓝身份，但让整体像一间
+   被温柔照料的私人空间，而非功能密集的控制台。
+   铁律：全 App 禁用纯黑 #000 与纯白 #FFF；阴影用彩色叠加，禁灰阴影。
+   ============================================================ */
+
+/* ============ 1. RESET ============ */
+*, *::before, *::after { box-sizing: border-box; }
+* { margin: 0; padding: 0; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+body { min-height: 100vh;  background: var(--bg); }
+
+button { font-family: inherit; font-size: inherit; cursor: pointer; border: 0; background: none; color: inherit; }
+input, textarea, select { font-family: inherit; font-size: inherit; color: inherit; }
+a { color: inherit; text-decoration: none; }
+ul, ol { list-style: none; }
+img, svg { display: block; max-width: 100%; }
+
+/* ============ 2. LIGHT TOKENS（日间 · 暖中性 + 品牌蓝） ============ */
+:root {
+  color-scheme: light;
+
+  /* —— 表面 —— */
+  --bg: #FAF6F0;            /* 页面底 · 暖白（Headspace 暖底） */
+  --bg-glow-1: rgba(0, 47, 167, 0.07);     /* 顶部克莱因蓝光晕 */
+  --bg-glow-2: rgba(139, 126, 200, 0.06);  /* 顶部柔和紫光晕 */
+  --bg-glow-warm: rgba(255, 138, 92, 0.05); /* 暖橙光晕（珊瑚橙补暖） */
+  --card: #FFFFFF;          /* 卡片底 · 白 */
+  --surface-2: #F3EFE8;     /* 次级表面 · 暖灰米 */
+  --surface-3: #EAE5DB;     /* 三级表面 */
+  --scrim: rgba(38, 34, 30, 0.32);
+
+  /* —— 文字 —— */
+  --text-1: #26221E;        /* 主文字 · 暖墨（非纯黑） */
+  --text-2: #7A746C;        /* 次文字 · 暖灰 */
+  --text-3: #A69F94;        /* 弱文字 */
+  --text-inverse: #FDFBF7;
+
+  /* —— 边框 —— */
+  --border: #EAE6DF;
+  --border-strong: #DCD6CB;
+
+  /* —— 品牌 —— */
+  --brand: #002FA7;         /* 克莱因蓝 · 学习/专注/目标主色 */
+  --brand-strong: #001F6E;
+  --brand-soft: rgba(0, 47, 167, 0.10);
+  --brand-softer: rgba(0, 47, 167, 0.06);
+  --purple: #8B7EC8;        /* 柔和紫 · 养生/冥想/用药 */
+  --purple-soft: rgba(139, 126, 200, 0.12);
+  --gradient: linear-gradient(135deg, #002FA7 0%, #8B7EC8 100%);
+
+  /* —— 语义色 —— */
+  --goal-blue: #4169E1;     /* 宝蓝 · 进度/饮水 */
+  --goal-blue-soft: rgba(65, 105, 225, 0.12);
+  --life-green: #7BAE7F;    /* 鼠尾草绿 · 生活/习惯/饮食/收入 */
+  --life-green-soft: rgba(123, 174, 127, 0.14);
+  --expense-red: #FF8A5C;   /* 珊瑚橙 · 训练/支出 */
+  --expense-red-soft: rgba(255, 138, 92, 0.12);
+  --pause-amber: #D99A2B;
+  --pause-amber-soft: rgba(217, 154, 43, 0.14);
+  --emotion: #E8849A;         /* 暖粉玫红 · 情绪 */
+  --emotion-soft: rgba(232, 132, 154, 0.14);
+
+  /* —— 睡眠（深夜蓝系，入睡仪式 / 三段分色） —— */
+  --sleep-night: #1B2A4A;    /* 深夜蓝 · 入睡仪式深色背景 */
+  --sleep-seg-deep: #6E5BB8; /* 深睡 */
+  --sleep-seg-mid: #8B7EC8;  /* 浅睡 */
+  --sleep-seg-light: #BAB0E2;/* REM */
+
+  /* —— 阴影（中性暖灰，去蓝调） —— */
+  --shadow-xs: 0 1px 2px rgba(38, 34, 30, 0.05);
+  --shadow-sm: 0 2px 10px rgba(38, 34, 30, 0.05);
+  --shadow-md: 0 8px 24px rgba(38, 34, 30, 0.08);
+  --shadow-lg: 0 18px 44px rgba(38, 34, 30, 0.12);
+  --shadow-card: 0 1px 2px rgba(38, 34, 30, 0.04), 0 10px 30px rgba(38, 34, 30, 0.06);
+  --shadow-primary: 0 8px 22px rgba(0, 47, 167, 0.20);
+
+  /* —— 圆角 —— */
+  --r-sm: 12px;
+  --r-md: 16px;
+  --r-lg: 20px;
+  --r-xl: 24px;
+  --r-pill: 999px;
+
+  /* —— 字体 —— */
+  --font-sans: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", "Helvetica Neue", sans-serif;
+  --font-num: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "PingFang SC", monospace;
+
+  /* —— 字号 / 行高 —— */
+  --fs-display: 34px;
+  --fs-h1: 28px;
+  --fs-h2: 20px;
+  --fs-h3: 17px;
+  --fs-body: 15px;
+  --fs-sm: 13px;
+  --fs-caption: 12px;
+
+  /* —— 间距 —— */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-8: 32px;
+
+  /* ============ 18. 尺寸 token（全局内容区规范） ============ */
+  --icon-sm: 32px;   /* 紧凑小图标 */
+  --icon-md: 38px;   /* 标准条目图标容器 */
+  --icon-lg: 44px;   /* 概览/量化头大图标 */
+  --pad-card: 18px 20px;      /* 标准卡片内边距 */
+  --pad-card-sm: 14px 20px;   /* 紧凑卡（设置区/说明卡） */
+  --gap-list: 10px;           /* 条目纵向间距 */
+  --h-title: 18px;  --h-name: 16px;  --fs-meta: 12px;
+  --r-icon: var(--r-lg);      /* 图标容器圆角 20px */
+
+  /* —— 动效 —— */
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-fast: 200ms;
+  --dur: 300ms;
+  --dur-slow: 400ms;
+}
+
+/* ============ 3. DARK TOKENS（夜间 · SleepCore 高级感） ============ */
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* —— 表面（深海军蓝 → 靛蓝 → 深紫渐变，非纯黑） —— */
+  --bg: #0D1117;
+  --bg-glow-1: rgba(74, 108, 240, 0.16);
+  --bg-glow-2: rgba(91, 84, 200, 0.14);
+  --card: rgba(255, 255, 255, 0.05);       /* 玻璃拟态 */
+  --surface-2: rgba(255, 255, 255, 0.06);
+  --surface-3: rgba(255, 255, 255, 0.10);
+  --scrim: rgba(4, 6, 12, 0.60);
+
+  /* —— 文字 —— */
+  --text-1: #EDEAE4;        /* 暖白 */
+  --text-2: #8A8AA0;
+  --text-3: #5E5F73;
+  --text-inverse: #0D1117;
+
+  /* —— 边框 —— */
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.14);
+
+  /* —— 品牌（暗色下提亮以保证对比，光晕用低透明度） —— */
+  --brand: #4A6CF0;
+  --brand-strong: #7A9CF8;
+  --brand-soft: rgba(74, 108, 240, 0.16);
+  --brand-softer: rgba(74, 108, 240, 0.10);
+  --purple: #A79BD8;
+  --purple-soft: rgba(167, 155, 216, 0.16);
+  --gradient: linear-gradient(135deg, #3B5BDB 0%, #8A7ED0 100%);
+
+  /* —— 语义色 —— */
+  --goal-blue: #6E8FE8;
+  --goal-blue-soft: rgba(110, 143, 232, 0.16);
+  --life-green: #8CBE8E;
+  --life-green-soft: rgba(140, 190, 142, 0.16);
+  --expense-red: #FF9A75;
+  --expense-red-soft: rgba(255, 154, 117, 0.16);
+  --pause-amber: #E0AF52;
+  --pause-amber-soft: rgba(224, 175, 82, 0.16);
+  --emotion: #EFA6BC;
+  --emotion-soft: rgba(239, 166, 188, 0.16);
+
+  /* —— 阴影（暗色光晕） —— */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.30);
+  --shadow-sm: 0 2px 12px rgba(0, 0, 0, 0.40);
+  --shadow-md: 0 8px 28px rgba(0, 0, 0, 0.50);
+  --shadow-lg: 0 18px 48px rgba(0, 0, 0, 0.60);
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.28), 0 10px 32px rgba(0, 0, 0, 0.42);
+  --shadow-primary: 0 8px 26px rgba(62, 107, 224, 0.36);
+}
+
+/* ============ 4. 全局基础 ============ */
+body {
+  font-family: var(--font-sans);
+  font-size: var(--fs-body);
+  line-height: 1.6;
+  color: var(--text-1);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+/* 环境光晕背景（柔和 · 非纯色） */
+.app-stage {
+  position: relative;
+  min-height: 100vh;
+  background:
+    radial-gradient(1100px 560px at 50% -12%, var(--bg-glow-1), transparent 62%),
+    radial-gradient(760px 420px at 88% -4%, var(--bg-glow-2), transparent 58%),
+    radial-gradient(900px 520px at -12% 100%, var(--bg-glow-warm), transparent 62%),
+    var(--bg);
+}
+
+[data-theme="dark"] .app-stage {
+  background:
+    radial-gradient(1000px 560px at 18% -8%, var(--bg-glow-1), transparent 58%),
+    radial-gradient(900px 520px at 88% 8%, var(--bg-glow-2), transparent 58%),
+    linear-gradient(180deg, #0D1117 0%, #141A2E 58%, #1A1530 100%);
+}
+
+/* 430px 容器 · 移动端优先 */
+.app {
+  position: relative;
+  max-width: 430px;
+  margin: 0 auto;
+  min-height: 100vh;
+  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+}
+
+/* 桌面呈现：居中 + 侧边框 + 柔和投影，像一台安静的设备 */
+@media (min-width: 768px) {
+  body { background: #0C0F16; }
+  .app-stage {
+    background: #0C0F16;
+    padding: 32px 0;
+  }
+  .app {
+    min-height: calc(100vh - 64px);
+    border-radius: 40px;
+    overflow: hidden;
+    box-shadow: 0 40px 120px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.06);
+    background:
+      radial-gradient(1000px 520px at 50% -10%, var(--bg-glow-1), transparent 60%),
+      radial-gradient(800px 420px at 88% -4%, var(--bg-glow-2), transparent 56%),
+      radial-gradient(900px 520px at -12% 100%, var(--bg-glow-warm), transparent 62%),
+      var(--bg);
+  }
+  [data-theme="dark"] .app {
+    background:
+      radial-gradient(1000px 560px at 18% -8%, var(--bg-glow-1), transparent 58%),
+      radial-gradient(900px 520px at 88% 8%, var(--bg-glow-2), transparent 58%),
+      linear-gradient(180deg, #0D1117 0%, #141A2E 58%, #1A1530 100%);
+  }
+}
+
+/* ============ 5. 排版工具 ============ */
+.t-display {
+  font-size: var(--fs-display);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.18;
+}
+.t-h1 { font-size: var(--fs-h1); font-weight: 700; letter-spacing: -0.02em; line-height: 1.24; }
+.t-h2 { font-size: var(--fs-h2); font-weight: 650; letter-spacing: -0.01em; line-height: 1.3; }
+.t-h3 { font-size: var(--fs-h3); font-weight: 600; line-height: 1.4; }
+.t-body { font-size: var(--fs-body); font-weight: 400; line-height: 1.6; }
+.t-sm { font-size: var(--fs-sm); font-weight: 400; line-height: 1.55; }
+.t-caption { font-size: var(--fs-caption); font-weight: 400; line-height: 1.5; }
+.t-num { font-variant-numeric: tabular-nums; font-family: var(--font-num); }
+.t-muted { color: var(--text-2); }
+.t-faint { color: var(--text-3); }
+.t-brand { color: var(--brand); }
+
+/* ============ 6. 布局工具 ============ */
+.page { padding: 0 var(--sp-4); }
+.stack { display: flex; flex-direction: column; }
+.row { display: flex; align-items: center; }
+.grow { flex: 1; min-width: 0; }
+.gap-2 { gap: var(--sp-2); }
+.gap-3 { gap: var(--sp-3); }
+.gap-4 { gap: var(--sp-4); }
+.space-y-4 > * + * { margin-top: var(--sp-4); }
+.space-y-3 > * + * { margin-top: var(--sp-3); }
+
+/* 区块标题（跨页通用 · 标题左 / 计数右） */
+.section-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 12px; }
+.section-head__title { font-size: 18px; font-weight: 700; letter-spacing: -0.01em; color: var(--text-1); }
+.section-head__hint { font-size: 12px; color: var(--text-3); font-variant-numeric: tabular-nums; }
+.section-head__meta { font-size: 13px; color: var(--text-3); font-variant-numeric: tabular-nums; }
+
+/* ============ 7. 顶栏 ============ */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: 14px 16px;
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  backdrop-filter: blur(18px) saturate(160%);
+}
+.topbar__title { flex: 1; text-align: center; font-size: var(--fs-h3); font-weight: 650; }
+.topbar__side { width: 36px; display: flex; justify-content: flex-start; }
+.topbar__side--right { justify-content: flex-end; }
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--r-pill);
+  color: var(--text-1);
+  transition: background var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
+}
+.icon-btn:active { transform: scale(0.92); background: var(--surface-2); }
+.icon-btn svg { width: 20px; height: 20px; }
+
+/* ============ 8. 按钮 ============ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 52px;
+  padding: 0 22px;
+  border-radius: var(--r-pill);
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  transition: transform var(--dur-fast) var(--ease), box-shadow var(--dur) var(--ease), opacity var(--dur-fast) var(--ease);
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+.btn:active { transform: scale(0.97); }
+.btn svg { width: 20px; height: 20px; }
+
+.btn--primary {
+  background: var(--gradient);
+  color: #FFFFFF;
+  box-shadow: var(--shadow-primary);
+}
+.btn--primary:hover { box-shadow: 0 10px 28px rgba(0, 47, 167, 0.25); }
+
+.btn--soft {
+  background: var(--brand-soft);
+  color: var(--brand);
+  height: 44px;
+  padding: 0 18px;
+  font-size: 15px;
+}
+[data-theme="dark"] .btn--soft { color: var(--brand-strong); }
+
+.btn--ghost {
+  background: var(--surface-2);
+  color: var(--text-1);
+  height: 44px;
+  padding: 0 18px;
+  font-size: 15px;
+}
+
+.btn--sm { height: 38px; padding: 0 16px; font-size: 13px; border-radius: var(--r-pill); }
+.btn--sm svg { width: 16px; height: 16px; }
+.btn--block { width: 100%; }
+.btn:disabled { opacity: 0.45; pointer-events: none; }
+
+/* ============ 9. 输入框 ============ */
+.field { display: flex; flex-direction: column; gap: 8px; }
+.field__label { font-size: var(--fs-sm); font-weight: 600; color: var(--text-2); }
+
+.input {
+  width: 100%;
+  height: 50px;
+  padding: 0 16px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  font-size: 15px;
+  color: var(--text-1);
+  outline: none;
+  transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
+}
+.input::placeholder { color: var(--text-3); }
+.input:focus {
+  border-color: var(--brand);
+  background: var(--card);
+  box-shadow: 0 0 0 4px var(--brand-softer);
+}
+
+.textarea {
+  width: 100%;
+  min-height: 88px;
+  padding: 14px 16px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--text-1);
+  outline: none;
+  resize: vertical;
+  transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
+}
+.textarea::placeholder { color: var(--text-3); }
+.textarea:focus { border-color: var(--brand); background: var(--card); box-shadow: 0 0 0 4px var(--brand-softer); }
+
+/* ============ 10. 卡片 ============ */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xl);
+  padding: var(--pad-card);
+  box-shadow: var(--shadow-card);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+.card--inset { background: var(--surface-2); border: 1px solid var(--border); box-shadow: none; }
+
+/* ============ 11. 进度条 ============ */
+.progress {
+  position: relative;
+  height: 8px;
+  border-radius: var(--r-pill);
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.progress--thin { height: 6px; }
+.progress--lg { height: 12px; }
+.progress__fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0;
+  border-radius: var(--r-pill);
+  background: var(--gradient);
+  transition: width 0.6s var(--ease-out);
+}
+.progress__fill--green { background: linear-gradient(135deg, #7BAE7F, #5E9A62); }
+.progress__fill--blue { background: linear-gradient(135deg, #4169E1, #002FA7); }
+.progress__fill--amber { background: linear-gradient(135deg, #E0AF52, #D99A2B); }
+[data-theme="dark"] .progress { background: rgba(255, 255, 255, 0.08); }
+
+/* ============ 12. 标签 / 状态 ============ */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: var(--r-pill);
+  font-size: var(--fs-caption);
+  font-weight: 600;
+  line-height: 1;
+}
+.tag__dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.tag--active { background: var(--life-green-soft); color: #1F9D5C; }
+[data-theme="dark"] .tag--active { color: var(--life-green); }
+.tag--paused { background: var(--pause-amber-soft); color: var(--pause-amber); }
+.tag--done { background: var(--brand-soft); color: var(--brand); }
+[data-theme="dark"] .tag--done { color: var(--brand-strong); }
+
+/* 过滤胶囊 */
+.chips {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 2px 0;
+}
+.chips::-webkit-scrollbar { display: none; }
+.chip {
+  flex: 0 0 auto;
+  height: 38px;
+  padding: 0 18px;
+  border-radius: var(--r-pill);
+  font-size: 14px;
+  font-weight: 550;
+  color: var(--text-2);
+  background: var(--surface-2);
+  border: 1px solid transparent;
+  transition: all var(--dur-fast) var(--ease);
+}
+.chip.is-active {
+  color: #FFFFFF;
+  background: var(--gradient);
+  box-shadow: var(--shadow-primary);
+}
+
+/* ============ 13. 底部导航 ============ */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 430px;
+  z-index: 40;
+  display: flex;
+  padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 0px));
+  background: color-mix(in srgb, var(--bg) 78%, transparent);
+  border-top: 1px solid var(--border);
+  -webkit-backdrop-filter: blur(22px) saturate(180%);
+  backdrop-filter: blur(22px) saturate(180%);
+}
+@media (min-width: 768px) {
+  .bottom-nav { bottom: 32px; border-radius: 0 0 40px 40px; }
+}
+.nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 0;
+  border-radius: var(--r-md);
+  color: var(--text-3);
+  transition: color var(--dur) var(--ease);
+  -webkit-tap-highlight-color: transparent;
+}
+.nav-item svg { width: 22px; height: 22px; }
+.nav-item__label { font-size: 11px; font-weight: 550; line-height: 1; }
+.nav-item.is-active { color: var(--brand); }
+.nav-item.is-active .nav-item__icon {
+  position: relative;
+}
+.nav-item.is-active .nav-item__icon::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -7px;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--gradient);
+}
+
+/* ============ 13.5 全局悬浮球（AI 助手入口） ============ */
+.fab-wrap {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 430px;
+  bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 16px;
+  pointer-events: none;
+  z-index: 45;
+}
+@media (min-width: 768px) {
+  .fab-wrap { bottom: 116px; }
+}
+.fab {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--gradient);
+  color: #FFFFFF;
+  box-shadow: 0 8px 24px rgba(0, 47, 167, 0.28);
+  animation: breath 3.2s var(--ease) infinite;
+  transition: transform var(--dur-fast) var(--ease);
+  -webkit-tap-highlight-color: transparent;
+}
+.fab:active { transform: scale(0.88); }
+.fab svg { width: 24px; height: 24px; }
+
+/* ============ 14. 弹层 ============ */
+.sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  pointer-events: none;
+}
+.sheet.is-open { pointer-events: auto; }
+.sheet__scrim {
+  position: absolute;
+  inset: 0;
+  background: var(--scrim);
+  opacity: 0;
+  transition: opacity var(--dur) var(--ease);
+  -webkit-backdrop-filter: blur(8px) saturate(1.15);
+  backdrop-filter: blur(8px) saturate(1.15);
+}
+.sheet__panel {
+  position: relative;
+  width: 100%;
+  max-width: 430px;
+  max-height: 88vh;
+  overflow-y: auto;
+  background: var(--card);
+  border-radius: 24px 24px 0 0;
+  border-top: 1px solid var(--border);
+  padding: 16px 20px calc(20px + env(safe-area-inset-bottom, 0px));
+  box-shadow: 0 -8px 32px rgba(15, 23, 42, 0.10), var(--shadow-lg);
+  transform: translateY(100%);
+  transition: transform var(--dur-slow) cubic-bezier(0.32, 0.72, 0, 1);
+}
+.sheet.is-open .sheet__panel { transform: translateY(0) scale(1); }
+[data-theme="dark"] .sheet__panel {
+  box-shadow: 0 -8px 32px rgba(15, 23, 42, 0.18), var(--shadow-lg);
+}
+.sheet__grip {
+  width: 48px;
+  height: 5px;
+  border-radius: var(--r-pill);
+  background: var(--text-3);
+  opacity: 0.55;
+  margin: 0 auto 14px;
+}
+.sheet__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.sheet__title {
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text-1);
+}
+.sheet__close {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-3);
+  background: var(--surface-2);
+  -webkit-tap-highlight-color: transparent;
+}
+.sheet__close svg { width: 17px; height: 17px; }
+.sheet__actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+.sheet__actions .btn { flex: 1; }
+.sheet.is-open .sheet__scrim { opacity: 1; }
+.sheet.is-open .sheet__panel { transform: translateY(0) scale(1); }
+
+/* ============ 15. 空状态 ============ */
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 72px 28px;
+  gap: 16px;
+}
+.empty__art {
+  width: 108px;
+  height: 108px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--brand-softer);
+  color: var(--brand);
+  margin-bottom: 4px;
+}
+.empty__art svg { width: 44px; height: 44px; }
+.empty__title { font-size: var(--fs-h3); font-weight: 650; color: var(--text-1); }
+.empty__desc { font-size: var(--fs-sm); color: var(--text-2); max-width: 260px; line-height: 1.7; }
+.empty .btn { margin-top: 8px; }
+
+/* ============ 16. 光晕 / 玻璃 ============ */
+.glow-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(64px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.glass {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+
+/* ============ 17. 动效 ============ */
+@keyframes breath {
+  0%, 100% { transform: scale(1); opacity: 0.85; }
+  50% { transform: scale(1.06); opacity: 1; }
+}
+@keyframes breathe-dots {
+  0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+  40% { transform: scale(1); opacity: 1; }
+}
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes shimmer {
+  0% { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+.breath { animation: breath 2.4s var(--ease) infinite; }
+
+/* AI 生成呼吸状态 */
+.ai-generating { display: flex; align-items: center; gap: 6px; }
+.ai-generating__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--brand);
+  animation: breathe-dots 1.2s var(--ease) infinite;
+}
+.ai-generating__dot:nth-child(2) { animation-delay: 0.15s; }
+.ai-generating__dot:nth-child(3) { animation-delay: 0.3s; }
+
+/* 骨架屏 */
+.skeleton {
+  border-radius: var(--r-md);
+  background: linear-gradient(90deg, var(--surface-2) 25%, var(--surface-3) 50%, var(--surface-2) 75%);
+  background-size: 400px 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+.fade-up { animation: fade-up 0.5s var(--ease-out) both; }
+.fade-up--1 { animation-delay: 0.03s; }
+.fade-up--2 { animation-delay: 0.08s; }
+.fade-up--3 { animation-delay: 0.13s; }
+
+/* 折叠区 */
+.collapse__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 4px 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.collapse__chevron {
+  transition: transform var(--dur) var(--ease);
+  color: var(--text-3);
+}
+.collapse__chevron svg { width: 18px; height: 18px; }
+.collapse.is-open .collapse__chevron { transform: rotate(180deg); }
+.collapse__body {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--dur-slow) var(--ease);
+}
+.collapse__body > div { overflow: hidden; }
+.collapse.is-open .collapse__body { grid-template-rows: 1fr; }
+
+/* 开关 */
+.switch {
+  position: relative;
+  width: 48px;
+  height: 28px;
+  border-radius: var(--r-pill);
+  background: var(--surface-3);
+  transition: background var(--dur) var(--ease);
+  flex: 0 0 auto;
+}
+.switch::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #FFFFFF;
+  box-shadow: 0 2px 6px rgba(38, 34, 30, 0.14);
+  transition: transform var(--dur) var(--ease-out);
+}
+.switch.is-on { background: var(--gradient); }
+.switch.is-on::after { transform: translateX(20px); }
+
+/* 复选框（圆润） */
+.check {
+  width: 26px;
+  height: 26px;
+  border-radius: 9px;
+  border: 2px solid var(--border-strong);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  color: transparent;
+  transition: all var(--dur-fast) var(--ease);
+  -webkit-tap-highlight-color: transparent;
+}
+.check svg { width: 15px; height: 15px; }
+.check.is-done {
+  background: var(--gradient);
+  border-color: transparent;
+  color: #FFFFFF;
+}
+
+/* stepper 步进器 */
+.stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+  padding: 3px;
+}
+.stepper__btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-2);
+  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+.stepper__btn:active { background: var(--surface-3); color: var(--text-1); }
+.stepper__btn svg { width: 16px; height: 16px; }
+.stepper__val { min-width: 40px; text-align: center; font-weight: 650; font-variant-numeric: tabular-nums; }
+
+/* Toast */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 110px;
+  transform: translateX(-50%) translateY(16px);
+  padding: 11px 22px;
+  border-radius: var(--r-pill);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: #FFFFFF;
+  background: var(--gradient);
+  box-shadow: var(--shadow-primary);
+  opacity: 0;
+  pointer-events: none;
+  transition: all var(--dur) var(--ease-out);
+  z-index: 100;
+  white-space: nowrap;
+}
+.toast.is-show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* 分割线 */
+.divider { height: 1px; background: var(--border); border: 0; }
+
+/* 工具 */
+.is-hidden { display: none !important; }
+.sr-only {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+}
+
+/* ============ 18.5 语义色分工规范（跨模块统一） ============ */
+/*
+  模块色：
+    训练 = --expense-red（珊瑚橙）
+    饮水 = --goal-blue（宝蓝）
+    睡眠 = --purple（柔和紫）
+    饮食 = --life-green（鼠尾草绿）
+    久坐/姿态 = --purple（柔和紫）
+    养生/功法 = --life-green（鼠尾草绿）
+    吃药 = --purple（柔和紫）
+    记账 = --goal-blue（宝蓝）
+    专注/品牌 = --brand（克莱因蓝）
+  状态色（跨模块统一）：
+    达标/完成 = --life-green
+    预警/超支 = --pause-amber
+    品牌/主按钮 = --brand
+*/
+
+/* ============ 19. 条目/图标组件（全局唯一标准） ============ */
+/* 图标容器：.icon-box 为全局唯一图标容器标准 */
+.icon-box {
+  width: var(--icon-md);
+  height: var(--icon-md);
+  border-radius: var(--r-icon);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  background: var(--surface-2);
+  color: var(--text-2);
+}
+.icon-box svg { width: 19px; height: 19px; }
+.icon-box--lg { width: var(--icon-lg); height: var(--icon-lg); }
+.icon-box--lg svg { width: 22px; height: 22px; }
+.icon-box--sm { width: var(--icon-sm); height: var(--icon-sm); }
+.icon-box--sm svg { width: 16px; height: 16px; }
+/* 语义色变体 */
+.icon-box--strength { background: var(--expense-red-soft); color: var(--expense-red); }
+.icon-box--water { background: var(--goal-blue-soft); color: var(--goal-blue); }
+.icon-box--sleep { background: var(--purple-soft); color: var(--purple); }
+.icon-box--life { background: var(--life-green-soft); color: var(--life-green); }
+.icon-box--brand { background: var(--brand-soft); color: var(--brand); }
+.icon-box--amber { background: var(--pause-amber-soft); color: var(--pause-amber); }
+.icon-box--emotion { background: var(--emotion-soft); color: var(--emotion); }
+[data-theme="dark"] .icon-box--strength { color: var(--expense-red); }
+[data-theme="dark"] .icon-box--water { color: var(--goal-blue); }
+[data-theme="dark"] .icon-box--sleep { color: var(--purple); }
+[data-theme="dark"] .icon-box--life { color: var(--life-green); }
+[data-theme="dark"] .icon-box--brand { color: var(--brand-strong); }
+[data-theme="dark"] .icon-box--amber { color: var(--pause-amber); }
+[data-theme="dark"] .icon-box--emotion { color: var(--emotion); }
+
+/* 通用条目骨架：.item-row 为全局唯一条目标准 */
+.item-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 0;
+}
+.item-row__main { flex: 1; min-width: 0; }
+.item-row__name {
+  font-size: var(--h-name);
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  color: var(--text-1);
+}
+.item-row__meta {
+  font-size: var(--fs-meta);
+  color: var(--text-3);
+  margin-top: 2px;
+  line-height: 1.5;
+}
+.item-row__val {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-1);
+  font-variant-numeric: tabular-nums;
+  flex: 0 0 auto;
+}
+
+/* ============ 20. 状态/交互类（跨页统一） ============ */
+/* 完成态工具类：左侧色条变浅绿 + 绿图标 + 绿文字 + opacity 0.6 */
+.is-done { opacity: 0.6; }
+.is-done::before { background: var(--life-green) !important; }
+.is-done > .icon-box,
+.is-done .icon-box {
+  background: var(--life-green-soft) !important;
+  color: var(--life-green) !important;
+}
+.is-done .item-row__name { color: var(--life-green) !important; }
+.is-done .ev__focus { background: var(--life-green-soft) !important; color: var(--life-green) !important; }
+.is-done__note {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  color: var(--life-green);
+  margin-top: 2px;
+}
+.is-done__note svg { width: 11px; height: 11px; }
+
+/* chip 扩展变体 */
+.chip--custom { border-style: dashed; }
+.chip--custom.is-active {
+  background: var(--brand-soft);
+  border-color: var(--brand);
+  border-style: solid;
+  color: var(--brand);
+}
+[data-theme="dark"] .chip--custom.is-active { color: var(--brand-strong); }
+.chips--my .chip { position: relative; }
+.chips--my .chip.is-longpress::after {
+  content: '×';
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--expense-red);
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  line-height: 1;
+}
+
+/* ============ 21. 跨页联动模式（规范注释） ============ */
+/*
+  跨页状态同步统一模式：
+  1. 数据源：localStorage.setItem('lifeflow-<mod>-<key>', JSON.stringify({date, ...}))
+  2. 写入：保存后立即 dispatchEvent(new CustomEvent('<mod>-updated', { detail }))
+  3. 读取：消费方 read → 按 date 校验今天 → 应用状态
+  4. 监听：addEventListener('<mod>-updated') + addEventListener('storage' 按 key)
+     + addEventListener('visibilitychange')（切回页面刷新，防漏事件）
+  5. 事件命名：<mod>-updated（train-updated / water-updated / habit-updated）
+  6. 数据结构：跨页状态用 {date, typesDone:[类型名], typeTimes:{类型名:HH:MM}, ...}
+     代替单纯 {done:[项目名]}（typesDone 适合"按类型聚合"——一个类型完成一次即标完成）
+*/
+
+/* 无障碍：减少动效 */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+<style type="text/tailwindcss">
+@theme inline {
+  --color-background: var(--bg);
+  --color-foreground: var(--text-1);
+  --color-card: var(--card);
+  --color-muted: var(--text-2);
+  --color-brand: var(--brand);
+  --color-primary: var(--brand);
+  --radius-sm: var(--r-sm);
+  --radius-md: var(--r-md);
+  --radius-lg: var(--r-lg);
+}
+@layer base {
+  body {
+    background: var(--bg);
+    color: var(--text-1);
+    font-family: var(--font-sans);
+  }
+}
+</style>
+</head>
+<body>
+<div class="app-stage">
+  <main class="app">
+
+    <!-- 顶栏 -->
+    <header class="topbar">
+      <div class="topbar__side">
+        <button type="button" class="icon-btn" data-dom-id="back-training" data-href="training.html" aria-label="返回训练"><i data-lucide="arrow-left"></i></button>
+      </div>
+      <div class="topbar__title">训练计划</div>
+      <div class="topbar__side topbar__side--right">
+        <button type="button" class="icon-btn" id="theme-toggle" aria-label="切换深浅主题"><i data-lucide="moon"></i></button>
+      </div>
+    </header>
+
+    <div class="plan-body">
+
+      <!-- ① 力量训练 -->
+      <section class="card" aria-label="力量训练配置" style="padding:18px 20px">
+        <div class="section-head">
+          <h2 class="section-head__title"><i data-lucide="dumbbell" class="sh-ic--strength"></i>力量训练</h2>
+          <span class="section-head__hint">练 3 休 1 · 循环</span>
+        </div>
+
+        <div class="cycle-row">
+          <div class="cycle-row__title">练几天 · 休几天</div>
+          <div class="cycle-row__controls">
+            <div class="cycle-row__grp">
+              <span class="cycle-row__grp-label">练</span>
+              <div class="stepper" role="group" aria-label="练几天">
+                <button type="button" class="stepper__btn" id="str-train-dec" aria-label="减少"><i data-lucide="minus"></i></button>
+                <span class="stepper__val" id="str-train-val">3</span>
+                <button type="button" class="stepper__btn" id="str-train-inc" aria-label="增加"><i data-lucide="plus"></i></button>
+              </div>
+              <span class="t-sm t-faint">天</span>
+            </div>
+            <div class="cycle-row__grp">
+              <span class="cycle-row__grp-label">休</span>
+              <div class="stepper" role="group" aria-label="休几天">
+                <button type="button" class="stepper__btn" id="str-rest-dec" aria-label="减少"><i data-lucide="minus"></i></button>
+                <span class="stepper__val" id="str-rest-val">1</span>
+                <button type="button" class="stepper__btn" id="str-rest-inc" aria-label="增加"><i data-lucide="plus"></i></button>
+              </div>
+              <span class="t-sm t-faint">天</span>
+            </div>
+          </div>
+        </div>
+        <div class="cycle-preview" id="str-preview"></div>
+
+        <div id="str-days"></div>
+        <button type="button" class="cfg-add" id="str-add-day"><i data-lucide="plus"></i> 添加训练日</button>
+      </section>
+
+      <!-- ② 有氧训练 -->
+      <section class="card" aria-label="有氧训练配置" style="padding:18px 20px">
+        <div class="section-head">
+          <h2 class="section-head__title"><i data-lucide="heart-pulse" class="sh-ic--cardio"></i>有氧训练</h2>
+          <span class="section-head__hint">练 2 休 1 · 循环</span>
+        </div>
+
+        <div class="cycle-row">
+          <div class="cycle-row__title">练几天 · 休几天</div>
+          <div class="cycle-row__controls">
+            <div class="cycle-row__grp">
+              <span class="cycle-row__grp-label">练</span>
+              <div class="stepper" role="group" aria-label="练几天">
+                <button type="button" class="stepper__btn" id="car-train-dec" aria-label="减少"><i data-lucide="minus"></i></button>
+                <span class="stepper__val" id="car-train-val">2</span>
+                <button type="button" class="stepper__btn" id="car-train-inc" aria-label="增加"><i data-lucide="plus"></i></button>
+              </div>
+              <span class="t-sm t-faint">天</span>
+            </div>
+            <div class="cycle-row__grp">
+              <span class="cycle-row__grp-label">休</span>
+              <div class="stepper" role="group" aria-label="休几天">
+                <button type="button" class="stepper__btn" id="car-rest-dec" aria-label="减少"><i data-lucide="minus"></i></button>
+                <span class="stepper__val" id="car-rest-val">1</span>
+                <button type="button" class="stepper__btn" id="car-rest-inc" aria-label="增加"><i data-lucide="plus"></i></button>
+              </div>
+              <span class="t-sm t-faint">天</span>
+            </div>
+          </div>
+        </div>
+        <div class="cycle-preview" id="car-preview"></div>
+
+        <div id="car-days"></div>
+        <button type="button" class="cfg-add" id="car-add-day"><i data-lucide="plus"></i> 添加训练日</button>
+      </section>
+
+      <!-- ③ 三大项 -->
+      <section class="card" aria-label="三大项配置" style="padding:18px 20px">
+        <div class="section-head">
+          <h2 class="section-head__title"><i data-lucide="trending-up" class="sh-ic--big3"></i>三大项</h2>
+          <span class="section-head__hint">三个月轮转 · 每月 1 主项 + 2 辅项</span>
+        </div>
+
+        <div class="rot-flow" id="rot-flow">
+          <span class="rot-chip is-main">8 月 · 农夫行走</span>
+          <span class="rot-arrow"><i data-lucide="arrow-right"></i></span>
+          <span class="rot-chip">9 月 · 爆发力</span>
+          <span class="rot-arrow"><i data-lucide="arrow-right"></i></span>
+          <span class="rot-chip">10 月 · 负重旋转</span>
+        </div>
+
+        <div class="set-row" style="margin-top:8px">
+          <span class="set-label">本月训练日<small>每月内容一致，只配一次</small></span>
+        </div>
+        <div class="chips" id="big3-weekdays">
+          <button type="button" class="chip is-active" data-wd="1">周一</button>
+          <button type="button" class="chip" data-wd="3">周三</button>
+          <button type="button" class="chip is-active" data-wd="5">周五</button>
+          <button type="button" class="chip" data-wd="2">周二</button>
+          <button type="button" class="chip" data-wd="4">周四</button>
+          <button type="button" class="chip" data-wd="6">周六</button>
+          <button type="button" class="chip" data-wd="0">周日</button>
+        </div>
+
+        <div class="set-row" style="margin-top:6px">
+          <span class="set-label">主项 · <b id="big3-main-name">农夫行走</b><span class="tag" style="background:var(--pause-amber-soft);color:var(--pause-amber);height:20px;font-size:10px" id="big3-main-tag">本月主项</span></span>
+          <div class="stepper" role="group" aria-label="主项时长">
+            <button type="button" class="stepper__btn" data-dec="main"><i data-lucide="minus"></i></button>
+            <span class="stepper__val" data-val="main">15<span style="font-size:10px;color:var(--text-3)">分</span></span>
+            <button type="button" class="stepper__btn" data-inc="main"><i data-lucide="plus"></i></button>
+          </div>
+        </div>
+        <div class="set-row">
+          <span class="set-label">辅项 1 · <b id="big3-sub1-name">爆发力</b><span class="tag" style="background:var(--surface-2);color:var(--text-2);height:20px;font-size:10px">辅项</span></span>
+          <div class="stepper" role="group" aria-label="辅项1时长">
+            <button type="button" class="stepper__btn" data-dec="sub1"><i data-lucide="minus"></i></button>
+            <span class="stepper__val" data-val="sub1">8<span style="font-size:10px;color:var(--text-3)">分</span></span>
+            <button type="button" class="stepper__btn" data-inc="sub1"><i data-lucide="plus"></i></button>
+          </div>
+        </div>
+        <div class="set-row">
+          <span class="set-label">辅项 2 · <b id="big3-sub2-name">负重旋转</b><span class="tag" style="background:var(--surface-2);color:var(--text-2);height:20px;font-size:10px">辅项</span></span>
+          <div class="stepper" role="group" aria-label="辅项2时长">
+            <button type="button" class="stepper__btn" data-dec="sub2"><i data-lucide="minus"></i></button>
+            <span class="stepper__val" data-val="sub2">8<span style="font-size:10px;color:var(--text-3)">分</span></span>
+            <button type="button" class="stepper__btn" data-inc="sub2"><i data-lucide="plus"></i></button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ④ 热身（按类型跟随，训练前 5-10 分钟） -->
+      <section class="card" aria-label="热身配置" style="padding:18px 20px">
+        <div class="section-head">
+          <h2 class="section-head__title"><i data-lucide="flame" class="sh-ic--str"></i>热身</h2>
+          <span class="section-head__hint">训练前 5-10 分钟 · 按当天类型自动跟随</span>
+        </div>
+        <div id="warmup-wrap"></div>
+      </section>
+
+      <div class="save-wrap">
+        <button type="button" class="save-btn" id="save-plan"><i data-lucide="check"></i> 保存训练计划</button>
+      </div>
+
+    </div>
+
+    <!-- 底部导航 -->
+        <nav class="bottom-nav" aria-label="底部导航">
+      <a class="nav-item is-active" data-dom-id="nav-home" href="schedule.html" aria-label="今日安排" aria-current="page">
+        <span class="nav-item__icon"><i data-lucide="calendar-days"></i></span>
+        <span class="nav-item__label">今日安排</span>
+      </a>
+      <a class="nav-item" data-dom-id="nav-goals" href="goals.html" aria-label="目标">
+        <span class="nav-item__icon"><i data-lucide="target"></i></span>
+        <span class="nav-item__label">目标</span>
+      </a>
+      <a class="nav-item" data-dom-id="nav-habit" href="habit.html" aria-label="习惯">
+        <span class="nav-item__icon"><i data-lucide="repeat"></i></span>
+        <span class="nav-item__label">习惯</span>
+      </a>
+      <a class="nav-item" data-dom-id="nav-review" href="review.html" aria-label="回顾">
+        <span class="nav-item__icon"><i data-lucide="bar-chart-3"></i></span>
+        <span class="nav-item__label">回顾</span>
+      </a>
+      <a class="nav-item" data-dom-id="nav-more" href="more.html" aria-label="我的">
+        <span class="nav-item__icon"><i data-lucide="user"></i></span>
+        <span class="nav-item__label">我的</span>
+      </a>
+    </nav>
+
+    <div class="fab-wrap">
+      <button type="button" class="fab" data-dom-id="fab" data-href="assistant.html" aria-label="打开 LifeFlow 陪练">
+        <i data-lucide="sparkles"></i>
+      </button>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </main>
+</div>
+
+<script src="../assets/lucide.min.js"></script>
+<script>
+(function () {
+  'use strict';
+  var $ = function (id) { return document.getElementById(id); };
+  var toast = $('toast');
+  var toastTimer;
+  function showToast(msg) {
+    toast.textContent = msg;
+    toast.classList.add('is-show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toast.classList.remove('is-show'); }, 1800);
+  }
+
+  /* 主题切换 */
+  var LS_THEME = 'lifeflow-theme';
+  var root = document.documentElement;
+  function applyTheme(t) {
+    root.setAttribute('data-theme', t);
+    var meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) { meta.setAttribute('content', t === 'dark' ? '#0D1117' : '#F7F4EF'); }
+    var icon = document.querySelector('#theme-toggle i');
+    if (icon) { icon.setAttribute('data-lucide', t === 'dark' ? 'sun' : 'moon'); }
+    if (window.lucide) { window.lucide.createIcons(); }
+  }
+  var saved = null;
+  try { saved = localStorage.getItem(LS_THEME); } catch (e) {}
+  if (saved) { applyTheme(saved); }
+  var themeToggle = $('theme-toggle');
+  if (themeToggle) {
+    themeToggle.addEventListener('click', function () {
+      var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      applyTheme(next);
+      try { localStorage.setItem(LS_THEME, next); } catch (e) {}
+    });
+  }
+
+  /* data-href 跳转 */
+  document.addEventListener('click', function (e) {
+    var h = e.target.closest('[data-href]');
+    if (h) {
+      var href = h.getAttribute('data-href');
+      if (href && href.charAt(0) !== '#') { location.href = href; }
+    }
+  });
+
+  /* ===== 训练计划配置 ===== */
+  var LS_PLAN = 'lifeflow-train-plan';
+
+  function defaultPlan() {
+    return {
+      strength: {
+        trainDays: 3, restDays: 1,
+        days: [
+          { name: '训练日 1', actions: [
+            { name: '俯卧撑', sets: 3, weight: 0, reps: 15 },
+            { name: '哑铃肩推', sets: 4, weight: 16, reps: 10 }
+          ]},
+          { name: '训练日 2', actions: [
+            { name: '绳索臂屈伸', sets: 3, weight: 0, reps: 12 }
+          ]},
+          { name: '训练日 3', actions: [
+            { name: '农夫行走', sets: 4, weight: 24, reps: 40 }
+          ]}
+        ]
+      },
+      cardio: {
+        trainDays: 2, restDays: 1,
+        days: [
+          { name: '训练日 1', actions: [{ name: '跑步', minutes: 30 }] },
+          { name: '训练日 2', actions: [{ name: '快走', minutes: 40 }] }
+        ]
+      },
+      big3: {
+        weekdays: [1, 5],
+        main: '农夫行走', sub1: '爆发力', sub2: '负重旋转',
+        durations: { main: 15, sub1: 8, sub2: 8 }
+      },
+      warmup: {
+        strength: [
+          { name: '肩部绕环', seconds: 30 },
+          { name: '开合跳', seconds: 40 },
+          { name: '弓步走', seconds: 40 },
+          { name: '轻重量激活', seconds: 30 }
+        ],
+        cardio: [
+          { name: '原地慢跑', seconds: 60 },
+          { name: '开合跳', seconds: 40 },
+          { name: '高抬腿', seconds: 30 },
+          { name: '后踢腿', seconds: 30 }
+        ],
+        big3: [
+          { name: '髋部激活动', seconds: 40 },
+          { name: '核心激活', seconds: 40 },
+          { name: '躯干旋转', seconds: 30 },
+          { name: '轻负荷农夫行走', seconds: 30 }
+        ]
+      }
+    };
+  }
+
+  function loadPlan() {
+    try {
+      var raw = localStorage.getItem(LS_PLAN);
+      if (raw) {
+        var d = JSON.parse(raw);
+        if (d && d.strength && d.cardio) {
+          /* 兼容旧数据：补 big3 动作名字段 + warmup 热身 */
+          var def = defaultPlan();
+          d.big3 = Object.assign({}, def.big3, d.big3 || {});
+          d.warmup = Object.assign({}, def.warmup, d.warmup || {});
+          return d;
+        }
+      }
+    } catch (e) {}
+    return defaultPlan();
+  }
+  function savePlan() {
+    try { localStorage.setItem(LS_PLAN, JSON.stringify(plan)); } catch (e) {}
+  }
+  var plan = loadPlan();
+
+  /* ===== 三大项月度轮换（起始 2026-08；每月主项轮转，辅项随之） ===== */
+  var ROT_BASE = { y: 2026, m: 7 }; /* 8 月 = getMonth() 7 */
+  var ROTATION = [
+    { main: '农夫行走', sub1: '爆发力', sub2: '负重旋转' },
+    { main: '爆发力', sub1: '农夫行走', sub2: '负重旋转' },
+    { main: '负重旋转', sub1: '爆发力', sub2: '农夫行走' }
+  ];
+  function currentRotation(d) {
+    var dt = d || new Date();
+    var off = (dt.getFullYear() - ROT_BASE.y) * 12 + (dt.getMonth() - ROT_BASE.m);
+    var i = ((off % 3) + 3) % 3;
+    return ROTATION[i];
+  }
+  function renderBig3Rotation() {
+    var now = new Date();
+    var rot = currentRotation(now);
+    /* 轮转流：当前月高亮 */
+    var flow = $('rot-flow');
+    if (flow) {
+      var months = ['8 月', '9 月', '10 月'];
+      var html = '';
+      ROTATION.forEach(function (r, i) {
+        if (i > 0) { html += '<span class="rot-arrow"><i data-lucide="arrow-right"></i></span>'; }
+        html += '<span class="rot-chip' + (i === 0 ? ' is-main' : '') + '">' + months[i] + ' · ' + r.main + '</span>';
+      });
+      flow.innerHTML = html;
+      if (window.lucide) { window.lucide.createIcons(); }
+    }
+    /* 当前月主项 / 辅项名 */
+    var mainName = $('big3-main-name');
+    var sub1Name = $('big3-sub1-name');
+    var sub2Name = $('big3-sub2-name');
+    if (mainName) { mainName.textContent = rot.main; }
+    if (sub1Name) { sub1Name.textContent = rot.sub1; }
+    if (sub2Name) { sub2Name.textContent = rot.sub2; }
+  }
+
+  /* ===== 热身（3 套，按类型跟随） ===== */
+  var WU_TYPES = [
+    { key: 'strength', label: '力量热身' },
+    { key: 'cardio', label: '有氧热身' },
+    { key: 'big3', label: '三大项热身' }
+  ];
+  function fmtDur(sec) {
+    sec = sec || 0;
+    var m = Math.floor(sec / 60), s = sec % 60;
+    if (m && s) { return m + ' 分 ' + s + ' 秒'; }
+    if (m) { return m + ' 分'; }
+    return s + ' 秒';
+  }
+  function warmupDur(list) {
+    return fmtDur(list.reduce(function (n, a) { return n + (a.seconds || 0); }, 0));
+  }
+  function renderWarmup() {
+    var wrap = $('warmup-wrap');
+    if (!wrap) { return; }
+    var html = '';
+    WU_TYPES.forEach(function (t) {
+      var list = plan.warmup[t.key] || [];
+      html += '<div class="wu-type" data-wu="' + t.key + '">' +
+        '<div class="wu-type__head"><span class="wu-type__title">' + t.label + '</span>' +
+        '<span class="wu-type__dur">' + warmupDur(list) + '</span></div>';
+      list.forEach(function (a, i) {
+        html += '<div class="wu-item">' +
+          '<div class="wu-item__name"><input class="input" type="text" value="' + a.name + '" data-wu-name="' + i + '" placeholder="动作名"></div>' +
+          '<div class="stepper"><button type="button" class="stepper__btn" data-wu-dec="' + i + '"><i data-lucide="minus"></i></button>' +
+          '<span class="stepper__val" data-wu-val="' + i + '">' + a.seconds + '</span>' +
+          '<button type="button" class="stepper__btn" data-wu-inc="' + i + '"><i data-lucide="plus"></i></button></div>' +
+          '<span class="wu-item__unit">秒</span>' +
+          '<button type="button" class="wu-item__del" data-wu-del="' + i + '" aria-label="删除"><i data-lucide="x"></i></button>' +
+          '</div>';
+      });
+      html += '<button type="button" class="cfg-add" data-wu-add="' + t.key + '"><i data-lucide="plus"></i> 添加动作</button>' +
+        '</div>';
+    });
+    wrap.innerHTML = html;
+    if (window.lucide) { window.lucide.createIcons(); }
+  }
+  var warmupWrap = $('warmup-wrap');
+  if (warmupWrap) {
+    warmupWrap.addEventListener('click', function (e) {
+      var btn = e.target.closest('[data-wu-inc],[data-wu-dec],[data-wu-del],[data-wu-add]');
+      if (!btn) { return; }
+      var typeEl = e.target.closest('.wu-type');
+      if (!typeEl) { return; }
+      var key = typeEl.getAttribute('data-wu');
+      var list = plan.warmup[key];
+      if (btn.hasAttribute('data-wu-add')) {
+        list.push({ name: '新动作', seconds: 30 });
+        renderWarmup();
+        return;
+      }
+      if (btn.hasAttribute('data-wu-del')) {
+        var di = Number(btn.getAttribute('data-wu-del'));
+        if (list.length > 1) { list.splice(di, 1); }
+        renderWarmup();
+        return;
+      }
+      var idx = Number(btn.getAttribute('data-wu-inc') || btn.getAttribute('data-wu-dec'));
+      var delta = btn.hasAttribute('data-wu-inc') ? 5 : -5;
+      list[idx].seconds = Math.max(5, list[idx].seconds + delta);
+      renderWarmup();
+    });
+    warmupWrap.addEventListener('input', function (e) {
+      var input = e.target.closest('[data-wu-name]');
+      if (!input) { return; }
+      var typeEl = input.closest('.wu-type');
+      if (!typeEl) { return; }
+      var idx = Number(input.getAttribute('data-wu-name'));
+      plan.warmup[typeEl.getAttribute('data-wu')][idx].name = input.value;
+    });
+  }
+
+  /* ===== 力量训练 ===== */
+  var strDaysEl = $('str-days');
+  function renderStrPreview() {
+    var el = $('str-preview');
+    var t = plan.strength.trainDays, r = plan.strength.restDays;
+    var html = '';
+    for (var i = 0; i < t + r; i++) {
+      var train = i < t;
+      html += '<span class="cyc ' + (train ? 'cyc--train' : 'cyc--rest') + '">' + (train ? '练' : '休') + '</span>';
+    }
+    el.innerHTML = html;
+  }
+
+  function renderStrDays() {
+    var html = '';
+    plan.strength.days.forEach(function (day, di) {
+      html += '<div class="day-card" data-day="' + di + '">' +
+        '<div class="day-card__head"><span class="day-card__name">' + day.name + '</span>' +
+        '<button type="button" class="day-card__del" data-del-day="' + di + '" aria-label="删除训练日"><i data-lucide="x"></i></button></div>';
+      day.actions.forEach(function (a, ai) {
+        html += '<div class="cfg-ex" data-ex="' + di + '-' + ai + '">' +
+          '<div class="cfg-ex__row">' +
+          '<input class="input cfg-ex__name" type="text" value="' + a.name + '" data-ex-name="' + di + '-' + ai + '" placeholder="动作名">' +
+          '<button type="button" class="cfg-ex__del" data-del-ex="' + di + '-' + ai + '" aria-label="删除动作"><i data-lucide="trash-2"></i></button>' +
+          '</div>' +
+          '<div class="cfg-ex__row cfg-ex__stats">' +
+          '<div class="cfg-ex__stat"><span class="cfg-ex__stat-label">组数</span>' +
+          '<div class="stepper"><button type="button" class="stepper__btn" data-ex-dec="' + di + '-' + ai + '-sets"><i data-lucide="minus"></i></button><span class="stepper__val" data-ex-val="' + di + '-' + ai + '-sets">' + a.sets + '</span><button type="button" class="stepper__btn" data-ex-inc="' + di + '-' + ai + '-sets"><i data-lucide="plus"></i></button></div></div>' +
+          '<div class="cfg-ex__stat"><span class="cfg-ex__stat-label">次数</span>' +
+          '<div class="stepper"><button type="button" class="stepper__btn" data-ex-dec="' + di + '-' + ai + '-reps"><i data-lucide="minus"></i></button><span class="stepper__val" data-ex-val="' + di + '-' + ai + '-reps">' + a.reps + '</span><button type="button" class="stepper__btn" data-ex-inc="' + di + '-' + ai + '-reps"><i data-lucide="plus"></i></button></div></div>' +
+          '<div class="cfg-ex__stat"><span class="cfg-ex__stat-label">重量</span>' +
+          '<div class="stepper"><button type="button" class="stepper__btn" data-ex-dec="' + di + '-' + ai + '-weight"><i data-lucide="minus"></i></button><span class="stepper__val" data-ex-val="' + di + '-' + ai + '-weight">' + a.weight + '</span><button type="button" class="stepper__btn" data-ex-inc="' + di + '-' + ai + '-weight"><i data-lucide="plus"></i></button></div></div>' +
+          '</div>' +
+          '</div>';
+      });
+      html += '<button type="button" class="cfg-add" data-add-ex="' + di + '"><i data-lucide="plus"></i> 添加动作</button></div>';
+    });
+    strDaysEl.innerHTML = html;
+    renderStrPreview();
+    if (window.lucide) { window.lucide.createIcons(); }
+  }
+
+  function strAddAction(di) {
+    plan.strength.days[di].actions.push({ name: '新动作', sets: 3, weight: 0, reps: 10 });
+    renderStrDays();
+  }
+  function strDelAction(key) {
+    var parts = key.split('-');
+    var di = parseInt(parts[0], 10), ai = parseInt(parts[1], 10);
+    plan.strength.days[di].actions.splice(ai, 1);
+    renderStrDays();
+  }
+  function strDelDay(di) {
+    plan.strength.days.splice(di, 1);
+    renderStrDays();
+  }
+  function strAddDay() {
+    var n = plan.strength.days.length + 1;
+    plan.strength.days.push({ name: '训练日 ' + n, actions: [{ name: '新动作', sets: 3, weight: 0, reps: 10 }] });
+    renderStrDays();
+  }
+
+  /* ===== 有氧训练 ===== */
+  var carDaysEl = $('car-days');
+  function renderCarPreview() {
+    var el = $('car-preview');
+    var t = plan.cardio.trainDays, r = plan.cardio.restDays;
+    var html = '';
+    for (var i = 0; i < t + r; i++) {
+      var train = i < t;
+      html += '<span class="cyc ' + (train ? 'cyc--train' : 'cyc--rest') + '" style="' + (train ? 'background:var(--life-green)' : '') + '">' + (train ? '练' : '休') + '</span>';
+    }
+    el.innerHTML = html;
+  }
+
+  function renderCarDays() {
+    var html = '';
+    plan.cardio.days.forEach(function (day, di) {
+      html += '<div class="day-card" data-cday="' + di + '">' +
+        '<div class="day-card__head"><span class="day-card__name">' + day.name + '</span>' +
+        '<button type="button" class="day-card__del" data-del-cday="' + di + '" aria-label="删除训练日"><i data-lucide="x"></i></button></div>';
+      day.actions.forEach(function (a, ai) {
+        html += '<div class="cfg-ex" data-ex="c' + di + '-' + ai + '">' +
+          '<input class="input cfg-ex__name" type="text" value="' + a.name + '" data-ex-name="c' + di + '-' + ai + '" placeholder="动作名">' +
+          '<div class="cfg-ex__set"><div class="stepper" role="group"><button type="button" class="stepper__btn" data-ex-dec="c' + di + '-' + ai + '-minutes"><i data-lucide="minus"></i></button><span class="stepper__val" data-ex-val="c' + di + '-' + ai + '-minutes">' + a.minutes + '</span><button type="button" class="stepper__btn" data-ex-inc="c' + di + '-' + ai + '-minutes"><i data-lucide="plus"></i></button></div></div>' +
+          '<span class="t-sm t-faint">分</span>' +
+          '<button type="button" class="cfg-ex__del" data-del-ex="c' + di + '-' + ai + '" aria-label="删除动作"><i data-lucide="trash-2"></i></button>' +
+          '</div>';
+      });
+      html += '<button type="button" class="cfg-add" data-add-ex="c' + di + '"><i data-lucide="plus"></i> 添加动作</button></div>';
+    });
+    carDaysEl.innerHTML = html;
+    renderCarPreview();
+    if (window.lucide) { window.lucide.createIcons(); }
+  }
+
+  function carAddAction(di) {
+    plan.cardio.days[di].actions.push({ name: '新动作', minutes: 30 });
+    renderCarDays();
+  }
+  function carDelAction(key) {
+    var parts = key.split('-');
+    var di = parseInt(parts[1], 10), ai = parseInt(parts[2], 10);
+    plan.cardio.days[di].actions.splice(ai, 1);
+    renderCarDays();
+  }
+  function carDelDay(di) {
+    plan.cardio.days.splice(di, 1);
+    renderCarDays();
+  }
+  function carAddDay() {
+    var n = plan.cardio.days.length + 1;
+    plan.cardio.days.push({ name: '训练日 ' + n, actions: [{ name: '新动作', minutes: 30 }] });
+    renderCarDays();
+  }
+
+  /* ===== 事件绑定 ===== */
+  /* 力量循环 */
+  function bindStepper(decId, incId, valId, get, set) {
+    $(decId).addEventListener('click', function () { set(Math.max(1, get() - 1)); });
+    $(incId).addEventListener('click', function () { set(Math.min(6, get() + 1)); });
+  }
+  bindStepper('str-train-dec', 'str-train-inc', 'str-train-val',
+    function () { return plan.strength.trainDays; },
+    function (v) { plan.strength.trainDays = v; $('str-train-val').textContent = v; renderStrPreview(); });
+  bindStepper('str-rest-dec', 'str-rest-inc', 'str-rest-val',
+    function () { return plan.strength.restDays; },
+    function (v) { plan.strength.restDays = v; $('str-rest-val').textContent = v; renderStrPreview(); });
+  bindStepper('car-train-dec', 'car-train-inc', 'car-train-val',
+    function () { return plan.cardio.trainDays; },
+    function (v) { plan.cardio.trainDays = v; $('car-train-val').textContent = v; renderCarPreview(); });
+  bindStepper('car-rest-dec', 'car-rest-inc', 'car-rest-val',
+    function () { return plan.cardio.restDays; },
+    function (v) { plan.cardio.restDays = v; $('car-rest-val').textContent = v; renderCarPreview(); });
+
+  /* 力量：添加训练日/动作、删除 */
+  $('str-add-day').addEventListener('click', strAddDay);
+  strDaysEl.addEventListener('click', function (e) {
+    var delDay = e.target.closest('[data-del-day]');
+    var delEx = e.target.closest('[data-del-ex]');
+    var addEx = e.target.closest('[data-add-ex]');
+    var dec = e.target.closest('[data-ex-dec]');
+    var inc = e.target.closest('[data-ex-inc]');
+    if (delDay) { strDelDay(parseInt(delDay.getAttribute('data-del-day'), 10)); }
+    else if (delEx) { strDelAction(delEx.getAttribute('data-del-ex')); }
+    else if (addEx) { strAddAction(parseInt(addEx.getAttribute('data-add-ex'), 10)); }
+    else if (dec) { exStep(dec.getAttribute('data-ex-dec'), -1); }
+    else if (inc) { exStep(inc.getAttribute('data-ex-inc'), 1); }
+  });
+  strDaysEl.addEventListener('input', function (e) {
+    var nameEl = e.target.closest('[data-ex-name]');
+    if (!nameEl) { return; }
+    var key = nameEl.getAttribute('data-ex-name');
+    var parts = key.split('-');
+    var di = parseInt(parts[0], 10), ai = parseInt(parts[1], 10);
+    plan.strength.days[di].actions[ai].name = nameEl.value;
+  });
+
+  /* 有氧：添加训练日/动作、删除 */
+  $('car-add-day').addEventListener('click', carAddDay);
+  carDaysEl.addEventListener('click', function (e) {
+    var delDay = e.target.closest('[data-del-cday]');
+    var delEx = e.target.closest('[data-del-ex]');
+    var addEx = e.target.closest('[data-add-ex]');
+    var dec = e.target.closest('[data-ex-dec]');
+    var inc = e.target.closest('[data-ex-inc]');
+    if (delDay) { carDelDay(parseInt(delDay.getAttribute('data-del-cday'), 10)); }
+    else if (delEx) { carDelAction(delEx.getAttribute('data-del-ex')); }
+    else if (addEx) { carAddAction(parseInt(addEx.getAttribute('data-add-ex'), 10)); }
+    else if (dec) { exStep(dec.getAttribute('data-ex-dec'), -1); }
+    else if (inc) { exStep(inc.getAttribute('data-ex-inc'), 1); }
+  });
+  carDaysEl.addEventListener('input', function (e) {
+    var nameEl = e.target.closest('[data-ex-name]');
+    if (!nameEl) { return; }
+    var key = nameEl.getAttribute('data-ex-name');
+    var parts = key.split('-');
+    var di = parseInt(parts[1], 10), ai = parseInt(parts[2], 10);
+    plan.cardio.days[di].actions[ai].name = nameEl.value;
+  });
+
+  /* 动作字段 stepper（通用） */
+  function exStep(key, delta) {
+    var parts = key.split('-');
+    var isCardio = parts[0] === 'c';
+    var field = parts[parts.length - 1];
+    var di, ai;
+    if (isCardio) {
+      di = parseInt(parts[1], 10); ai = parseInt(parts[2], 10);
+    } else {
+      di = parseInt(parts[0], 10); ai = parseInt(parts[1], 10);
+    }
+    var target = isCardio ? plan.cardio.days[di].actions[ai] : plan.strength.days[di].actions[ai];
+    var step = field === 'weight' ? 2 : 1;
+    var min = field === 'weight' ? 0 : 1;
+    var next = Math.max(min, (target[field] || 0) + delta * step);
+    target[field] = next;
+    var el = document.querySelector('[data-ex-val="' + key + '"]');
+    if (el) { el.textContent = next; }
+  }
+
+  /* 三大项：周几多选 */
+  document.querySelectorAll('#big3-weekdays .chip').forEach(function (chip) {
+    chip.addEventListener('click', function () {
+      var wd = parseInt(chip.getAttribute('data-wd'), 10);
+      var idx = plan.big3.weekdays.indexOf(wd);
+      if (idx >= 0) {
+        plan.big3.weekdays.splice(idx, 1);
+        chip.classList.remove('is-active');
+        chip.setAttribute('aria-checked', 'false');
+      } else {
+        plan.big3.weekdays.push(wd);
+        plan.big3.weekdays.sort(function (a, b) { return a - b; });
+        chip.classList.add('is-active');
+        chip.setAttribute('aria-checked', 'true');
+      }
+    });
+  });
+
+  /* 三大项时长 stepper */
+  document.querySelectorAll('[data-dec], [data-inc]').forEach(function (btn) {
+    if (!btn.hasAttribute('data-ex-dec') && !btn.hasAttribute('data-ex-inc')) {
+      var isDec = btn.hasAttribute('data-dec');
+      var field = btn.getAttribute(isDec ? 'data-dec' : 'data-inc');
+      if (field === 'main' || field === 'sub1' || field === 'sub2') {
+        btn.addEventListener('click', function () {
+          var v = plan.big3.durations[field];
+          v = Math.max(1, v + (isDec ? -1 : 1));
+          plan.big3.durations[field] = v;
+          var el = document.querySelector('[data-val="' + field + '"]');
+          if (el) { el.innerHTML = v + '<span style="font-size:10px;color:var(--text-3)">分</span>'; }
+        });
+      }
+    }
+  });
+
+  /* 保存 */
+  $('save-plan').addEventListener('click', function () {
+    savePlan();
+    showToast('训练计划已保存');
+    setTimeout(function () { location.href = 'training.html'; }, 700);
+  });
+
+  /* 初始化渲染 */
+  $('str-train-val').textContent = plan.strength.trainDays;
+  $('str-rest-val').textContent = plan.strength.restDays;
+  $('car-train-val').textContent = plan.cardio.trainDays;
+  $('car-rest-val').textContent = plan.cardio.restDays;
+  document.querySelectorAll('#big3-weekdays .chip').forEach(function (chip) {
+    var wd = parseInt(chip.getAttribute('data-wd'), 10);
+    var on = plan.big3.weekdays.indexOf(wd) >= 0;
+    chip.classList.toggle('is-active', on);
+    chip.setAttribute('aria-checked', on ? 'true' : 'false');
+  });
+  document.querySelectorAll('[data-val="main"],[data-val="sub1"],[data-val="sub2"]').forEach(function (el) {
+    var f = el.getAttribute('data-val');
+    el.innerHTML = plan.big3.durations[f] + '<span style="font-size:10px;color:var(--text-3)">分</span>';
+  });
+  renderStrDays();
+  renderCarDays();
+  renderBig3Rotation();
+  renderWarmup();
+
+  if (window.lucide) { window.lucide.createIcons(); }
+})();
+</script>
+<style>
+  /* ===== 训练计划页 · 配置向导（力量/有氧/三大项） ===== */
+  .plan-body { padding: 8px 16px 20px; display: flex; flex-direction: column; gap: 16px; }
+  /* 训练语义色（珊瑚橙） */
+  .plan-body { --tr: var(--expense-red); --tr-soft: var(--expense-red-soft); }
+
+  /* 区块头（共享 section-head · 小图标内联标题左侧） */
+  .section-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 14px; }
+  .section-head__title { font-size: 18px; font-weight: 700; letter-spacing: -0.01em; color: var(--text-1); display: flex; align-items: center; gap: 7px; }
+  .section-head__title svg { width: 17px; height: 17px; }
+  .section-head__hint { font-size: 12px; color: var(--text-3); }
+  .sh-ic--strength { color: var(--expense-red); }
+  .sh-ic--cardio { color: var(--life-green); }
+  .sh-ic--big3 { color: var(--pause-amber); }
+
+  /* 循环设置行 */
+  .cycle-row { display: flex; flex-direction: column; gap: 10px; margin: 12px 0 4px; padding: 14px; background: var(--surface-2); border-radius: var(--r-lg); }
+  .cycle-row__title { font-size: 13px; font-weight: 600; color: var(--text-2); }
+  .cycle-row__controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .cycle-row__grp { display: flex; align-items: center; gap: 6px; }
+  .cycle-row__grp .stepper { flex-shrink: 0; }
+  .cycle-row__grp-label { font-size: 12px; font-weight: 600; color: var(--text-3); }
+  .cycle-preview { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+  .cyc { width: 30px; height: 30px; border-radius: var(--r-md); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; }
+  .cyc--train { background: var(--expense-red); color: #fff; }
+  .cyc--rest { background: var(--surface-2); color: var(--text-3); }
+
+  /* 训练日 */
+  .day-card { margin-top: 10px; border: 1px solid var(--border); border-radius: var(--r-lg); padding: 12px 14px; background: var(--card); }
+  .day-card__head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+  .day-card__name { font-size: 14px; font-weight: 700; color: var(--text-1); }
+  .day-card__del { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--text-3); }
+  .day-card__del svg { width: 14px; height: 14px; }
+  .day-card__del:active { color: var(--expense-red); background: var(--expense-red-soft); }
+
+  /* 动作行（可增删）：两行布局（动作名+删除 / 组·次·重 stepper） */
+  .cfg-ex { padding: 10px 0; }
+  .cfg-ex + .cfg-ex { border-top: 1px dashed var(--border-strong); }
+  .cfg-ex__row { display: flex; align-items: center; gap: 8px; }
+  .cfg-ex__row + .cfg-ex__row { margin-top: 8px; }
+  .cfg-ex__name { flex: 1; min-width: 0; }
+  .cfg-ex__name .input { height: 36px; font-size: 13px; padding: 0 10px; }
+  .cfg-ex__del { width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: var(--text-3); }
+  .cfg-ex__del svg { width: 14px; height: 14px; }
+  .cfg-ex__del:active { color: var(--expense-red); background: var(--expense-red-soft); }
+  .cfg-ex__stats { display: flex; gap: 8px; }
+  .cfg-ex__stat { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+  .cfg-ex__stat .stepper { width: 100%; justify-content: space-between; }
+  .cfg-ex__stat-label { font-size: 11px; color: var(--text-3); text-align: center; font-weight: 600; }
+
+  .cfg-add {
+    display: flex; align-items: center; justify-content: center; gap: 5px;
+    width: 100%; height: 36px; margin-top: 6px;
+    border-radius: var(--r-pill);
+    border: 1.5px dashed var(--border-strong);
+    color: var(--text-3); font-size: 12px; font-weight: 600;
+    background: transparent;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .cfg-add svg { width: 14px; height: 14px; }
+  .cfg-add:active { background: var(--surface-2); color: var(--text-1); }
+
+  /* 热身 */
+  .wu-type { margin-top: 10px; padding: 12px; border-radius: var(--r-lg); background: var(--surface-2); }
+  .wu-type + .wu-type { margin-top: 10px; }
+  .wu-type__head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 4px; }
+  .wu-type__title { font-size: 13px; font-weight: 700; color: var(--text-1); }
+  .wu-type__dur { font-size: 12px; color: var(--text-3); font-variant-numeric: tabular-nums; }
+  .wu-item { display: flex; align-items: center; gap: 8px; padding: 6px 0; }
+  .wu-item + .wu-item { border-top: 1px dashed var(--border-strong); }
+  .wu-item__name { flex: 1; min-width: 0; }
+  .wu-item__name .input { height: 34px; font-size: 13px; padding: 0 10px; }
+  .wu-item .stepper { transform: scale(0.88); transform-origin: right center; }
+  .wu-item__unit { font-size: 11px; color: var(--text-3); flex: 0 0 auto; }
+  .wu-item__del { width: 26px; height: 26px; border-radius: 50%; flex: 0 0 auto; display: flex; align-items: center; justify-content: center; color: var(--text-3); }
+  .wu-item__del svg { width: 13px; height: 13px; }
+  .wu-item__del:active { color: var(--expense-red); background: var(--expense-red-soft); }
+
+  /* 三大项 */
+  .rot-flow { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+  .rot-chip { display: inline-flex; align-items: center; gap: 4px; height: 32px; padding: 0 12px; border-radius: var(--r-pill); font-size: 13px; font-weight: 600; background: var(--surface-2); color: var(--text-2); }
+  .rot-chip.is-main { background: var(--expense-red); color: #fff; }
+  .rot-arrow { color: var(--text-3); display: inline-flex; }
+  .rot-arrow svg { width: 13px; height: 13px; }
+
+  .set-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 0; }
+  .set-row + .set-row { border-top: 1px solid var(--border); }
+  .set-label { font-size: 13px; font-weight: 600; color: var(--text-2); }
+  .set-label small { display: block; font-size: 11px; color: var(--text-3); font-weight: 400; margin-top: 2px; }
+  .set-label .tag { margin-left: 6px; vertical-align: 1px; }
+  .set-control { display: flex; align-items: center; gap: 8px; }
+
+  /* 周几多选 chips */
+  .chips { flex-wrap: wrap; }
+  .chip { height: 32px; padding: 0 14px; font-size: 13px; }
+
+  /* 保存 */
+  .save-wrap { padding: 6px 6px 0; }
+  .save-btn {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    width: 100%; height: 50px; border-radius: var(--r-pill);
+    background: var(--tr-grad, linear-gradient(135deg, #FF8A5C 0%, #F0623F 100%));
+    color: #fff; font-size: 15px; font-weight: 650;
+    box-shadow: 0 8px 20px rgba(255, 138, 92, 0.26);
+    transition: transform var(--dur-fast) var(--ease);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .save-btn svg { width: 18px; height: 18px; }
+  .save-btn:active { transform: scale(0.97); }
+</style>
+</body>
+</html>

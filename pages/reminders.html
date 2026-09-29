@@ -1256,21 +1256,58 @@ body {
      点一下只切 class + 弹 toast，刷新就回默认（全开）。
 
        设置类数据单独一个 key（不混进集合）：
-       lifeflow-reminder-settings = { v:1, on:{ <稳定 id>: true|false } }
-       id 规则：r<组序号>-<行序号>，从页面**自上而下**数（作息 r1-1..r1-3 · 服药 r2-1..r2-2 ·
-               饮水 r3-1..r3-2 · 久坐 r4-1）。行顺序变了要跟着改 —— 见下面 SEED_ON。
+       lifeflow-reminder-settings = { v:1, on:{ <语义 id>: true|false } }
+
+     ⚠ id 用**稳定语义名**，不用位置序号。
+       原因：本页的「晨起 · 自然醒 / 07:00」和 routine.html 的「起床 / 07:00」
+       是**同一个真实提醒**，两页必须读写同一份状态，否则会出现
+       "这边关了、那边还开着"。而 routine 页用语义名（wake/sleep），
+       位置型 id（r1-1）没法跟它对上，所以这里也统一成语义名。
+       旧的位置型数据会自动迁移（见 migrateIds），不会丢用户设置。
 
      顶部「今日 8 个提醒 · 已响 3 · 待响 5」里的 8 / 5 **由开关状态算**（改造前写死），
      3 是"已响"计数、与开关无关，仍用静态值。
      ══════════════════════════════════════════════════════════════ */
   var K_SETTINGS = 'lifeflow-reminder-settings';
   var SCHEMA_V = 1;
+
+  /* 位置型 id → 语义 id 的映射。
+     顺序必须与页面上 `.rgroup` → `.rrow`（只数带 .switch 的）自上而下一致 ——
+     这也是为什么用**显式映射表**而不是拼字符串：
+     拼字符串时"行顺序变了"是静默出错，映射表则是"改的人必须看见这张表"。 */
+  var RID_ORDER = [
+    'wake',          /* r1-1 作息 · 晨起 · 自然醒 07:00   ← routine.html 的「起床」同一个 */
+    'winddown',      /* r1-2 作息 · 降速预告 22:00 */
+    'sleep-ritual',  /* r1-3 作息 · 睡眠仪式 · 最后提醒 22:45 */
+    'med-morning',   /* r2-1 服药 · 服药 1/2（早）08:00 */
+    'med-night',     /* r2-2 服药 · 服药 2/2（晚）21:00 */
+    'water-noon',    /* r3-1 饮水 · 午餐前喝水 300ml 11:30 */
+    'water-pm',      /* r3-2 饮水 · 补水 200ml 15:00 */
+    'sedentary'      /* r4-1 久坐 · 久坐打断 18:00 */
+  ];
   /* 改造前 8 个开关都是 is-on ⟹ 种子全 true，首屏与改造前逐像素一致 */
-  var SEED_ON = {
-    'r1-1': true, 'r1-2': true, 'r1-3': true,
-    'r2-1': true, 'r2-2': true,
-    'r3-1': true, 'r3-2': true,
-    'r4-1': true
+  var SEED_ON = {};
+  RID_ORDER.forEach(function (k) { SEED_ON[k] = true; });
+
+  /* 旧数据迁移：把 { 'r1-1': true, … } 换成 { wake: true, … }。
+     不迁移的话，改造前后用过本页的用户设置会**静默丢失**（回默认全开）。 */
+  function migrateIds(on) {
+    var out = {};
+    var migrated = false;
+    for (var i = 0; i < RID_ORDER.length; i++) {
+      var sem = RID_ORDER[i];
+      var oldKey = OLD_IDS[sem];
+      if (Object.prototype.hasOwnProperty.call(on, sem)) { out[sem] = on[sem] !== false; }
+      else if (oldKey && Object.prototype.hasOwnProperty.call(on, oldKey)) { out[sem] = on[oldKey] !== false; migrated = true; }
+      else { out[sem] = true; }
+    }
+    return { on: out, migrated: migrated };
+  }
+  var OLD_IDS = {
+    'wake': 'r1-1', 'winddown': 'r1-2', 'sleep-ritual': 'r1-3',
+    'med-morning': 'r2-1', 'med-night': 'r2-2',
+    'water-noon': 'r3-1', 'water-pm': 'r3-2',
+    'sedentary': 'r4-1'
   };
 
   function loadSettings() {
@@ -1278,7 +1315,11 @@ body {
       var raw = localStorage.getItem(K_SETTINGS);
       if (raw) {
         var d = JSON.parse(raw);
-        if (d && d.v === SCHEMA_V && d.on && typeof d.on === 'object') { return d; }
+        if (d && d.v === SCHEMA_V && d.on && typeof d.on === 'object') {
+          var m = migrateIds(d.on);
+          if (m.migrated) { saveSettings({ on: m.on }, true); }   /* 迁移后立刻回写 */
+          return { v: SCHEMA_V, on: m.on };
+        }
       }
     } catch (e) { /* 存储不可用 → 退化为种子（页面仍能显示） */ }
     var seed = { v: SCHEMA_V, on: Object.assign({}, SEED_ON) };
@@ -1292,17 +1333,20 @@ body {
     } catch (e) { /* 忽略 */ }
   }
 
-  /* 给 8 行开关编号（不改标记、不加 class，只挂 data 属性）。
-     ⚠ 计数与编号都用**全部 .rrow**（含没有开关的那一行）：
-       改造前顶部写死「8 个提醒」，而带开关的只有 7 行 —— 用 rows.length 会变成 7 ⟹ 假的像素差异。 */
+  /* 给每行开关挂语义 id（不改标记、不加 class，只挂 data 属性）。
+     ⚠ 计数仍用**全部 .rrow**（含没有开关的那一行）：
+       改造前顶部写死「8 个提醒」，而带开关的只有 7 行 —— 用带开关的行数会变成 7
+       ⟹ 假的像素差异（踩过）。 */
   var rows = [];
   var totalRows = 0;
-  document.querySelectorAll('.rgroup').forEach(function (grp, gi) {
-    grp.querySelectorAll('.rrow').forEach(function (row, ri) {
+  var seq = 0;
+  document.querySelectorAll('.rgroup').forEach(function (grp) {
+    grp.querySelectorAll('.rrow').forEach(function (row) {
       totalRows++;
       var sw = row.querySelector('.switch');
       if (!sw) { return; }
-      var id = 'r' + (gi + 1) + '-' + (ri + 1);
+      var id = RID_ORDER[seq] || ('extra-' + seq);
+      seq++;
       sw.setAttribute('data-rid', id);
       rows.push({ id: id, sw: sw });
     });

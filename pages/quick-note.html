@@ -220,7 +220,7 @@ body {
   max-width: 430px;
   margin: 0 auto;
   min-height: 100vh;
-  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(148px + env(safe-area-inset-bottom, 0px));
 }
 
 /* 桌面呈现：居中 + 侧边框 + 柔和投影，像一台安静的设备 */
@@ -1209,8 +1209,58 @@ body {
     });
   });
 
-  /* 确认 → toast → 700ms 返回首页 */
+  /* ══════════════════════════════════════════════════════════════
+     持久化（本次新增）—— 改造前「记下来」只弹 toast + 跳转，**输入的内容直接丢掉**。
+
+       lifeflow-quick-notes = { v:1, items:[ { id, text, dims:[…], createdAt } ] }
+
+     ⚠ 归属说明（留给 lead 决定，我**没有**擅自接别人的 key）：
+       这一页的产出本质就是"一条笔记"，理想上应写进头脑域已完成的
+       `lifeflow-note-items` —— 但头脑域（notes/note-create/note-detail）已交付并验收，
+       从跨域页往里写会产生**未验证的耦合**（schema 要求 title/body/pinned，
+       而本页只有一句话 + 维度多选，映射规则没人验过）。
+       所以这里先用自己的 key，并广播 `quick-note-updated`；
+       建议后续由头脑域来消费（把 quick-note 的条目并入 lifeflow-note-items）。
+     ══════════════════════════════════════════════════════════════ */
+  var K_NOTES = 'lifeflow-quick-notes';
+  var SCHEMA_V = 1;
+
+  function loadNotes() {
+    try {
+      var raw = localStorage.getItem(K_NOTES);
+      if (raw) {
+        var d = JSON.parse(raw);
+        if (d && d.v === SCHEMA_V && Array.isArray(d.items)) { return d.items; }
+      }
+    } catch (e) { /* 存储不可用 → 退化为空表（本页只是追加） */ }
+    return [];
+  }
+  function stamp() {
+    var n = new Date();
+    var p = function (x) { return (x < 10 ? '0' : '') + x; };
+    return n.getFullYear() + '-' + p(n.getMonth() + 1) + '-' + p(n.getDate()) +
+      ' ' + p(n.getHours()) + ':' + p(n.getMinutes());
+  }
+  /* 选中哪些维度（多选，沿用原按钮的 is-active 状态，不新增字段） */
+  function readDims() {
+    var out = [];
+    document.querySelectorAll('#quick-modules .chip.is-active').forEach(function (c) {
+      out.push(c.getAttribute('data-module'));
+    });
+    return out;
+  }
+
+  /* 记录 → 写盘 → 广播 → 700ms 返回首页 */
   $('save-quick').addEventListener('click', function () {
+    var text = $('quick-text').value.trim();
+    if (!text) { window.LF.toast('先写一句话'); return; }
+    var items = loadNotes();
+    items.push({ id: 'q' + Date.now(), text: text, dims: readDims(), createdAt: stamp() });
+    try {
+      localStorage.setItem(K_NOTES, JSON.stringify({ v: SCHEMA_V, items: items }));
+      window.dispatchEvent(new CustomEvent('quick-note-updated', { detail: { items: items } }));
+    } catch (e) { /* 忽略：无存储时仍走成功态，不阻塞用户 */ }
+
     window.LF.toast('已记下');
     setTimeout(function () { location.href = 'schedule.html'; }, 700);
   });

@@ -220,7 +220,7 @@ body {
   max-width: 430px;
   margin: 0 auto;
   min-height: 100vh;
-  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(148px + env(safe-area-inset-bottom, 0px));
 }
 
 /* 桌面呈现：居中 + 侧边框 + 柔和投影，像一台安静的设备 */
@@ -780,6 +780,19 @@ body {
 }
 .switch.is-on { background: var(--gradient); }
 .switch.is-on::after { transform: translateX(20px); }
+
+/* 触控热区：按钮自己的渲染盒一点不动（视觉不可能变），
+   只用一个绝对定位的透明伪元素往外撑出可点区。
+   热区高 = 13 + 28 + 13 = 54px；diet 页有 .meal-switch .switch{transform:scale(0.82)}，
+   缩放会连热区一起缩，54 × 0.82 ≈ 44.3px，仍达标。 */
+.switch::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -13px;
+  bottom: -13px;
+}
 
 /* 复选框（圆润） */
 .check {

@@ -220,7 +220,7 @@ body {
   max-width: 430px;
   margin: 0 auto;
   min-height: 100vh;
-  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(148px + env(safe-area-inset-bottom, 0px));
 }
 
 /* 桌面呈现：居中 + 侧边框 + 柔和投影，像一台安静的设备 */
@@ -1048,14 +1048,14 @@ body {
 
     <div class="exp-detail-body" id="content">
 
-      <!-- 金额头卡 -->
+      <!-- 金额头卡（内容由 ?id= 从 localStorage 取；静态值留作无参时的回退，保证视觉不变） -->
       <section class="card head-card fade-up">
         <div class="head-top">
-          <span class="head-icon"><i data-lucide="utensils"></i></span>
-          <span class="tag tag--expense">餐饮</span>
+          <span class="head-icon" id="det-icon"><i data-lucide="utensils"></i></span>
+          <span class="tag tag--expense" id="det-cat">餐饮</span>
         </div>
-        <p class="head-amount t-num">-32.00</p>
-        <p class="head-time">08-14 12:30 · 午餐</p>
+        <p class="head-amount t-num" id="det-amount">-32.00</p>
+        <p class="head-time" id="det-when">08-14 12:30 · 午餐</p>
       </section>
 
       <!-- 信息卡 -->
@@ -1063,28 +1063,28 @@ body {
         <div class="info-row">
           <span class="info-ic"><i data-lucide="clock"></i></span>
           <span class="info-label">时间</span>
-          <span class="info-val">08-14 12:30</span>
+          <span class="info-val" id="det-time">08-14 12:30</span>
         </div>
         <div class="info-row">
           <span class="info-ic"><i data-lucide="layers"></i></span>
           <span class="info-label">分类</span>
-          <span class="info-val"><span class="tag tag--expense">餐饮</span></span>
+          <span class="info-val"><span class="tag tag--expense" id="det-cat2">餐饮</span></span>
         </div>
         <div class="info-row">
           <span class="info-ic"><i data-lucide="wallet"></i></span>
           <span class="info-label">账户</span>
-          <span class="info-val">现金</span>
+          <span class="info-val" id="det-account">现金</span>
         </div>
         <div class="info-row">
           <span class="info-ic"><i data-lucide="file-text"></i></span>
           <span class="info-label">备注</span>
-          <span class="info-val">楼下快餐，堂食</span>
+          <span class="info-val" id="det-note">楼下快餐，堂食</span>
         </div>
       </section>
 
       <!-- 操作区 -->
       <section class="ops fade-up fade-up--3">
-        <button type="button" class="btn btn--soft" data-href="expense-create.html"><i data-lucide="pencil"></i>编辑</button>
+        <button type="button" class="btn btn--soft" id="btn-edit"><i data-lucide="pencil"></i>编辑</button>
         <button type="button" class="btn btn--danger-outline" id="btn-delete"><i data-lucide="trash-2"></i>删除</button>
       </section>
     </div>
@@ -1217,10 +1217,100 @@ body {
 (function () {
   'use strict';
   var $ = function (id) { return document.getElementById(id); };
+
+  /* ══════════════════════════════════════════════════════════════
+     持久化（本次新增）—— 改前 #btn-delete **只弹 toast + 跳转**，
+     数据一行都没删（全站 localStorage.removeItem 出现 0 次）；
+     卡片内容也是写死的，跟点进来的是哪一笔无关。
+     现在：按 ?id= 从 localStorage 取那一条并渲染；删除是真删。
+
+       lifeflow-expense-items = { v:1, items:[ { id, date, time, type,
+                                  amount, cat, note, account } ] }
+     ══════════════════════════════════════════════════════════════ */
+  var K_ITEMS = 'lifeflow-expense-items';
+  var SCHEMA_V = 1;
+
+  function loadItems() {
+    try {
+      var raw = localStorage.getItem(K_ITEMS);
+      if (raw) {
+        var d = JSON.parse(raw);
+        if (d && d.v === SCHEMA_V && Array.isArray(d.items)) { return d.items; }
+      }
+    } catch (e) { /* 忽略 */ }
+    return [];
+  }
+  function saveItems(list) {
+    try {
+      localStorage.setItem(K_ITEMS, JSON.stringify({ v: SCHEMA_V, items: list }));
+      window.dispatchEvent(new CustomEvent('expense-updated', { detail: { items: list } }));
+    } catch (e) { /* 忽略 */ }
+  }
+
+  var CAT_ICON = {
+    '餐饮': 'utensils', '交通': 'bus', '购物': 'shopping-bag', '居住': 'home',
+    '娱乐': 'gamepad-2', '日用': 'package', '医疗': 'heart-pulse', '学习': 'book-open',
+    '工资': 'wallet', '理财': 'trending-up', '红包': 'gift', '其他': 'more-horizontal'
+  };
+
+  var params = new URLSearchParams(location.search);
+  var wantId = params.get('id');
+  var items = loadItems();
+  /* 有 ?id= 就找那一条；没带参数时退化为第一条（便于直接打开本页看效果）。
+     ⚠ 找不到时**不隐藏内容**，而是保留静态回退值 —— 否则直接打开这页会一片空白，
+       那是比"显示示例数据"更差的体验。真正的"没有这笔"由 #empty 状态负责。 */
+  var item = null;
+  if (wantId) {
+    item = items.filter(function (x) { return String(x.id) === String(wantId); })[0] || null;
+    if (!item && $('empty-state')) {
+      /* 明确查了但查不到 → 走空态 */
+      if ($('content')) { $('content').classList.add('is-hidden'); }
+      $('empty-state').classList.remove('is-hidden');
+      if (window.lucide) { window.lucide.createIcons(); }
+      return;
+    }
+  } else {
+    item = items[0] || null;
+  }
+
+  if (item) {
+    var sign = item.type === 'in' ? '+' : '-';
+    var amt = Number(item.amount) || 0;
+    var mmdd = String(item.date || '').slice(5).replace('-', '-');
+    var icon = CAT_ICON[item.cat] || 'more-horizontal';
+
+    if ($('det-icon')) { $('det-icon').innerHTML = '<i data-lucide="' + icon + '"></i>'; }
+    if ($('det-cat')) { $('det-cat').textContent = item.cat || '其他'; }
+    if ($('det-cat2')) { $('det-cat2').textContent = item.cat || '其他'; }
+    if ($('det-amount')) { $('det-amount').textContent = sign + amt.toFixed(2); }
+    var whenText = mmdd + ' ' + (item.time || '') + (item.note ? ' · ' + item.note : '');
+    if ($('det-when')) { $('det-when').textContent = whenText; }
+    if ($('det-time')) { $('det-time').textContent = mmdd + ' ' + (item.time || ''); }
+    if ($('det-account')) { $('det-account').textContent = item.account || '—'; }
+    if ($('det-note')) { $('det-note').textContent = item.note || '—'; }
+  }
+
+  /* 编辑 → 带上 id 回到新建页（该页目前只支持新增，改存量不在本次范围） */
+  if ($('btn-edit')) {
+    $('btn-edit').addEventListener('click', function () {
+      if (item) { location.href = 'expense-create.html?id=' + encodeURIComponent(item.id); }
+      else { location.href = 'expense-create.html'; }
+    });
+  }
+
+  /* 删除 —— 真删（改前只 toast） */
   $('btn-delete').addEventListener('click', function () {
-    window.LF.toast('已删除这笔账 · 30 天内可恢复');
+    if (item) {
+      var left = items.filter(function (x) { return String(x.id) !== String(item.id); });
+      saveItems(left);
+      window.LF.toast('已删除这笔账 · 30 天内可恢复');
+    } else {
+      window.LF.toast('已删除这笔账 · 30 天内可恢复');
+    }
     setTimeout(function () { location.href = 'expense.html'; }, 700);
   });
+
+  if (window.lucide) { window.lucide.createIcons(); }
 })();
 </script>
 <style>

@@ -220,7 +220,7 @@ body {
   max-width: 430px;
   margin: 0 auto;
   min-height: 100vh;
-  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(148px + env(safe-area-inset-bottom, 0px));
 }
 
 /* 桌面呈现：居中 + 侧边框 + 柔和投影，像一台安静的设备 */
@@ -1065,7 +1065,7 @@ body {
       <section class="card" aria-label="今日训练" style="padding:18px 20px">
         <div class="section-head" style="margin-bottom:4px">
           <h2 class="section-head__title">今日训练</h2>
-          <span class="section-head__hint" id="today-count">0 / 3 完成</span>
+          <span class="section-head__hint count-chip" id="today-count">0 / 3 完成</span>
         </div>
         <!-- 热身块 -->
         <div class="warmup" id="warmup-block">
@@ -1301,6 +1301,27 @@ body {
     try { localStorage.setItem(LS_TODAY, JSON.stringify(todayState)); } catch (e) {}
     try { window.dispatchEvent(new CustomEvent('train-updated', { detail: todayState })); } catch (e) {}
   }
+
+  /* 「今日训练」进度计数（唯一写入口）
+     改前这里有 4 处各自 count.textContent = done + ' / ' + total + ' 完成'，
+     改后统一走这里：文案从「比值」改成「还剩几项」—— 用户要的是还剩多少，不是一个分数；
+     全做完给一个明确的完成态（配合 .count-chip.is-all-done 变绿）。 */
+  function setTodayCount(done, total) {
+    var el = $('today-count');
+    if (!el) { return; }
+    if (total === 0) {
+      el.textContent = '今天休息';
+      el.classList.remove('is-all-done');
+      return;
+    }
+    if (done >= total) {
+      el.textContent = '全部完成 ✓';
+      el.classList.add('is-all-done');
+      return;
+    }
+    el.textContent = '还剩 ' + (total - done) + ' 项';
+    el.classList.remove('is-all-done');
+  }
   function markDone(name, type) {
     if (todayState.done.indexOf(name) < 0) {
       todayState.done.push(name);
@@ -1479,13 +1500,12 @@ body {
 
   function renderToday() {
     var list = $('train-list');
-    var count = $('today-count');
     var empty = $('record-empty');
     var recordAdd = $('record-add');
     list.innerHTML = '';
     if (todayActions.length === 0) {
       empty.style.display = '';
-      count.textContent = '0 / 0 完成';
+      setTodayCount(0, 0);
       recordAdd.style.display = 'none';
       if (window.lucide) { window.lucide.createIcons(); }
       return;
@@ -1511,10 +1531,9 @@ body {
         '<button type="button" class="train-check' + (isDone ? ' is-done' : '') + '" data-check="' + i + '" aria-label="标记完成"><i data-lucide="check"></i></button>';
       list.appendChild(row);
     });
-    count.textContent = doneCount + ' / ' + todayActions.length + ' 完成';
+    setTodayCount(doneCount, todayActions.length);
     if (window.lucide) { window.lucide.createIcons(); }
   }
-
   /* 热身块（按当天类型跟随，训练前 5-10 分钟） */
   var WU_LABEL = { strength: '力量热身', cardio: '有氧热身', big3: '三大项热身' };
   function renderWarmup() {
@@ -1578,7 +1597,7 @@ body {
     }
     saveTodayState();
     doneCount = document.querySelectorAll('.train-check.is-done').length;
-    $('today-count').textContent = doneCount + ' / ' + todayActions.length + ' 完成';
+    setTodayCount(doneCount, todayActions.length);
     showToast(done ? '已完成' : '已撤销');
   });
 
@@ -1982,7 +2001,7 @@ body {
         markDone(action.name, action.type);
         saveTodayState();
         doneCount = document.querySelectorAll('.train-check.is-done').length;
-        $('today-count').textContent = doneCount + ' / ' + todayActions.length + ' 完成';
+        setTodayCount(doneCount, todayActions.length);
       }
     }
     showToast(isPr ? '已记录「' + ex.name + '」· 新 PR！' : '已记录「' + ex.name + '」');
@@ -2073,6 +2092,24 @@ body {
   .train-item[data-type="strength"] .train-check.is-done { background: var(--expense-red); border-color: transparent; color: #fff; }
   .train-item[data-type="cardio"] .train-check.is-done { background: var(--life-green); border-color: transparent; color: #fff; }
   .train-item[data-type="big3"] .train-check.is-done { background: var(--pause-amber); border-color: transparent; color: #fff; }
+
+  /* ── 「今日训练」进度计数 ─────────────────────────────────────
+     改前：这一行用的是全局 .section-head__hint（12px / weight 400 / var(--text-3) 最淡灰），
+     和旁边 12px 的循环说明同级，比 18px/700 的区块标题弱得多 ——
+     而它是全页唯一告诉用户「今天还剩几项」的信息，属于主行动信号。
+     改成 chip：品牌蓝 = 还有事要做；全部完成 → 鼠尾草绿（与本页 .is-done 完成态同一套语义色）。
+     只影响这一页：本 <style> 块在 training.html 内。 */
+  .section-head__hint.count-chip {
+    padding: 3px 10px;
+    border-radius: var(--r-pill);
+    font-size: 12.5px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    background: var(--brand-soft);
+    color: var(--brand);
+    white-space: nowrap;
+  }
+  .section-head__hint.count-chip.is-all-done { background: var(--life-green-soft); color: var(--life-green); }
 
   /* 记录入口（虚线按钮对齐产品） */
   .record-add {

@@ -220,7 +220,7 @@ body {
   max-width: 430px;
   margin: 0 auto;
   min-height: 100vh;
-  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(148px + env(safe-area-inset-bottom, 0px));
 }
 
 /* 桌面呈现：居中 + 侧边框 + 柔和投影，像一台安静的设备 */
@@ -1063,71 +1063,9 @@ body {
         </div>
 
         <!-- 笔记卡片流：点击进详情 -->
-        <section class="note-list fade-up fade-up--1" aria-label="备忘列表">
-
-          <article class="card note-card" role="button" tabindex="0" data-title="训练动作笔记">
-            <span class="note-card__mark" aria-hidden="true"></span>
-            <div class="note-card__main">
-              <div class="note-card__head">
-                <span class="note-card__title">训练动作笔记</span>
-                <span class="tag tag--brand"><span class="tag__dot"></span>置顶</span>
-              </div>
-              <p class="note-card__excerpt">深蹲：膝盖与脚尖同向，核心收紧，下蹲到大腿平行地面；硬拉：杠铃贴近小腿，腰背挺直。</p>
-              <div class="note-card__time"><i data-lucide="clock"></i> 今天 09:30</div>
-            </div>
-            <span class="note-card__chevron"><i data-lucide="chevron-right"></i></span>
-          </article>
-
-          <article class="card note-card" role="button" tabindex="0" data-title="省考错题本">
-            <span class="note-card__mark" aria-hidden="true"></span>
-            <div class="note-card__main">
-              <div class="note-card__head">
-                <span class="note-card__title">省考错题本</span>
-                <span class="tag tag--brand"><span class="tag__dot"></span>置顶</span>
-              </div>
-              <p class="note-card__excerpt">资料分析：比重变化量题型，先判升降再算绝对值，避免死记公式。</p>
-              <div class="note-card__time"><i data-lucide="clock"></i> 昨天 18:20</div>
-            </div>
-            <span class="note-card__chevron"><i data-lucide="chevron-right"></i></span>
-          </article>
-
-          <article class="card note-card" role="button" tabindex="0" data-title="作息记录">
-            <span class="note-card__mark" aria-hidden="true"></span>
-            <div class="note-card__main">
-              <div class="note-card__head">
-                <span class="note-card__title">作息记录</span>
-              </div>
-              <p class="note-card__excerpt">本周连续早睡 5 天，周四破功 23:40，周末补一个完整睡眠周期。</p>
-              <div class="note-card__time"><i data-lucide="clock"></i> 8月12日</div>
-            </div>
-            <span class="note-card__chevron"><i data-lucide="chevron-right"></i></span>
-          </article>
-
-          <article class="card note-card" role="button" tabindex="0" data-title="饮食备忘">
-            <span class="note-card__mark" aria-hidden="true"></span>
-            <div class="note-card__main">
-              <div class="note-card__head">
-                <span class="note-card__title">饮食备忘</span>
-              </div>
-              <p class="note-card__excerpt">早餐包子豆浆习惯保持，午间堂食偏多，下周尝试自带一餐。</p>
-              <div class="note-card__time"><i data-lucide="clock"></i> 8月10日</div>
-            </div>
-            <span class="note-card__chevron"><i data-lucide="chevron-right"></i></span>
-          </article>
-
-          <article class="card note-card" role="button" tabindex="0" data-title="灵感：周末徒步路线">
-            <span class="note-card__mark" aria-hidden="true"></span>
-            <div class="note-card__main">
-              <div class="note-card__head">
-                <span class="note-card__title">灵感：周末徒步路线</span>
-              </div>
-              <p class="note-card__excerpt">从香山到植物园，全程约 3 小时，轻装即可，记得带水。</p>
-              <div class="note-card__time"><i data-lucide="clock"></i> 8月8日</div>
-            </div>
-            <span class="note-card__chevron"><i data-lucide="chevron-right"></i></span>
-          </article>
-
-        </section>
+        <!-- 笔记卡片流：点击进详情 -->
+        <!-- 由 localStorage 驱动渲染（原先这里写死 5 张卡） -->
+        <section class="note-list fade-up fade-up--1" aria-label="备忘列表" id="note-list"></section>
 
         <!-- 每日回顾（flomo：回顾让旧笔记复活） -->
         <section class="card fade-up" style="padding:14px 20px;margin:16px 0">
@@ -1247,6 +1185,21 @@ body {
     var v = qnInput ? qnInput.value.trim() : '';
     if (!v) { return; }
     qnInput.value = '';
+    /* 改动：原来只弹 toast（输入的内容直接丢掉）。
+       现在写成一条笔记 —— 标题取首行（截断），正文为全文。 */
+    var now = new Date();
+    var hm = ('0' + now.getHours()).slice(-2) + ':' + ('0' + now.getMinutes()).slice(-2);
+    var stamp = ymd(now) + ' ' + hm;
+    notes.push({
+      id: 'x' + Date.now(),
+      title: v.length > 18 ? v.slice(0, 18) + '…' : v,
+      body: v,
+      pinned: false,
+      createdAt: stamp,
+      updatedAt: stamp
+    });
+    saveNotes(notes);
+    renderNotes();
     window.LF.toast('已记下 · 想法到手了');
   }
   if (qnAdd && qnInput) {
@@ -1260,16 +1213,132 @@ body {
   if (window.lucide) { window.lucide.createIcons(); }
   window.LF = { toast: showToast };
 
-  /* 备忘页专属：点击进详情 + 新建 + 状态切换 */
-  function openNote(card) {
-    location.href = 'note-detail.html';
+  /* ══════════════════════════════════════════════════════════════
+     持久化层（本次新增）—— 改造前这一页**没有数据落盘**：
+     「全部备忘」那 5 张卡是写死的静态标记；「记下」只弹 toast；
+     点卡片进详情**不带 id**（所以详情页只能显示写死的示例）。
+     现在：笔记落 localStorage，列表由数据渲染，点卡片带上 id。
+
+       lifeflow-note-items = { v:1, items:[ { id, title, body, pinned, createdAt, updatedAt } ] }
+     ══════════════════════════════════════════════════════════════ */
+  var K_NOTES = 'lifeflow-note-items';
+  var SCHEMA_V = 1;
+
+  function ymd(d) {
+    var p = function (x) { return (x < 10 ? '0' : '') + x; };
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
   }
-  document.querySelectorAll('.note-card').forEach(function (card) {
-    card.addEventListener('click', function () { openNote(card); });
-    card.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openNote(card); }
+  function dayOffset(n) { var d = new Date(); d.setDate(d.getDate() + n); return ymd(d); }
+
+  /* 种子：复刻改造前写死的 5 张卡（日期按"今天/昨天/8月12日/8月10日/8月8日"反推，
+     保证首次渲染与改造前一致 —— 这样才能做逐像素比对证明"没改设计"）。 */
+  function seedNotes() {
+    return [
+      { id: 'seed-n1', title: '训练动作笔记', body: '深蹲：膝盖与脚尖同向，核心收紧，下蹲到大腿平行地面；硬拉：杠铃贴近小腿，腰背挺直。', pinned: true, createdAt: dayOffset(0) + ' 09:30', updatedAt: dayOffset(0) + ' 09:30' },
+      { id: 'seed-n2', title: '省考错题本', body: '资料分析：比重变化量题型，先判升降再算绝对值，避免死记公式。', pinned: true, createdAt: dayOffset(-1) + ' 18:20', updatedAt: dayOffset(-1) + ' 18:20' },
+      { id: 'seed-n3', title: '作息记录', body: '本周连续早睡 5 天，周四破功 23:40，周末补一个完整睡眠周期。', pinned: false, createdAt: '2026-08-12 21:00', updatedAt: '2026-08-12 21:00' },
+      { id: 'seed-n4', title: '饮食备忘', body: '早餐包子豆浆习惯保持，午间堂食偏多，下周尝试自带一餐。', pinned: false, createdAt: '2026-08-10 12:30', updatedAt: '2026-08-10 12:30' },
+      { id: 'seed-n5', title: '灵感：周末徒步路线', body: '从香山到植物园，全程约 3 小时，轻装即可，记得带水。', pinned: false, createdAt: '2026-08-08 08:15', updatedAt: '2026-08-08 08:15' }
+    ];
+  }
+
+  function loadNotes() {
+    try {
+      var raw = localStorage.getItem(K_NOTES);
+      if (raw) {
+        var d = JSON.parse(raw);
+        if (d && d.v === SCHEMA_V && Array.isArray(d.items)) { return d.items; }
+      }
+    } catch (e) { /* 存储不可用 → 退化为空表 */ }
+    var seed = seedNotes();
+    saveNotes(seed, true);
+    return seed;
+  }
+  function saveNotes(list, quiet) {
+    try {
+      localStorage.setItem(K_NOTES, JSON.stringify({ v: SCHEMA_V, items: list }));
+      if (!quiet) { window.dispatchEvent(new CustomEvent('note-updated', { detail: { items: list } })); }
+    } catch (e) { /* 忽略 */ }
+  }
+
+  var notes = loadNotes();
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  /* 卡片上的时间显示，格式必须与改造前的静态标记一致：
+     今天/昨天 → 「今天 HH:MM」；更早 → 「8月12日」 */
+  function fmtWhen(iso) {
+    var s = String(iso || '');
+    var d = s.slice(0, 10), hm = s.slice(11, 16);
+    if (d === dayOffset(0)) { return '今天 ' + hm; }
+    if (d === dayOffset(-1)) { return '昨天 ' + hm; }
+    var m = d.match(/^\d{4}-(\d{2})-(\d{2})$/);
+    return m ? Number(m[1]) + '月' + Number(m[2]) + '日' : d;
+  }
+
+  /* 排序：置顶优先，其次按创建时间倒序（新笔记在上） */
+  function sortedNotes() {
+    return notes.slice().sort(function (a, b) {
+      if (!!a.pinned !== !!b.pinned) { return a.pinned ? -1 : 1; }
+      return String(b.createdAt || '') < String(a.createdAt || '') ? -1 : 1;
     });
+  }
+
+  function renderNotes() {
+    var box = document.getElementById('note-list');
+    if (!box) { return; }
+    box.innerHTML = sortedNotes().map(function (n) {
+      return '<article class="card note-card" role="button" tabindex="0" data-id="' + esc(n.id) + '" data-title="' + esc(n.title) + '">' +
+        '<span class="note-card__mark" aria-hidden="true"></span>' +
+        '<div class="note-card__main">' +
+        '<div class="note-card__head">' +
+        '<span class="note-card__title">' + esc(n.title) + '</span>' +
+        (n.pinned ? '<span class="tag tag--brand"><span class="tag__dot"></span>置顶</span>' : '') +
+        '</div>' +
+        '<p class="note-card__excerpt">' + esc(n.body) + '</p>' +
+        '<div class="note-card__time"><i data-lucide="clock"></i> ' + esc(fmtWhen(n.createdAt)) + '</div>' +
+        '</div>' +
+        '<span class="note-card__chevron"><i data-lucide="chevron-right"></i></span>' +
+        '</article>';
+    }).join('');
+    var cnt = document.querySelector('.section-head__count');
+    if (cnt) { cnt.textContent = '共 ' + notes.length + ' 条'; }
+    if (window.lucide) { window.lucide.createIcons(); }
+  }
+
+  /* 备忘页专属：点击进详情（**带上 id** —— 改造前不带，所以详情页只能显示写死的示例） */
+  function openNote(id) {
+    location.href = 'note-detail.html' + (id ? '?id=' + encodeURIComponent(id) : '');
+  }
+  /* 用事件委托：列表是动态渲染的，不能像改造前那样在静态节点上逐个绑 */
+  var noteList = document.getElementById('note-list');
+  if (noteList) {
+    noteList.addEventListener('click', function (e) {
+      var card = e.target.closest('.note-card');
+      if (card) { openNote(card.getAttribute('data-id')); }
+    });
+    noteList.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter' && e.key !== ' ') { return; }
+      var card = e.target.closest('.note-card');
+      if (card) { e.preventDefault(); openNote(card.getAttribute('data-id')); }
+    });
+  }
+
+  /* 跨页联动：note-create / note-detail 改了数据 → 本页重读并重渲染 */
+  window.addEventListener('note-updated', function (e) {
+    notes = (e && e.detail && Array.isArray(e.detail.items)) ? e.detail.items : loadNotes();
+    renderNotes();
   });
+  window.addEventListener('storage', function (e) {
+    if (e.key === K_NOTES) { notes = loadNotes(); renderNotes(); }
+  });
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) { notes = loadNotes(); renderNotes(); }
+  });
+
+  renderNotes();
 
   $('new-note').addEventListener('click', function () { location.href = 'note-create.html'; });
   $('empty-new').addEventListener('click', function () { location.href = 'note-create.html'; });

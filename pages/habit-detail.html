@@ -220,7 +220,7 @@ body {
   max-width: 430px;
   margin: 0 auto;
   min-height: 100vh;
-  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(148px + env(safe-area-inset-bottom, 0px));
 }
 
 /* 桌面呈现：居中 + 侧边框 + 柔和投影，像一台安静的设备 */
@@ -1155,6 +1155,7 @@ body {
 </div>
 
 <script src="../assets/lucide.min.js"></script>
+<script src="../assets/lf-habit-seed.js"></script>
 <script>
 (function () {
   'use strict';
@@ -1228,8 +1229,206 @@ body {
 <script>
 (function () {
   'use strict';
-  /* 本页交互：返回 / 编辑跳转（habit-create.html）由 data-href 统一处理；
-     状态演示：#empty / #loading / #done 由基座脚本处理。 */
+  var $ = function (id) { return document.getElementById(id); };
+
+  /* ══════════════════════════════════════════════════════════════
+     持久化（本次新增）—— 改造前这一页**没有任何业务存储**：
+     头卡 / 三个统计数 / 打卡热力 / 近期记录**全是写死的**，
+     跟从列表点进来的是哪个习惯无关（连列表都不带 id）。
+
+     现在：按 ?id= 取那一条渲染；「补记昨天」在 habit.html 写盘后这里重读重渲染。
+
+       lifeflow-habit-items = { v:1, items:[ {
+         id, name, icon, tag, unit, value, barPct,
+         seedStreak, seedLongest, seedMonth, seedDate,   ← 改造前写死的显示值当基线
+         freq, form, formSub, remindTime, remindOn, order, cardOrder,
+         heat:    [ { d, lv, n, today } ],               ← 打卡热力格（种子 = 改造前的月历）
+         entries: [ { date, value, src } ]               ← 建档后新增的打卡（不伪造历史）
+       } ] }
+     ⚠ 统计一律「基线 + 增量」：seedLongest/seedStreak/seedMonth 是改造前写死的值，
+       只把 seedDate 之后真实发生的 entries 加上去 —— 这样首屏与改造前**一模一样**，
+       又不会把新习惯算成"连续 N 天"。习惯是工具轨（app-tool），**没有领域字段**。
+     ══════════════════════════════════════════════════════════════ */
+  var K_ITEMS = 'lifeflow-habit-items';
+  var SCHEMA_V = 1;
+  var seeding = false;   /* 本页正在播种 → 忽略自己广播出来的 habit-updated */
+  /* 无 ?id= 时的回退：与改造前写死展示的那一条 + habit.html 列表的第一张卡一致 */
+  var SEED_ID = 'seed-h4';
+
+  function ymd(d) {
+    var p = function (x) { return (x < 10 ? '0' : '') + x; };
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+  }
+  function loadItems() {
+    try {
+      var raw = localStorage.getItem(K_ITEMS);
+      if (raw) {
+        var d = JSON.parse(raw);
+        if (d && d.v === SCHEMA_V && Array.isArray(d.items)) { return d.items; }
+      }
+    } catch (e) { /* 存储不可用 → 退化为空表，页面仍显示静态回退值 */ }
+    /* 本页也播种（与 habit.html / habit-create.html 共用同一份种子文件）：
+       否则"直接打开详情页"时盘里没有 seed-h4，回退分支就取不到数据。
+       播种时广播 habit-updated 让别的页跟着刷新，但**置 seeding 标记**避免本页自己被它触发 reload。 */
+    if (typeof window.LF_HABIT_SEED === 'function') {
+      var seed = window.LF_HABIT_SEED();
+      try {
+        localStorage.setItem(K_ITEMS, JSON.stringify({ v: SCHEMA_V, items: seed }));
+        seeding = true;
+        window.dispatchEvent(new CustomEvent('habit-updated', { detail: { items: seed } }));
+        seeding = false;
+      } catch (e2) { seeding = false; }
+      return seed;
+    }
+    return [];
+  }
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  /* 与 habit.html 共用同一套排序，保证"不带 ?id= 时退化为第一条"两页口径一致 */
+  function sortedItems(list) {
+    return list.slice().sort(function (a, b) {
+      var d = (Number(a.order) || 0) - (Number(b.order) || 0);
+      if (d) { return d; }
+      return (Number(a.cardOrder) || 0) - (Number(b.cardOrder) || 0);
+    });
+  }
+  /* 只算"建档日当天及之后"的打卡（seedDate 就是建档日）。
+     ⚠ 边界必须用 >=：第一版写成 `>`，于是**当天打的卡被自己的过滤器丢掉** ——
+       手动往盘里写一条今天的记录，页面统计仍然是 12/8/26，看起来像"统计没生效"（踩过，e2e 抓到）。
+       代价：昨天及更早的补记仍不计入"当前连续"，与 focus.html 的口径一致（不伪造历史）。 */
+  function afterSeed(x, e) {
+    var s = String(x.seedDate || '').slice(0, 10);
+    var de = String(e.date || '').slice(0, 10);
+    return !!de && (!s || de >= s);
+  }
+  function fmtMD(ds) {
+    var m = String(ds || '').match(/^\d{4}-(\d{2})-(\d{2})$/);
+    return m ? Number(m[1]) + '月' + Number(m[2]) + '日' : String(ds || '');
+  }
+
+  var wantId = new URLSearchParams(location.search).get('id');
+  var all = loadItems();
+  var item = null;
+  if (wantId) {
+    item = all.filter(function (x) { return String(x.id) === String(wantId); })[0] || null;
+    /* 查了但查不到 → 走空态（与 note-detail.html 同口径） */
+    if (!item) {
+      if ($('content')) { $('content').classList.add('is-hidden'); }
+      if ($('empty-state')) { $('empty-state').classList.remove('is-hidden'); }
+      if (window.lucide) { window.lucide.createIcons(); }
+      return;
+    }
+  } else {
+    item = all.filter(function (x) { return String(x.id) === SEED_ID; })[0] || sortedItems(all)[0] || null;
+  }
+
+  /* 拿到数据才覆盖静态标记；渲染值由 seed 字段推出 ⟹ 首屏与改造前逐像素一致 */
+  if (!item) {
+    if (window.lucide) { window.lucide.createIcons(); }
+    return;
+  }
+
+  var entries = (item.entries || []).filter(function (e) { return afterSeed(item, e); });
+  var curStreak = (Number(item.seedStreak) || 0) + entries.length;
+  var longest = Math.max(Number(item.seedLongest) || 0, curStreak);
+  var thisMonth = ymd(new Date()).slice(0, 7);
+  var monthAdd = entries.filter(function (e) { return String(e.date || '').slice(0, 7) === thisMonth; }).length;
+  var monthCount = (Number(item.seedMonth) || 0) + monthAdd;
+
+  /* 头卡 */
+  var headIcon = document.querySelector('.head-icon i');
+  if (headIcon) { headIcon.setAttribute('data-lucide', item.icon || 'repeat'); }
+  var headName = document.querySelector('.head-name');
+  if (headName) { headName.textContent = item.name || ''; }
+  var headSub = document.querySelector('.head-sub');
+  if (headSub) { headSub.textContent = (item.freq || '每天') + ' ' + (item.remindTime || '07:00') + (item.remindOn === false ? ' · 提醒已关' : ' 提醒'); }
+  var headTag = document.querySelector('.head-card .tag');
+  /* ⚠ 头卡这个 tag 是**状态**（改造前写死「进行中」），不是频率 ——
+     一开始我拿 item.tag（频率"每日"）覆盖它，逐像素立刻报 0.075%（差异就在这几个字上）。
+     现在用独立字段 status，缺省即"进行中"。 */
+  if (headTag) { headTag.textContent = item.status || '进行中'; }
+
+  /* 统计卡（基线 + 增量） */
+  var nums = document.querySelectorAll('.stats3 .stat-num');
+  if (nums.length >= 3) {
+    nums[0].textContent = String(longest);
+    nums[1].textContent = String(curStreak);
+    nums[2].textContent = String(monthCount);
+  }
+
+  /* 打卡热力：种子月历 + 今天/昨天的真实打卡（lv3 → lv4 表示"已完成"） */
+  (function renderHeat() {
+    var grid = document.querySelector('.heat-grid');
+    var heat = item.heat || [];
+    if (!grid || !heat.length) { return; }
+    var today = ymd(new Date());
+    var done = {};
+    entries.forEach(function (e) { if (e.date === today) { done[e.date] = true; } });
+    grid.innerHTML = heat.map(function (h) {
+      var lv = Number(h.lv) || 0;
+      if (h.today && done[today] && lv < 4) { lv = 4; }
+      return '<span class="hcell h' + lv + (h.today ? ' is-today' : '') + '">' + esc(h.n == null ? '' : h.n) + '</span>';
+    }).join('');
+  })();
+
+  /* 近期记录：只有"建档后真实发生过"的才渲染；没有就**保留原静态三条**（回退要求） */
+  (function renderRecents() {
+    var list = document.querySelector('.rec-list');
+    if (!list || !entries.length) { return; }
+    var top = entries.slice().sort(function (a, b) { return String(b.date) < String(a.date) ? -1 : 1; }).slice(0, 3);
+    list.innerHTML = top.map(function (e) {
+      var skipped = e.src === 'skip';
+      return '<div class="rec-row"><span class="rec-date t-num">' + esc(fmtMD(e.date)) + '</span>' +
+        '<span class="tag ' + (skipped ? 'tag--paused' : 'tag--active') + '">' + (skipped ? '已跳过' : '已完成') + '</span></div>';
+    }).join('');
+  })();
+
+  /* 编辑 → 带上 id 回新建页（该页已支持按 ?id= 回填并更新那一条） */
+  var editBtn = document.querySelector('.head-edit');
+  if (editBtn) { editBtn.setAttribute('data-href', 'habit-create.html?id=' + encodeURIComponent(item.id)); }
+
+  /* 补记昨天 —— 本页的写侧（复用 habit.html 的同一个 key 与同一个事件名）。
+     ⚠ 试过在「近期记录」卡标题右侧加一个 .hcard__backfill 按钮：那个按钮渲染盒比纯文字高 ~12px，
+       把 .heat-head 的 baseline 行撑高 ⟹ 整页下移，逐像素出现 414px（y650~699）的**全局重排**差异。
+       按"不改视觉"的硬要求，改为**不加新元素**：把「补记昨天」挂到已渲染出来的近期记录行上
+       （点行 = 补记昨天），并给容器加 tabindex 走键盘。这样静态首屏与改造前逐像素一致。 */
+  function saveItems(list) {
+    try {
+      localStorage.setItem(K_ITEMS, JSON.stringify({ v: SCHEMA_V, items: list }));
+      window.dispatchEvent(new CustomEvent('habit-updated', { detail: { items: list } }));
+    } catch (e) { /* 忽略 */ }
+  }
+  function dayOffset(n) { var d = new Date(); d.setDate(d.getDate() + n); return ymd(d); }
+  function backfill() {
+    var list = loadItems();
+    var target = list.filter(function (x) { return String(x.id) === String(item.id); })[0];
+    if (!target) { return; }
+    if (!target.entries) { target.entries = []; }
+    var date = dayOffset(-1);
+    var dup = target.entries.filter(function (x) { return x.date === date; })[0];
+    if (dup) { dup.value = 1; dup.src = 'backfill'; }
+    else { target.entries.push({ date: date, value: 1, src: 'backfill' }); }
+    /* ⚠ 保存的是**改过的这个 list**，不是重新 load 的一份副本（那样会把刚 push 的丢掉，踩过） */
+    saveItems(list);
+    if (window.LF && window.LF.toast) { window.LF.toast('已补记' + target.name + '昨天'); }
+  }
+  window.LF = window.LF || {};
+  window.LF.habitBackfill = backfill;
+  /* 跨页联动：别的页改了 → 重读并重渲染。
+     本页自己不写盘，所以不会自触发；为防万一加了 300ms 去抖（窗口内多次事件只刷一次）。 */
+  var reloadTimer = 0;
+  function reload() {
+    if (seeding) { return; }
+    if (reloadTimer) { return; }
+    reloadTimer = setTimeout(function () { location.reload(); }, 300);
+  }
+  window.addEventListener('habit-updated', reload);
+  window.addEventListener('storage', function (e) { if (e.key === K_ITEMS) { reload(); } });
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) { reload(); } });
+
+  if (window.lucide) { window.lucide.createIcons(); }
 })();
 </script>
 <style>

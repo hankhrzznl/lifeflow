@@ -220,7 +220,7 @@ body {
   max-width: 430px;
   margin: 0 auto;
   min-height: 100vh;
-  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(148px + env(safe-area-inset-bottom, 0px));
 }
 
 /* 桌面呈现：居中 + 侧边框 + 柔和投影，像一台安静的设备 */
@@ -1302,6 +1302,83 @@ body {
     paused = false;
   }
 
+  /* ══════════════════════════════════════════════════════════════
+     持久化层（本次新增）—— 改造前这一页**没有数据落盘**：
+     「今日专注 2小时35分 / 专注次数 3 / 连续天数 5」三个数是**写死的**，
+     专注结束后什么都不记，刷新即回原样。
+
+       lifeflow-focus-sessions = { v:1,
+         items:[ { id, date, minutes, at } ],      ← 每段完成的专注
+         seedMinutes: 155,                          ← 改造前写死的"今日 2小时35分"
+         seedCount: 3,                              ← 改造前写死的"专注次数 3"
+         seedStreak: 5 }                            ← 改造前写死的"连续天数 5"
+     ══════════════════════════════════════════════════════════════ */
+  var K_FOCUS = 'lifeflow-focus-sessions';
+  var SCHEMA_V = 1;
+
+  function ymd(d) {
+    var p = function (x) { return (x < 10 ? '0' : '') + x; };
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+  }
+  /* 首次打开：只写"基线"，不伪造历史流水 —— 三个数字仍等于改造前显示的 2h35m/3/5 */
+  function loadFocus() {
+    try {
+      var raw = localStorage.getItem(K_FOCUS);
+      if (raw) {
+        var d = JSON.parse(raw);
+        if (d && d.v === SCHEMA_V && Array.isArray(d.items)) { return d; }
+      }
+    } catch (e) { /* 存储不可用 → 退化为纯内存 */ }
+    var seed = { v: SCHEMA_V, items: [], seedMinutes: 155, seedCount: 3, seedStreak: 5 };
+    saveFocus(seed, true);
+    return seed;
+  }
+  function saveFocus(store, quiet) {
+    try {
+      localStorage.setItem(K_FOCUS, JSON.stringify(store));
+      if (!quiet) { window.dispatchEvent(new CustomEvent('focus-updated', { detail: store })); }
+    } catch (e) { /* 忽略 */ }
+  }
+
+  var focusStore = loadFocus();
+
+  function renderFocusStats() {
+    var today = ymd(new Date());
+    var todays = focusStore.items.filter(function (x) { return x.date === today; });
+    var addMin = todays.reduce(function (n, x) { return n + (Number(x.minutes) || 0); }, 0);
+    var totalMin = (Number(focusStore.seedMinutes) || 0) + addMin;
+    var count = (Number(focusStore.seedCount) || 0) + todays.length;
+
+    /* 连续天数：从"有记录的日期"倒着数；基线天数作为下限保留 */
+    var days = {};
+    focusStore.items.forEach(function (x) { if (x.date) { days[x.date] = true; } });
+    var streak = 0;
+    var probe = new Date();
+    for (var i = 0; i < 400; i++) {
+      var k = ymd(probe);
+      if (days[k]) { streak++; probe.setDate(probe.getDate() - 1); }
+      else if (i === 0) { probe.setDate(probe.getDate() - 1); }   /* 今天还没专注不算断 */
+      else { break; }
+    }
+    streak = Math.max(streak, Number(focusStore.seedStreak) || 0);
+
+    var h = Math.floor(totalMin / 60), m = totalMin % 60;
+    var txt = h > 0 ? (h + '小时' + (m ? m + '分' : '')) : (m + '分');
+    if ($('focus-today')) { $('focus-today').textContent = totalMin > 0 ? txt : '0分'; }
+    if ($('focus-count')) { $('focus-count').textContent = String(count); }
+    if ($('focus-streak')) { $('focus-streak').textContent = String(streak); }
+  }
+
+  /* 记一段专注（完成或中途结束都记，minutes 为实际专注分钟数，至少 1） */
+  function logSession(minutes, how) {
+    var mins = Math.max(1, Math.round(minutes));
+    var now = new Date();
+    var hm = ('0' + now.getHours()).slice(-2) + ':' + ('0' + now.getMinutes()).slice(-2);
+    focusStore.items.push({ id: 'x' + Date.now(), date: ymd(now), minutes: mins, at: hm, how: how });
+    saveFocus(focusStore);
+    renderFocusStats();
+  }
+
   function resetToStart() {
     stopTimer();
     totalSeconds = currentMinutes * 60;
@@ -1328,6 +1405,8 @@ body {
     render();
     if (remaining <= 0) {
       stopTimer();
+      /* 改动：专注跑完 → 记一段（改造前什么都不记） */
+      logSession(currentMinutes, 'complete');
       /* 显示完成态双出口，不退出沉浸态 */
       var actions = document.querySelector('.focus-im-actions');
       var complete = $('focus-complete');
@@ -1347,11 +1426,15 @@ body {
   }
 
   function giveup() {
+    /* 改动：中途结束也记一段（记**实际专注的分钟数**，不是选定的时长）。
+       改造前这里什么都不记，于是"结束"等于白专注。 */
+    var doneMin = Math.round((totalSeconds - Math.max(remaining, 0)) / 60);
     stopTimer();
+    if (doneMin >= 1) { logSession(doneMin, 'giveup'); }
     body.classList.remove('is-immersive');
     setStatus('准备开始');
     render();
-    window.LF.toast('已结束本次专注');
+    window.LF.toast(doneMin >= 1 ? ('已结束本次专注 · 记下 ' + doneMin + ' 分钟') : '已结束本次专注');
   }
 
   /* 时长选择 */
@@ -1419,7 +1502,6 @@ body {
     var def = $('focus-default');
     var empty = $('focus-empty');
     var loading = $('focus-loading');
-
     resetToStart();
     def.classList.remove('is-hidden');
     empty.classList.add('is-hidden');
@@ -1439,8 +1521,21 @@ body {
     }
   }
   render();
+  renderFocusStats();
   showState();
   window.addEventListener('hashchange', showState);
+
+  /* 跨页联动：别的标签页/页面改了专注记录 → 本页重读并重渲染统计 */
+  window.addEventListener('focus-updated', function (e) {
+    if (e && e.detail && Array.isArray(e.detail.items)) { focusStore = e.detail; } else { focusStore = loadFocus(); }
+    renderFocusStats();
+  });
+  window.addEventListener('storage', function (e) {
+    if (e.key === K_FOCUS) { focusStore = loadFocus(); renderFocusStats(); }
+  });
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) { focusStore = loadFocus(); renderFocusStats(); }
+  });
 })();
 </script>
 <style>

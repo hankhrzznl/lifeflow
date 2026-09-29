@@ -220,7 +220,7 @@ body {
   max-width: 430px;
   margin: 0 auto;
   min-height: 100vh;
-  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(148px + env(safe-area-inset-bottom, 0px));
 }
 
 /* 桌面呈现：居中 + 侧边框 + 柔和投影，像一台安静的设备 */
@@ -1086,57 +1086,13 @@ body {
         <button type="button" class="rec-save" id="rec-save"><i data-lucide="plus"></i> 记一笔</button>
       </section>
 
-      <!-- 本月流水 -->
+      <!-- 本月流水（由 localStorage 驱动渲染；原先这里写死三段静态标记） -->
       <section class="fade-up" aria-label="本月流水">
         <div class="section-head">
           <h2 class="section-head__title">本月流水</h2>
           <span class="section-head__hint" id="flow-hint">6 笔</span>
         </div>
-        <div class="flow-group">
-          <div class="flow-group__label">今天</div>
-          <div class="flow-group__list">
-            <div class="flow-item item-row">
-              <span class="icon-box icon-box--amber"><i data-lucide="utensils"></i></span>
-              <div class="flow-item__main item-row__main"><div class="flow-item__note item-row__name">午餐 · 沙拉碗</div><div class="flow-item__time item-row__meta">12:20</div></div>
-              <span class="flow-item__amt item-row__val">-¥38.00</span>
-            </div>
-            <div class="flow-item item-row">
-              <span class="icon-box icon-box--water"><i data-lucide="bus"></i></span>
-              <div class="flow-item__main item-row__main"><div class="flow-item__note item-row__name">地铁通勤</div><div class="flow-item__time item-row__meta">08:45</div></div>
-              <span class="flow-item__amt item-row__val">-¥6.00</span>
-            </div>
-          </div>
-        </div>
-        <div class="flow-group">
-          <div class="flow-group__label">昨天</div>
-          <div class="flow-group__list">
-            <div class="flow-item item-row">
-              <span class="icon-box icon-box--sleep"><i data-lucide="shopping-bag"></i></span>
-              <div class="flow-item__main item-row__main"><div class="flow-item__note item-row__name">日用品补给</div><div class="flow-item__time item-row__meta">19:30</div></div>
-              <span class="flow-item__amt item-row__val">-¥126.50</span>
-            </div>
-            <div class="flow-item item-row">
-              <span class="icon-box icon-box--amber"><i data-lucide="utensils"></i></span>
-              <div class="flow-item__main item-row__main"><div class="flow-item__note item-row__name">晚餐 · 家常菜</div><div class="flow-item__time item-row__meta">18:15</div></div>
-              <span class="flow-item__amt item-row__val">-¥52.00</span>
-            </div>
-          </div>
-        </div>
-        <div class="flow-group">
-          <div class="flow-group__label">8 月 16 日</div>
-          <div class="flow-group__list">
-            <div class="flow-item item-row">
-              <span class="icon-box icon-box--strength"><i data-lucide="home"></i></span>
-              <div class="flow-item__main item-row__main"><div class="flow-item__note item-row__name">水电燃气</div><div class="flow-item__time item-row__meta">10:00</div></div>
-              <span class="flow-item__amt item-row__val">-¥214.00</span>
-            </div>
-            <div class="flow-item item-row">
-              <span class="icon-box icon-box--life"><i data-lucide="gamepad-2"></i></span>
-              <div class="flow-item__main item-row__main"><div class="flow-item__note item-row__name">周末电影</div><div class="flow-item__time item-row__meta">20:40</div></div>
-              <span class="flow-item__amt item-row__val">-¥88.00</span>
-            </div>
-          </div>
-        </div>
+        <div id="flow-root"></div>
       </section>
 
       <!-- ③ 目标挂靠 -->
@@ -1284,7 +1240,91 @@ body {
   showState();
   window.addEventListener('hashchange', showState);
 
-  var spent = 3200, budget = 5000, currentCat = '餐饮';
+  /* ══════════════════════════════════════════════════════════════
+     持久化层（本次新增）—— 记账数据以前**完全不落盘**：
+     `spent` / `budget` 是写死的数字，「本月流水」是三段写死的静态标记，
+     点「记一笔」只往 DOM 插一行 + 弹 toast，刷新即丢。
+     现在改成：数据落 localStorage，流水由数据渲染。
+
+     schema（与 expense-create / expense-detail 共用同一个 key）：
+       lifeflow-expense-items = { v:1, items:[ {
+         id, date:'YYYY-MM-DD', time:'HH:MM', type:'out'|'in',
+         amount:Number, cat:String, note:String, account:String
+       } ] }
+     预算单独一个 key（它是设置，不是流水）：lifeflow-expense-budget
+
+     跨页联动沿用项目既有模式（见其它页的规范注释）：
+       写入 → dispatchEvent('expense-updated')；消费方监听它 + storage + visibilitychange
+     ══════════════════════════════════════════════════════════════ */
+  var K_ITEMS = 'lifeflow-expense-items';
+  var K_BUDGET = 'lifeflow-expense-budget';
+  var SCHEMA_V = 1;
+
+  function ymd(d) {
+    var p = function (x) { return (x < 10 ? '0' : '') + x; };
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+  }
+  function dayOffset(n) { var d = new Date(); d.setDate(d.getDate() + n); return ymd(d); }
+
+  /* 首次打开的种子数据 —— 复刻原先写死的那 6 条（含原分组标签的日期偏移：今天/昨天/8月16日）
+     ⚠ 种子的意义不只是"有数据好看"：它保证改造后**渲染结果与改造前一致**，可做逐像素比对。 */
+  function seedItems() {
+    return [
+      { id: 'seed-1', date: dayOffset(0), time: '12:20', type: 'out', amount: 38.00, cat: '餐饮', note: '午餐 · 沙拉碗', account: '支付宝' },
+      { id: 'seed-2', date: dayOffset(0), time: '08:45', type: 'out', amount: 6.00, cat: '交通', note: '地铁通勤', account: '支付宝' },
+      { id: 'seed-3', date: dayOffset(-1), time: '19:30', type: 'out', amount: 126.50, cat: '购物', note: '日用品补给', account: '微信' },
+      { id: 'seed-4', date: dayOffset(-1), time: '18:15', type: 'out', amount: 52.00, cat: '餐饮', note: '晚餐 · 家常菜', account: '微信' },
+      { id: 'seed-5', date: '2026-08-16', time: '10:00', type: 'out', amount: 214.00, cat: '居住', note: '水电燃气', account: '中国银行' },
+      { id: 'seed-6', date: '2026-08-16', time: '20:40', type: 'out', amount: 88.00, cat: '娱乐', note: '周末电影', account: '现金' }
+    ];
+  }
+
+  function loadItems() {
+    try {
+      var raw = localStorage.getItem(K_ITEMS);
+      if (raw) {
+        var d = JSON.parse(raw);
+        if (d && d.v === SCHEMA_V && Array.isArray(d.items)) { return d.items; }
+      }
+    } catch (e) { /* 存储不可用时退化为空表，页面仍可用 */ }
+    /* 首次：写入种子 */
+    var seed = seedItems();
+    saveItems(seed, true);
+    return seed;
+  }
+  function saveItems(list, quiet) {
+    try {
+      localStorage.setItem(K_ITEMS, JSON.stringify({ v: SCHEMA_V, items: list }));
+      if (!quiet) { window.dispatchEvent(new CustomEvent('expense-updated', { detail: { items: list } })); }
+    } catch (e) { /* 忽略：无存储时页面仍能显示 */ }
+  }
+  function loadBudget() {
+    try {
+      var raw = localStorage.getItem(K_BUDGET);
+      if (raw) { var d = JSON.parse(raw); if (d && d.v === SCHEMA_V && typeof d.amount === 'number') { return d.amount; } }
+    } catch (e) { /* 同上 */ }
+    return 5000;
+  }
+  function saveBudget(n) {
+    try {
+      localStorage.setItem(K_BUDGET, JSON.stringify({ v: SCHEMA_V, amount: n }));
+      window.dispatchEvent(new CustomEvent('expense-updated', { detail: { budget: n } }));
+    } catch (e) { /* 忽略 */ }
+  }
+
+  var items = loadItems();
+  var budget = loadBudget();
+  var currentCat = '餐饮';
+
+  /* 本月支出 = 从流水算（不再写死 3200）。
+     ⚠ 这会改变「本月支出」显示的数字 —— 那正是修 bug（原来的 3200 与流水对不上）。 */
+  function spentThisMonth() {
+    var m = ymd(new Date()).slice(0, 7);
+    return items.reduce(function (n, x) {
+      return (x.type === 'out' && String(x.date).slice(0, 7) === m) ? n + x.amount : n;
+    }, 0);
+  }
+
   var CAT_META = {
     '餐饮': { icon: 'utensils', cls: 'icon-box--amber' },
     '交通': { icon: 'bus', cls: 'icon-box--water' },
@@ -1293,11 +1333,65 @@ body {
     '娱乐': { icon: 'gamepad-2', cls: 'icon-box--life' },
     '其他': { icon: 'more-horizontal', cls: 'icon-box' }
   };
+  /* 分类兜底：expense-create 的分类比本页多（日用/医疗/学习/工资/理财/红包），
+     那些类别在本页没有专属图标，统一落到「其他」的样式，避免出现空白图标。 */
+  function catMeta(c) { return CAT_META[c] || CAT_META['其他']; }
 
   function fmt(n) { return '¥' + n.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
   function fmtInt(n) { return '¥' + n.toLocaleString('zh-CN'); }
 
+  /* ── 流水渲染（按日期分组）── */
+  function groupLabel(dateStr) {
+    if (dateStr === dayOffset(0)) { return '今天'; }
+    if (dateStr === dayOffset(-1)) { return '昨天'; }
+    var m = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!m) { return dateStr; }
+    return Number(m[2]) + ' 月 ' + Number(m[3]) + ' 日';
+  }
+  function esc(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function renderFlow() {
+    var root = $('flow-root');
+    if (!root) { return; }
+    /* 按日期倒序分组 */
+    var byDate = {};
+    items.forEach(function (x) {
+      var d = String(x.date || '');
+      if (!byDate[d]) { byDate[d] = []; }
+      byDate[d].push(x);
+    });
+    var dates = Object.keys(byDate).sort().reverse();
+    root.innerHTML = dates.map(function (d) {
+      /* ⚠ 组内**不排序**，按数组插入顺序显示。
+         试过按 time 倒序，但那和改造前的渲染顺序不一致（原静态标记里
+         「水电燃气 10:00」排在「周末电影 20:40」之前），会造成无意义的视觉差异。
+         组间按日期倒序（今天在上）、组内保持录入顺序 —— 与改造前一致。 */
+      var rows = byDate[d];
+      return '<div class="flow-group">' +
+        '<div class="flow-group__label">' + esc(groupLabel(d)) + '</div>' +
+        '<div class="flow-group__list">' +
+        rows.map(function (x) {
+          var meta = catMeta(x.cat);
+          var sign = x.type === 'in' ? '+' : '-';
+          return '<div class="flow-item item-row" data-id="' + esc(x.id) + '">' +
+            '<span class="icon-box ' + meta.cls + '"><i data-lucide="' + meta.icon + '"></i></span>' +
+            '<div class="flow-item__main item-row__main">' +
+            '<div class="flow-item__note item-row__name">' + esc(x.note || x.cat) + '</div>' +
+            '<div class="flow-item__time item-row__meta">' + esc(x.time || '') + '</div></div>' +
+            '<span class="flow-item__amt item-row__val">' + sign + fmt(x.amount) + '</span>' +
+            '</div>';
+        }).join('') +
+        '</div></div>';
+    }).join('');
+    var hint = $('flow-hint');
+    if (hint) { hint.textContent = items.length + ' 笔'; }
+    if (window.lucide) { window.lucide.createIcons(); }
+  }
+
   function render() {
+    var spent = spentThisMonth();
     var pct = Math.round(spent / budget * 100);
     var over = pct > 100;
     $('spent-val').textContent = spent.toLocaleString('zh-CN');
@@ -1325,39 +1419,68 @@ body {
     });
   });
 
-  /* 记一笔 */
+  /* 记一笔 —— 改成写盘
+     改前：`spent += amt` 只改内存变量，再往 DOM 插一行；刷新即丢。
+     改后：加进 items → 存 localStorage → 广播 → 重渲染流水（渲染来自数据，不再手工插 DOM）。
+     ⚠ 原来那行「往第一个 .flow-group 插入」是**写死分组**的遗留 bug：
+       不管记的是哪天，都显示在「今天」下面。改成按日期分组渲染后这个问题自然消失。 */
   $('rec-save').addEventListener('click', function () {
     var amt = parseFloat($('amt-input').value);
     if (!amt || amt <= 0) { showToast('先输入金额'); return; }
     var note = $('note-input').value.trim() || currentCat;
-    spent += amt;
-    var meta = CAT_META[currentCat];
     var now = new Date();
     var hm = ('0' + now.getHours()).slice(-2) + ':' + ('0' + now.getMinutes()).slice(-2);
-    var group = document.querySelector('.flow-group');
-    var row = document.createElement('div');
-    row.className = 'flow-item item-row';
-    row.innerHTML =
-      '<span class="icon-box ' + meta.cls + '"><i data-lucide="' + meta.icon + '"></i></span>' +
-      '<div class="flow-item__main item-row__main"><div class="flow-item__note item-row__name">' + note + '</div><div class="flow-item__time item-row__meta">' + hm + ' · ' + currentCat + '</div></div>' +
-      '<span class="flow-item__amt item-row__val">-' + fmt(amt) + '</span>';
-    group.querySelector('.flow-group__list').insertBefore(row, group.querySelector('.flow-group__list').firstChild);
-    render();
+    items.push({
+      id: 'x' + Date.now(),
+      date: ymd(now),
+      time: hm,
+      type: 'out',
+      amount: Math.round(amt * 100) / 100,
+      cat: currentCat,
+      note: note,
+      account: '支付宝'
+    });
+    saveItems(items);
+    renderFlow();
     if (window.lucide) { window.lucide.createIcons(); }
     $('amt-input').value = ''; $('note-input').value = '';
     showToast('已记一笔 ' + currentCat + ' ' + fmt(amt));
   });
 
-  /* 预算 stepper（步进 500） */
+  /* 点流水行 → 进详情（原先这些行**不可点**，而 expense-detail 页存在且带了删除功能） */
+  var flowRoot = $('flow-root');
+  if (flowRoot) {
+    flowRoot.addEventListener('click', function (e) {
+      var row = e.target.closest('[data-id]');
+      if (!row) { return; }
+      location.href = 'expense-detail.html?id=' + encodeURIComponent(row.getAttribute('data-id'));
+    });
+  }
+
+  /* 跨页联动：别的页（create / detail）改了数据 → 本页重读并重渲染 */
+  window.addEventListener('expense-updated', function (e) {
+    if (e && e.detail && Array.isArray(e.detail.items)) { items = e.detail.items; }
+    else { items = loadItems(); }
+    if (e && e.detail && typeof e.detail.budget === 'number') { budget = e.detail.budget; }
+    renderFlow(); render();
+  });
+  window.addEventListener('storage', function (e) {
+    if (e.key === K_ITEMS || e.key === K_BUDGET) { items = loadItems(); budget = loadBudget(); renderFlow(); render(); }
+  });
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) { items = loadItems(); budget = loadBudget(); renderFlow(); render(); }
+  });
+
+  /* 预算 stepper（步进 500）—— 也改成写盘 */
   function bindBudget(decId, incId) {
     var anchors = [3000, 3500, 4000, 4500, 5000, 5500, 6000, 6500, 7000];
     $(decId).addEventListener('click', function () {
       var i = anchors.indexOf(budget);
-      if (i > 0) { budget = anchors[i - 1]; $('budget-set-val').textContent = fmtInt(budget); render(); }
+      if (i > 0) { budget = anchors[i - 1]; $('budget-set-val').textContent = fmtInt(budget); saveBudget(budget); render(); }
     });
     $(incId).addEventListener('click', function () {
       var i = anchors.indexOf(budget);
-      if (i < anchors.length - 1) { budget = anchors[i + 1]; $('budget-set-val').textContent = fmtInt(budget); render(); }
+      if (i < anchors.length - 1) { budget = anchors[i + 1]; $('budget-set-val').textContent = fmtInt(budget); saveBudget(budget); render(); }
     });
   }
   bindBudget('budget-dec', 'budget-inc');
@@ -1365,6 +1488,7 @@ body {
   /* 分类管理 */
   $('cat-mgmt').addEventListener('click', function () { showToast('分类管理 · 长按分类可停用'); });
 
+  renderFlow();
   render();
 })();
 </script>

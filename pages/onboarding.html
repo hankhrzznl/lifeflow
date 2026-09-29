@@ -220,7 +220,7 @@ body {
   max-width: 430px;
   margin: 0 auto;
   min-height: 100vh;
-  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(148px + env(safe-area-inset-bottom, 0px));
 }
 
 /* 桌面呈现：居中 + 侧边框 + 柔和投影，像一台安静的设备 */
@@ -1096,8 +1096,8 @@ body {
       <!-- 第③步：完成第一个最小行动 → 庆祝 -->
       <section class="ob-step is-hidden" id="step-3">
         <header class="ob-head fade-up">
-          <h1 class="ob-head__title" id="step3-title">完成第一个行动</h1>
-          <p class="ob-head__sub" id="step3-sub">点一下，完成你的第一个最小行动</p>
+          <h1 class="ob-head__title" id="step3-title">先做一件小事</h1>
+          <p class="ob-head__sub" id="step3-sub">记下就好，不用做满</p>
         </header>
 
         <div class="action-area fade-up fade-up--1" id="action-area">
@@ -1157,12 +1157,57 @@ body {
   var $ = function (id) { return document.getElementById(id); };
   var step = 1;
   var selectedDim = null; /* 'sleep' | 'focus' | 'water' */
+  var acted = false;      /* 第③步的最小行动是否已点过 */
 
-  /* 维度对应的行动配置 */
+  /* ══════════════════════════════════════════════════════════════
+     持久化（本次新增）—— 改造前这一页**已经真写** lifeflow-onboarded
+     （第③步「进入 LifeFlow」时写 '1'，schedule.html 靠它做首开重定向）。
+     ⚠ 那个 key 的名字与逻辑**原样保留、一个字没动**（下面仍是 setItem('lifeflow-onboarded','1')）。
+
+     本次补的是**引导进度**（改造前走到第几步、选了哪个维度，刷新即回第 1 步）：
+
+       lifeflow-onboarding-progress = { v:1,
+         step: 1|2|3, dim: 'sleep'|'focus'|'water'|null,
+         actionDone: false, actionDim: 'sleep'|…|null,
+         actionAt: 'YYYY-MM-DD HH:mm'|null, doneAt: 'YYYY-MM-DD HH:mm'|null }
+     ══════════════════════════════════════════════════════════════ */
+  var K_PROGRESS = 'lifeflow-onboarding-progress';
+  var SCHEMA_V = 1;
+
+  function stamp() {
+    var n = new Date();
+    var p = function (x) { return (x < 10 ? '0' : '') + x; };
+    return n.getFullYear() + '-' + p(n.getMonth() + 1) + '-' + p(n.getDate()) +
+      ' ' + p(n.getHours()) + ':' + p(n.getMinutes());
+  }
+  function loadProgress() {
+    try {
+      var raw = localStorage.getItem(K_PROGRESS);
+      if (raw) {
+        var d = JSON.parse(raw);
+        if (d && d.v === SCHEMA_V) { return d; }
+      }
+    } catch (e) { /* 存储不可用 → 退化为"从头开始"，页面仍能显示 */ }
+    return null;
+  }
+  var progress = loadProgress() || { v: SCHEMA_V, step: 1, dim: null, actionDone: false, actionDim: null, actionAt: null, doneAt: null };
+  function saveProgress() {
+    try {
+      localStorage.setItem(K_PROGRESS, JSON.stringify(progress));
+      window.dispatchEvent(new CustomEvent('onboarding-updated', { detail: { progress: progress } }));
+    } catch (e) { /* 忽略 */ }
+  }
+
+  /* 维度对应的行动配置
+     ⚠ title / sub 改过一次：原来三处都是
+        title「完成第一个行动」+ sub「点一下，完成你的第一个最小行动」——
+        标题和小字在说同一件事（重复），而且标题没告诉用户**做什么**。
+        真正的动作在按钮上，且三个维度各不同（记录今晚入睡 / 开始 5 分钟专注 / +250ml）。
+        现在标题给态度、小字给"做不完整也行"的许可，与按钮形成「标题 → 小字 → 按钮」三段递进。 */
   var dimConfig = {
-    sleep: { icon: 'moon-star', text: '记录今晚入睡', title: '完成第一个行动', sub: '点一下，完成你的第一个最小行动', cls: 'action-btn--sleep' },
-    focus: { icon: 'timer', text: '开始 5 分钟专注', title: '完成第一个行动', sub: '点一下，完成你的第一个最小行动', cls: 'action-btn--focus' },
-    water: { icon: 'droplets', text: '+250ml', title: '完成第一个行动', sub: '点一下，完成你的第一个最小行动', cls: 'action-btn--water' }
+    sleep: { icon: 'moon-star', text: '记录今晚入睡', title: '先做一件小事', sub: '记下就好，不用做满', cls: 'action-btn--sleep' },
+    focus: { icon: 'timer', text: '开始 5 分钟专注', title: '先做一件小事', sub: '记下就好，不用做满', cls: 'action-btn--focus' },
+    water: { icon: 'droplets', text: '+250ml', title: '先做一件小事', sub: '记下就好，不用做满', cls: 'action-btn--water' }
   };
 
   function showStep(n) {
@@ -1197,6 +1242,11 @@ body {
       $('step3-sub').textContent = cfg.sub;
     }
 
+    /* 记下进度（改造前不落盘：刷新回第 1 步） */
+    progress.step = n;
+    progress.dim = selectedDim || null;
+    saveProgress();
+
     if (window.lucide) { window.lucide.createIcons(); }
     window.scrollTo(0, 0);
   }
@@ -1208,16 +1258,23 @@ body {
       c.classList.add('is-active');
       selectedDim = c.getAttribute('data-dim');
       $('btn-next').disabled = false;
+      progress.dim = selectedDim;
+      saveProgress();
     });
   });
 
-  /* 第③步：行动按钮 → 庆祝 */
+  /* 第③步：行动按钮 → 庆祝（并把这次最小行动落盘） */
   $('action-btn').addEventListener('click', function () {
     $('action-area').classList.add('is-hidden');
     $('success-overlay').classList.remove('is-hidden');
     $('btn-next').classList.remove('is-hidden');
     $('btn-next').disabled = false;
     $('btn-next').innerHTML = '<i data-lucide="check"></i> 进入 LifeFlow';
+    acted = true;
+    progress.actionDone = true;
+    progress.actionDim = selectedDim || null;
+    progress.actionAt = stamp();
+    saveProgress();
     if (window.lucide) { window.lucide.createIcons(); }
   });
 
@@ -1229,6 +1286,10 @@ body {
       showStep(3);
     } else if (step === 3) {
       /* 庆祝后自动跳转 */
+      progress.step = 3;
+      progress.dim = selectedDim || null;
+      progress.doneAt = stamp();
+      saveProgress();
       try { localStorage.setItem('lifeflow-onboarded', '1'); } catch (e) {}
       setTimeout(function () {
         window.location.href = 'schedule.html';
@@ -1237,7 +1298,36 @@ body {
   });
   $('btn-prev').addEventListener('click', function () { showStep(step - 1); });
 
-  showStep(1);
+  /* 恢复上次进度：回填维度 / 行动 / 步骤。
+     ⚠ 只回填**状态**，不动任何文案与 class 的静态定义；第一次打开（无进度）时
+        step=1、dim=null ⟹ 与改造前完全一致（逐像素 0 差异）。 */
+  (function restore() {
+    if (progress.dim) {
+      selectedDim = progress.dim;
+      var card = document.querySelector('.dim-card[data-dim="' + progress.dim + '"]');
+      if (card) { card.classList.add('is-active'); }
+    }
+    showStep(Number(progress.step) || 1);
+    if (progress.step === 3 && progress.actionDone) {
+      acted = true;
+      $('action-area').classList.add('is-hidden');
+      $('success-overlay').classList.remove('is-hidden');
+      $('btn-next').classList.remove('is-hidden');
+      $('btn-next').disabled = false;
+      $('btn-next').innerHTML = '<i data-lucide="check"></i> 进入 LifeFlow';
+      if (window.lucide) { window.lucide.createIcons(); }
+    }
+  })();
+
+  /* 跨页联动：别的页改了进度 → 重读并重放（本页自己不监听自己写出来的事件，用去抖防自触发） */
+  var reloadTimer = 0;
+  function reloadProgress() {
+    if (reloadTimer) { return; }
+    reloadTimer = setTimeout(function () { location.reload(); }, 300);
+  }
+  window.addEventListener('onboarding-updated', function () { /* 本页自己广播的，忽略 */ });
+  window.addEventListener('storage', function (e) { if (e.key === K_PROGRESS) { reloadProgress(); } });
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) { reloadProgress(); } });
 })();
 </script>
 <style>

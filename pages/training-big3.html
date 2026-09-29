@@ -220,7 +220,7 @@ body {
   max-width: 430px;
   margin: 0 auto;
   min-height: 100vh;
-  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(148px + env(safe-area-inset-bottom, 0px));
 }
 
 /* 桌面呈现：居中 + 侧边框 + 柔和投影，像一台安静的设备 */
@@ -1450,8 +1450,16 @@ body {
       if (i % cCycle < plan.cardio.trainDays) { cDays++; }
     }
     $('ov-pr').innerHTML = prCount + '<span class="over-unit">项 PR</span>';
-    $('ov-cycle').textContent = sDays + ' / ' + cDays;
-    $('ov-cycle-label').textContent = '本周力量 / 有氧（' + sCycle + ' 天循环）';
+    /* 改前：sDays + ' / ' + cDays → 渲染成「6 / 5」。
+       但这是**两个并列数量**（力量 6 天、有氧 5 天），不是比值；
+       用斜杠写会被读成「6 比 5」甚至「进度 6/5（超额了？）」——
+       而本页 PR 那边（PR / 总数）用的也是斜杠，同一符号两种含义。
+       改成带单位的并列写法，与概览卡另一项「N 项 PR」同一风格。
+       ⚠ 单位只写一次（力量 6 · 有氧 5 天）：概览卡是双列网格，
+         写全「力量 6 天 · 有氧 5 天」会换行、把卡片撑高（实测过）。 */
+    $('ov-cycle').textContent = '力量 ' + sDays + ' · 有氧 ' + cDays + ' 天';
+    /* 标签跟着数据走：卡片默认标签只有「本周力量」，而这里算的是力量+有氧两个值 */
+    $('ov-cycle-label').textContent = '本周安排（' + sCycle + ' 天循环）';
     var wdNames = wd.map(function (w) { return '周' + ['日', '一', '二', '三', '四', '五', '六'][w]; }).join('·');
     $('ov-tag').innerHTML = '<i data-lucide="trending-up"></i>' + (wdNames || '计划中');
   }

@@ -220,7 +220,7 @@ body {
   max-width: 430px;
   margin: 0 auto;
   min-height: 100vh;
-  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(148px + env(safe-area-inset-bottom, 0px));
 }
 
 /* 桌面呈现：居中 + 侧边框 + 柔和投影，像一台安静的设备 */
@@ -1056,57 +1056,9 @@ body {
         <!-- 重要日子卡片流：大数字 = 距今天数（视觉焦点） -->
         <p class="t-caption t-faint" style="margin:0 0 12px">纯时间标记（生日/假期）住这里；要行动的考试请建目标，会显示「备考中」联动</p>
 
-        <section class="cd-list fade-up fade-up--1" id="cd-list" aria-label="倒数日列表">
-
-          <article class="card cd-card cd-card--purple" data-date="2026-08-30">
-            <div class="cd-card__num"><span class="cd-card__big" data-days>16</span><span class="cd-card__unit">天后</span></div>
-            <div class="cd-card__main">
-              <h2 class="cd-card__title">生日</h2>
-              <div class="cd-card__date"><i data-lucide="cake"></i> 2026 年 8 月 30 日</div>
-            </div>
-          </article>
-
-          <article class="card cd-card cd-card--goal" data-date="2026-09-01">
-            <div class="cd-card__num"><span class="cd-card__big" data-days>18</span><span class="cd-card__unit">天后</span></div>
-            <div class="cd-card__main">
-              <h2 class="cd-card__title">发薪日</h2>
-              <div class="cd-card__date"><i data-lucide="banknote"></i> 2026 年 9 月 1 日</div>
-            </div>
-          </article>
-
-          <article class="card cd-card cd-card--goal" data-date="2026-09-27">
-            <div class="cd-card__num"><span class="cd-card__big" data-days>44</span><span class="cd-card__unit">天后</span></div>
-            <div class="cd-card__main">
-              <h2 class="cd-card__title">半程马拉松</h2>
-              <div class="cd-card__date"><i data-lucide="flag"></i> 2026 年 9 月 27 日</div>
-            </div>
-          </article>
-
-          <article class="card cd-card cd-card--purple" data-date="2026-10-01">
-            <div class="cd-card__num"><span class="cd-card__big" data-days>48</span><span class="cd-card__unit">天后</span></div>
-            <div class="cd-card__main">
-              <h2 class="cd-card__title">国庆假期</h2>
-              <div class="cd-card__date"><i data-lucide="palmtree"></i> 2026 年 10 月 1 日</div>
-            </div>
-          </article>
-
-          <article class="card cd-card cd-card--goal" data-date="2026-12-14">
-            <div class="cd-card__num"><span class="cd-card__big" data-days>122</span><span class="cd-card__unit">天后</span></div>
-            <div class="cd-card__main">
-              <h2 class="cd-card__title">英语四级</h2>
-              <div class="cd-card__date"><i data-lucide="graduation-cap"></i> 2026 年 12 月 14 日 · <a href="exam.html" style="color:var(--tech-blue);text-decoration:none;font-weight:600">备考中 →</a></div>
-            </div>
-          </article>
-
-          <article class="card cd-card cd-card--purple" data-date="2027-04-01">
-            <div class="cd-card__num"><span class="cd-card__big" data-days>230</span><span class="cd-card__unit">天后</span></div>
-            <div class="cd-card__main">
-              <h2 class="cd-card__title">2027 安徽省考</h2>
-              <div class="cd-card__date"><i data-lucide="book-open"></i> 2027 年 4 月 1 日 · <a href="exam.html" style="color:var(--tech-blue);text-decoration:none;font-weight:600">备考中 →</a></div>
-            </div>
-          </article>
-
-        </section>
+        <!-- 倒数日卡片流：点击无详情页，仅展示 -->
+        <!-- 由 localStorage 驱动渲染（原先这里写死 6 张卡） -->
+        <section class="cd-list fade-up fade-up--1" id="cd-list" aria-label="倒数日列表"></section>
 
         <!-- 底部「新建倒计时」入口 -->
         <button type="button" class="btn btn--primary btn--block fade-up fade-up--2" id="new-countdown"><i data-lucide="plus"></i> 新建倒计时</button>
@@ -1235,6 +1187,114 @@ body {
 
   $('new-countdown').addEventListener('click', function () { location.href = 'countdown-create.html'; });
   $('empty-new').addEventListener('click', function () { location.href = 'countdown-create.html'; });
+
+  /* ══════════════════════════════════════════════════════════════
+     持久化层（本次新增）—— 改造前这一页**没有数据落盘**：
+     「重要日子」那 6 张卡（生日/发薪日/半程马拉松/国庆假期/英语四级/
+     2027 安徽省考）是写死的静态标记，改一次就没了；新建页保存也不落盘。
+     现在：数据落 localStorage，卡片由数据渲染，天数仍按目标日期实时计算。
+
+       lifeflow-countdown-items = { v:1, items:[ { id, title, date, icon, accent, pinned } ] }
+       · accent: 'purple' | 'goal'   → 卡片左侧色条 + 大数字配色（对应
+         .cd-card--purple / .cd-card--goal，不是新 class）
+       · 不含「领域」字段：这一页的内容横跨多域（生日/发薪/马拉松/考试），
+         页面本身也没有领域概念，硬塞会造出页面不显示的字段。
+     ══════════════════════════════════════════════════════════════ */
+  var K_CD = 'lifeflow-countdown-items';
+  var SCHEMA_V = 1;
+
+  function daysUntil(dateStr) {
+    var now = new Date(); now.setHours(0, 0, 0, 0);
+    var t = new Date(String(dateStr) + 'T00:00:00');
+    return Math.ceil((t - now) / 86400000);
+  }
+  function fmtCnDate(dateStr) {
+    var m = String(dateStr || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!m) { return String(dateStr || ''); }
+    return m[1] + ' 年 ' + Number(m[2]) + ' 月 ' + Number(m[3]) + ' 日';
+  }
+
+  /* 种子：复刻改造前写死的 6 张卡（id 固定成 seed-cd1…seed-cd6，
+     与卡片流顺序一致）。日期取改造前写死的 data-date，
+     标题/图标/配色/「备考中 →」也从改造前的静态标记里读回来。 */
+  var SEED_CD = [
+    { id: 'seed-cd1', title: '生日',         date: '2026-08-30', icon: 'cake',           accent: 'purple' },
+    { id: 'seed-cd2', title: '发薪日',       date: '2026-09-01', icon: 'banknote',       accent: 'goal' },
+    { id: 'seed-cd3', title: '半程马拉松',   date: '2026-09-27', icon: 'flag',           accent: 'goal' },
+    { id: 'seed-cd4', title: '国庆假期',     date: '2026-10-01', icon: 'palmtree',       accent: 'purple' },
+    { id: 'seed-cd5', title: '英语四级',     date: '2026-12-14', icon: 'graduation-cap', accent: 'goal', link: 'exam.html' },
+    { id: 'seed-cd6', title: '2027 安徽省考', date: '2027-04-01', icon: 'book-open',      accent: 'purple', link: 'exam.html' }
+  ];
+
+  function loadCds() {
+    try {
+      var raw = localStorage.getItem(K_CD);
+      if (raw) {
+        var d = JSON.parse(raw);
+        if (d && d.v === SCHEMA_V && Array.isArray(d.items)) { return d.items; }
+      }
+    } catch (e) { /* 存储不可用 → 退化为空表，页面仍能显示 */ }
+    var seed = SEED_CD.slice();
+    saveCds(seed, true);
+    return seed;
+  }
+  function saveCds(list, quiet) {
+    try {
+      localStorage.setItem(K_CD, JSON.stringify({ v: SCHEMA_V, items: list }));
+      if (!quiet) { window.dispatchEvent(new CustomEvent('countdown-updated', { detail: { items: list } })); }
+    } catch (e) { /* 忽略 */ }
+  }
+
+  var cds = loadCds();
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  /* ⚠ 排序口径（改造前 sortByProximity 只按 data-date 升序）：
+     置顶优先 → 其余按日期升序。种子全部 pinned 缺省（undefined），
+     所以改造后首屏顺序与改造前**完全一致**。 */
+  function sortedCds() {
+    return cds.slice().sort(function (a, b) {
+      if (!!a.pinned !== !!b.pinned) { return a.pinned ? -1 : 1; }
+      return String(a.date || '').localeCompare(String(b.date || ''));
+    });
+  }
+
+  function renderCds() {
+    var list = $('cd-list');
+    if (!list) { return; }
+    list.innerHTML = sortedCds().map(function (c) {
+      var accent = (c.accent === 'goal') ? 'cd-card--goal' : 'cd-card--purple';
+      var d = daysUntil(c.date);
+      var n = d >= 0 ? d : 0;
+      var tail = c.link
+        ? ' · <a href="' + esc(c.link) + '" style="color:var(--tech-blue);text-decoration:none;font-weight:600">备考中 →</a>'
+        : '';
+      return '<article class="card cd-card ' + accent + '" data-id="' + esc(c.id) + '" data-date="' + esc(c.date) + '">' +
+        '<div class="cd-card__num"><span class="cd-card__big" data-days>' + n + '</span><span class="cd-card__unit">天后</span></div>' +
+        '<div class="cd-card__main">' +
+        '<h2 class="cd-card__title">' + esc(c.title) + '</h2>' +
+        '<div class="cd-card__date"><i data-lucide="' + esc(c.icon || 'calendar') + '"></i> ' + fmtCnDate(c.date) + tail + '</div>' +
+        '</div>' +
+        '</article>';
+    }).join('');
+    if (window.lucide) { window.lucide.createIcons(); }
+  }
+
+  /* 跨页联动：countdown-create 新建了 → 本页重读并重渲染 */
+  window.addEventListener('countdown-updated', function (e) {
+    cds = (e && e.detail && Array.isArray(e.detail.items)) ? e.detail.items : loadCds();
+    renderCds();
+  });
+  window.addEventListener('storage', function (e) {
+    if (e.key === K_CD) { cds = loadCds(); renderCds(); }
+  });
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) { cds = loadCds(); renderCds(); }
+  });
+
+  renderCds();
 
   function showState() {
     var content = $('content');

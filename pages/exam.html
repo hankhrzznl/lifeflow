@@ -220,7 +220,7 @@ body {
   max-width: 430px;
   margin: 0 auto;
   min-height: 100vh;
-  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(148px + env(safe-area-inset-bottom, 0px));
 }
 
 /* 桌面呈现：居中 + 侧边框 + 柔和投影，像一台安静的设备 */
@@ -1294,6 +1294,126 @@ body {
   'use strict';
   var $ = function (id) { return document.getElementById(id); };
 
+  /* ══════════════════════════════════════════════════════════════
+     持久化层（本次新增）—— 改造前这一页**没有数据落盘**：
+     「考研上岸 / 四级 550+ / 考公上岸」三套备考数据写死在 EXAMS 字面量里，
+     科目进度（42/80 小时…）、今日复习（到期 23 张）、每日学习计划（4 项）、
+     本周行动（16 次行动）全是静态标记；点 checkbox 打了个勾，
+     刷新即丢；切了备考也不会记住。
+     现在：备考数据落 localStorage，渲染由数据驱动，当前备考也落盘。
+     ⚠ 这一段必须和 renderExam / chip 监听在**同一个 IIFE** 里：
+       拆到上一个 <script> 会变成 ReferenceError（已踩过），
+       表现是"点了 chip 界面变了但盘里没变"。
+
+       lifeflow-exam-plans      = { v:1, items:[ exam ], active:'kaoyan' }
+         exam = { id, name, date, days, est, due, breakdown,
+                  wins:{ count, breakdown },
+                  subjects:[ { name, hours, total, unit, percent, fill } ],
+                  plans:[ { title, tag, meta } ] }
+       · days / percent 存下来是**有意**的：它们是改造前页面渲染出来的数字
+         本身（也就是口径里的"基线"）；改造前并没有"考试目标日期"这个字段，
+         编一个日期再反推天数会造出页面没有的数据。
+       · 没有第二个 key：三套备考 + 当前选中是同一份状态，
+         拆成两个 key 会出现"选中项指向已不存在的备考"这种不一致。
+     ══════════════════════════════════════════════════════════════ */
+  var K_EXAM = 'lifeflow-exam-plans';
+  var SCHEMA_V = 1;
+  var DEFAULT_ACTIVE = 'kaoyan';
+
+  /* 种子：逐字复刻改造前 EXAMS 字面量 + 改造前**静态标记里**的
+     wins（16 次行动 / 学习 4 · 专注 7 · 习惯 5）。
+     ⚠ plan 的 tag 来自改造前静态标记（JS 版 renderExam 渲染时会把它丢掉，
+       这里保留，否则首屏 4 条计划的教学标签会凭空消失 → 变成明显像素差异）。
+     ⚠ 科目单位（小时/词）在改造前是 `total > 100 ? '词' : '小时'` 猜出来的，
+       这里显式存成 unit —— 改造后加科目不会因为点数超过 100 被显示成"词"。 */
+  var SEED_EXAMS = [
+    {
+      id: 'kaoyan', name: '考研上岸', date: '2026 年 12 月 21 日 · 全国硕士研究生招生考试', days: 129,
+      est: '按当前节奏，一轮复习预计 12 月 8 日完成 · 日均需 1.9 小时',
+      due: '到期 23 张', breakdown: '张卡片到复习点 · 高数 12 / 单词 11',
+      wins: { count: 16, breakdown: '学习 4 · 专注 7 · 习惯 5' },
+      subjects: [
+        { name: '数学',   hours: 42, total: 80, unit: '小时', percent: 53, fill: 'progress__fill--blue' },
+        { name: '英语',   hours: 30, total: 60, unit: '小时', percent: 50, fill: '' },
+        { name: '政治',   hours: 18, total: 40, unit: '小时', percent: 45, fill: 'progress__fill--amber' },
+        { name: '专业课', hours: 28, total: 70, unit: '小时', percent: 40, fill: 'progress__fill--green' }
+      ],
+      plans: [
+        { title: '数学 · 高数第三章', tag: '新学', meta: '08:00 · 2 小时' },
+        { title: '英语 · 阅读精读',   tag: '真题', meta: '10:30 · 1.5 小时' },
+        { title: '政治 · 马原第二章', tag: '新学', meta: '14:00 · 1 小时' },
+        { title: '专业课 · 数据结构', tag: '复习', meta: '19:30 · 2 小时' }
+      ]
+    },
+    {
+      id: 'cet4', name: '四级 550+', date: '2026 年 12 月 13 日 · 全国大学英语四级考试', days: 115,
+      est: '按当前节奏，考纲词汇 11 月 20 日背完 · 日均 25 词',
+      due: '到期 41 张', breakdown: '张卡片到复习点 · 全部来自词汇书',
+      wins: { count: 16, breakdown: '学习 4 · 专注 7 · 习惯 5' },
+      subjects: [
+        { name: '词汇', hours: 1450, total: 2500, unit: '词',  percent: 58, fill: 'progress__fill--blue' },
+        { name: '听力', hours: 12,   total: 30,   unit: '小时', percent: 40, fill: '' },
+        { name: '阅读', hours: 18,   total: 30,   unit: '小时', percent: 60, fill: 'progress__fill--green' },
+        { name: '写译', hours: 6,    total: 20,   unit: '小时', percent: 30, fill: 'progress__fill--amber' }
+      ],
+      plans: [
+        { title: '词汇 · List 18', tag: '新学', meta: '08:00 · 40 分钟' },
+        { title: '听力 · 真题 Section B', tag: '真题', meta: '12:30 · 30 分钟' },
+        { title: '阅读 · 仔细阅读 2 篇', tag: '真题', meta: '16:00 · 40 分钟' }
+      ]
+    },
+    {
+      id: 'gongwuyuan', name: '考公上岸', date: '2026 年 11 月 30 日 · 国考笔试', days: 104,
+      est: '按当前节奏，行测一轮 10 月 25 日完成 · 日均需 2.2 小时',
+      due: '到期 17 张', breakdown: '张卡片到复习点 · 言语 9 / 常识 8',
+      wins: { count: 16, breakdown: '学习 4 · 专注 7 · 习惯 5' },
+      subjects: [
+        { name: '行测·言语', hours: 16, total: 30, unit: '小时', percent: 53, fill: 'progress__fill--blue' },
+        { name: '行测·判断', hours: 14, total: 30, unit: '小时', percent: 47, fill: '' },
+        { name: '行测·数资', hours: 9,  total: 30, unit: '小时', percent: 30, fill: 'progress__fill--amber' },
+        { name: '申论',     hours: 8,  total: 25, unit: '小时', percent: 32, fill: 'progress__fill--green' }
+      ],
+      plans: [
+        { title: '言语 · 逻辑填空', tag: '新学', meta: '08:30 · 1.5 小时' },
+        { title: '判断 · 图形推理', tag: '真题', meta: '14:00 · 1 小时' },
+        { title: '申论 · 小题精练', tag: '真题', meta: '20:00 · 1.5 小时' }
+      ]
+    }
+  ];
+
+  function saveExamStore(st, quiet) {
+    try {
+      localStorage.setItem(K_EXAM, JSON.stringify({ v: SCHEMA_V, items: st.items, active: st.active }));
+      if (!quiet) { window.dispatchEvent(new CustomEvent('exam-updated', { detail: { items: st.items, active: st.active } })); }
+    } catch (e) { /* 忽略 */ }
+  }
+  function loadExamStore() {
+    try {
+      var raw = localStorage.getItem(K_EXAM);
+      if (raw) {
+        var d = JSON.parse(raw);
+        if (d && d.v === SCHEMA_V && Array.isArray(d.items) && d.items.length) { return d; }
+      }
+    } catch (e) { /* 存储不可用 → 退化为种子，页面仍能显示 */ }
+    var seed = { v: SCHEMA_V, items: SEED_EXAMS, active: DEFAULT_ACTIVE };
+    saveExamStore(seed, true);
+    return seed;
+  }
+
+  var store = loadExamStore();
+
+  /* 当前备考：盘里的 active → 改造前静态标记里 is-active 的那个 chip → 第一条 */
+  function activeExamKey() {
+    if (store.active && store.items.some(function (x) { return x.id === store.active; })) { return store.active; }
+    var on = document.querySelector('#exam-chips .chip.is-active');
+    if (on && on.getAttribute('data-exam')) { return on.getAttribute('data-exam'); }
+    return store.items[0] ? store.items[0].id : '';
+  }
+  function examById(id) {
+    var hit = store.items.filter(function (x) { return x.id === id; })[0];
+    return hit || store.items[0] || null;
+  }
+
   document.querySelectorAll('[data-action="check"]').forEach(function (check) {
     check.addEventListener('click', function () {
       var plan = check.closest('.plan');
@@ -1342,50 +1462,44 @@ body {
       banner.classList.remove('is-hidden');
     }
   }
-  /* 多备考数据集 */
-  var EXAMS = {
-    kaoyan: {
-      title: '考研上岸', date: '2026 年 12 月 21 日 · 全国硕士研究生招生考试', days: 129,
-      est: '按当前节奏，一轮复习预计 12 月 8 日完成 · 日均需 1.9 小时',
-      subjects: [['数学', 42, 80, 53, 'progress__fill--blue'], ['英语', 30, 60, 50, ''], ['政治', 18, 40, 45, 'progress__fill--amber'], ['专业课', 28, 70, 40, 'progress__fill--green']],
-      due: '到期 23 张', breakdown: '张卡片到复习点 · 高数 12 / 单词 11',
-      plans: [['数学 · 高数第三章', '新学', '08:00 · 2 小时'], ['英语 · 阅读精读', '真题', '10:30 · 1.5 小时'], ['政治 · 马原第二章', '新学', '14:00 · 1 小时'], ['专业课 · 数据结构', '复习', '19:30 · 2 小时']]
-    },
-    cet4: {
-      title: '四级 550+', date: '2026 年 12 月 13 日 · 全国大学英语四级考试', days: 115,
-      est: '按当前节奏，考纲词汇 11 月 20 日背完 · 日均 25 词',
-      subjects: [['词汇', 1450, 2500, 58, 'progress__fill--blue'], ['听力', 12, 30, 40, ''], ['阅读', 18, 30, 60, 'progress__fill--green'], ['写译', 6, 20, 30, 'progress__fill--amber']],
-      due: '到期 41 张', breakdown: '张卡片到复习点 · 全部来自词汇书',
-      plans: [['词汇 · List 18', '新学', '08:00 · 40 分钟'], ['听力 · 真题 Section B', '真题', '12:30 · 30 分钟'], ['阅读 · 仔细阅读 2 篇', '真题', '16:00 · 40 分钟']]
-    },
-    gongwuyuan: {
-      title: '考公上岸', date: '2026 年 11 月 30 日 · 国考笔试', days: 104,
-      est: '按当前节奏，行测一轮 10 月 25 日完成 · 日均需 2.2 小时',
-      subjects: [['行测·言语', 16, 30, 53, 'progress__fill--blue'], ['行测·判断', 14, 30, 47, ''], ['行测·数资', 9, 30, 30, 'progress__fill--amber'], ['申论', 8, 25, 32, 'progress__fill--green']],
-      due: '到期 17 张', breakdown: '张卡片到复习点 · 言语 9 / 常识 8',
-      plans: [['言语 · 逻辑填空', '新学', '08:30 · 1.5 小时'], ['判断 · 图形推理', '真题', '14:00 · 1 小时'], ['申论 · 小题精练', '真题', '20:00 · 1.5 小时']]
-    }
-  };
+  /* 渲染：数据来自 store（localStorage），不再读写死的 EXAMS 字面量。
+     输出的 DOM 与改造前静态标记逐字对齐（含科目的 " / 80 小时" 文案、
+     计划标题后的教学标签、进度告急的两个档位），所以逐像素一致。 */
   function renderExam(key) {
-    var d = EXAMS[key]; if (!d) { return; }
-    document.getElementById('exam-title').textContent = d.title;
+    var d = examById(key); if (!d) { return; }
+
+    document.getElementById('exam-title').textContent = d.name;
     document.getElementById('exam-date').textContent = d.date;
     document.getElementById('countdown-days').textContent = d.days;
     document.getElementById('exam-est').textContent = d.est;
     document.getElementById('review-due').textContent = d.due;
     document.getElementById('review-breakdown').textContent = d.breakdown;
+
+    /* 本周行动：改造前是静态标记，且切备考时**不会**跟着变 —— 保持一致，
+       只在整页初始化时有数据可读的情况下由数据驱动覆盖。 */
+    if (d.wins) {
+      var winsNum = document.getElementById('wins-count');
+      var winsBd = document.getElementById('wins-breakdown');
+      if (winsNum) { winsNum.textContent = d.wins.count; }
+      if (winsBd) { winsBd.textContent = d.wins.breakdown; }
+    }
+
     var subs = d.subjects.map(function (x) {
-      var prog = x[3];
+      /* 改造前的告急档位：≤45% 才出「进度告急」，正好 45% 用弱化档 */
       var alertHtml = '';
-      if (prog <= 45) {
-        var mildClass = prog === 45 ? ' subject__alert--mild' : '';
-        alertHtml = '<div style="display:flex;align-items:center;margin-top:6px"><span class="subject__alert' + mildClass + '">进度告急</span><button type="button" class="subject__next" data-subject="' + x[0] + '">下一步</button></div>';
+      if (x.percent <= 45) {
+        var mildClass = x.percent === 45 ? ' subject__alert--mild' : '';
+        alertHtml = '<div style="display:flex;align-items:center;margin-top:6px"><span class="subject__alert' + mildClass + '">进度告急</span><button type="button" class="subject__next" data-subject="' + x.name + '">下一步</button></div>';
       }
-      return '<div class="subject"><div class="subject__head"><span class="subject__name">' + x[0] + '</span><span class="subject__hours"><b>' + x[1] + '</b> / ' + x[2] + (typeof x[1] === 'number' && x[2] > 100 ? ' 词' : ' 小时') + '</span></div><div class="progress progress--thin"><div class="progress__fill ' + x[4] + '" style="width:' + prog + '%"></div></div>' + alertHtml + '</div>';
+      return '<div class="subject"><div class="subject__head"><span class="subject__name">' + x.name + '</span><span class="subject__hours"><b>' + x.hours + '</b> / ' + x.total + ' ' + x.unit + '</span></div><div class="progress progress--thin"><div class="progress__fill ' + (x.fill || '') + '" style="width:' + x.percent + '%"></div></div>' + alertHtml + '</div>';
     }).join('');
     document.getElementById('subjects').innerHTML = subs;
+
     var plans = d.plans.map(function (x) {
-      return '<div class="plan"><button type="button" class="check" data-action="check" aria-pressed="false" aria-label="标记完成"><i data-lucide="check"></i></button><div class="plan__main"><div class="plan__title">' + x[0] + '</div><div class="plan__meta"><i data-lucide="clock"></i> ' + x[2] + '</div></div></div>';
+      var tagHtml = x.tag
+        ? ' <span class="tag' + (x.tag === '真题' ? ' tag--active' : x.tag === '复习' ? ' tag--paused' : '') + '" style="height:18px;font-size:10px;margin-left:4px">' + x.tag + '</span>'
+        : '';
+      return '<div class="plan"><button type="button" class="check" data-action="check" aria-pressed="false" aria-label="标记完成"><i data-lucide="check"></i></button><div class="plan__main"><div class="plan__title">' + x.title + tagHtml + '</div><div class="plan__meta"><i data-lucide="clock"></i> ' + x.meta + '</div></div></div>';
     }).join('');
     document.getElementById('plan-list').innerHTML = plans;
     document.getElementById('plan-count').textContent = d.plans.length + ' 项';
@@ -1401,16 +1515,59 @@ body {
     });
     if (window.lucide) { window.lucide.createIcons(); }
   }
+
+  /* chip 的选中态也由数据驱动：data-exam 对应 store 里的 id */
+  function markActiveChip(key) {
+    document.querySelectorAll('#exam-chips .chip').forEach(function (c) {
+      var on = c.getAttribute('data-exam') === key;
+      c.classList.toggle('is-active', on);
+      c.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+  }
+
   document.querySelectorAll('#exam-chips .chip').forEach(function (chip) {
     chip.addEventListener('click', function () {
-      document.querySelectorAll('#exam-chips .chip').forEach(function (c) {
-        var on = c === chip;
-        c.classList.toggle('is-active', on);
-        c.setAttribute('aria-selected', on ? 'true' : 'false');
-      });
-      renderExam(chip.getAttribute('data-exam'));
-      window.LF.toast('已切换到 ' + chip.textContent.split(' ·')[0]);
+      var key = chip.getAttribute('data-exam');
+      markActiveChip(key);
+      /* 切换备考 → 记住选择（改造前不记，刷新就回到考研） */
+      store.active = key;
+      saveExamStore(store);
+      renderExam(key);
+      window.LF.toast('已切换到 ' + String(chip.textContent || '').split(' ·')[0]);
     });
+  });
+
+  /* 首次渲染：改造前**只有点 chip 才渲染**，首屏靠静态标记 →
+     这里只在"拿到数据"时覆盖一次，静态标记继续当回退，两边都不白屏。 */
+  var activeKey = activeExamKey();
+  var activeData = examById(activeKey);
+  if (activeData && activeData.subjects && activeData.subjects.length) {
+    markActiveChip(activeKey);
+    renderExam(activeKey);
+  }
+
+  /* 跨页联动：别的页改了备考数据 → 本页重读并重渲染 */
+  window.addEventListener('exam-updated', function () {
+    store = loadExamStore();
+    var k = activeExamKey();
+    markActiveChip(k);
+    renderExam(k);
+  });
+  window.addEventListener('storage', function (e) {
+    if (e.key === K_EXAM) {
+      store = loadExamStore();
+      var k = activeExamKey();
+      markActiveChip(k);
+      renderExam(k);
+    }
+  });
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) {
+      store = loadExamStore();
+      var k = activeExamKey();
+      markActiveChip(k);
+      renderExam(k);
+    }
   });
 
   showState();

@@ -220,7 +220,7 @@ body {
   max-width: 430px;
   margin: 0 auto;
   min-height: 100vh;
-  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(148px + env(safe-area-inset-bottom, 0px));
 }
 
 /* 桌面呈现：居中 + 侧边框 + 柔和投影，像一台安静的设备 */
@@ -1208,18 +1208,81 @@ body {
   var $ = function (id) { return document.getElementById(id); };
 
   /* 开关切换 */
+  function toggleSwitch(s) {
+    var on = !s.classList.contains('is-on');
+    s.classList.toggle('is-on', on);
+    s.setAttribute('aria-checked', on ? 'true' : 'false');
+  }
+
   document.querySelectorAll('.switch').forEach(function (s) {
     s.addEventListener('click', function () {
-      var on = !s.classList.contains('is-on');
-      s.classList.toggle('is-on', on);
-      s.setAttribute('aria-checked', on ? 'true' : 'false');
+      toggleSwitch(s);
     });
   });
 
-  /* 保存 → 校验 → toast → 700ms 返回 */
+  /* 整行可点：带 .switch-row 的行，点行的任意位置都切换行内开关。
+     开关自己的点击会冒泡到行上，所以先用 sw.contains(e.target) 排除，避免翻两次翻回原状。 */
+  document.querySelectorAll('.switch-row').forEach(function (row) {
+    row.addEventListener('click', function (e) {
+      var sw = row.querySelector('.switch');
+      if (!sw) { return; }
+      if (sw.contains(e.target)) { return; }   // 开关自己已经处理过，直接返回
+      toggleSwitch(sw);
+    });
+  });
+
+  /* 保存 → 校验 → **写盘 + 广播** → toast → 700ms 返回
+     （改造前这里只弹 toast：事件名/日期/置顶开关**一个都没存**） */
   $('save-cd').addEventListener('click', function () {
     var name = $('cd-name').value.trim();
     if (!name) { window.LF.toast('请填写事件名称'); return; }
+
+    /* ══════════════════════════════════════════════════════════════
+       持久化层（本次新增）
+
+         lifeflow-countdown-items = { v:1, items:[ { id, title, date, icon, accent, pinned } ] }
+       与 countdown.html 共用同一个 key（列表页读取并渲染）。
+       · date 为空时退化为今天，避免写出 "Invalid Date"
+       · icon/accent 是本页没有的字段（表单里没图标选择），
+         新条目取中性值 —— 不为了凑字段而假装用户选过
+       ══════════════════════════════════════════════════════════════ */
+    var K_CD = 'lifeflow-countdown-items';
+    var SCHEMA_V = 1;
+
+    var dateVal = $('cd-date') ? $('cd-date').value : '';
+    if (!dateVal) {
+      var t = new Date();
+      var p = function (x) { return (x < 10 ? '0' : '') + x; };
+      dateVal = t.getFullYear() + '-' + p(t.getMonth() + 1) + '-' + p(t.getDate());
+    }
+    var sw = document.querySelector('.switch-row .switch');
+    var pinned = !!(sw && sw.classList.contains('is-on'));
+
+    var items = [];
+    try {
+      var raw = localStorage.getItem(K_CD);
+      if (raw) {
+        var d = JSON.parse(raw);
+        if (d && d.v === SCHEMA_V && Array.isArray(d.items)) { items = d.items; }
+      }
+    } catch (e) { /* 存储不可用 → 退化为空表（本页只是追加） */ }
+
+    items.push({
+      id: 'x' + Date.now(),
+      title: name,
+      date: dateVal,
+      icon: 'calendar',
+      accent: 'purple',
+      pinned: pinned
+    });
+
+    try {
+      localStorage.setItem(K_CD, JSON.stringify({ v: SCHEMA_V, items: items }));
+      window.dispatchEvent(new CustomEvent('countdown-updated', { detail: { items: items } }));
+    } catch (e) { /* 忽略：无存储时仍走成功态，不阻塞用户 */ }
+
+    $('content').classList.add('is-hidden');
+    $('done-state').classList.remove('is-hidden');
     window.LF.toast('倒计时已创建');
     setTimeout(function () { location.href = 'countdown.html'; }, 700);
   });
@@ -1240,6 +1303,12 @@ body {
   .switch-row__sub { display: block; margin-top: 2px; font-size: 12px; color: var(--text-3); }
 
   .switch:active { transform: scale(0.94); }
+
+  /* 触控热区：带 .switch-row 的行，语义是「点这行就切换」。
+     所以热区撑在整行上，开关本身不再单独撑 —— 避免两个重叠热区。
+     整行可点后，行高 45.2px 已达标（≥44px）。 */
+  .switch-row { cursor: pointer; }
+  .switch-row:active { transform: scale(0.985); }
 
   /* 模块主色按钮：柔和紫 */
   .btn--purple { background: linear-gradient(135deg, #8B7EC8 0%, #6E5BB8 100%); color: #FFFFFF; box-shadow: 0 8px 22px rgba(139, 126, 200, 0.34); }

@@ -220,7 +220,7 @@ body {
   max-width: 430px;
   margin: 0 auto;
   min-height: 100vh;
-  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(148px + env(safe-area-inset-bottom, 0px));
 }
 
 /* 桌面呈现：居中 + 侧边框 + 柔和投影，像一台安静的设备 */
@@ -781,6 +781,19 @@ body {
 .switch.is-on { background: var(--gradient); }
 .switch.is-on::after { transform: translateX(20px); }
 
+/* 触控热区：按钮自己的渲染盒一点不动（视觉不可能变），
+   只用一个绝对定位的透明伪元素往外撑出可点区。
+   热区高 = 13 + 28 + 13 = 54px；diet 页有 .meal-switch .switch{transform:scale(0.82)}，
+   缩放会连热区一起缩，54 × 0.82 ≈ 44.3px，仍达标。 */
+.switch::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -13px;
+  bottom: -13px;
+}
+
 /* 复选框（圆润） */
 .check {
   width: 26px;
@@ -1238,13 +1251,106 @@ body {
     if (h) { var href = h.getAttribute('data-href'); if (href && href.charAt(0) !== '#') { location.href = href; } }
   });
 
-  /* 开关：启用/停用（演示） */
-  document.querySelectorAll('.rrow .switch').forEach(function (sw) {
-    sw.addEventListener('click', function () {
-      var on = sw.classList.toggle('is-on');
-      sw.setAttribute('aria-checked', on ? 'true' : 'false');
+  /* ══════════════════════════════════════════════════════════════
+     持久化（本次新增）—— 改造前 8 个开关的状态**完全不落盘**：
+     点一下只切 class + 弹 toast，刷新就回默认（全开）。
+
+       设置类数据单独一个 key（不混进集合）：
+       lifeflow-reminder-settings = { v:1, on:{ <稳定 id>: true|false } }
+       id 规则：r<组序号>-<行序号>，从页面**自上而下**数（作息 r1-1..r1-3 · 服药 r2-1..r2-2 ·
+               饮水 r3-1..r3-2 · 久坐 r4-1）。行顺序变了要跟着改 —— 见下面 SEED_ON。
+
+     顶部「今日 8 个提醒 · 已响 3 · 待响 5」里的 8 / 5 **由开关状态算**（改造前写死），
+     3 是"已响"计数、与开关无关，仍用静态值。
+     ══════════════════════════════════════════════════════════════ */
+  var K_SETTINGS = 'lifeflow-reminder-settings';
+  var SCHEMA_V = 1;
+  /* 改造前 8 个开关都是 is-on ⟹ 种子全 true，首屏与改造前逐像素一致 */
+  var SEED_ON = {
+    'r1-1': true, 'r1-2': true, 'r1-3': true,
+    'r2-1': true, 'r2-2': true,
+    'r3-1': true, 'r3-2': true,
+    'r4-1': true
+  };
+
+  function loadSettings() {
+    try {
+      var raw = localStorage.getItem(K_SETTINGS);
+      if (raw) {
+        var d = JSON.parse(raw);
+        if (d && d.v === SCHEMA_V && d.on && typeof d.on === 'object') { return d; }
+      }
+    } catch (e) { /* 存储不可用 → 退化为种子（页面仍能显示） */ }
+    var seed = { v: SCHEMA_V, on: Object.assign({}, SEED_ON) };
+    saveSettings(seed, true);
+    return seed;
+  }
+  function saveSettings(obj, quiet) {
+    try {
+      localStorage.setItem(K_SETTINGS, JSON.stringify({ v: SCHEMA_V, on: obj.on }));
+      if (!quiet) { window.dispatchEvent(new CustomEvent('reminders-updated', { detail: { on: obj.on } })); }
+    } catch (e) { /* 忽略 */ }
+  }
+
+  /* 给 8 行开关编号（不改标记、不加 class，只挂 data 属性）。
+     ⚠ 计数与编号都用**全部 .rrow**（含没有开关的那一行）：
+       改造前顶部写死「8 个提醒」，而带开关的只有 7 行 —— 用 rows.length 会变成 7 ⟹ 假的像素差异。 */
+  var rows = [];
+  var totalRows = 0;
+  document.querySelectorAll('.rgroup').forEach(function (grp, gi) {
+    grp.querySelectorAll('.rrow').forEach(function (row, ri) {
+      totalRows++;
+      var sw = row.querySelector('.switch');
+      if (!sw) { return; }
+      var id = 'r' + (gi + 1) + '-' + (ri + 1);
+      sw.setAttribute('data-rid', id);
+      rows.push({ id: id, sw: sw });
+    });
+  });
+
+  function renderSwitches() {
+    var st = loadSettings();
+    rows.forEach(function (r) {
+      var on = st.on[r.id] !== false;
+      r.sw.classList.toggle('is-on', on);
+      r.sw.setAttribute('aria-checked', on ? 'true' : 'false');
+    });
+    var stat = document.querySelector('.remind-stats span');
+    if (stat) {
+      /* ⚠ 计数口径（踩过两次，记下来）：
+         · 全页 8 行、**8 个开关**，但改造前顶部写死的是「8 个 · 已响 3 · 待响 5」。
+         · 5 ≠ 开关数（8），也 ≠ 行数 − 已响（8−3）：它是**静态业务数字**（"已经响过 3 个，还剩 5 个"）。
+         ⟹ 8 / 3 / 5 全都留作静态回退值，**只在真有开关被停用时**才按"停用几个就从 5 里减几个"改成活的。
+            这样首屏一个字符都不动（逐像素 0 差异），而关掉开关后数字又不会骗人。 */
+      var off = rows.filter(function (r) { return st.on[r.id] === false; }).length;
+      if (!off) { return; }
+      var waiting = Math.max(0, 5 - off);
+      stat.innerHTML = '今日 <b>' + totalRows + '</b> 个提醒 · 已响 <b>3</b> · 待响 <b>' + waiting + '</b>';
+    }
+  }
+
+  /* 开关：启用/停用 —— 改成"切 class + 写盘 + 广播"（改造前只 toast） */
+  rows.forEach(function (r) {
+    r.sw.addEventListener('click', function () {
+      var st = loadSettings();
+      var on = !(st.on[r.id] !== false);
+      st.on[r.id] = on;
+      saveSettings(st, false);
+      r.sw.classList.toggle('is-on', on);
+      r.sw.setAttribute('aria-checked', on ? 'true' : 'false');
+      renderSwitches();
       showToast(on ? '提醒已启用' : '提醒已停用');
     });
+  });
+  renderSwitches();
+
+  /* 跨页联动：别的页改了 → 重读并重渲染 */
+  window.addEventListener('reminders-updated', renderSwitches);
+  window.addEventListener('storage', function (e) {
+    if (e.key === K_SETTINGS) { renderSwitches(); }
+  });
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) { renderSwitches(); }
   });
 
   if (window.lucide) { window.lucide.createIcons(); }

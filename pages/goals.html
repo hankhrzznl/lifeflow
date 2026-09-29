@@ -220,7 +220,7 @@ body {
   max-width: 430px;
   margin: 0 auto;
   min-height: 100vh;
-  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(148px + env(safe-area-inset-bottom, 0px));
 }
 
 /* 桌面呈现：居中 + 侧边框 + 柔和投影，像一台安静的设备 */
@@ -1260,11 +1260,231 @@ body {
     });
   }
 
-  /* 过滤 */
+  /* ══════════════════════════════════════════════════════════════
+     持久化层（本次新增）—— 改造前这一页**没有数据落盘**：
+     列表里 5 张 .goal-card 是写死的静态标记（连"置顶/暂停中/已达成"这类
+     状态文字都硬编码在标记里），过滤只切 display，跨页取不到"同一条目标"。
+     现在：这 5 个目标当**种子**写进 localStorage，列表由数据渲染；
+     点卡片带上 ?id=，与详情页共用 sortGoals() 同一套排序口径。
+
+       lifeflow-goal-items = { v:1, items:[ {
+         id, domId, title, status, domain, domainIcon,
+         days, deadline, progress, bar, pct,
+         measure:{ label, icon, href, cls } | null,
+         summary, nextStep, today:{ icon, text, full },
+         step:{ title, sub, startedAt },
+         strategy,
+         stages:[ { id, name, meta, date, state:'done'|'active'|'todo' } ],
+         tasks: [ { id, name, meta, done } ]
+       } ] }
+       —— 三层：目标 → 阶段(stages) → 任务(tasks)
+     ══════════════════════════════════════════════════════════════ */
+  var K_GOALS = 'lifeflow-goal-items';
+  var SCHEMA_V = 1;
+
+  function ymd(d) {
+    var p = function (x) { return (x < 10 ? '0' : '') + x; };
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+  }
+
+  /* 种子：**精确复刻**改造前写死的 5 张卡 —— 标题 / 领域标签 / 已推进天数 /
+     进度与进度条配色 / 衡量维度 / 今日计数 / 状态标签，逐字照抄；
+     数组顺序 = 改造前的 DOM 顺序（card-1,2,5,3,4），排序后渲染结果不变。
+     ⚠ 三层结构里只有第 1 条在改造前写了阶段与任务，其余 4 条 stages/tasks
+       留空 —— 不硬造内容（详情页对空集隐藏对应区块）。 */
+  function seedGoals() {
+    return [
+      {
+        id: 'seed-g1', domId: 'goal-card-1',
+        title: '三个月减脂到体脂 22%',
+        status: 'active', domain: '健康', domainIcon: 'heart-pulse',
+        days: 42, deadline: '11 月 20 日', progress: 64, bar: '', pct: '',
+        measure: { label: '训练', icon: 'dumbbell', href: 'training.html', cls: 'attach--train' },
+        summary: '由训练数据自动汇总 · 本周 2/3 次 · 下一步：今日训练 1 次',
+        nextStep: '训练 1 次',
+        today: { icon: 'check-circle-2', text: '今日 2/3', full: false },
+        step: { title: '晨间慢跑', sub: '30 分钟有氧 · 从 5 分钟起步也可以', startedAt: null },
+        strategy: '减脂的核心是「热量缺口 + 可持续性」。建议以有氧训练建立基础消耗，力量训练保留肌肉、维持代谢。将目标拆成「每周 4 次有氧 + 2 次力量」的节奏，比短期猛练更容易做下去 3 个月。饮食上先用记录建立觉察，再逐步减少精制碳水，避免激进节食引发反弹。',
+        stages: [
+          { id: 'st1', name: '建立运动习惯', meta: '连续 4 周每周运动 3 次', date: '已完成', state: 'done' },
+          { id: 'st2', name: '体脂降至 24%', meta: '当前 25.3% · 饮食控制 + 有氧', date: '10 月 15 日', state: 'active' },
+          { id: 'st3', name: '体脂降至 22%', meta: '维持力量训练，精细饮食', date: '11 月 20 日', state: 'todo' }
+        ],
+        tasks: [
+          { id: 'tk1', name: '周一有氧 30 分钟', meta: '07:30', done: true },
+          { id: 'tk2', name: '周三力量训练 45 分钟', meta: '18:30', done: false },
+          { id: 'tk3', name: '周五有氧 30 分钟', meta: '07:30', done: false },
+          { id: 'tk4', name: '记录每日饮食', meta: '每天 5 分钟', done: false }
+        ]
+      },
+      {
+        id: 'seed-g2', domId: 'goal-card-2',
+        title: '建立稳定的早起睡眠节律',
+        status: 'active', domain: '睡眠', domainIcon: 'moon-star',
+        days: 56, deadline: null, progress: 48, bar: 'progress__fill--blue', pct: '',
+        measure: { label: '睡眠', icon: 'moon', href: 'sleep.html', cls: 'attach--sleep' },
+        summary: '由睡眠数据自动汇总 · 本周 6/7 天达标 · 下一步：今晚 23:00 前入睡',
+        nextStep: '23:00 前准备入睡',
+        today: { icon: 'check-circle-2', text: '今日 1/2', full: false },
+        step: { title: '23:00 前准备入睡', sub: '', startedAt: null },
+        strategy: '',
+        stages: [],
+        tasks: []
+      },
+      {
+        id: 'seed-g5', domId: 'goal-card-5',
+        title: '3 个月存 5000 元',
+        status: 'active', domain: '财务', domainIcon: 'piggy-bank',
+        days: 42, deadline: null, progress: 64, bar: 'progress__fill--green', pct: '',
+        measure: { label: '记账', icon: 'wallet', href: 'expense.html', cls: 'attach--expense' },
+        summary: '由记账数据自动汇总 · 本月已存 3,200 / 5,000 元 · 下一步：本周记 3 笔',
+        nextStep: '记 1 笔帐',
+        today: { icon: 'wallet', text: '今日已记 3 笔', full: false },
+        step: { title: '记 1 笔帐', sub: '', startedAt: null },
+        strategy: '',
+        stages: [],
+        tasks: []
+      },
+      {
+        id: 'seed-g3', domId: 'goal-card-3',
+        title: '读完 12 本设计经典',
+        status: 'paused', domain: '工作学习', domainIcon: 'book-open',
+        days: 28, deadline: null, progress: 33, bar: 'progress__fill--amber', pct: 'goal-card__pct--amber',
+        measure: { label: '阅读', icon: 'repeat', href: 'habit.html', cls: 'attach--habit' },
+        summary: '由阅读数据自动汇总 · 累计 4/12 本 · 已暂停 14 天',
+        nextStep: '重新开始阅读 10 分钟',
+        today: { icon: 'pause-circle', text: '已暂停', full: false },
+        step: { title: '重新开始阅读 10 分钟', sub: '', startedAt: null },
+        strategy: '',
+        stages: [],
+        tasks: []
+      },
+      {
+        id: 'seed-g4', domId: 'goal-card-4',
+        title: '完成一次半程马拉松',
+        status: 'done', domain: '生活', domainIcon: 'flag',
+        days: 90, deadline: null, progress: 100, bar: 'progress__fill--green', pct: 'goal-card__pct--green',
+        measure: { label: '训练', icon: 'dumbbell', href: 'training.html', cls: 'attach--train' },
+        summary: null,
+        nextStep: '回顾完赛经历',
+        today: { icon: 'check-circle-2', text: '已达成', full: true },
+        step: { title: '回顾完赛经历', sub: '', startedAt: null },
+        strategy: '',
+        stages: [],
+        tasks: []
+      }
+    ];
+  }
+
+  function loadGoals() {
+    try {
+      var raw = localStorage.getItem(K_GOALS);
+      if (raw) {
+        var d = JSON.parse(raw);
+        if (d && d.v === SCHEMA_V && Array.isArray(d.items)) { return d.items; }
+      }
+    } catch (e) { /* 存储不可用 → 退化为种子，页面仍能显示 */ }
+    var seed = seedGoals();
+    saveGoals(seed, true);
+    return seed;
+  }
+  function saveGoals(list, quiet) {
+    try {
+      localStorage.setItem(K_GOALS, JSON.stringify({ v: SCHEMA_V, items: list }));
+      if (!quiet) { window.dispatchEvent(new CustomEvent('goal-updated', { detail: { items: list } })); }
+    } catch (e) { /* 忽略 */ }
+  }
+
+  /* 排序口径（**列表与详情页共用**，两侧必须一致）：
+     先按状态「进行中 → 暂停 → 已完成」，同状态内保持存储顺序（sort 稳定）。
+     ⚠ 详情页不带 ?id= 时的回退也必须走这一支 —— 否则会显示出与列表
+       第一张卡不同的条目（头脑域踩过这个坑）。 */
+  var STATUS_RANK = { active: 0, paused: 1, done: 2 };
+  function sortGoals(arr) {
+    return arr.slice().sort(function (a, b) {
+      var ra = STATUS_RANK[a.status]; ra = (ra == null ? 9 : ra);
+      var rb = STATUS_RANK[b.status]; rb = (rb == null ? 9 : rb);
+      return ra - rb;
+    });
+  }
+
+  var STATUS_LABEL = { active: '进行中', paused: '暂停', done: '已完成' };
+  var STATUS_TAG = { active: 'tag--active', paused: 'tag--paused', done: 'tag--done' };
+  /* meta 行里那段状态文字（改造前写死在标记里：暂停中 / 已达成） */
+  var STATUS_NOTE = { active: '', paused: '暂停中', done: '已达成' };
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  function statusOf(g) { return STATUS_RANK[g.status] == null ? 'active' : g.status; }
+  function detailHref(g) { return 'goal-detail.html?id=' + encodeURIComponent(g.id); }
+
+  /* 卡片标记：与改造前的静态标记逐字对应（含 <i data-lucide> 图标名） */
+  function goalCardHTML(g) {
+    var st = statusOf(g);
+    var segs = [g.domain, '已推进 ' + g.days + ' 天', STATUS_NOTE[st]].filter(function (x) { return !!x; });
+    var meta = '<i data-lucide="' + esc(g.domainIcon || 'target') + '"></i> ' + esc(segs.join(' · '));
+    if (g.measure) {
+      meta += ' · <span class="attach ' + esc(g.measure.cls) + '" data-href="' + esc(g.measure.href) + '">' +
+        '<i data-lucide="' + esc(g.measure.icon) + '"></i> 衡量：' + esc(g.measure.label) + '</span>';
+    }
+    var pct = Number(g.progress || 0);
+    var today = g.today || {};
+    return '<article class="goal-card' + (st === 'done' ? ' is-done' : '') + '"' +
+        ' data-dom-id="' + esc(g.domId || ('goal-card-' + g.id)) + '"' +
+        ' data-status="' + esc(st) + '"' +
+        ' data-href="' + esc(detailHref(g)) + '"' +
+        ' tabindex="0" role="button" aria-label="查看目标：' + esc(g.title) + '">' +
+      '<div class="goal-card__head">' +
+        '<div class="grow">' +
+          '<h2 class="goal-card__title">' + esc(g.title) + '</h2>' +
+          '<p class="goal-card__meta">' + meta + '</p>' +
+        '</div>' +
+        '<span class="tag ' + STATUS_TAG[st] + '"><span class="tag__dot"></span>' + STATUS_LABEL[st] + '</span>' +
+      '</div>' +
+      '<div class="goal-card__progress">' +
+        '<div class="row">' +
+          '<span class="t-sm t-muted">总进度</span>' +
+          '<span class="t-num goal-card__pct' + (g.pct ? ' ' + esc(g.pct) : '') + '">' + pct + '%</span>' +
+        '</div>' +
+        '<div class="progress"><div class="progress__fill' + (g.bar ? ' ' + esc(g.bar) : '') + '" style="width:' + pct + '%"></div></div>' +
+        (g.summary ? '<p class="t-caption t-faint" style="margin-top:8px">' + esc(g.summary) + '</p>' : '') +
+      '</div>' +
+      '<div class="goal-card__step"><i data-lucide="footprints"></i> 今天这一步：' + esc(g.nextStep) + '</div>' +
+      '<div class="goal-card__foot">' +
+        '<span class="goal-card__today' + (today.full ? ' is-full' : '') + '">' +
+          '<i data-lucide="' + esc(today.icon || 'circle') + '"></i> ' + esc(today.text || '') + '</span>' +
+        '<span class="goal-card__arrow"><i data-lucide="chevron-right"></i></span>' +
+      '</div>' +
+    '</article>';
+  }
+
+  /* 过滤 + 渲染 */
   var chips = document.querySelectorAll('#filter-chips .chip');
-  var cards = document.querySelectorAll('#goal-list .goal-card');
   var empty = document.getElementById('empty-state');
   var list = document.getElementById('goal-list');
+  var activeFilter = 'all';
+  var goals = loadGoals();
+
+  function applyFilter() {
+    if (!list) { return; }
+    var visible = 0;
+    Array.prototype.forEach.call(list.querySelectorAll('.goal-card'), function (card) {
+      var show = activeFilter === 'all' || card.getAttribute('data-status') === activeFilter;
+      card.style.display = show ? '' : 'none';
+      if (show) { visible++; }
+    });
+    if (empty) { empty.classList.toggle('is-hidden', visible > 0); }
+  }
+
+  /* 渲染：数据在 → 覆盖静态回退；静态那 5 张卡留在 HTML 里当无 JS / 无存储的回退 */
+  function renderGoals() {
+    if (!list) { return; }
+    list.innerHTML = sortGoals(goals).map(goalCardHTML).join('');
+    applyFilter();
+    if (window.lucide) { window.lucide.createIcons(); }
+  }
 
   chips.forEach(function (chip) {
     chip.addEventListener('click', function () {
@@ -1273,14 +1493,8 @@ body {
         c.classList.toggle('is-active', on);
         c.setAttribute('aria-selected', on ? 'true' : 'false');
       });
-      var f = chip.getAttribute('data-filter');
-      var visible = 0;
-      cards.forEach(function (card) {
-        var show = f === 'all' || card.getAttribute('data-status') === f;
-        card.style.display = show ? '' : 'none';
-        if (show) { visible++; }
-      });
-      empty.classList.toggle('is-hidden', visible > 0);
+      activeFilter = chip.getAttribute('data-filter');
+      applyFilter();
     });
   });
 
@@ -1293,16 +1507,33 @@ body {
     }
   });
 
-  /* 键盘激活卡片 */
-  cards.forEach(function (card) {
-    card.addEventListener('keydown', function (e) {
+  /* 键盘激活卡片（列表是动态渲染的 → 用事件委托，不能像改造前那样逐节点绑） */
+  if (list) {
+    list.addEventListener('keydown', function (e) {
       if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        var href = card.getAttribute('data-href');
-        if (href) { location.href = href; }
+        var card = e.target.closest('.goal-card');
+        if (card) {
+          e.preventDefault();
+          var href = card.getAttribute('data-href');
+          if (href) { location.href = href; }
+        }
       }
     });
+  }
+
+  /* 跨页联动：goal-create / goal-detail 改了数据 → 本页重读并重渲染 */
+  window.addEventListener('goal-updated', function (e) {
+    goals = (e && e.detail && Array.isArray(e.detail.items)) ? e.detail.items : loadGoals();
+    renderGoals();
   });
+  window.addEventListener('storage', function (e) {
+    if (e.key === K_GOALS) { goals = loadGoals(); renderGoals(); }
+  });
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) { goals = loadGoals(); renderGoals(); }
+  });
+
+  renderGoals();
 
   if (window.lucide) { window.lucide.createIcons(); }
 })();

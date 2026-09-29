@@ -220,7 +220,7 @@ body {
   max-width: 430px;
   margin: 0 auto;
   min-height: 100vh;
-  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(148px + env(safe-area-inset-bottom, 0px));
 }
 
 /* 桌面呈现：居中 + 侧边框 + 柔和投影，像一台安静的设备 */
@@ -1203,10 +1203,58 @@ body {
     window.LF.toast('语音速记演示');
   });
 
-  /* 保存 → 校验 → toast → 700ms 返回 */
+  /* ══════════════════════════════════════════════════════════════
+     保存 —— 改成写盘（改造前只弹 toast + 跳转，标题和正文**都没存**）
+
+       lifeflow-note-items = { v:1, items:[ { id, title, body, pinned, createdAt, updatedAt } ] }
+     与 notes.html / note-detail.html 共用同一个 key。
+     ══════════════════════════════════════════════════════════════ */
+  var K_NOTES = 'lifeflow-note-items';
+  var SCHEMA_V = 1;
+
+  function ymd(d) {
+    var p = function (x) { return (x < 10 ? '0' : '') + x; };
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+  }
+  function loadNotes() {
+    try {
+      var raw = localStorage.getItem(K_NOTES);
+      if (raw) {
+        var d = JSON.parse(raw);
+        if (d && d.v === SCHEMA_V && Array.isArray(d.items)) { return d.items; }
+      }
+    } catch (e) { /* 存储不可用 → 退化为空表（本页只是追加） */ }
+    return [];
+  }
+
+  /* 保存 → 校验 → 写盘 → 广播 → 成功态 → 700ms 返回 */
   $('save-note').addEventListener('click', function () {
     var title = $('note-title').value.trim();
     if (!title) { window.LF.toast('请填写标题'); return; }
+    var body = $('note-body') ? $('note-body').value.trim() : '';
+
+    var now = new Date();
+    var hm = ('0' + now.getHours()).slice(-2) + ':' + ('0' + now.getMinutes()).slice(-2);
+    var stamp = ymd(now) + ' ' + hm;
+    /* 支持从详情页「编辑」带 ?id= 进来 —— 有 id 就更新那一条，没有就新增 */
+    var editId = new URLSearchParams(location.search).get('id');
+    var items = loadNotes();
+    if (editId) {
+      var hit = false;
+      items = items.map(function (x) {
+        if (String(x.id) !== String(editId)) { return x; }
+        hit = true;
+        return { id: x.id, title: title, body: body, pinned: !!x.pinned, createdAt: x.createdAt, updatedAt: stamp };
+      });
+      if (!hit) { items.push({ id: editId, title: title, body: body, pinned: false, createdAt: stamp, updatedAt: stamp }); }
+    } else {
+      items.push({ id: 'x' + Date.now(), title: title, body: body, pinned: false, createdAt: stamp, updatedAt: stamp });
+    }
+    try {
+      localStorage.setItem(K_NOTES, JSON.stringify({ v: SCHEMA_V, items: items }));
+      window.dispatchEvent(new CustomEvent('note-updated', { detail: { items: items } }));
+    } catch (e) { /* 忽略：无存储时仍走成功态，不阻塞用户 */ }
+
     window.LF.toast('笔记已保存');
     setTimeout(function () { location.href = 'notes.html'; }, 700);
   });

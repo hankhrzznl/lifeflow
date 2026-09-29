@@ -220,7 +220,7 @@ body {
   max-width: 430px;
   margin: 0 auto;
   min-height: 100vh;
-  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(148px + env(safe-area-inset-bottom, 0px));
 }
 
 /* 桌面呈现：居中 + 侧边框 + 柔和投影，像一台安静的设备 */
@@ -1153,7 +1153,7 @@ body {
         <h2 class="section-head__title">前瞻下周</h2>
         <span class="section-head__hint">周日晚 20:00 提醒</span>
       </div>
-      <p class="t-sm" style="color:var(--text-1);line-height:1.7">已写入 1 项改变：<b>22:00 降速预告响起时，手机放客厅充电</b></p>
+      <p class="t-sm" id="fwd-commit-line" style="color:var(--text-1);line-height:1.7">已写入 1 项改变：<b>22:00 降速预告响起时，手机放客厅充电</b></p>
       <p class="t-caption t-faint" style="margin-top:6px">下周日程骨架已按节奏方案生成，目标切片待你确认</p>
       <button type="button" class="btn btn--primary btn--block" id="fwd-confirm" style="margin-top:12px"><i data-lucide="calendar-check"></i> 预览下周安排</button>
     </section>
@@ -1216,6 +1216,89 @@ body {
   var fwdBtn = $('fwd-confirm'); if (fwdBtn) { fwdBtn.addEventListener('click', function () { showToast('下周安排预览已生成 · 随时可调整'); }); }
   if (window.lucide) { window.lucide.createIcons(); }
   window.LF = { toast: showToast };
+
+  /* ══════════════════════════════════════════════════════════════
+     持久化层（本次新增）—— ⚠ 这一页的性质和其它页**不一样**，先说清：
+
+     ① 本页主体（本周小胜 26 次、专注 320 分钟、习惯 5/7 天、
+        日均饮水 1.7L、学习完成率 82%、日程完成率 76%、每日专注柱状、
+        目标进度 64/48/33%、「陪练周推进报告」文案）**全是聚合结果**，
+        不是用户在本页录入的数据。按规格它们应当**由本页去读别人的 key**，
+        而不是本页自己存一份（存了就必然和目标页漂移）。
+        该读哪些 key —— 见交付报告「weekly 应读哪些 key」一节。
+        ⟹ 本次**没有**为这些数字造 lifeflow-weekly-* 的假 key。
+
+     ② 本页真正"自己产生"的数据只有一处：前瞻下周的那条**承诺**
+        （点击「预览下周安排」时确认）。它不来自任何别的模块，
+        刷新即丢 —— 所以只有它落盘：
+
+          lifeflow-weekly-forward = { v:1, text, savedAt }
+     ══════════════════════════════════════════════════════════════ */
+  var K_FWD = 'lifeflow-weekly-forward';
+  var SCHEMA_V = 1;
+  /* 回退值：改造前写死在标记里的那句承诺（拿不到数据时原样显示） */
+  var FWD_SEED_TEXT = '22:00 降速预告响起时，手机放客厅充电';
+
+  function loadForward() {
+    try {
+      var raw = localStorage.getItem(K_FWD);
+      if (raw) {
+        var d = JSON.parse(raw);
+        if (d && d.v === SCHEMA_V && typeof d.text === 'string' && d.text) { return d; }
+      }
+    } catch (e) { /* 存储不可用 → 退化为种子文案 */ }
+    return { v: SCHEMA_V, text: FWD_SEED_TEXT, savedAt: '' };
+  }
+  function saveForward(obj) {
+    try {
+      localStorage.setItem(K_FWD, JSON.stringify({ v: SCHEMA_V, text: obj.text, savedAt: obj.savedAt }));
+      window.dispatchEvent(new CustomEvent('weekly-updated', { detail: { text: obj.text } }));
+    } catch (e) { /* 忽略 */ }
+  }
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  var forward = loadForward();
+
+  /* 只在这条真有数据时覆盖；没有就保留标记里写死的那句（不白屏） */
+  function renderForward() {
+    var line = $('fwd-commit-line');
+    if (!line || !forward || !forward.text) { return; }
+    line.innerHTML = '已写入 1 项改变：<b>' + esc(forward.text) + '</b>';
+  }
+
+  if (fwdBtn) {
+    fwdBtn.addEventListener('click', function () {
+      /* 确认即落盘：记住这条下周承诺 + 确认时间 */
+      var now = new Date();
+      var p = function (x) { return (x < 10 ? '0' : '') + x; };
+      forward = {
+        v: SCHEMA_V,
+        text: forward.text || FWD_SEED_TEXT,
+        savedAt: now.getFullYear() + '-' + p(now.getMonth() + 1) + '-' + p(now.getDate()) +
+          ' ' + p(now.getHours()) + ':' + p(now.getMinutes())
+      };
+      saveForward(forward);
+      renderForward();
+    });
+  }
+
+  /* 跨页联动：别的页改了这条承诺 → 本页重读并重渲染 */
+  window.addEventListener('weekly-updated', function (e) {
+    if (e && e.detail && typeof e.detail.text === 'string') {
+      forward = { v: SCHEMA_V, text: e.detail.text, savedAt: forward.savedAt };
+    } else { forward = loadForward(); }
+    renderForward();
+  });
+  window.addEventListener('storage', function (e) {
+    if (e.key === K_FWD) { forward = loadForward(); renderForward(); }
+  });
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) { forward = loadForward(); renderForward(); }
+  });
+
+  renderForward();
 })();
 </script>
 <script>

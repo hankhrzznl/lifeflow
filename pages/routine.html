@@ -220,7 +220,7 @@ body {
   max-width: 430px;
   margin: 0 auto;
   min-height: 100vh;
-  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(148px + env(safe-area-inset-bottom, 0px));
 }
 
 /* 桌面呈现：居中 + 侧边框 + 柔和投影，像一台安静的设备 */
@@ -781,6 +781,19 @@ body {
 .switch.is-on { background: var(--gradient); }
 .switch.is-on::after { transform: translateX(20px); }
 
+/* 触控热区：按钮自己的渲染盒一点不动（视觉不可能变），
+   只用一个绝对定位的透明伪元素往外撑出可点区。
+   热区高 = 13 + 28 + 13 = 54px */
+
+.switch::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -13px;
+  bottom: -13px;
+}
+
 /* 复选框（圆润） */
 .check {
   width: 26px;
@@ -1175,16 +1188,87 @@ body {
   'use strict';
   var $ = function (id) { return document.getElementById(id); };
 
-  /* 锚点开关（起床/入睡） */
-  document.querySelectorAll('.routine-card .switch').forEach(function (sw) {
-    sw.addEventListener('click', function () {
-      var on = !sw.classList.contains('is-on');
+  /* ══════════════════════════════════════════════════════════════
+     持久化层（本次新增）—— 先说清这一页的"改前是什么样"：
+     它是一个**只读的节奏骨架**页 —— 起床 07:00 / 入睡 23:00 / 三餐与午休
+     全是写死的展示文案，没有任何编辑入口（没有输入框、没有时间选择器），
+     所以**锚点时间不落盘**（不硬造 key）。
+     这一页唯一有状态的是两个提醒开关：改前只切 .is-on + toast，
+     刷新就回到写死的 `switch is-on`（两个都开）。
+     现在：只有开关状态落盘，冷启动按数据回填。
+
+       lifeflow-routine-reminders = { v:1, wake:true, sleep:true }   ← 设置类单独一个 key
+     ══════════════════════════════════════════════════════════════ */
+  var K_REMIND = 'lifeflow-routine-reminders';
+  var SCHEMA_V = 1;
+
+  /* 种子 = 改造前写死的状态（两个开关都是 .is-on / aria-checked="true"） */
+  function seedReminders() { return { wake: true, sleep: true }; }
+
+  function loadReminders() {
+    try {
+      var raw = localStorage.getItem(K_REMIND);
+      if (raw) {
+        var d = JSON.parse(raw);
+        if (d && d.v === SCHEMA_V) { return { wake: d.wake !== false, sleep: d.sleep !== false }; }
+      }
+    } catch (e) { /* 存储不可用 → 退化为种子，页面仍能显示 */ }
+    var seed = seedReminders();
+    saveReminders(seed, true);
+    return seed;
+  }
+  function saveReminders(obj, quiet) {
+    try {
+      localStorage.setItem(K_REMIND, JSON.stringify({ v: SCHEMA_V, wake: obj.wake, sleep: obj.sleep }));
+      if (!quiet) { window.dispatchEvent(new CustomEvent('routine-updated', { detail: obj })); }
+    } catch (e) { /* 忽略 */ }
+  }
+
+  /* 开关 ↔ key：靠 id / data-name 认，不靠顺序 */
+  function switchKey(sw) {
+    var n = sw.getAttribute('data-name');
+    if (sw.id === 'wake-switch' || n === '起床') { return 'wake'; }
+    if (sw.id === 'sleep-switch' || n === '入睡') { return 'sleep'; }
+    return null;
+  }
+
+  var reminders = loadReminders();
+  function applyReminders() {
+    Array.prototype.forEach.call(document.querySelectorAll('.routine-card .switch'), function (sw) {
+      var key = switchKey(sw);
+      if (!key) { return; }
+      var on = reminders[key] !== false;
       sw.classList.toggle('is-on', on);
       sw.setAttribute('aria-checked', on ? 'true' : 'false');
+    });
+  }
+
+  /* 锚点开关（起床/入睡）：写盘 + 广播（改造前只切 class + toast） */
+  Array.prototype.forEach.call(document.querySelectorAll('.routine-card .switch'), function (sw) {
+    sw.addEventListener('click', function () {
+      var key = switchKey(sw);
+      if (!key) { return; }
+      var on = !(reminders[key] !== false);
+      reminders[key] = on;
+      saveReminders(reminders);
       var name = sw.getAttribute('data-name') || '锚点';
       window.LF.toast((on ? '已开启' : '已关闭') + name + '提醒');
     });
   });
+
+  /* 跨页联动：别的页改了提醒设置 → 本页重读并回填 */
+  window.addEventListener('routine-updated', function (e) {
+    reminders = (e && e.detail) ? e.detail : loadReminders();
+    applyReminders();
+  });
+  window.addEventListener('storage', function (e) {
+    if (e.key === K_REMIND) { reminders = loadReminders(); applyReminders(); }
+  });
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) { reminders = loadReminders(); applyReminders(); }
+  });
+
+  applyReminders();
 
   function showState() {
     var hash = location.hash;

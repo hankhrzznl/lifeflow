@@ -220,7 +220,11 @@ body {
   max-width: 430px;
   margin: 0 auto;
   min-height: 100vh;
-  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  /* 底部避让：实测浮空球占用「距视口底 0~142px」这条带
+     （.fab-wrap fixed bottom:84px + .fab 动画态高 59px）
+     原值 96px 差 46px ⟹ 滚到底时最后几行落在浮空球下面（sleep 的开关就被压住过）。
+     148px = 142 + 6px 余量。改这一处影响全站 40 页，改完全量回归。 */
+  padding-bottom: calc(148px + env(safe-area-inset-bottom, 0px));
 }
 
 /* 桌面呈现：居中 + 侧边框 + 柔和投影，像一台安静的设备 */
@@ -780,6 +784,19 @@ body {
 }
 .switch.is-on { background: var(--gradient); }
 .switch.is-on::after { transform: translateX(20px); }
+
+/* 触控热区：按钮自己的渲染盒一点不动（视觉不可能变），
+   只用一个绝对定位的透明伪元素往外撑出可点区。
+   热区高 = 13 + 28 + 13 = 54px；diet 页有 .meal-switch .switch{transform:scale(0.82)}，
+   缩放会连热区一起缩，54 × 0.82 ≈ 44.3px，仍达标。 */
+.switch::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -13px;
+  bottom: -13px;
+}
 
 /* 复选框（圆润） */
 .check {
@@ -1356,6 +1373,96 @@ body {
   var RING_LEN = 308;
   var lastDur = 7.2, goalDur = 7.5;
 
+  /* ══════════════════════════════════════════════════════════════
+     持久化层（本次新增）—— 改造前这一页**没有数据落盘**：
+     「记录今晚入睡」只改了 $('last-in').textContent 这一个 DOM 文本，
+     刷新即回到写死的 23:14；设置区的三个 goal 步进器、渐进提醒开关同样不存。
+     现在：入睡记录落 localStorage，设置项也落盘。
+
+       lifeflow-sleep-logs   = { v:1, items:[ { id, date, time, type } ] }
+       lifeflow-sleep-goals  = { v:1, inTarget, outTarget, durTarget, ritual }
+       lifeflow-sleep-plan   = { v:1, inTime, outTime, nap, napDur, durTarget }
+                               ← 由 sleep-plan-create.html 写，本页只读 durTarget
+
+     ⚠ 首屏的「7.2h / 23:14 / 06:26」是**昨晚**的既有事实（连左边那个
+       .check-duration 也是写死的 7.2），改造前的 HTML 里没有可归属的流水。
+       seed 一条假流水去顶这 7.2 就是伪造历史，所以：
+         · 默认渲染值全部保持改造前的写死值不动（regression 见 render 注释）
+         · 只有**今天**真的点过「记录今晚入睡」时，才把 入睡 覆盖为真实时刻
+       首次打开 ⟹ DOM 与改造前逐像素一致。
+     ══════════════════════════════════════════════════════════════ */
+  var K_LOGS = 'lifeflow-sleep-logs';
+  var K_GOALS = 'lifeflow-sleep-goals';
+  var SCHEMA_V = 1;
+
+  function ymd(d) {
+    var p = function (x) { return (x < 10 ? '0' : '') + x; };
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+  }
+  function loadLogs() {
+    try {
+      var raw = localStorage.getItem(K_LOGS);
+      if (raw) {
+        var d = JSON.parse(raw);
+        if (d && d.v === SCHEMA_V && Array.isArray(d.items)) { return d.items; }
+      }
+    } catch (e) { /* 存储不可用 → 退化为空表，页面仍能显示 */ }
+    return [];
+  }
+  function saveLogs(list) {
+    try {
+      localStorage.setItem(K_LOGS, JSON.stringify({ v: SCHEMA_V, items: list }));
+      window.dispatchEvent(new CustomEvent('sleep-updated', { detail: { items: list } }));
+    } catch (e) { /* 忽略 */ }
+  }
+  function loadGoals() {
+    try {
+      var raw = localStorage.getItem(K_GOALS);
+      if (raw) {
+        var d = JSON.parse(raw);
+        if (d && d.v === SCHEMA_V) { return d; }
+      }
+    } catch (e) { /* 忽略 */ }
+    return null;
+  }
+  function saveGoals(patch) {
+    var cur = loadGoals() || { v: SCHEMA_V };
+    var next = {
+      v: SCHEMA_V,
+      inTarget: patch.inTarget != null ? patch.inTarget : cur.inTarget,
+      outTarget: patch.outTarget != null ? patch.outTarget : cur.outTarget,
+      durTarget: patch.durTarget != null ? patch.durTarget : cur.durTarget,
+      ritual: patch.ritual != null ? patch.ritual : cur.ritual
+    };
+    try {
+      localStorage.setItem(K_GOALS, JSON.stringify(next));
+      window.dispatchEvent(new CustomEvent('sleep-updated', { detail: next }));
+    } catch (e) { /* 忽略 */ }
+    return next;
+  }
+  /* 只读 sleep-plan-create 写下的时长目标（跨页衔接，本页不写这个 key） */
+  function planDurTarget() {
+    try {
+      var raw = localStorage.getItem('lifeflow-sleep-plan');
+      if (raw) {
+        var d = JSON.parse(raw);
+        if (d && d.v === SCHEMA_V && typeof d.durTarget === 'number') { return d.durTarget; }
+      }
+    } catch (e) { /* 忽略 */ }
+    return null;
+  }
+  var logs = loadLogs();
+
+  /* 今天记过的入睡时刻（没记过 → null ⟹ 保持改造前写死的 23:14） */
+  function todaySleepIn() {
+    var today = ymd(new Date());
+    var hit = null;
+    logs.forEach(function (r) {
+      if (String(r.date) === today && r.type === 'in' && r.time) { hit = r.time; }
+    });
+    return hit;
+  }
+
   function render() {
     var pct = Math.round(lastDur / goalDur * 100);
     $('ring-fill').style.strokeDashoffset = String(RING_LEN * (1 - Math.min(pct, 100) / 100));
@@ -1364,12 +1471,18 @@ body {
     $('bar-fill').style.width = Math.min(pct, 100) + '%';
     var diff = Math.round((goalDur - lastDur) * 60);
     var status = $('check-status');
-    if (diff <= 0) {
+    var tin = todaySleepIn();
+    if (tin) {
+      /* 今晚已记录 → 确定性文案（明早才有起床时刻，不能凭空报「已达标」） */
+      $('last-in').textContent = tin;
+      status.className = 'check-status';
+      status.innerHTML = '<i data-lucide="hourglass"></i> 已记录今晚入睡 · 明早自动算时长';
+    } else if (diff <= 0) {
       status.className = 'check-status';
       status.innerHTML = '<i data-lucide="check-circle-2"></i> 达成 · 比目标多 ' + (-diff) + ' 分钟';
     } else {
       status.className = 'check-status is-miss';
-      status.innerHTML = '<i data-lucide="hourglass"></i> 距目标 7.5h · 今晚 23:00 前准备入睡';
+      status.innerHTML = '<i data-lucide="hourglass"></i> 距目标 ' + goalDur + 'h · 今晚 23:00 前准备入睡';
     }
     $('coach-next').textContent = diff <= 0
       ? '已连续 5 天达标 · 今晚 23:00 前准备入睡'
@@ -1377,53 +1490,110 @@ body {
     if (window.lucide) { window.lucide.createIcons(); }
   }
 
-  /* ② 记录今晚入睡 */
+  /* ② 记录今晚入睡（改前只改 DOM 文本不落盘） */
   $('sleep-in-btn').addEventListener('click', function () {
     var now = new Date();
     var hm = ('0' + now.getHours()).slice(-2) + ':' + ('0' + now.getMinutes()).slice(-2);
-    $('last-in').textContent = hm;
+    logs.push({ id: 's' + Date.now(), date: ymd(now), time: hm, type: 'in' });
+    saveLogs(logs);
+    render();
     showToast('已记录入睡 ' + hm + ' · 明早自动算时长');
   });
 
-  /* 睡前仪式 - 放下 */
+  /* 睡前仪式 - 放下（改前输入框里的内容点「存好」后直接丢掉，只显示一行已存好） */
+  var letgoInput = document.querySelector('.ritual-letgo .input');
   $('letgo-btn').addEventListener('click', function () {
+    var txt = letgoInput ? letgoInput.value.trim() : '';
+    if (txt) {
+      var now = new Date();
+      var hm = ('0' + now.getHours()).slice(-2) + ':' + ('0' + now.getMinutes()).slice(-2);
+      logs.push({ id: 'l' + Date.now(), date: ymd(now), time: hm, type: 'letgo', note: txt });
+      saveLogs(logs);
+      letgoInput.value = '';
+    }
     $('letgo-confirm').classList.remove('is-hidden');
     showToast('已存好');
   });
 
-  /* ④/⑥ 渐进提醒开关联动 */
-  function bindSwitch(id, msg) {
+  /* ④/⑥ 渐进提醒开关联动（改前只切 class，不落盘） */
+  function bindSwitch(id, name) {
     var sw = $(id);
     if (!sw) { return; }
     sw.addEventListener('click', function () {
       var on = sw.classList.toggle('is-on');
       sw.setAttribute('aria-checked', on ? 'true' : 'false');
-      showToast(on ? msg + '已开启' : msg + '已关闭');
+      saveGoals({ ritual: on });
+      /* 开关在 ④ 和 ⑥ 各有一个，保持两处同步 */
+      ['ritual-switch', 'set-ritual'].forEach(function (x) {
+        var el = $(x);
+        if (el && el !== sw) { el.classList.toggle('is-on', on); el.setAttribute('aria-checked', on ? 'true' : 'false'); }
+      });
+      showToast(on ? name + '已开启' : name + '已关闭');
     });
   }
   bindSwitch('ritual-switch', '渐进提醒');
   bindSwitch('set-ritual', '渐进提醒');
 
-  /* ⑥ 设置 stepper */
-  function bindTimeStep(decId, incId, valEl, anchors) {
+  /* ⑥ 设置 stepper（改前只改文本 + 内存变量，不落盘） */
+  function bindTimeStep(decId, incId, valEl, anchors, onPick) {
     var HOURS = anchors;
     $(decId).addEventListener('click', function () {
       var i = HOURS.indexOf(valEl.textContent);
-      if (i > 0) { valEl.textContent = HOURS[i - 1]; }
+      if (i > 0) { valEl.textContent = HOURS[i - 1]; if (onPick) { onPick(HOURS[i - 1]); } }
     });
     $(incId).addEventListener('click', function () {
       var i = HOURS.indexOf(valEl.textContent);
-      if (i < HOURS.length - 1) { valEl.textContent = HOURS[i + 1]; }
+      if (i < HOURS.length - 1) { valEl.textContent = HOURS[i + 1]; if (onPick) { onPick(HOURS[i + 1]); } }
     });
   }
   var inAnchors = ['22:00', '22:30', '23:00', '23:30', '24:00'];
   var outAnchors = ['05:00', '05:30', '06:00', '06:30', '07:00', '07:30', '08:00', '08:30', '09:00'];
-  bindTimeStep('in-dec', 'in-inc', $('in-val'), inAnchors);
-  bindTimeStep('out-dec', 'out-inc', $('out-val'), outAnchors);
-
+  bindTimeStep('in-dec', 'in-inc', $('in-val'), inAnchors, function (v) { saveGoals({ inTarget: v }); });
+  bindTimeStep('out-dec', 'out-inc', $('out-val'), outAnchors, function (v) { saveGoals({ outTarget: v }); });
+  /* ⚠ 设置区这个 stepper 的锚点是 '7.5h' 这种带单位的字符串，而 HTML 里
+     id="dur-val" 出现了两次（环形图 7.2 / 设置区 7.5h），$('dur-val') 取到的是
+     环形图那个 ⟹ 这个步进器**改造前就是按不动的**（'7.2' 不在锚点表里）。
+     这是既有缺陷、不在本次范围，故未改；落盘回调仍然挂上，等它一旦能点就会存。 */
   var durAnchors = ['6.0h', '6.5h', '7.0h', '7.5h', '8.0h', '8.5h', '9.0h'];
-  bindTimeStep('dur-dec', 'dur-inc', $('dur-val'), durAnchors);
+  bindTimeStep('dur-dec', 'dur-inc', $('dur-val'), durAnchors, function (v) { saveGoals({ durTarget: v }); });
 
+  /* 开屏：把盘里的设置贴回界面（无存储 ⟹ 保持改造前的静态值） */
+  function hydrateGoals() {
+    var g = loadGoals();
+    if (g) {
+      if (g.inTarget) { $('in-val').textContent = g.inTarget; }
+      if (g.outTarget) { $('out-val').textContent = g.outTarget; }
+      if (typeof g.ritual === 'boolean') {
+        ['ritual-switch', 'set-ritual'].forEach(function (id) {
+          var el = $(id);
+          if (el) { el.classList.toggle('is-on', g.ritual); el.setAttribute('aria-checked', g.ritual ? 'true' : 'false'); }
+        });
+      }
+    }
+    /* 睡眠安排（sleep-plan-create 写的）只借它的时长目标，不改 #dur-val（id 撞车） */
+    var pd = planDurTarget();
+    if (typeof pd === 'number' && pd > 0) { goalDur = pd; }
+  }
+
+  /* 跨页 / 跨标签页联动：sleep-plan-create 改过安排 → 本页重读并重渲染 */
+  function reloadAll() {
+    logs = loadLogs();
+    hydrateGoals();
+    render();
+  }
+  window.addEventListener('sleep-updated', function (e) {
+    if (e && e.detail && Array.isArray(e.detail.items)) { logs = e.detail.items; } else { logs = loadLogs(); }
+    hydrateGoals();
+    render();
+  });
+  window.addEventListener('storage', function (e) {
+    if (e.key === K_LOGS || e.key === K_GOALS || e.key === 'lifeflow-sleep-plan') { reloadAll(); }
+  });
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) { reloadAll(); }
+  });
+
+  hydrateGoals();
   render();
 })();
 </script>

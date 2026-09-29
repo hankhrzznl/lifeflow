@@ -220,7 +220,7 @@ body {
   max-width: 430px;
   margin: 0 auto;
   min-height: 100vh;
-  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(148px + env(safe-area-inset-bottom, 0px));
 }
 
 /* 桌面呈现：居中 + 侧边框 + 柔和投影，像一台安静的设备 */
@@ -1055,7 +1055,7 @@ body {
         </div>
         <div class="goal-head__row">
           <span class="goal-head__days"><i data-lucide="calendar-check"></i> 已推进 42 天</span>
-          <span style="font-size:12px;color:var(--text-3);">截止 11 月 20 日</span>
+          <span id="goal-deadline" style="font-size:12px;color:var(--text-3);">截止 11 月 20 日</span>
         </div>
       </section>
 
@@ -1117,7 +1117,7 @@ body {
             <span class="section-head__hint">陪练生成</span>
           </div>
           <div class="strategy-text">
-            减脂的核心是「热量缺口 + 可持续性」。建议以有氧训练建立基础消耗，力量训练保留肌肉、维持代谢。将目标拆成「每周 4 次有氧 + 2 次力量」的节奏，比短期冲刺更容易坚持 3 个月。饮食上先用记录建立觉察，再逐步减少精制碳水，避免激进节食引发反弹。
+            减脂的核心是「热量缺口 + 可持续性」。建议以有氧训练建立基础消耗，力量训练保留肌肉、维持代谢。将目标拆成「每周 4 次有氧 + 2 次力量」的节奏，比短期猛练更容易做下去 3 个月。饮食上先用记录建立觉察，再逐步减少精制碳水，避免激进节食引发反弹。
           </div>
 
           <!-- 本周任务 -->
@@ -1241,22 +1241,303 @@ body {
     if (window.lucide) { window.lucide.createIcons(); }
   });
 
-  /* 今天这一步 */
+  /* ══════════════════════════════════════════════════════════════
+     持久化层（本次新增）—— 改造前这一页**没有数据落盘**：
+     目标头部 / 今天这一步 / 3 个阶段 / 4 条本周任务 / 策略说明全是写死的静态
+     标记，而且**不带 ?id= 也只能显示这一条**；「开始」只弹 toast（连 class 都
+     不改）；任务勾选只切 .is-done + toast，刷新即回到未勾选。
+     现在：按 ?id= 渲染对应目标（不带 id 时退化为**列表排序的第一条**，
+     与 goals.html 的 sortGoals() 同源）；任务勾选写盘；「开始」记录开始时间。
+
+       lifeflow-goal-items = { v:1, items:[ {
+         id, domId, title, status, domain, domainIcon,
+         days, deadline, progress, bar, pct,
+         measure:{ label, icon, href, cls } | null,
+         summary, nextStep, today:{ icon, text, full },
+         step:{ title, sub, startedAt },
+         strategy,
+         stages:[ { id, name, meta, date, state:'done'|'active'|'todo' } ],
+         tasks: [ { id, name, meta, done } ]
+       } ] }
+       —— 三层：目标 → 阶段(stages) → 任务(tasks)
+     ══════════════════════════════════════════════════════════════ */
+  var K_GOALS = 'lifeflow-goal-items';
+  var SCHEMA_V = 1;
+
+  function ymd(d) {
+    var p = function (x) { return (x < 10 ? '0' : '') + x; };
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+  }
+
+  /* 种子：与 goals.html **同一份**（幂等：谁先打开谁落盘，另一页读到同一份）。
+     第 1 条的三阶段 / 四任务 / 策略说明逐字照抄改造前的静态标记。 */
+  function seedGoals() {
+    return [
+      {
+        id: 'seed-g1', domId: 'goal-card-1',
+        title: '三个月减脂到体脂 22%',
+        status: 'active', domain: '健康', domainIcon: 'heart-pulse',
+        days: 42, deadline: '11 月 20 日', progress: 64, bar: '', pct: '',
+        measure: { label: '训练', icon: 'dumbbell', href: 'training.html', cls: 'attach--train' },
+        summary: '由训练数据自动汇总 · 本周 2/3 次 · 下一步：今日训练 1 次',
+        nextStep: '训练 1 次',
+        today: { icon: 'check-circle-2', text: '今日 2/3', full: false },
+        step: { title: '晨间慢跑', sub: '30 分钟有氧 · 从 5 分钟起步也可以', startedAt: null },
+        strategy: '减脂的核心是「热量缺口 + 可持续性」。建议以有氧训练建立基础消耗，力量训练保留肌肉、维持代谢。将目标拆成「每周 4 次有氧 + 2 次力量」的节奏，比短期猛练更容易做下去 3 个月。饮食上先用记录建立觉察，再逐步减少精制碳水，避免激进节食引发反弹。',
+        stages: [
+          { id: 'st1', name: '建立运动习惯', meta: '连续 4 周每周运动 3 次', date: '已完成', state: 'done' },
+          { id: 'st2', name: '体脂降至 24%', meta: '当前 25.3% · 饮食控制 + 有氧', date: '10 月 15 日', state: 'active' },
+          { id: 'st3', name: '体脂降至 22%', meta: '维持力量训练，精细饮食', date: '11 月 20 日', state: 'todo' }
+        ],
+        tasks: [
+          { id: 'tk1', name: '周一有氧 30 分钟', meta: '07:30', done: true },
+          { id: 'tk2', name: '周三力量训练 45 分钟', meta: '18:30', done: false },
+          { id: 'tk3', name: '周五有氧 30 分钟', meta: '07:30', done: false },
+          { id: 'tk4', name: '记录每日饮食', meta: '每天 5 分钟', done: false }
+        ]
+      },
+      {
+        id: 'seed-g2', domId: 'goal-card-2',
+        title: '建立稳定的早起睡眠节律',
+        status: 'active', domain: '睡眠', domainIcon: 'moon-star',
+        days: 56, deadline: null, progress: 48, bar: 'progress__fill--blue', pct: '',
+        measure: { label: '睡眠', icon: 'moon', href: 'sleep.html', cls: 'attach--sleep' },
+        summary: '由睡眠数据自动汇总 · 本周 6/7 天达标 · 下一步：今晚 23:00 前入睡',
+        nextStep: '23:00 前准备入睡',
+        today: { icon: 'check-circle-2', text: '今日 1/2', full: false },
+        step: { title: '23:00 前准备入睡', sub: '', startedAt: null },
+        strategy: '',
+        stages: [],
+        tasks: []
+      },
+      {
+        id: 'seed-g5', domId: 'goal-card-5',
+        title: '3 个月存 5000 元',
+        status: 'active', domain: '财务', domainIcon: 'piggy-bank',
+        days: 42, deadline: null, progress: 64, bar: 'progress__fill--green', pct: '',
+        measure: { label: '记账', icon: 'wallet', href: 'expense.html', cls: 'attach--expense' },
+        summary: '由记账数据自动汇总 · 本月已存 3,200 / 5,000 元 · 下一步：本周记 3 笔',
+        nextStep: '记 1 笔帐',
+        today: { icon: 'wallet', text: '今日已记 3 笔', full: false },
+        step: { title: '记 1 笔帐', sub: '', startedAt: null },
+        strategy: '',
+        stages: [],
+        tasks: []
+      },
+      {
+        id: 'seed-g3', domId: 'goal-card-3',
+        title: '读完 12 本设计经典',
+        status: 'paused', domain: '工作学习', domainIcon: 'book-open',
+        days: 28, deadline: null, progress: 33, bar: 'progress__fill--amber', pct: 'goal-card__pct--amber',
+        measure: { label: '阅读', icon: 'repeat', href: 'habit.html', cls: 'attach--habit' },
+        summary: '由阅读数据自动汇总 · 累计 4/12 本 · 已暂停 14 天',
+        nextStep: '重新开始阅读 10 分钟',
+        today: { icon: 'pause-circle', text: '已暂停', full: false },
+        step: { title: '重新开始阅读 10 分钟', sub: '', startedAt: null },
+        strategy: '',
+        stages: [],
+        tasks: []
+      },
+      {
+        id: 'seed-g4', domId: 'goal-card-4',
+        title: '完成一次半程马拉松',
+        status: 'done', domain: '生活', domainIcon: 'flag',
+        days: 90, deadline: null, progress: 100, bar: 'progress__fill--green', pct: 'goal-card__pct--green',
+        measure: { label: '训练', icon: 'dumbbell', href: 'training.html', cls: 'attach--train' },
+        summary: null,
+        nextStep: '回顾完赛经历',
+        today: { icon: 'check-circle-2', text: '已达成', full: true },
+        step: { title: '回顾完赛经历', sub: '', startedAt: null },
+        strategy: '',
+        stages: [],
+        tasks: []
+      }
+    ];
+  }
+
+  function loadGoals() {
+    try {
+      var raw = localStorage.getItem(K_GOALS);
+      if (raw) {
+        var d = JSON.parse(raw);
+        if (d && d.v === SCHEMA_V && Array.isArray(d.items)) { return d.items; }
+      }
+    } catch (e) { /* 存储不可用 → 退化为种子，页面仍能显示 */ }
+    var seed = seedGoals();
+    saveGoals(seed, true);
+    return seed;
+  }
+  function saveGoals(list, quiet) {
+    try {
+      localStorage.setItem(K_GOALS, JSON.stringify({ v: SCHEMA_V, items: list }));
+      if (!quiet) { window.dispatchEvent(new CustomEvent('goal-updated', { detail: { items: list } })); }
+    } catch (e) { /* 忽略 */ }
+  }
+
+  /* 排序口径：**与 goals.html 完全一致**（进行中 → 暂停 → 已完成，同状态保持存储顺序） */
+  var STATUS_RANK = { active: 0, paused: 1, done: 2 };
+  function sortGoals(arr) {
+    return arr.slice().sort(function (a, b) {
+      var ra = STATUS_RANK[a.status]; ra = (ra == null ? 9 : ra);
+      var rb = STATUS_RANK[b.status]; rb = (rb == null ? 9 : rb);
+      return ra - rb;
+    });
+  }
+
+  var STATUS_LABEL = { active: '进行中', paused: '暂停', done: '已完成' };
+  var STATUS_TAG = { active: 'tag--active', paused: 'tag--paused', done: 'tag--done' };
+  var STAGE_ICON = { done: 'check', active: 'target', todo: 'circle' };
+  var STAGE_CLASS = { done: ' is-done', active: ' is-active', todo: '' };
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  function statusOf(g) { return STATUS_RANK[g.status] == null ? 'active' : g.status; }
+
+  var goals = loadGoals();
+
+  /* 当前目标：有 ?id= 取那一条；查不到 / 不带 id → **列表排序的第一条**
+     （与 goals.html 首屏第一张卡同一条，两页口径一致） */
+  function currentGoal() {
+    var id = null;
+    try { id = new URLSearchParams(location.search).get('id'); } catch (e) { id = null; }
+    if (id) {
+      for (var i = 0; i < goals.length; i++) {
+        if (String(goals[i].id) === String(id)) { return goals[i]; }
+      }
+    }
+    var sorted = sortGoals(goals);
+    return sorted.length ? sorted[0] : null;
+  }
+
+  /* ── 渲染（数据在 → 覆盖静态回退；静态标记原样留着当无 JS / 无存储的回退） ── */
+  var headTitle = document.querySelector('.goal-head__title');
+  var headTag = document.querySelector('.goal-head .tag');
+  var headDays = document.querySelector('.goal-head__days');
+  var headDeadline = document.getElementById('goal-deadline');
+  var stepTitle = document.querySelector('.today-step-card__title');
+  var stepSub = document.querySelector('.today-step-card__sub');
+  var stageList = document.querySelector('.stage-list');
+  var strategyBox = document.querySelector('.strategy-text');
+  var taskList = document.querySelector('.task-list');
+
+  function stageHTML(s) {
+    var st = (s.state === 'done' || s.state === 'active') ? s.state : 'todo';
+    return '<div class="stage">' +
+      '<span class="stage__icon' + STAGE_CLASS[st] + '"><i data-lucide="' + STAGE_ICON[st] + '"></i></span>' +
+      '<div class="stage__main">' +
+        '<div class="stage__name">' + esc(s.name) + '</div>' +
+        (s.meta ? '<div class="stage__meta">' + esc(s.meta) + '</div>' : '') +
+      '</div>' +
+      '<span class="stage__date">' + esc(s.date) + '</span>' +
+    '</div>';
+  }
+  function taskHTML(t) {
+    return '<div class="task' + (t.done ? ' is-done' : '') + '">' +
+      '<button type="button" class="check' + (t.done ? ' is-done' : '') + '" data-task-id="' + esc(t.id) + '"' +
+        ' aria-pressed="' + (t.done ? 'true' : 'false') + '"><i data-lucide="check"></i></button>' +
+      '<div class="task__main">' +
+        '<div class="task__title">' + esc(t.name) + '</div>' +
+        (t.meta ? '<div class="task__meta">' + esc(t.meta) + '</div>' : '') +
+      '</div>' +
+    '</div>';
+  }
+  /* 空集区块：改造前的静态页只写了第 1 条目标的阶段/任务/策略 ——
+     别的目标没有这些内容时**隐藏而不是硬造**（连同它的 section-head 一起收） */
+  function toggleBlock(el, show) {
+    if (!el) { return; }
+    el.style.display = show ? '' : 'none';
+    var head = el.previousElementSibling;
+    if (head && head.classList && head.classList.contains('section-head')) {
+      head.style.display = show ? '' : 'none';
+    }
+  }
+
+  function renderDetail() {
+    var g = currentGoal();
+    if (!g) { return; }
+    var st = statusOf(g);
+    if (headTitle) { headTitle.textContent = g.title || ''; }
+    if (headTag) {
+      headTag.className = 'tag ' + STATUS_TAG[st];
+      headTag.innerHTML = '<span class="tag__dot"></span>' + STATUS_LABEL[st];
+    }
+    if (headDays) {
+      headDays.innerHTML = '<i data-lucide="calendar-check"></i> 已推进 ' + Number(g.days || 0) + ' 天';
+    }
+    if (headDeadline) {
+      headDeadline.textContent = g.deadline ? ('截止 ' + g.deadline) : '';
+      headDeadline.style.display = g.deadline ? '' : 'none';
+    }
+    var step = g.step || {};
+    if (stepTitle) { stepTitle.textContent = step.title || g.nextStep || ''; }
+    if (stepSub) {
+      stepSub.textContent = step.sub || '';
+      stepSub.style.display = step.sub ? '' : 'none';
+    }
+    var stages = g.stages || [], tasks = g.tasks || [];
+    if (stageList) {
+      stageList.innerHTML = stages.map(stageHTML).join('');
+      toggleBlock(stageList.closest('section') || stageList, stages.length > 0);
+    }
+    if (strategyBox) {
+      strategyBox.textContent = g.strategy || '';
+      toggleBlock(strategyBox, !!g.strategy);
+    }
+    if (taskList) {
+      taskList.innerHTML = tasks.map(taskHTML).join('');
+      toggleBlock(taskList, tasks.length > 0);
+    }
+    if (window.lucide) { window.lucide.createIcons(); }
+  }
+
+  /* 今天这一步：改造前只弹 toast（连 class 都不改）→ 现在记录开始时间并写盘 */
   document.getElementById('do-step').addEventListener('click', function () {
-    showToast('已开始晨间慢跑');
+    var g = currentGoal();
+    if (!g) { return; }
+    var now = new Date();
+    var hm = ('0' + now.getHours()).slice(-2) + ':' + ('0' + now.getMinutes()).slice(-2);
+    g.step = g.step || {};
+    g.step.startedAt = ymd(now) + ' ' + hm;
+    saveGoals(goals);
+    showToast('已开始' + (g.step.title || ''));
   });
 
-  /* 任务勾选 */
-  document.querySelectorAll('.fold__body .check').forEach(function (check) {
-    check.addEventListener('click', function () {
-      var task = check.closest('.task');
-      var done = !check.classList.contains('is-done');
-      check.classList.toggle('is-done', done);
-      check.setAttribute('aria-pressed', done ? 'true' : 'false');
-      if (task) { task.classList.toggle('is-done', done); }
-      showToast(done ? '已标记完成' : '已恢复待办');
+  /* 任务勾选：改造前只切 class + toast（刷新即丢）→ 现在写盘并**由数据回填勾选态**
+     （列表是数据渲染的 → 用事件委托，不能像改造前那样在静态节点上逐个绑） */
+  if (taskList) {
+    taskList.addEventListener('click', function (e) {
+      var check = e.target.closest('.check');
+      if (!check) { return; }
+      var g = currentGoal();
+      if (!g || !Array.isArray(g.tasks)) { return; }
+      var id = check.getAttribute('data-task-id');
+      var hit = null;
+      for (var i = 0; i < g.tasks.length; i++) {
+        if (String(g.tasks[i].id) === String(id)) { hit = g.tasks[i]; }
+      }
+      if (!hit) { return; }
+      hit.done = !hit.done;
+      saveGoals(goals);
+      renderDetail();
+      showToast(hit.done ? '已标记完成' : '已恢复待办');
     });
+  }
+
+  /* 跨页联动：goals / goal-create 改了数据 → 本页重读并重渲染 */
+  window.addEventListener('goal-updated', function (e) {
+    goals = (e && e.detail && Array.isArray(e.detail.items)) ? e.detail.items : loadGoals();
+    renderDetail();
   });
+  window.addEventListener('storage', function (e) {
+    if (e.key === K_GOALS) { goals = loadGoals(); renderDetail(); }
+  });
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) { goals = loadGoals(); renderDetail(); }
+  });
+
+  renderDetail();
 
   if (window.lucide) { window.lucide.createIcons(); }
 })();

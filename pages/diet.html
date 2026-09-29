@@ -220,7 +220,7 @@ body {
   max-width: 430px;
   margin: 0 auto;
   min-height: 100vh;
-  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(148px + env(safe-area-inset-bottom, 0px));
 }
 
 /* 桌面呈现：居中 + 侧边框 + 柔和投影，像一台安静的设备 */
@@ -781,6 +781,19 @@ body {
 .switch.is-on { background: var(--gradient); }
 .switch.is-on::after { transform: translateX(20px); }
 
+/* 触控热区：按钮自己的渲染盒一点不动（视觉不可能变），
+   只用一个绝对定位的透明伪元素往外撑出可点区。
+   热区高 = 13 + 28 + 13 = 54px；diet 页有 .meal-switch .switch{transform:scale(0.82)}，
+   缩放会连热区一起缩，54 × 0.82 ≈ 44.3px，仍达标。 */
+.switch::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -13px;
+  bottom: -13px;
+}
+
 /* 复选框（圆润） */
 .check {
   width: 26px;
@@ -1316,20 +1329,118 @@ body {
   window.addEventListener('hashchange', showState);
 
   var RING_LEN = 308;
-  var dayCount = 8, dayGoal = 12, weekCount = 18, weekGoal = 25;
+  var dayGoal = 12, weekGoal = 25;
   var currentMeal = '早餐';
 
+  /* ══════════════════════════════════════════════════════════════
+     持久化层（本次新增）—— 改造前这一页**没有数据落盘**：
+     「保存这一餐」只做 `dayCount += n; weekCount += n; render()`，
+     数字全在内存里，刷新即丢；设置区的日/周目标、三餐提醒开关同样不存。
+     现在：每餐的食材落 localStorage，日/周种类数由数据算出来。
+
+       lifeflow-diet-logs =
+         { v:1, items:[ { id, date, time, meal, kinds, foods:{ cat:[名称] } } ] }
+       lifeflow-diet-config =
+         { v:1, upto:{ day, week }, dayGoal, weekGoal,
+           remind:{ '早餐':true, '午餐':true, '晚餐':true } }
+
+     ⚠ upto 是「改造前的基线累加值」：改造前屏幕上是「今日 8 种 / 本周 18 种」，
+       但那 8/18 是写死的、没有任何可归属的流水。seed 一条假的流水去顶这
+       8 种属于伪造历史，所以改用 upto 承接基线，真实记录只在其上累加：
+         dayCount  = upto.day  + 今天记录过的食材种类（去重）
+         weekCount = upto.week + 本周记录过的食材种类（去重，封顶 weekGoal）
+       首次打开：0 + 8 = 8、0 + 18 = 18 ⟹ 与改造前逐像素一致。
+     ══════════════════════════════════════════════════════════════ */
+  var K_LOGS = 'lifeflow-diet-logs';
+  var K_CONFIG = 'lifeflow-diet-config';
+  var SCHEMA_V = 1;
+  var DEFAULT_UPTO = { day: 8, week: 18 };
+
+  function ymd(d) {
+    var p = function (x) { return (x < 10 ? '0' : '') + x; };
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+  }
+  /* 本周起点（周一），用于「本周去重」 */
+  function weekStartYmd() {
+    var d = new Date();
+    var off = (d.getDay() + 6) % 7;
+    d.setDate(d.getDate() - off);
+    return ymd(d);
+  }
+  function loadLogs() {
+    try {
+      var raw = localStorage.getItem(K_LOGS);
+      if (raw) {
+        var d = JSON.parse(raw);
+        if (d && d.v === SCHEMA_V && Array.isArray(d.items)) { return d.items; }
+      }
+    } catch (e) { /* 存储不可用 → 退化为空表，页面仍能显示 */ }
+    return [];
+  }
+  function saveLogs(list) {
+    try {
+      localStorage.setItem(K_LOGS, JSON.stringify({ v: SCHEMA_V, items: list }));
+      window.dispatchEvent(new CustomEvent('diet-updated', { detail: { items: list } }));
+    } catch (e) { /* 忽略 */ }
+  }
+  /* 配置类数据：整块读写（改哪一项都先 load 再整体回写，避免互相覆盖） */
+  function loadConfig() {
+    try {
+      var raw = localStorage.getItem(K_CONFIG);
+      if (raw) {
+        var d = JSON.parse(raw);
+        if (d && d.v === SCHEMA_V) { return d; }
+      }
+    } catch (e) { /* 忽略 */ }
+    return null;
+  }
+  function saveConfig(patch) {
+    var cur = loadConfig() || { v: SCHEMA_V, upto: DEFAULT_UPTO, dayGoal: dayGoal, weekGoal: weekGoal, remind: {} };
+    var next = {
+      v: SCHEMA_V,
+      upto: patch.upto || cur.upto || DEFAULT_UPTO,
+      dayGoal: patch.dayGoal != null ? patch.dayGoal : cur.dayGoal,
+      weekGoal: patch.weekGoal != null ? patch.weekGoal : cur.weekGoal,
+      remind: patch.remind || cur.remind || {}
+    };
+    try {
+      localStorage.setItem(K_CONFIG, JSON.stringify(next));
+      window.dispatchEvent(new CustomEvent('diet-updated', { detail: next }));
+    } catch (e) { /* 忽略 */ }
+    return next;
+  }
+  var logs = loadLogs();
+  /* 首次打开就把配置播种落盘（否则 upto 基线只活在内存里，
+     别的页/别的标签页读不到"今日 8 种 / 本周 18 种"这个起点） */
+  var config = loadConfig() || saveConfig({ upto: DEFAULT_UPTO, dayGoal: 12, weekGoal: 25, remind: {} });
+
+  /* 某个日期区间内记录过的食材种类（去重） */
+  function kindsIn(fromYmd, toYmd) {
+    var set = {};
+    logs.forEach(function (r) {
+      if (String(r.date) < fromYmd || String(r.date) > toYmd) { return; }
+      var f = r.foods || {};
+      Object.keys(f).forEach(function (cat) {
+        (f[cat] || []).forEach(function (nm) { set[nm] = 1; });
+      });
+    });
+    return Object.keys(set).length;
+  }
+  function dayCount() { return (config.upto ? config.upto.day : 0) + kindsIn(ymd(new Date()), ymd(new Date())); }
+  function weekCount() { return Math.min(weekGoal, (config.upto ? config.upto.week : 0) + kindsIn(weekStartYmd(), ymd(new Date()))); }
+
   function render() {
-    var pct = Math.round(dayCount / dayGoal * 100);
+    var dc = dayCount(), wc = weekCount();
+    var pct = Math.round(dc / dayGoal * 100);
     $('ring-fill').style.strokeDashoffset = String(RING_LEN * (1 - Math.min(pct, 100) / 100));
     $('ring-pct').textContent = pct + '%';
-    $('today-count').textContent = String(dayCount);
+    $('today-count').textContent = String(dc);
     $('bar-fill').style.width = Math.min(pct, 100) + '%';
-    $('week-count').textContent = String(weekCount);
+    $('week-count').textContent = String(wc);
     $('week-goal').textContent = String(weekGoal);
-    $('day-dual').textContent = dayCount + ' / ' + dayGoal + ' 种';
-    $('week-dual').textContent = weekCount + ' / ' + weekGoal + ' 种';
-    var remain = dayGoal - dayCount;
+    $('day-dual').textContent = dc + ' / ' + dayGoal + ' 种';
+    $('week-dual').textContent = wc + ' / ' + weekGoal + ' 种';
+    var remain = dayGoal - dc;
     $('coach-next').textContent = remain > 0
       ? '今天还差 ' + remain + ' 种食材 · 午餐加一份绿叶菜或水果'
       : '今日食材已达标 · 明天试试没吃过的种类';
@@ -1366,7 +1477,7 @@ body {
         return '<span class="rec-chip">' + name + '<i data-lucide="x" data-del="' + name + '"></i></span>';
       }).join('');
       if (!chips) { chips = '<span class="rec-chip is-empty">暂无</span>'; }
-      html += '<div class="rec-group"><span class="rec-group__tag ' + tag + '">' + cat + '</span><div class="rec-group__chips">' + chips + '</div></div>';
+      html += '<div class="rec-group" data-cat="' + cat + '"><span class="rec-group__tag ' + tag + '">' + cat + '</span><div class="rec-group__chips">' + chips + '</div></div>';
     });
     $('rec-groups').innerHTML = html;
     if (window.lucide) { window.lucide.createIcons(); }
@@ -1394,15 +1505,90 @@ body {
     if (del) { del.closest('.rec-chip').remove(); }
   });
 
-  /* 保存 */
+  /* 保存 → 落盘（改前只加内存计数 + 重渲染，刷新即丢）
+     食材名：chip 的文本节点里除了名字还挂着 <i data-lucide="x">，
+     所以取 firstChild 的文本，不能用 textContent。 */
+  function chipName(chip) {
+    var n = chip.firstChild;
+    var s = (n && n.nodeType === 3) ? n.nodeValue : chip.textContent;
+    return String(s == null ? '' : s).trim();
+  }
+  /* 把这一餐记到对应三餐行的「已记录 N 种 / 待记录」上。
+     ⚠ 两个坑（都踩过，靠逐像素比对抓出来的）：
+       ① data-meal 挂在**行内的「记录这一餐」按钮**上，不在 .meal 行上
+          （改造前那几行就是这么写的，选择器要按它的实际位置来）。
+       ② 改造前那三行是写死的「早餐 已记录 3 种 / 午餐 已记录 3 种 / 晚餐 待记录」，
+          而 upto 只承接了合计数 8（= 3+3+2）。所以**没有今天流水的那一餐必须保持
+          写死的原文**（模板硬性要求 4：保留数据回退）——我第一版无条件把 n=0 写成
+          「待记录」，把早餐/午餐的 3 种抹掉了，逐像素直接炸到 38%。
+       ③ 但如果有别的记录可用，就据实覆盖。 */
+  var MEAL_BASELINE = { '早餐': 3, '午餐': 3, '晚餐': 0 };   /* 复刻改造前写死的行文案 */
+  function mealCounts() {
+    var today = ymd(new Date());
+    var byMeal = {};
+    logs.forEach(function (r) { if (String(r.date) === today) { byMeal[r.meal] = (byMeal[r.meal] || 0) + (r.kinds || 0); } });
+    return byMeal;
+  }
+  function applyMealStatus() {
+    var byMeal = mealCounts();
+    document.querySelectorAll('.meal').forEach(function (row) {
+      var btn = row.querySelector('[data-meal]');
+      var meal = btn ? btn.getAttribute('data-meal') : '';
+      if (!meal) { return; }
+      var n = byMeal[meal];
+      if (n === undefined) { n = MEAL_BASELINE[meal] || 0; }   /* 无当日流水 → 用写死的基线 */
+      var st = row.querySelector('.meal__status');
+      if (st) { st.textContent = n > 0 ? '已记录 ' + n + ' 种' : '待记录'; }
+      row.classList.toggle('is-done', n > 0);
+    });
+  }
+
   $('rec-save').addEventListener('click', function () {
-    var chips = document.querySelectorAll('#rec-groups .rec-chip:not(.is-empty)');
-    var n = chips.length;
-    if (n === 0) { showToast('先输入吃了什么'); return; }
-    dayCount += n;
-    weekCount = Math.min(weekGoal, weekCount + n);
+    /* foods 按四类存。口径：默认以**输入框的原文**为准重新归类（与页面上
+       renderGroups 用的是同一个 classify），只有当某个类目下页面上被手动删过
+       chip（数量少于分类结果）时，才以页面渲染出的那份为准。
+       ⚠ 不能只读 DOM：`input` 事件没触发过（比如程序化赋值、或某些输入法）
+         时 #rec-groups 是空的，那只靠 DOM 就会把用户真的输入过的内容
+         当成"还没输入"而拒存（我第一版就是这样，e2e 直接抓到）。 */
+    var classified = classify($('rec-input').value);
+    var foods = {};
+    ['主食', '蛋白', '蔬菜', '水果'].forEach(function (cat) {
+      var out = [];
+      if (classified[cat] && classified[cat].length) {
+        var on = document.querySelector('#rec-groups .rec-group[data-cat="' + cat + '"]');
+        var shown = [];
+        if (on) {
+          on.querySelectorAll('.rec-chip:not(.is-empty)').forEach(function (c) {
+            var nm2 = chipName(c); if (nm2) { shown.push(nm2); }
+          });
+        }
+        /* 页面上这类少于分类结果 ⟹ 用户手动删过 ⟹ 以页面为准；
+           否则用分类结果（相当于"输入事件没触发"时的兜底） */
+        out = (on && shown.length < classified[cat].length)
+          ? classified[cat].filter(function (nm3) { return shown.indexOf(nm3) >= 0; })
+          : classified[cat];
+      }
+      if (out.length) { foods[cat] = out; }
+    });
+    var names = [];
+    Object.keys(foods).forEach(function (cat) { names = names.concat(foods[cat]); });
+    if (names.length === 0) { showToast('先输入吃了什么'); return; }
+
+    var now = new Date();
+    var hm = ('0' + now.getHours()).slice(-2) + ':' + ('0' + now.getMinutes()).slice(-2);
+    var n = names.length;
+    logs.push({
+      id: 'd' + Date.now(),
+      date: ymd(now),
+      time: hm,
+      meal: currentMeal,
+      kinds: n,
+      foods: foods
+    });
+    saveLogs(logs);
+    if (!config.upto) { config = saveConfig({ upto: DEFAULT_UPTO }); }
     render();
-    var statusEl = document.querySelector('.meal[data-meal]') && null;
+    applyMealStatus();
     showToast(currentMeal + '已记录 · 新增 ' + n + ' 种食材');
     $('rec-input').value = '';
     renderGroups('');
@@ -1421,20 +1607,67 @@ body {
       if (apply) { apply(v); }
     });
   }
-  bindStep('day-dec', 'day-inc', $('day-val'), 10, 20, function (v) { dayGoal = v; render(); });
-  bindStep('week-dec', 'week-inc', $('week-set-val'), 20, 35, function (v) { weekGoal = v; render(); });
+  bindStep('day-dec', 'day-inc', $('day-val'), 10, 20, function (v) { dayGoal = v; saveConfig({ dayGoal: v }); render(); });
+  bindStep('week-dec', 'week-inc', $('week-set-val'), 20, 35, function (v) { weekGoal = v; saveConfig({ weekGoal: v }); render(); });
 
-  /* 三餐提醒开关 */
-  [['sw-bf', '早餐'], ['sw-lu', '午餐'], ['sw-di', '晚餐']].forEach(function (pair) {
-    var sw = $(pair[0]);
+  /* 三餐提醒开关（改前只切 class + toast，不落盘） */
+  var MEALS = ['早餐', '午餐', '晚餐'];
+  function bindMealSwitch(id, name) {
+    var sw = $(id);
+    if (!sw) { return; }
     sw.addEventListener('click', function () {
       var on = sw.classList.toggle('is-on');
       sw.setAttribute('aria-checked', on ? 'true' : 'false');
-      showToast((on ? '已开启' : '已关闭') + pair[1] + '提醒');
+      var r = {};
+      MEALS.forEach(function (m) { r[m] = true; });
+      Object.assign(r, config.remind || {});
+      r[name] = on;
+      config = saveConfig({ remind: r });
+      showToast((on ? '已开启' : '已关闭') + name + '提醒');
     });
+  }
+  bindMealSwitch('sw-bf', '早餐');
+  bindMealSwitch('sw-lu', '午餐');
+  bindMealSwitch('sw-di', '晚餐');
+
+  /* 开屏把盘里的配置态贴回界面（无配置 = 保持改造前的静态值，不动 DOM） */
+  function hydrateConfig() {
+    if (config.v !== SCHEMA_V) { return; }
+    dayGoal = config.dayGoal != null ? config.dayGoal : dayGoal;
+    weekGoal = config.weekGoal != null ? config.weekGoal : weekGoal;
+    $('day-val').textContent = String(dayGoal);
+    $('week-set-val').textContent = String(weekGoal);
+    var swMap = { '早餐': 'sw-bf', '午餐': 'sw-lu', '晚餐': 'sw-di' };
+    MEALS.forEach(function (m) {
+      var stored = (config.remind || {})[m];
+      if (stored === undefined) { return; }
+      var sw = $(swMap[m]);
+      if (!sw) { return; }
+      sw.classList.toggle('is-on', !!stored);
+      sw.setAttribute('aria-checked', stored ? 'true' : 'false');
+    });
+  }
+
+  /* 跨页 / 跨标签页联动：重读盘里的记录与配置后重渲染 */
+  function reloadAll() {
+    logs = loadLogs();
+    var c = loadConfig();
+    if (c) { config = c; }
+    hydrateConfig();
+    render();
+    applyMealStatus();
+  }
+  window.addEventListener('diet-updated', function () { reloadAll(); });
+  window.addEventListener('storage', function (e) {
+    if (e.key === K_LOGS || e.key === K_CONFIG) { reloadAll(); }
+  });
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) { reloadAll(); }
   });
 
+  hydrateConfig();
   render();
+  applyMealStatus();
   renderGroups('');
 })();
 </script>

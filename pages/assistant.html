@@ -220,7 +220,7 @@ body {
   max-width: 430px;
   margin: 0 auto;
   min-height: 100vh;
-  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(148px + env(safe-area-inset-bottom, 0px));
 }
 
 /* 桌面呈现：居中 + 侧边框 + 柔和投影，像一台安静的设备 */
@@ -1164,6 +1164,10 @@ body {
     chatScroll.appendChild(wrap);
     if (window.lucide) { window.lucide.createIcons(); }
     scrollBottom();
+    /* ⚠ 记录的是**整个 .msg 外壳**（不是 .msg__bubble 的内容）：
+       追问 chip 是挂在 .msg 下面的 .ask-chips，只存 bubble 的话
+       冷启动回填完，"减脂到 22%"那几个 chip 就没了 —— 用户再也点不出预览卡（实测踩到）。 */
+    recordMsg(role, wrap.outerHTML);
     return wrap;
   }
 
@@ -1247,7 +1251,7 @@ body {
           '<span class="strategy__chevron"><i data-lucide="chevron-down"></i></span>' +
         '</button>' +
         '<div class="strategy__body"><div class="strategy__inner"><div class="strategy__panel">' +
-          '<textarea class="pv-textarea">减脂的核心是「热量缺口 + 可持续性」。以有氧训练建立基础消耗，力量训练保留肌肉。拆成「每周 4 次有氧 + 2 次力量」的节奏更容易坚持 3 个月。</textarea>' +
+          '<textarea class="pv-textarea">减脂的核心是「热量缺口 + 可持续性」。以有氧训练建立基础消耗，力量训练保留肌肉。拆成「每周 4 次有氧 + 2 次力量」的节奏更容易做下去 3 个月。</textarea>' +
         '</div></div></div>' +
       '</div>' +
       '<div class="pv-actions">' +
@@ -1261,10 +1265,245 @@ body {
     var wrap = document.createElement('div');
     wrap.className = 'msg msg--card fade-up';
     wrap.innerHTML = previewCardHTML();
+    /* 记录/回填要能对上"是哪一张草稿卡" —— id 先挂在卡上，真正落盘时再写入盘 */
+    var card = wrap.querySelector('.pv-card');
+    if (card) {
+      if (!activeDraftId) { activeDraftId = 'gd' + Date.now(); }
+      card.setAttribute('data-draft-id', activeDraftId);
+    }
     chatScroll.appendChild(wrap);
     if (window.lucide) { window.lucide.createIcons(); }
     scrollBottom();
+    return wrap;
   }
+
+  /* ══════════════════════════════════════════════════════════════
+     持久化（本次新增）—— 改造前这一页**没有任何落盘**：
+       · 对话流一刷新就没（连"记一笔"里说的内容都留不下）
+       · 「添加关键结果 / 添加行动」只在 DOM 里插一行
+       · 「确认创建」只弹遮罩 + 追加一句回复，**目标草稿直接丢掉**
+
+       lifeflow-assistant-goal-drafts = { v:1, items:[ {
+         id, createdAt, updatedAt, status: 'draft'|'created',
+         text, vision, strategy,
+         krs:     [ { text, num, unit } ],
+         actions: [ { text, time } ]
+       } ] }
+
+     ⚠ 归属说明（按作业要求，**没有**跨域写别人的 key）：
+       这份草稿本质上是"方向域"的 goal（愿景/关键结果/行动）。
+       但方向域（goals / goal-create / goal-detail）不在我的范围内、可能正在被其它 agent 改，
+       所以我**不写** `lifeflow-goal-items` 之类别人的 key，只写本域自己的 key，
+       然后广播 `assistant-goal-draft-updated` + `assistant-goal-created`。
+       → 建议由方向域来决定怎么消费（把它并入 goal schema，或直接就认这个 key）。
+
+       lifeflow-assistant-chat = { v:1, items:[ { role:'ai'|'user', html } ] }
+       （聊天气泡里的 HTML 由本页自己生成，回填时原样插回 ⟹ 与原渲染一致）
+
+     事件名：`assistant-goal-updated`（草稿写盘后广播；确认创建时 detail.status==='created'）
+             `assistant-chat-updated`（聊天记录写盘后广播）
+     ══════════════════════════════════════════════════════════════ */
+  var K_DRAFTS = 'lifeflow-assistant-goal-drafts';
+  var K_CHAT = 'lifeflow-assistant-chat';
+  var SCHEMA_V = 1;
+  var activeDraftId = null;
+  var restoring = false;   /* 回填期间不记录、不重渲染，避免自触发 */
+
+  function stamp() {
+    var n = new Date();
+    var p = function (x) { return (x < 10 ? '0' : '') + x; };
+    return n.getFullYear() + '-' + p(n.getMonth() + 1) + '-' + p(n.getDate()) +
+      ' ' + p(n.getHours()) + ':' + p(n.getMinutes());
+  }
+  function loadJSON(key, fallback) {
+    try {
+      var raw = localStorage.getItem(key);
+      if (raw) {
+        var d = JSON.parse(raw);
+        if (d && d.v === SCHEMA_V && Array.isArray(d.items)) { return d; }
+      }
+    } catch (e) { /* 存储不可用 → 退化为空表，页面照常能聊 */ }
+    return fallback;
+  }
+  function persist(key, items) {
+    try {
+      localStorage.setItem(key, JSON.stringify({ v: SCHEMA_V, items: items }));
+    } catch (e) { /* 忽略 */ }
+  }
+  /* ⚠ 事件名必须写成**字面量**：一是全站口径一眼可查，二是 verify-persist-page 的静态检查
+     用正则找 `CustomEvent('<mod>-updated'`，把事件名藏在变量里会被判成"缺广播更新事件"（踩过）。 */
+  function broadcastDraft(detail) {
+    window.dispatchEvent(new CustomEvent('assistant-goal-updated', { detail: detail }));
+  }
+  function broadcastChat(detail) {
+    window.dispatchEvent(new CustomEvent('assistant-chat-updated', { detail: detail }));
+  }
+  function loadDrafts() { return loadJSON(K_DRAFTS, { v: SCHEMA_V, items: [] }); }
+
+  /* 聊天记录：存**整个 .msg 元素的 HTML**（role + 气泡 + 追问 chip 一起存），
+     回填时原样插回 ⟹ 与原渲染一致，chip 也不会丢。
+     ⚠ 旧格式（只存 bubble 内容）读进来也能显示，只是少了 chip。 */
+  function loadChat() { return loadJSON(K_CHAT, { v: SCHEMA_V, items: [] }); }
+  function recordMsg(role, msgHtml) {
+    if (restoring) { return; }
+    var d = loadChat();
+    d.items.push({ role: role, html: msgHtml });
+    persist(K_CHAT, d.items);
+    broadcastChat({ items: d.items });
+  }
+
+  /* 预览卡 ↔ 草稿对象 的双向映射（字段直接在 DOM 上读写，保证"用户改了什么就存什么"） */
+  function draftFromCard(card, base) {
+    var d = base || {};
+    d.vision = card.querySelector('.pv-input--full') ? card.querySelector('.pv-input--full').value : (d.vision || '');
+    d.strategy = card.querySelector('.pv-textarea') ? card.querySelector('.pv-textarea').value : (d.strategy || '');
+    var fields = card.querySelectorAll('.pv-field');
+    var prevUnit = '';
+    d.krs = [];
+    fields.forEach(function (f) {
+      var label = f.querySelector('.pv-label');
+      if (!label || label.textContent.indexOf('关键结果') < 0) { return; }
+      f.querySelectorAll('.pv-row').forEach(function (row) {
+        var ins = row.querySelectorAll('.pv-input');
+        /* ⚠ 单位不在 .pv-input 里，它是独立的 <span class="pv-unit">。
+           第一版按 ins[2] 取 ⟹ 单位永远是空串（实测存进去的 krs[0].unit === ''）。
+           新加的行走 krRow('', '', '次') —— 它**自带单位**，所以行内一定有 .pv-unit；
+           真取不到就沿用上一行的单位兜底。 */
+        var uEl = row.querySelector('.pv-unit');
+        var unit = uEl ? uEl.textContent.trim() : '';
+        if (unit) { prevUnit = unit; } else { unit = prevUnit; }
+        d.krs.push({
+          text: ins[0] ? ins[0].value : '',
+          num: ins[1] ? ins[1].value : '',
+          unit: unit
+        });
+      });
+    });
+    d.actions = [];
+    fields.forEach(function (f) {
+      var label = f.querySelector('.pv-label');
+      if (!label || label.textContent.indexOf('行动') < 0) { return; }
+      f.querySelectorAll('.pv-row').forEach(function (row) {
+        var ins = row.querySelectorAll('.pv-input');
+        d.actions.push({ text: ins[0] ? ins[0].value : '', time: ins[1] ? ins[1].value : '' });
+      });
+    });
+    return d;
+  }
+  /* 点「添加关键结果 / 添加行动」后：把那**一张卡**的当前状态写回盘（不是整页重渲染） */
+  function saveCard(card, status) {
+    if (!card || restoring) { return; }
+    var all = loadDrafts();
+    var id = card.getAttribute('data-draft-id');
+    if (!id) { id = 'gd' + Date.now(); card.setAttribute('data-draft-id', id); activeDraftId = id; }
+    var idx = -1;
+    all.items.forEach(function (x, i) { if (String(x.id) === String(id)) { idx = i; } });
+    var base = idx >= 0 ? all.items[idx] : { id: id, createdAt: stamp(), text: '', vision: '', strategy: '', krs: [], actions: [] };
+    var next = draftFromCard(card, base);
+    next.status = status || base.status || 'draft';
+    next.updatedAt = stamp();
+    if (idx >= 0) { all.items[idx] = next; } else { all.items.push(next); }
+    persist(K_DRAFTS, all.items);
+    broadcastDraft({ draft: next, items: all.items });
+  }
+  /* 从盘里渲染一张预览卡（回填用）—— 复用 previewCardHTML 的同一套 class 结构 */
+  function previewCardHTMLFrom(d) {
+    var html = '<div class="pv-card" data-draft-id="' + esc(d.id) + '">' +
+      '<div class="pv-head"><i data-lucide="sparkles"></i> 陪练已生成初稿，可微调后确认</div>' +
+      '<div class="pv-field">' +
+        '<div class="pv-label"><i data-lucide="compass"></i> 愿景 · 一句话</div>' +
+        '<input class="pv-input pv-input--full" type="text" value="' + esc(d.vision || '') + '">' +
+      '</div>' +
+      '<div class="pv-field">' +
+        '<div class="pv-label"><i data-lucide="target"></i> 量化目标 · 关键结果</div>' +
+        '<div class="pv-list">' +
+          (d.krs || []).map(function (k) { return krRow(k.text, k.num, k.unit); }).join('') +
+        '</div>' +
+        '<button type="button" class="pv-add" data-action="add-kr"><i data-lucide="plus"></i> 添加关键结果</button>' +
+      '</div>' +
+      '<div class="pv-field">' +
+        '<div class="pv-label"><i data-lucide="list-checks"></i> 行动 · 今日与近期</div>' +
+        '<div class="pv-list">' +
+          (d.actions || []).map(function (a) { return actionRow(a.text, a.time); }).join('') +
+        '</div>' +
+        '<button type="button" class="pv-add" data-action="add-action"><i data-lucide="plus"></i> 添加行动</button>' +
+      '</div>' +
+      '<div class="strategy" data-strategy>' +
+        '<button type="button" class="strategy__head" data-action="toggle-strategy" aria-expanded="false">' +
+          '<span class="strategy__icon"><i data-lucide="sparkles"></i></span>' +
+          '<span class="strategy__label">策略推导说明</span>' +
+          '<span class="strategy__badge">陪练生成</span>' +
+          '<span class="strategy__chevron"><i data-lucide="chevron-down"></i></span>' +
+        '</button>' +
+        '<div class="strategy__body"><div class="strategy__inner"><div class="strategy__panel">' +
+          '<textarea class="pv-textarea">' + esc(d.strategy || '') + '</textarea>' +
+        '</div></div></div>' +
+      '</div>' +
+      '<div class="pv-actions">' +
+        '<button type="button" class="btn btn--ghost btn--sm" data-action="cancel-create">取消</button>' +
+        '<button type="button" class="btn btn--primary btn--sm" data-action="confirm-create"><i data-lucide="check"></i> 确认创建</button>' +
+      '</div>' +
+    '</div>';
+    return html;
+  }
+  /* 草稿数据变了 → 把盘里最新状态写回它自己那张卡（关键结果/行动行按条数对齐后整体重建） */
+  function refreshDraftCard(id) {
+    if (!id) { return; }
+    var all = loadDrafts();
+    var hit = all.items.filter(function (x) { return String(x.id) === String(id); })[0];
+    if (!hit) { return; }
+    var card = document.querySelector('.pv-card[data-draft-id="' + id + '"]');
+    if (!card) { return; }
+    var wasThinking = restoring;
+    restoring = true;
+    card.outerHTML = previewCardHTMLFrom(hit);
+    restoring = wasThinking;
+    if (window.lucide) { window.lucide.createIcons(); }
+  }
+
+  /* 回填：把上次的对话与"还没确认的草稿"放回页面。
+     ⚠ 两个坑（都踩过，改前版本直接把对话刷成了 105 条）：
+       ① **必须置 restoring 标记**：回填时 appendChild 不能走 recordMsg，
+          否则"读出来 → 再写回去"会自己喂自己，条数指数增长。
+       ② **回填必须幂等**：加一个 data-restored 标记，重复调用不重复插。
+       另外本页**不监听 visibilitychange** —— 它在 headless/切回场景下会触发 reload，
+       而 reload 又会再回填一次，是上面那个爆炸的第二推力。跨页联动只靠 storage 事件。 */
+  var restored = false;
+  (function restoreSession() {
+    if (restored) { return; }
+    var chat = loadChat();
+    if (!chat.items.length) { return; }
+    restored = true;
+    restoring = true;
+    chat.items.forEach(function (m) {
+      /* 存的是整个 .msg 元素（含 chip）；旧格式的裸气泡也能插回来 */
+      chatScroll.insertAdjacentHTML('beforeend',
+        /class="msg\b/.test(m.html) ? m.html : '<div class="msg msg--' + m.role + '" data-restored="1"><div class="msg__bubble">' + m.html + '</div></div>');
+    });
+    restoring = false;
+    var drafts = loadDrafts();
+    var open = null;
+    drafts.items.forEach(function (x) { if (x.status !== 'created') { open = x; } });
+    if (open) {
+      activeDraftId = open.id;
+      var cardWrap = document.createElement('div');
+      cardWrap.className = 'msg msg--card';
+      cardWrap.setAttribute('data-restored', '1');
+      cardWrap.innerHTML = previewCardHTMLFrom(open);
+      chatScroll.appendChild(cardWrap);
+    }
+    if (window.lucide) { window.lucide.createIcons(); }
+    scrollBottom();
+  })();
+
+  /* 跨页联动：别的页改了草稿 → 刷新对应卡片 */
+  window.addEventListener('assistant-goal-updated', function (e) {
+    if (e && e.detail && e.detail.draft && String(e.detail.draft.id) === String(activeDraftId)) { return; }
+    refreshDraftCard(activeDraftId);
+  });
+  window.addEventListener('storage', function (e) {
+    if (e.key === K_DRAFTS) { refreshDraftCard(activeDraftId); }
+  });
 
   /* 路由 */
   function route(text) {
@@ -1359,13 +1598,19 @@ body {
       return;
     }
     var rm = e.target.closest('[data-action="remove-row"]');
-    if (rm) { rm.closest('.pv-row').remove(); return; }
+    if (rm) {
+      var rmCard = rm.closest('.pv-card');
+      rm.closest('.pv-row').remove();
+      saveCard(rmCard);          /* 删一行也要落盘 */
+      return;
+    }
     var addKr = e.target.closest('[data-action="add-kr"]');
     if (addKr) {
       var krList = addKr.previousElementSibling;
       krList.insertAdjacentHTML('beforeend', krRow('', '', '次'));
       if (window.lucide) { window.lucide.createIcons(); }
       scrollBottom();
+      saveCard(addKr.closest('.pv-card'));   /* 新增一行 → 立刻落盘（改造前只在 DOM 里插） */
       return;
     }
     var addAction = e.target.closest('[data-action="add-action"]');
@@ -1374,6 +1619,7 @@ body {
       aList.insertAdjacentHTML('beforeend', actionRow('', ''));
       if (window.lucide) { window.lucide.createIcons(); }
       scrollBottom();
+      saveCard(addAction.closest('.pv-card'));
       return;
     }
     var toggle = e.target.closest('[data-action="toggle-strategy"]');
@@ -1385,7 +1631,11 @@ body {
     }
     var confirm = e.target.closest('[data-action="confirm-create"]');
     if (confirm) {
-      confirm.closest('.pv-card').querySelectorAll('.btn').forEach(function (b) { b.disabled = true; });
+      var cCard = confirm.closest('.pv-card');
+      /* 确认创建 → 把这张卡的最终内容落盘并标记为 created，再广播（改造前直接丢掉） */
+      saveCard(cCard, 'created');
+      if (window.LF && window.LF.toast) { window.LF.toast('目标已创建'); }
+      cCard.querySelectorAll('.btn').forEach(function (b) { b.disabled = true; });
       var overlay = $('success-overlay');
       overlay.classList.add('is-show');
       setTimeout(function () {

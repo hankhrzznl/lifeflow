@@ -220,7 +220,7 @@ body {
   max-width: 430px;
   margin: 0 auto;
   min-height: 100vh;
-  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(148px + env(safe-area-inset-bottom, 0px));
 }
 
 /* 桌面呈现：居中 + 侧边框 + 柔和投影，像一台安静的设备 */
@@ -1253,10 +1253,55 @@ body {
   durPlus.addEventListener('click', function () { if (dur < 180) { dur += 15; renderDur(); } });
   renderDur();
 
-  /* 保存：校验名称，成功后遮罩 + toast，700ms 后返回 */
+  /* 保存：校验 → **写盘 + 广播** → 成功遮罩 + toast → 700ms 后返回目标页
+     （改造前这里只切完成面板 + toast：名称/关联目标/时长/时段**全都没存**） */
   $('btn-save').addEventListener('click', function () {
     var name = $('study-name').value.trim();
     if (!name) { window.LF.toast('请填写学习项名称'); return; }
+
+    /* ══════════════════════════════════════════════════════════════
+       持久化层（本次新增）
+
+         lifeflow-study-items = { v:1, items:[ { id, name, goal, duration, period, createdAt } ] }
+       · goal / period 取当前选中的 chip 文案（两组都是单选 chip）
+       · 新增独立 key：本页的「学习项」与 lifeflow-train-plan（训练计划）
+         不是一回事，不塞进别人的 key
+       · 写盘后广播 study-updated；跳转目标 goal-detail.html 属**方向域**，
+         本次不在范围内，故不改那个页面（由它自己决定要不要消费这个 key）
+       ══════════════════════════════════════════════════════════════ */
+    var K_STUDY = 'lifeflow-study-items';
+    var SCHEMA_V = 1;
+
+    var goalChip = document.querySelector('#goal-chips .chip.is-active');
+    var periodChip = document.querySelector('#time-chips .chip.is-active');
+    var now = new Date();
+    var p = function (x) { return (x < 10 ? '0' : '') + x; };
+    var stamp = now.getFullYear() + '-' + p(now.getMonth() + 1) + '-' + p(now.getDate()) +
+      ' ' + p(now.getHours()) + ':' + p(now.getMinutes());
+
+    var items = [];
+    try {
+      var raw = localStorage.getItem(K_STUDY);
+      if (raw) {
+        var d = JSON.parse(raw);
+        if (d && d.v === SCHEMA_V && Array.isArray(d.items)) { items = d.items; }
+      }
+    } catch (e) { /* 存储不可用 → 退化为空表（本页只是追加） */ }
+
+    items.push({
+      id: 'x' + Date.now(),
+      name: name,
+      goal: goalChip ? goalChip.textContent.trim() : '',
+      duration: dur,
+      period: periodChip ? periodChip.textContent.trim() : '',
+      createdAt: stamp
+    });
+
+    try {
+      localStorage.setItem(K_STUDY, JSON.stringify({ v: SCHEMA_V, items: items }));
+      window.dispatchEvent(new CustomEvent('study-updated', { detail: { items: items } }));
+    } catch (e) { /* 忽略：无存储时仍走成功态，不阻塞用户 */ }
+
     $('content').classList.add('is-hidden');
     $('done-state').classList.remove('is-hidden');
     window.LF.toast('已添加学习项');

@@ -220,7 +220,7 @@ body {
   max-width: 430px;
   margin: 0 auto;
   min-height: 100vh;
-  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(148px + env(safe-area-inset-bottom, 0px));
 }
 
 /* 桌面呈现：居中 + 侧边框 + 柔和投影，像一台安静的设备 */
@@ -1079,10 +1079,10 @@ body {
       <section class="card form-card">
         <h3 class="form-card__title">服药时段</h3>
         <div class="chip-wrap" id="med-periods" role="group" aria-label="服药时段多选">
-          <button type="button" class="chip is-active" data-period="早" aria-pressed="true">早</button>
-          <button type="button" class="chip is-active" data-period="午" aria-pressed="true">午</button>
-          <button type="button" class="chip" data-period="晚" aria-pressed="false">晚</button>
-          <button type="button" class="chip" data-period="睡前" aria-pressed="false">睡前</button>
+          <button type="button" class="chip is-active" data-period="早" data-time="08:00" aria-pressed="true">早</button>
+          <button type="button" class="chip is-active" data-period="午" data-time="12:00" aria-pressed="true">午</button>
+          <button type="button" class="chip" data-period="晚" data-time="19:00" aria-pressed="false">晚</button>
+          <button type="button" class="chip" data-period="睡前" data-time="22:00" aria-pressed="false">睡前</button>
         </div>
         <p class="form-hint">可多选，按时段自动生成清单</p>
       </section>
@@ -1253,11 +1253,26 @@ body {
   var $ = function (id) { return document.getElementById(id); };
 
   /* 开关切换 */
+  function toggleSwitch(s) {
+    var on = !s.classList.contains('is-on');
+    s.classList.toggle('is-on', on);
+    s.setAttribute('aria-checked', on ? 'true' : 'false');
+  }
+
   document.querySelectorAll('.switch').forEach(function (s) {
     s.addEventListener('click', function () {
-      var on = !s.classList.contains('is-on');
-      s.classList.toggle('is-on', on);
-      s.setAttribute('aria-checked', on ? 'true' : 'false');
+      toggleSwitch(s);
+    });
+  });
+
+  /* 整行可点：带 .switch-row 的行，点行的任意位置都切换行内开关。
+     开关自己的点击会冒泡到行上，所以先用 sw.contains(e.target) 排除，避免翻两次翻回原状。 */
+  document.querySelectorAll('.switch-row').forEach(function (row) {
+    row.addEventListener('click', function (e) {
+      var sw = row.querySelector('.switch');
+      if (!sw) { return; }
+      if (sw.contains(e.target)) { return; }   // 开关自己已经处理过，直接返回
+      toggleSwitch(sw);
     });
   });
 
@@ -1270,13 +1285,102 @@ body {
     });
   });
 
-  /* 保存 → 校验 → toast → 700ms 返回 */
+  /* ══════════════════════════════════════════════════════════════
+     持久化层（本次新增）—— 改造前这一页**没有数据落盘**：
+     「保存药品」是 toast-only 的假保存（校验药名 → showToast → 700ms 跳回），
+     类型/药名/剂量/时段一个都没写 ⟹ 跳回 medication.html 什么也没多。
+     现在：点保存先追加到吃药清单，再走原来的成功态。
+
+       lifeflow-medication-items =
+         { v:1, items:[ { id, name, type, typeLabel, dose, periods, time,
+                          timesPerDay, courseDays, remind, createdAt } ] }
+
+     ⚠ 时段的钟点归并规则必须与 medication.html 的 sheet 一致（早 08:00 /
+       午 12:00 / 晚 19:00 / 睡前 22:00），否则同一张清单两个入口写出两种 meta。
+     ⚠ 这个 key 由本页与 medication.html **共用**，两边都按同一份种子幂等播种
+       （谁先打开谁播种）—— 否则先直达本页会把 medication.html 原有的
+       「维生素 D / 护肝片」两行顶掉。
+     ══════════════════════════════════════════════════════════════ */
+  var K_MEDS = 'lifeflow-medication-items';
+  var SCHEMA_V = 1;
+  var PERIOD_TIME = { '早': '08:00', '午': '12:00', '晚': '19:00', '睡前': '22:00' };
+  var PERIOD_ORDER = ['早', '午', '晚', '睡前'];
+
+  /* 种子：与 medication.html 的 seedMeds() 逐字一致（改造前那两行写死的药） */
+  function seedMeds() {
+    return [
+      { id: 'seed-m1', name: '维生素 D', type: 'daily', dose: '400 IU', periods: ['早'], time: '08:00', timesPerDay: 1, remind: true },
+      { id: 'seed-m2', name: '护肝片', type: 'daily', dose: '2 片', periods: ['晚'], time: '21:00', timesPerDay: 1, remind: true }
+    ];
+  }
+  function loadMeds() {
+    try {
+      var raw = localStorage.getItem(K_MEDS);
+      if (raw) {
+        var d = JSON.parse(raw);
+        if (d && d.v === SCHEMA_V && Array.isArray(d.items)) { return d.items; }
+      }
+    } catch (e) { /* 存储不可用 → 退化为种子，页面仍能显示 */ }
+    var seed = seedMeds();
+    try { localStorage.setItem(K_MEDS, JSON.stringify({ v: SCHEMA_V, items: seed })); } catch (e) { /* 忽略 */ }
+    return seed;
+  }
+  function ymd(d) {
+    var p = function (x) { return (x < 10 ? '0' : '') + x; };
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+  }
+  var meds = loadMeds();
+
+  /* 保存 → 落盘 → 广播 → 原来的 toast + 700ms 返回 */
   $('save-med').addEventListener('click', function () {
     var name = $('med-name').value.trim();
     if (!name) { window.LF.toast('请填写药品名称'); return; }
+
+    var typeChip = document.querySelector('#med-type .chip.is-active');
+    var type = typeChip ? typeChip.getAttribute('data-type') : 'daily';
+    var periods = [];
+    var picked = {};
+    document.querySelectorAll('#med-periods .chip.is-active').forEach(function (c) {
+      var p = c.getAttribute('data-period') || c.textContent.trim();
+      periods.push(p);
+      picked[p] = c.getAttribute('data-time') || PERIOD_TIME[p];
+    });
+    /* 取最早的时段作为提醒钟点（钟点优先读 chip 上的 data-time，与页面上写的一致） */
+    var time = '08:00';
+    for (var i = 0; i < PERIOD_ORDER.length; i++) {
+      if (periods.indexOf(PERIOD_ORDER[i]) >= 0) { time = picked[PERIOD_ORDER[i]] || PERIOD_TIME[PERIOD_ORDER[i]]; break; }
+    }
+    var lastSwitch = document.querySelector('.switch-row .switch');
+    var items = loadMeds();
+    items.push({
+      id: 'm' + Date.now(),
+      name: name,
+      type: type,
+      typeLabel: typeChip ? typeChip.textContent.trim() : '每日长期',
+      dose: $('med-dose').value.trim(),
+      periods: periods,
+      time: time,
+      timesPerDay: periods.length || 1,
+      courseDays: $('course-days') ? ($('course-days').value || '') : '',
+      remind: lastSwitch ? lastSwitch.classList.contains('is-on') : true,
+      createdAt: ymd(new Date())
+    });
+    try {
+      localStorage.setItem(K_MEDS, JSON.stringify({ v: SCHEMA_V, items: items }));
+      window.dispatchEvent(new CustomEvent('medication-updated', { detail: { items: items } }));
+    } catch (e) { /* 忽略：无存储时仍走下面的成功态，不阻塞用户 */ }
+
     window.LF.toast('已保存药品');
     setTimeout(function () { location.href = 'medication.html'; }, 700);
   });
+
+  /* 跨页 / 跨标签页：medication.html 或本页改了清单 → 重读（本页只是追加，不用重渲染） */
+  function reloadMeds() { meds = loadMeds(); }
+  window.addEventListener('medication-updated', function (e) {
+    meds = (e && e.detail && Array.isArray(e.detail.items)) ? e.detail.items : loadMeds();
+  });
+  window.addEventListener('storage', function (e) { if (e.key === K_MEDS) { reloadMeds(); } });
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) { reloadMeds(); } });
 })();
 </script>
 <style>
@@ -1299,6 +1403,12 @@ body {
   .switch-row__sub { display: block; margin-top: 2px; font-size: 12px; color: var(--text-3); }
 
   .switch:active { transform: scale(0.94); }
+
+  /* 触控热区：带 .switch-row 的行，语义是「点这行就切换」。
+     所以热区撑在整行上，开关本身不再单独撑 —— 避免两个重叠热区。
+     整行可点后，行高 45.2px 已达标（≥44px）。 */
+  .switch-row { cursor: pointer; }
+  .switch-row:active { transform: scale(0.985); }
 
   /* 模块主色按钮：柔和紫 */
   .btn--purple { background: linear-gradient(135deg, #8B7EC8 0%, #6E5BB8 100%); color: #FFFFFF; box-shadow: 0 8px 22px rgba(139, 126, 200, 0.34); }

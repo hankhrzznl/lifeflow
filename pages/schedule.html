@@ -220,7 +220,7 @@ body {
   max-width: 430px;
   margin: 0 auto;
   min-height: 100vh;
-  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(148px + env(safe-area-inset-bottom, 0px));
 }
 
 /* 桌面呈现：居中 + 侧边框 + 柔和投影，像一台安静的设备 */
@@ -1429,18 +1429,133 @@ body {
     }
   });
 
-  /* 快速添加琐事（演示） */
+  /* ══════════════════════════════════════════════════════════════
+     快速添加琐事（本次改成真落盘）—— 改造前源码自标「演示」：
+     只弹 toast，**输入的内容直接丢掉**（刷新即无）。
+
+       lifeflow-trivia-items = { v:1, items:[ { id, date, time, text, src:'quick-add' } ] }
+
+     ⚠ 种子是**空数组**：改造前时间轴上没有任何"琐事"行（顶部「2 琐事」是写死的构成数字），
+       所以空种子 ⟹ 首屏与改造前逐像素一致。写死的「3 目标行动<br>5 习惯 · 2 琐事」
+       在没有任何琐事时**原样保留**（回退要求），只有真加了琐事才按条数改那个数字。
+
+     ⚠ 与日程里既有的训练块（lifeflow-train-schedule / lifeflow-train-today）**不共用 key**：
+       那两个是训练计划派生的，这里是用户手输的琐事，混在一起会互相覆盖。
+       渲染时只清自己的 .ev--trivia，绝不碰 .ev--train。
+     ══════════════════════════════════════════════════════════════ */
+  var K_TRIVIA = 'lifeflow-trivia-items';
+  var SCHEMA_V = 1;
+
+  function ymd(d) {
+    var p = function (x) { return (x < 10 ? '0' : '') + x; };
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+  }
+  function loadTrivia() {
+    try {
+      var raw = localStorage.getItem(K_TRIVIA);
+      if (raw) {
+        var d = JSON.parse(raw);
+        if (d && d.v === SCHEMA_V && Array.isArray(d.items)) { return d.items; }
+      }
+    } catch (e) { /* 存储不可用 → 退化为空表，页面仍能显示 */ }
+    var seed = [];
+    saveTrivia(seed, true);
+    return seed;
+  }
+  function saveTrivia(list, quiet) {
+    try {
+      localStorage.setItem(K_TRIVIA, JSON.stringify({ v: SCHEMA_V, items: list }));
+      if (!quiet) { window.dispatchEvent(new CustomEvent('schedule-updated', { detail: { items: list } })); }
+    } catch (e) { /* 忽略 */ }
+  }
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  /* 从「取快递 18:00」里取时间；取不到就按 18:00（输入框 placeholder 举的就是这个例子） */
+  function parseTime(v) {
+    var m = String(v).match(/(\d{1,2})[:：](\d{2})/);
+    if (!m) { return '18:00'; }
+    var h = Number(m[1]), mi = Number(m[2]);
+    if (h > 23 || mi > 59) { return '18:00'; }
+    return (h < 10 ? '0' : '') + h + ':' + m[2];
+  }
+  function todayTrivia() {
+    var today = ymd(new Date());
+    return loadTrivia().filter(function (x) { return !x.date || x.date === today; });
+  }
+
+  /* 时间轴插入：复用本页既有的 .ev / .item-row / .tl-hour 结构，不加新 class */
+  function renderTrivia() {
+    var tl = $('tl');
+    if (!tl) { return; }
+    tl.querySelectorAll('.ev--trivia').forEach(function (el) { el.remove(); });
+    var items = todayTrivia();
+    items.forEach(function (it) {
+      var t = it.time || '18:00';
+      var ev = document.createElement('div');
+      ev.className = 'ev item-row ev--life ev--trivia';
+      ev.innerHTML =
+        '<span class="icon-box icon-box--sm"><i data-lucide="zap"></i></span>' +
+        '<div class="item-row__main">' +
+        '<div class="item-row__name">' + esc(it.text) + '</div>' +
+        '<div class="item-row__meta"><i data-lucide="clock"></i> ' + esc(t) + ' · 琐事</div>' +
+        '</div>';
+      var list = Array.prototype.slice.call(tl.querySelectorAll('.tl-hour'));
+      var hourEl = null, nextEl = null;
+      list.forEach(function (h) {
+        var ht = h.querySelector('.tl-hour__time');
+        if (ht && ht.textContent === t) { hourEl = h; }
+      });
+      if (!hourEl) {
+        list.forEach(function (h) {
+          var ht = h.querySelector('.tl-hour__time');
+          if (ht && !nextEl && ht.textContent > t) { nextEl = h; }
+        });
+      }
+      if (hourEl) {
+        hourEl.querySelector('.tl-hour__slot').appendChild(ev);
+      } else {
+        var newHour = document.createElement('div');
+        newHour.className = 'tl-hour';
+        newHour.innerHTML = '<span class="src-dot src-dot--life"></span><span class="tl-hour__time">' + esc(t) + '</span><div class="tl-hour__slot"></div>';
+        newHour.querySelector('.tl-hour__slot').appendChild(ev);
+        if (nextEl) { tl.insertBefore(newHour, nextEl); } else { tl.appendChild(newHour); }
+      }
+    });
+    /* 顶部构成数字：没有琐事时**一个字都不动**（保留改造前写死的「3 目标行动 / 5 习惯 · 2 琐事） */
+    var comp = document.querySelector('.overview__comp');
+    if (comp && items.length) { comp.innerHTML = '3 目标行动<br>5 习惯 · ' + items.length + ' 琐事'; }
+    if (window.lucide) { window.lucide.createIcons(); }
+  }
+
   var quickInput = $('quick-add-input');
   var quickBtn = $('quick-add-btn');
+
+  /* 快速添加琐事 → 写盘 + 广播 + 上时间轴（改造前只弹 toast） */
   function quickAdd() {
     if (!quickInput) { return; }
     var v = quickInput.value.trim();
     if (!v) { showToast('输入一句琐事，如：取快递 18:00'); return; }
-    showToast('已添加到今天：' + v);
+    var list = loadTrivia();
+    list.push({ id: 't' + Date.now(), date: ymd(new Date()), time: parseTime(v), text: v, src: 'quick-add' });
+    saveTrivia(list, false);
     quickInput.value = '';
+    renderTrivia();
+    showToast('已添加到今天：' + v);
   }
   if (quickBtn) { quickBtn.addEventListener('click', quickAdd); }
   if (quickInput) { quickInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') { quickAdd(); } }); }
+
+  /* 琐事落盘后的渲染 + 跨页联动（别的页改了 → 重读重渲染） */
+  renderTrivia();
+  window.addEventListener('schedule-updated', renderTrivia);
+  window.addEventListener('storage', function (e) {
+    if (e.key === K_TRIVIA) { renderTrivia(); }
+  });
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) { renderTrivia(); }
+  });
 
   /* 久坐小组件：距下次起身倒计时（演示） */
   var remainEl = $('sit-remain');

@@ -220,7 +220,7 @@ body {
   max-width: 430px;
   margin: 0 auto;
   min-height: 100vh;
-  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(148px + env(safe-area-inset-bottom, 0px));
 }
 
 /* 桌面呈现：居中 + 侧边框 + 柔和投影，像一台安静的设备 */
@@ -1048,17 +1048,17 @@ body {
 
     <div class="note-detail-body" id="content">
 
-      <!-- 头区 -->
+      <!-- 头区（内容由 ?id= 从 localStorage 取；静态值留作无参时的回退，保证视觉不变） -->
       <section class="card note-head fade-up">
         <div class="note-title-row">
-          <h1 class="note-title">省考错题本</h1>
-          <span class="tag tag--pin">置顶</span>
+          <h1 class="note-title" id="det-title">省考错题本</h1>
+          <span class="tag tag--pin" id="det-pin">置顶</span>
         </div>
-        <p class="note-time">昨天 18:20</p>
+        <p class="note-time" id="det-time">昨天 18:20</p>
       </section>
 
       <!-- 正文 -->
-      <section class="card note-body fade-up fade-up--2">
+      <section class="card note-body fade-up fade-up--2" id="det-body">
         <p>资料分析：比重变化量题型，先判升降再算绝对值，避免死记公式。</p>
         <p>例题：A 占 B 的比重同比上升 2.3 个百分点，问原因——先找分子增速与分母增速大小关系，增速差即比重变化。</p>
         <p>错因推进回顾：直接套公式没看增速方向，下次先写判断再计算。</p>
@@ -1069,23 +1069,18 @@ body {
         <div class="meta-row">
           <span class="meta-ic"><i data-lucide="calendar"></i></span>
           <span class="meta-label">创建时间</span>
-          <span class="meta-val t-num">08-13 18:20</span>
-        </div>
-        <div class="meta-row">
-          <span class="meta-ic"><i data-lucide="book-open"></i></span>
-          <span class="meta-label">关联维度</span>
-          <span class="meta-val"><span class="tag tag--done">学习</span></span>
+          <span class="meta-val t-num" id="det-created">08-13 18:20</span>
         </div>
         <div class="meta-row">
           <span class="meta-ic"><i data-lucide="file-text"></i></span>
           <span class="meta-label">字数</span>
-          <span class="meta-val t-num">约 120 字</span>
+          <span class="meta-val t-num" id="det-words">约 120 字</span>
         </div>
       </section>
 
       <!-- 操作区 -->
       <section class="ops fade-up">
-        <button type="button" class="btn btn--soft" data-href="note-create.html"><i data-lucide="pencil"></i>编辑</button>
+        <button type="button" class="btn btn--soft" id="btn-edit"><i data-lucide="pencil"></i>编辑</button>
         <button type="button" class="btn btn--danger-outline" id="btn-delete"><i data-lucide="trash-2"></i>删除</button>
       </section>
     </div>
@@ -1218,7 +1213,107 @@ body {
 (function () {
   'use strict';
   var $ = function (id) { return document.getElementById(id); };
+
+  /* ══════════════════════════════════════════════════════════════
+     持久化（本次新增）—— 改造前两个问题：
+       ① 卡片内容**写死**（跟从列表点进来的是哪条笔记无关）
+       ② #btn-delete **只弹 toast 不删**（全站 localStorage.removeItem 出现 0 次）
+     现在：按 ?id= 取那一条渲染；删除是真删。
+
+       lifeflow-note-items = { v:1, items:[ { id, title, body, pinned, createdAt, updatedAt } ] }
+     ══════════════════════════════════════════════════════════════ */
+  var K_NOTES = 'lifeflow-note-items';
+  var SCHEMA_V = 1;
+
+  function ymd(d) {
+    var p = function (x) { return (x < 10 ? '0' : '') + x; };
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+  }
+  function dayOffset(n) { var d = new Date(); d.setDate(d.getDate() + n); return ymd(d); }
+  function loadNotes() {
+    try {
+      var raw = localStorage.getItem(K_NOTES);
+      if (raw) {
+        var d = JSON.parse(raw);
+        if (d && d.v === SCHEMA_V && Array.isArray(d.items)) { return d.items; }
+      }
+    } catch (e) { /* 忽略 */ }
+    return [];
+  }
+  function saveNotes(list) {
+    try {
+      localStorage.setItem(K_NOTES, JSON.stringify({ v: SCHEMA_V, items: list }));
+      window.dispatchEvent(new CustomEvent('note-updated', { detail: { items: list } }));
+    } catch (e) { /* 忽略 */ }
+  }
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  function fmtWhen(iso) {
+    var s = String(iso || '');
+    var d = s.slice(0, 10), hm = s.slice(11, 16);
+    if (d === dayOffset(0)) { return '今天 ' + hm; }
+    if (d === dayOffset(-1)) { return '昨天 ' + hm; }
+    var m = d.match(/^\d{4}-(\d{2})-(\d{2})$/);
+    return m ? Number(m[1]) + '月' + Number(m[2]) + '日' : d;
+  }
+
+  var params = new URLSearchParams(location.search);
+  var wantId = params.get('id');
+  var items = loadNotes();
+  /* 常用排序：置顶优先，其次创建时间倒序 —— **必须与 notes.html 的列表一致**，
+     否则"不带 ?id= 时退化为第一条"会显示出与列表第一张卡不同的笔记（踩过）。 */
+  function sortedNotes(list) {
+    return list.slice().sort(function (a, b) {
+      if (!!a.pinned !== !!b.pinned) { return a.pinned ? -1 : 1; }
+      return String(b.createdAt || '') < String(a.createdAt || '') ? -1 : 1;
+    });
+  }
+  /* 有 ?id= 就找那一条；没带参数时退化为**列表里的第一条**（便于直接打开本页看效果）。
+     ⚠ 查了但查不到 → 走空态；**没带参数** → 保留静态回退值，
+       否则直接打开这页会一片空白，比显示示例数据更差。 */
+  var note = null;
+  if (wantId) {
+    note = items.filter(function (x) { return String(x.id) === String(wantId); })[0] || null;
+    if (!note && $('empty-state')) {
+      if ($('content')) { $('content').classList.add('is-hidden'); }
+      $('empty-state').classList.remove('is-hidden');
+      if (window.lucide) { window.lucide.createIcons(); }
+      return;
+    }
+  } else {
+    note = sortedNotes(items)[0] || null;
+  }
+
+  if (note) {
+    if ($('det-title')) { $('det-title').textContent = note.title || '(无标题)'; }
+    if ($('det-pin')) { $('det-pin').style.display = note.pinned ? '' : 'none'; }
+    if ($('det-time')) { $('det-time').textContent = fmtWhen(note.createdAt); }
+    if ($('det-body')) {
+      /* 正文按空行/换行拆成段落，保持改造前的 <p> 结构 */
+      var paras = String(note.body || '').split(/\n+/).filter(function (s) { return s.trim(); });
+      $('det-body').innerHTML = paras.length
+        ? paras.map(function (s) { return '<p>' + esc(s.trim()) + '</p>'; }).join('')
+        : '<p>' + esc(note.body || '') + '</p>';
+    }
+    if ($('det-created')) { $('det-created').textContent = String(note.createdAt || '').slice(5).replace('-', '-'); }
+    if ($('det-words')) { $('det-words').textContent = '约 ' + String(note.body || '').replace(/\s/g, '').length + ' 字'; }
+  }
+
+  /* 编辑 → 带上 id 回新建页（该页已支持按 ?id= 更新那一条） */
+  if ($('btn-edit')) {
+    $('btn-edit').addEventListener('click', function () {
+      location.href = 'note-create.html' + (note ? '?id=' + encodeURIComponent(note.id) : '');
+    });
+  }
+
+  /* 删除 —— 真删（改造前只 toast） */
   $('btn-delete').addEventListener('click', function () {
+    if (note) {
+      var left = items.filter(function (x) { return String(x.id) !== String(note.id); });
+      saveNotes(left);
+    }
     window.LF.toast('已删除笔记');
     setTimeout(function () { location.href = 'notes.html'; }, 700);
   });

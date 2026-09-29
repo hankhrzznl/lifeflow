@@ -220,7 +220,7 @@ body {
   max-width: 430px;
   margin: 0 auto;
   min-height: 100vh;
-  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(148px + env(safe-area-inset-bottom, 0px));
 }
 
 /* 桌面呈现：居中 + 侧边框 + 柔和投影，像一台安静的设备 */
@@ -1053,9 +1053,9 @@ body {
             <h2 class="section-head__title">我的习惯</h2>
             <span class="section-head__hint">打卡去今天页</span>
           </div>
-          <div class="hlist">
+          <div class="hlist" id="habit-list">
 
-            <!-- 阅读 -->
+            <!-- 阅读（静态回退值：改造前写死的标记，只在拿到数据时被覆盖） -->
             <div class="hcard" data-href="habit-detail.html" aria-label="阅读 30 分钟 · 习惯详情">
               <div class="item-row">
                 <span class="icon-box icon-box--life"><i data-lucide="book-open"></i></span>
@@ -1251,6 +1251,7 @@ body {
 </div>
 
 <script src="../assets/lucide.min.js"></script>
+<script src="../assets/lf-habit-seed.js"></script>
 <script>
 (function () {
   'use strict';
@@ -1275,8 +1276,13 @@ body {
   document.addEventListener('click', function (e) { var h = e.target.closest('[data-href]'); if (h) { var href = h.getAttribute('data-href'); if (href && href.charAt(0) !== '#') { location.href = href; } } });
   if (window.lucide) { window.lucide.createIcons(); }
 
-  /* 补记昨天 */
+  /* 补记昨天（落盘版，见文件末尾的持久化块） */
   window.backfillYesterday = function(name) {
+    if (!window.LF) { return; }
+    var list = loadItems();
+    var hit = list.filter(function (x) { return x.name === name; })[0];
+    if (!hit) { showToast('没找到这个习惯'); return; }
+    addEntry(list, hit.id, dayOffset(-1), 1, 'backfill');
     showToast('已补记' + name + '昨天');
   };
 
@@ -1292,6 +1298,167 @@ body {
   var empty = $('empty-state');
   var loading = $('loading-state');
 
+  /* ══════════════════════════════════════════════════════════════
+     持久化层（本次新增）—— 改造前这一页**没有落盘**：
+       · 「我的习惯」3 张卡是**写死的静态标记**
+       · 「补记昨天」只弹 toast，什么都没记（点完刷新即失忆）
+     现在：列表由数据驱动渲染；「补记昨天」写入该习惯的打卡条目。
+
+       lifeflow-habit-items = { v:1, items:[ {
+         id, name, icon, tag, unit, value, barPct, seedStreak, seedDate,
+         freq, remindTime, remindOn, order,
+         heat: [ { d, lv, n, today } ],        ← 打卡热力格（种子 = 改造前写死的月历）
+         entries: [ { date, value, src } ]     ← 从种子日起新增的打卡（不伪造历史）
+       } ] }
+     ⚠ 习惯是**工具轨**（app-tool，不进七领域养成链）——所以 schema 里**没有「领域」字段**，
+       按 habit-create.html 表单里真实存在的五个字段（名称/图标/落地形态/频率/提醒时间）来。
+     ══════════════════════════════════════════════════════════════ */
+  var K_ITEMS = 'lifeflow-habit-items';
+  var SCHEMA_V = 1;
+
+  function ymd(d) {
+    var p = function (x) { return (x < 10 ? '0' : '') + x; };
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+  }
+  function dayOffset(n) { var d = new Date(); d.setDate(d.getDate() + n); return ymd(d); }
+
+  /* 种子：**精确复刻改造前写死的 3 张卡**（含顺序、进度条宽度、连续天数文案）
+     + 详情页本来写死展示的「早起 6:30」（order:1，不进 habit.html 列表）。
+     entries 一律从空开始 —— 与 focus.html 同一口径：**不伪造历史流水**。
+     ⚠ 种子放在共用文件 `../assets/lf-habit-seed.js`（三页共用同一个 key，各抄一份会
+        出现"谁先打开谁的种子生效"——实测先开 habit-create 保存会让列表只剩 1 张卡）。 */
+  function seedItems() {
+    if (typeof window.LF_HABIT_SEED === 'function') { return window.LF_HABIT_SEED(); }
+    return [];   /* 共用文件没加载到 → 不播种（静态回退值仍在标记里，页面照常显示） */
+  }
+
+  function loadItems() {
+    try {
+      var raw = localStorage.getItem(K_ITEMS);
+      if (raw) {
+        var d = JSON.parse(raw);
+        if (d && d.v === SCHEMA_V && Array.isArray(d.items)) { return d.items; }
+      }
+    } catch (e) { /* 存储不可用 → 退化为空表，页面仍能显示静态回退值 */ }
+    var seed = seedItems();
+    saveItems(seed, true);
+    return seed;
+  }
+  function saveItems(list, quiet) {
+    try {
+      localStorage.setItem(K_ITEMS, JSON.stringify({ v: SCHEMA_V, items: list }));
+      if (!quiet) { window.dispatchEvent(new CustomEvent('habit-updated', { detail: { items: list } })); }
+    } catch (e) { /* 忽略 */ }
+  }
+  /* 打卡（或补记）：写进该习惯的 entries，不伪造种子日之前的历史。
+     ⚠ 必须**保存传进来的那个 list**：第一版写的是 `saveItems(loadItems(), false)` ——
+       而 loadItems() 会重新 parse 一份**没有刚才那次 push** 的副本（对象是按值序列化出去的），
+       于是补记被静默丢掉：toast 说"已补记"，盘里 entries 仍是 0（e2e 第 3 步抓到，踩过）。 */
+  function addEntry(list, id, date, value, src) {
+    var item = null;
+    (list || []).forEach(function (x) { if (String(x.id) === String(id)) { item = x; } });
+    if (!item) { return null; }
+    if (!item.entries) { item.entries = []; }
+    var dup = item.entries.filter(function (x) { return x.date === date; })[0];
+    if (dup) { dup.value = value; dup.src = src; }
+    else { item.entries.push({ date: date, value: value, src: src }); }
+    saveItems(list, false);
+    return item;
+  }
+
+  var tpl = '<div class="item-row"><span class="icon-box icon-box--life"><i data-lucide="{icon}"></i></span>' +
+    '<div class="item-row__main"><div class="item-row__name">{name}<span class="hcard__tag">{tag}</span></div></div>' +
+    '<span class="item-row__val" style="color:var(--text-2);">{value}</span></div>' +
+    '<div class="hcard__bar"><i style="width:{pct}%"></i></div>' +
+    '<div class="hcard__sub"><span>连续 {streak} 天</span>' +
+    /* ⚠ 这里必须带 data-act="backfill"：改造前是内联 onclick，改成事件委托后
+       漏了这个属性 ⟹ 按钮点了没反应（e2e 第 3 步当场抓到：entries=0） */
+    '<button type="button" class="hcard__backfill" data-act="backfill">补记昨天</button></div>';
+
+  function cardHTML(x) {
+    return tpl
+      .replace('{icon}', esc(x.icon || 'repeat'))
+      .replace('{name}', esc(x.name))
+      .replace('{tag}', esc(x.tag || '每日'))
+      .replace('{value}', esc(x.value || '—'))
+      .replace('{pct}', String(Number(x.barPct) || 0))
+      .replace('{streak}', String(Number(x.seedStreak) || 0));
+  }
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  function sortedItems(list) {
+    /* 与 habit-detail.html **共用一套口径**：order 升序（种子卡 0）→ cardOrder 升序
+       （cardOrder = -建档时间 ⟹ 新建的插在种子卡前面，再按"新的更靠前"排）。 */
+    return list.slice().sort(function (a, b) {
+      var d = (Number(a.order) || 0) - (Number(b.order) || 0);
+      if (d) { return d; }
+      return (Number(a.cardOrder) || 0) - (Number(b.cardOrder) || 0);
+    });
+  }
+
+  /* ⚠ 只在**拿到数据**时覆盖静态标记（回退要求）；且种子渲染结果 == 改造前静态内容 ⟹ 像素 0 差异 */
+  function listItems() {
+    var arr = sortedItems(loadItems());
+    return arr.filter(function (x) { return !(Number(x.order) > 0); });
+  }
+  function renderList() {
+    var list = $('habit-list');
+    if (!list) { return; }
+    var arr = listItems();
+    if (!arr.length) { return; }
+    list.innerHTML = arr.map(function (x) {
+      return '<div class="hcard" data-href="habit-detail.html" data-id="' + esc(x.id) + '" aria-label="' + esc(x.name) + ' · 习惯详情">' + cardHTML(x) + '</div>';
+    }).join('');
+    if (window.lucide) { window.lucide.createIcons(); }
+  }
+
+  /* 「补记昨天」：按钮装了热区（.hcard__backfill::before），但按名字调用保持原样不动 */
+  function bindBackfill() {
+    var list = $('habit-list');
+    if (!list) { return; }
+    list.addEventListener('click', function (e) {
+      var btn = e.target.closest('[data-act="backfill"]');
+      if (!btn) { return; }
+      e.stopPropagation();
+      var card = btn.closest('[data-id]');
+      var id = card ? card.getAttribute('data-id') : '';
+      var list = loadItems();
+      var hit = list.filter(function (x) { return String(x.id) === String(id); })[0];
+      if (hit) { itemBackfill(list, hit); }
+    });
+  }
+  function itemBackfill(list, item) {
+    addEntry(list, item.id, dayOffset(-1), 1, 'backfill');
+    if (window.LF && window.LF.toast) { window.LF.toast('已补记' + item.name + '昨天'); }
+  }
+
+  /* 点卡片 → 带 ?id= 进详情页（改造前不带 id，详情页显示写死的示例） */
+  function bindCardNav() {
+    var list = $('habit-list');
+    if (!list) { return; }
+    list.addEventListener('click', function (e) {
+      var card = e.target.closest('[data-id]');
+      if (!card) { return; }
+      if (e.target.closest('[data-act]')) { return; }
+      /* 卡片自带 data-href（仍保留作静态回退）；这里要带上 ?id=，所以拦住文档级跳转自己走 */
+      e.stopPropagation();
+      location.href = 'habit-detail.html?id=' + encodeURIComponent(card.getAttribute('data-id'));
+    });
+  }
+
+  /* 跨页联动：别的页改了 → 本页重读并重渲染 */
+  window.addEventListener('habit-updated', function (e) {
+    if (e && e.detail && Array.isArray(e.detail.items)) { renderList(); } else { renderList(); }
+  });
+  window.addEventListener('storage', function (e) {
+    if (e.key === K_ITEMS) { renderList(); }
+  });
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) { renderList(); }
+  });
+
   function showState() {
     var hash = location.hash;
     content.classList.remove('is-hidden');
@@ -1302,6 +1469,11 @@ body {
   }
   showState();
   window.addEventListener('hashchange', showState);
+
+  /* 渲染 + 绑定（顺序：先渲染再由委托接管点击） */
+  renderList();
+  bindBackfill();
+  bindCardNav();
 
   /* 添加习惯 */
   var addBtn = $('add-habit');
@@ -1346,6 +1518,7 @@ body {
 
   /* 补记昨天（次级操作 · 视觉降级） */
   .hcard__backfill {
+    position: relative;                 /* ::before 的定位上下文，必须加 */
     font-size: 11px; color: var(--text-3); font-weight: 500;
     padding: 3px 10px; border-radius: var(--r-pill);
     border: 1px solid var(--border);
@@ -1357,6 +1530,21 @@ body {
   }
   .hcard__backfill:hover { color: var(--text-2); border-color: var(--border-strong); }
   .hcard__backfill:active { background: var(--surface-2); }
+
+  /* 触控热区：按钮自己的渲染盒一点不动（视觉不可能变），
+     只用一个绝对定位的透明伪元素往外撑出可点区。
+     渲染盒报 25px（取整），但实测按钮内容高约 24.5px ——
+     所以 12 + 24.5 + 8 = 44.5 → 实测命中 44px（先写 -7 时只有 43px，差 1px，踩过）。
+     可用空间实测：上方 12px（再上是 .hcard__bar，间距 12px）、下方无兄弟。
+     所以上方占满 12px 但不侵入进度条，余量放到下方。
+     ⚠ 纯伪元素撑出的区域**不改变 flex 布局**：相邻项间距不变，
+       视觉 0 像素差（已逐像素比对验证）。 */
+  .hcard__backfill::before {
+    content: '';
+    position: absolute;
+    left: 0; right: 0;
+    top: -12px; bottom: -8px;
+  }
 
   /* 报告区（热力月历 · 只读） */
   .report-section { }

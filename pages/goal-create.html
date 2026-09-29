@@ -220,7 +220,7 @@ body {
   max-width: 430px;
   margin: 0 auto;
   min-height: 100vh;
-  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(148px + env(safe-area-inset-bottom, 0px));
 }
 
 /* 桌面呈现：居中 + 侧边框 + 柔和投影，像一台安静的设备 */
@@ -1188,11 +1188,97 @@ body {
     if (window.lucide) { window.lucide.createIcons(); }
   });
 
-  /* 确认创建 */
+  /* ══════════════════════════════════════════════════════════════
+     持久化层（本次新增）—— 改造前 #confirm-btn **只弹成功遮罩 + 跳转**：
+     表单里写的目标名称 / 阶段 / 今天的第一步 / 关键结果一个都没存 ⟹ 建完就丢，
+     回到 goals.html 依然是那 5 张写死的卡。
+     现在：按 3 层表单组装成一条目标写盘，再广播。
+
+       lifeflow-goal-items = { v:1, items:[ {
+         id, domId, title, status, domain, domainIcon,
+         days, deadline, progress, bar, pct,
+         measure, summary, nextStep, today, step, strategy,
+         stages:[ { id, name, meta, date, state } ],
+         tasks: [ { id, name, meta, done } ]
+       } ] }
+       —— 三层：目标(名称) → 阶段(名称 + 预计完成日) → 今天的第一步
+       ⚠ 本页**只追加**，不播种（与 expense-create / note-create 同口径）：
+         存储不可用时退化为空表，不阻塞下面的成功态。
+     ══════════════════════════════════════════════════════════════ */
+  var K_GOALS = 'lifeflow-goal-items';
+  var SCHEMA_V = 1;
+
+  function loadGoals() {
+    try {
+      var raw = localStorage.getItem(K_GOALS);
+      if (raw) {
+        var d = JSON.parse(raw);
+        if (d && d.v === SCHEMA_V && Array.isArray(d.items)) { return d.items; }
+      }
+    } catch (e) { /* 存储不可用 → 退化为空表（本页只是追加） */ }
+    return [];
+  }
+  function saveGoals(list) {
+    try {
+      localStorage.setItem(K_GOALS, JSON.stringify({ v: SCHEMA_V, items: list }));
+      window.dispatchEvent(new CustomEvent('goal-updated', { detail: { items: list } }));
+    } catch (e) { /* 忽略：无存储时仍走成功态，不阻塞用户 */ }
+  }
+
+  /* 第 2 层：阶段行 → stages[]（空行不落盘；第一个阶段是"当前阶段"） */
+  function collectStages() {
+    var out = [];
+    Array.prototype.forEach.call(document.querySelectorAll('#stage-list .stage-row'), function (row) {
+      var inputs = row.querySelectorAll('input');
+      var name = inputs[0] ? inputs[0].value.trim() : '';
+      var date = inputs[1] ? inputs[1].value.trim() : '';
+      if (!name && !date) { return; }
+      out.push({
+        id: 'st' + (out.length + 1),
+        name: name,
+        meta: '',
+        date: date,
+        state: out.length === 0 ? 'active' : 'todo'
+      });
+    });
+    return out;
+  }
+
+  /* 确认创建：组装 schema → 写盘 → 广播 → 成功遮罩 → 跳回列表 */
   var overlay = document.getElementById('success-overlay');
   document.getElementById('confirm-btn').addEventListener('click', function () {
     var name = document.getElementById('goal-name').value.trim();
     if (!name) { showToast('先写一句话说清目标吧'); return; }
+
+    var nameEl = document.getElementById('first-step');
+    var notesEl = document.getElementById('advanced-notes');
+    var firstStep = nameEl ? nameEl.value.trim() : '';
+    var notes = notesEl ? notesEl.value.trim() : '';
+    var stages = collectStages();
+    /* 截止日取最后一个填了日期的阶段（表单里没有单独的截止字段） */
+    var deadline = null;
+    for (var i = stages.length - 1; i >= 0; i--) {
+      if (stages[i].date) { deadline = stages[i].date; break; }
+    }
+
+    var id = 'g' + Date.now();
+    var items = loadGoals();
+    items.push({
+      id: id, domId: 'goal-card-' + id,
+      title: name,
+      status: 'active', domain: '自定义', domainIcon: 'target',
+      days: 0, deadline: deadline, progress: 0, bar: '', pct: '',
+      measure: null,
+      summary: null,
+      nextStep: firstStep || '从今天的第一步开始',
+      today: { icon: 'circle', text: '今日未开始', full: false },
+      step: { title: firstStep || name, sub: '', startedAt: null },
+      strategy: notes,
+      stages: stages,
+      tasks: []
+    });
+    saveGoals(items);
+
     overlay.classList.add('is-show');
     setTimeout(function () { location.href = 'goals.html'; }, 1400);
   });

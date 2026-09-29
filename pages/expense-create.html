@@ -220,7 +220,7 @@ body {
   max-width: 430px;
   margin: 0 auto;
   min-height: 100vh;
-  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(148px + env(safe-area-inset-bottom, 0px));
 }
 
 /* 桌面呈现：居中 + 侧边框 + 柔和投影，像一台安静的设备 */
@@ -1297,7 +1297,71 @@ body {
 
   $('btn-mic').addEventListener('click', function () { window.LF.toast('语音输入演示'); });
 
+  /* ══════════════════════════════════════════════════════════════
+     持久化（本次新增）—— 改前 #btn-save **只弹 toast + 跳转**，
+     表单里选的金额/类型/账户/分类/备注一个都没存 ⟹ 记完就丢。
+     现在接上与 expense.html / expense-detail.html 共用的 key：
+
+       lifeflow-expense-items = { v:1, items:[ { id, date, time, type,
+                                  amount, cat, note, account } ] }
+
+     ⚠ 两处口径要和 expense.html 保持一致：
+       · type 用 'out' | 'in'（本页 UI 是 expense/income，要映射）
+       · 分类/账户从 `is-active` 类读（本页没有 data-* 属性，只能读类）
+     ══════════════════════════════════════════════════════════════ */
+  var K_ITEMS = 'lifeflow-expense-items';
+  var SCHEMA_V = 1;
+
+  function ymd(d) {
+    var p = function (x) { return (x < 10 ? '0' : '') + x; };
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+  }
+  function loadItems() {
+    try {
+      var raw = localStorage.getItem(K_ITEMS);
+      if (raw) {
+        var d = JSON.parse(raw);
+        if (d && d.v === SCHEMA_V && Array.isArray(d.items)) { return d.items; }
+      }
+    } catch (e) { /* 存储不可用时退化为空表（本页只是追加，不影响渲染） */ }
+    return [];
+  }
+  /* 读当前选中的 chip 文案（本页没有 data-* 属性，只能读 is-active） */
+  function activeChipText(groupId) {
+    var g = document.getElementById(groupId);
+    if (!g) { return ''; }
+    var on = g.querySelector('.chip.is-active');
+    return on ? on.textContent.trim() : '';
+  }
+
   $('btn-save').addEventListener('click', function () {
+    var amt = parseFloat($('amount').value);
+    if (!amt || amt <= 0) { window.LF.toast('先输入金额'); $('amount').focus(); return; }
+
+    var mode = seg.getAttribute('data-mode') === 'income' ? 'income' : 'expense';
+    var catGrid = mode === 'income' ? 'cats-income' : 'cats-expense';
+    var now = new Date();
+    var hm = ('0' + now.getHours()).slice(-2) + ':' + ('0' + now.getMinutes()).slice(-2);
+    /* 备注输入框没有 id（只有 placeholder），只能按容器找 */
+    var noteEl = document.querySelector('.note-row .input');
+    var note = noteEl ? noteEl.value.trim() : '';
+
+    var items = loadItems();
+    items.push({
+      id: 'x' + Date.now(),
+      date: ymd(now),
+      time: hm,
+      type: mode === 'income' ? 'in' : 'out',
+      amount: Math.round(amt * 100) / 100,
+      cat: activeChipText(catGrid) || '其他',
+      note: note,
+      account: activeChipText('acc-chips') || '支付宝'
+    });
+    try {
+      localStorage.setItem(K_ITEMS, JSON.stringify({ v: SCHEMA_V, items: items }));
+      window.dispatchEvent(new CustomEvent('expense-updated', { detail: { items: items } }));
+    } catch (e) { /* 忽略：无存储时仍走下面的成功态，不阻塞用户 */ }
+
     $('content').classList.add('is-hidden');
     $('done-state').classList.remove('is-hidden');
     window.LF.toast('已记下这笔账');

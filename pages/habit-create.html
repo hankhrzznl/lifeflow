@@ -220,7 +220,7 @@ body {
   max-width: 430px;
   margin: 0 auto;
   min-height: 100vh;
-  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(148px + env(safe-area-inset-bottom, 0px));
 }
 
 /* 桌面呈现：居中 + 侧边框 + 柔和投影，像一台安静的设备 */
@@ -1122,7 +1122,7 @@ body {
       <div class="done-overlay__card">
         <div class="done-overlay__check"><i data-lucide="check"></i></div>
         <p class="done-overlay__title">习惯已添加</p>
-        <p class="done-overlay__sub">坚持每天一点点，慢慢变成身体记忆</p>
+        <p class="done-overlay__sub">每天一点点，慢慢变成身体记忆</p>
         <button type="button" class="btn btn--primary" data-href="habit.html">返回习惯</button>
       </div>
     </div>
@@ -1163,6 +1163,7 @@ body {
 </div>
 
 <script src="../assets/lucide.min.js"></script>
+<script src="../assets/lf-habit-seed.js"></script>
 <script>
 (function () {
   'use strict';
@@ -1239,11 +1240,26 @@ body {
   var $ = function (id) { return document.getElementById(id); };
 
   /* 开关切换 */
+  function toggleSwitch(s) {
+    var on = !s.classList.contains('is-on');
+    s.classList.toggle('is-on', on);
+    s.setAttribute('aria-checked', on ? 'true' : 'false');
+  }
+
   document.querySelectorAll('.switch').forEach(function (s) {
     s.addEventListener('click', function () {
-      var on = !s.classList.contains('is-on');
-      s.classList.toggle('is-on', on);
-      s.setAttribute('aria-checked', on ? 'true' : 'false');
+      toggleSwitch(s);
+    });
+  });
+
+  /* 整行可点：带 .switch-row 的行，点行的任意位置都切换行内开关。
+     开关自己的点击会冒泡到行上，所以先用 sw.contains(e.target) 排除，避免翻两次翻回原状。 */
+  document.querySelectorAll('.switch-row').forEach(function (row) {
+    row.addEventListener('click', function (e) {
+      var sw = row.querySelector('.switch');
+      if (!sw) { return; }
+      if (sw.contains(e.target)) { return; }   // 开关自己已经处理过，直接返回
+      toggleSwitch(sw);
     });
   });
 
@@ -1296,13 +1312,135 @@ body {
     });
   });
 
-  /* 保存 → 校验 → toast → 700ms 返回 */
+  /* ══════════════════════════════════════════════════════════════
+     保存 —— 改成写盘（改造前只弹 toast + 跳转，**表单内容全丢**）
+
+       ⚠ 本页表单只有五个字段：名称 / 图标 / 落地形态（按图标推断）/ 频率 / 提醒时间+开关。
+         **没有「领域」这个概念** —— 习惯是工具轨（app-tool），不进七领域养成链，
+         所以 schema 里也不加领域字段。
+
+       lifeflow-habit-items = { v:1, items:[ {
+         id, name, icon, tag, unit, value, barPct, seedStreak, seedDate,
+         freq, remindTime, remindOn, order, cardOrder, heat, entries
+       } ] }
+       与 habit.html / habit-detail.html 共用同一个 key。
+       seedDate = 建档日：统计只算建档日之后的 entries，**不把新习惯算成"连续 N 天"**。
+     ══════════════════════════════════════════════════════════════ */
+  var K_ITEMS = 'lifeflow-habit-items';
+  var SCHEMA_V = 1;
+
+  function ymd(d) {
+    var p = function (x) { return (x < 10 ? '0' : '') + x; };
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+  }
+  function loadItems() {
+    try {
+      var raw = localStorage.getItem(K_ITEMS);
+      if (raw) {
+        var d = JSON.parse(raw);
+        if (d && d.v === SCHEMA_V && Array.isArray(d.items)) { return d.items; }
+      }
+    } catch (e) { /* 存储不可用 → 退化为空表（本页只是追加/更新） */ }
+    /* ⚠ 本页**要负责播种**：否则"先打开 habit-create 再保存"会把盘初始化成只有那一条新习惯，
+       回 habit.html 就只剩 1 张卡（实测踩到）。种子在共用文件里，与列表页/详情页同一份。
+       共用文件没加载到 → 不播种，页面仍能正常保存（只是列表里暂时没有那三张种子卡）。 */
+    if (typeof window.LF_HABIT_SEED === 'function') {
+      var seed = window.LF_HABIT_SEED();
+      try { localStorage.setItem(K_ITEMS, JSON.stringify({ v: SCHEMA_V, items: seed })); } catch (e2) { /* 忽略 */ }
+      return seed;
+    }
+    return [];
+  }
+  function saveItems(list) {
+    try {
+      localStorage.setItem(K_ITEMS, JSON.stringify({ v: SCHEMA_V, items: list }));
+      window.dispatchEvent(new CustomEvent('habit-updated', { detail: { items: list } }));
+    } catch (e) { /* 忽略：无存储时仍走成功态，不阻塞用户 */ }
+  }
+
+  /* 从表单读「落地形态」（第一段脚本的智能推断写的 DOM 值，避免再抄一份映射表） */
+  function readForm() {
+    var iconBtn = document.querySelector('#habit-icons .icon-pick.is-selected');
+    var freqChip = document.querySelector('#habit-freq .chip.is-active');
+    var sw = document.querySelector('.switch-row .switch');
+    return {
+      name: $('habit-name').value.trim(),
+      icon: iconBtn ? iconBtn.getAttribute('data-icon') : 'sunrise',
+      freq: freqChip ? freqChip.getAttribute('data-freq') : '每天',
+      form: document.getElementById('infer-label') ? document.getElementById('infer-label').textContent : '时间锚点',
+      formSub: document.getElementById('infer-sub') ? document.getElementById('infer-sub').textContent : '',
+      remindTime: $('habit-time').value || '07:00',
+      remindOn: sw ? sw.classList.contains('is-on') : true
+    };
+  }
+
+  /* 编辑态：从详情页「编辑」带 ?id= 进来 —— 回填那一条（改造前编辑按钮不带 id，等于又新建一个） */
+  var editId = new URLSearchParams(location.search).get('id') || null;
+  if (editId) {
+    var hit = loadItems().filter(function (x) { return String(x.id) === String(editId); })[0];
+    if (hit) {
+      $('habit-name').value = hit.name || '';
+      var picks = document.querySelectorAll('#habit-icons .icon-pick');
+      picks.forEach(function (p) {
+        var on = p.getAttribute('data-icon') === hit.icon;
+        p.classList.toggle('is-selected', on);
+        p.setAttribute('aria-pressed', on ? 'true' : 'false');
+      });
+      document.querySelectorAll('#habit-freq .chip').forEach(function (c) {
+        var on = c.getAttribute('data-freq') === hit.freq;
+        c.classList.toggle('is-active', on);
+        c.setAttribute('aria-pressed', on ? 'true' : 'false');
+      });
+      $('habit-time').value = hit.remindTime || '07:00';
+      var swEl = document.querySelector('.switch-row .switch');
+      if (swEl) {
+        swEl.classList.toggle('is-on', hit.remindOn !== false);
+        swEl.setAttribute('aria-checked', hit.remindOn !== false ? 'true' : 'false');
+      }
+      updateInfer(hit.icon);
+    }
+  }
+
+  /* 保存 → 校验 → 写盘 → 广播 → 700ms 返回 */
   $('save-habit').addEventListener('click', function () {
-    var name = $('habit-name').value.trim();
-    if (!name) { window.LF.toast('请填写习惯名称'); return; }
+    var f = readForm();
+    if (!f.name) { window.LF.toast('请填写习惯名称'); return; }
+
+    var list = loadItems();
+    if (editId) {
+      var done = false;
+      list = list.map(function (x) {
+        if (String(x.id) !== String(editId)) { return x; }
+        done = true;
+        /* 保留 seed 基线与打卡历史，只更新表单里的五个字段 */
+        return Object.assign({}, x, {
+          name: f.name, icon: f.icon, freq: f.freq, form: f.form, formSub: f.formSub,
+          remindTime: f.remindTime, remindOn: f.remindOn, updatedAt: ymd(new Date())
+        });
+      });
+      if (!done) { list.push(newHabit(f, editId)); }
+    } else {
+      list.push(newHabit(f, 'h' + Date.now()));
+    }
+    saveItems(list);
+
     window.LF.toast('已添加习惯');
     setTimeout(function () { location.href = 'habit.html'; }, 700);
   });
+
+  /* 新习惯：**不伪造历史** —— 连续 0 天、进度 0%、无打卡记录；卡片排在种子卡前面 */
+  function newHabit(f, id) {
+    return {
+      id: id, name: f.name, icon: f.icon, tag: f.freq || '每日',
+      /* status 是**详情页头卡那个状态标签**（改造前写死「进行中」），与频率 tag 不是一回事 */
+      status: '进行中',
+      unit: '', value: '—', barPct: 0,
+      seedStreak: 0, seedLongest: 0, seedMonth: 0, seedDate: ymd(new Date()),
+      freq: f.freq || '每天', form: f.form, formSub: f.formSub,
+      remindTime: f.remindTime, remindOn: f.remindOn,
+      order: 0, cardOrder: -Date.now(), heat: [], entries: []
+    };
+  }
 })();
 </script>
 <style>
@@ -1323,6 +1461,12 @@ body {
   .switch-row__sub { display: block; margin-top: 2px; font-size: 12px; color: var(--text-3); }
 
   .switch:active { transform: scale(0.94); }
+
+  /* 触控热区：带 .switch-row 的行，语义是「点这行就切换」。
+     所以热区撑在整行上，开关本身不再单独撑 —— 避免两个重叠热区。
+     整行可点后，行高 45.2px 已达标（≥44px）。 */
+  .switch-row { cursor: pointer; }
+  .switch-row:active { transform: scale(0.985); }
 
   .time-input { flex: 0 0 auto; width: 116px; height: 40px; padding: 0 10px; font-size: 14px; font-family: var(--font-num); }
 

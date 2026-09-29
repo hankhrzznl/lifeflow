@@ -220,7 +220,7 @@ body {
   max-width: 430px;
   margin: 0 auto;
   min-height: 100vh;
-  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(148px + env(safe-area-inset-bottom, 0px));
 }
 
 /* 桌面呈现：居中 + 侧边框 + 柔和投影，像一台安静的设备 */
@@ -1231,32 +1231,130 @@ body {
   /* 开关切换 */
   document.querySelectorAll('.switch').forEach(function (s) {
     s.addEventListener('click', function () {
-      var on = !s.classList.contains('is-on');
-      s.classList.toggle('is-on', on);
-      s.setAttribute('aria-checked', on ? 'true' : 'false');
+      toggleSwitch(s);
     });
   });
 
-  /* 目标时长步进器：步长 0.5，范围 5-10 */
-  var hours = 7.5;
-  var hoursEl = $('sleep-hours');
-  function renderHours() {
-    hoursEl.textContent = (Number.isInteger(hours) ? String(hours) : hours.toFixed(1)) + ' h';
+  function toggleSwitch(s) {
+    var on = !s.classList.contains('is-on');
+    s.classList.toggle('is-on', on);
+    s.setAttribute('aria-checked', on ? 'true' : 'false');
   }
+
+  /* 整行可点：带 .switch-row 的行，点行的任意位置都切换行内开关。
+     开关自己的点击会冒泡到行上，所以先用 sw.contains(e.target) 排除，避免翻两次翻回原状。 */
+  document.querySelectorAll('.switch-row').forEach(function (row) {
+    row.addEventListener('click', function (e) {
+      var sw = row.querySelector('.switch');
+      if (!sw) { return; }
+      if (sw.contains(e.target)) { return; }   // 开关自己已经处理过，直接返回
+      toggleSwitch(sw);
+    });
+  });
+
+  /* ══════════════════════════════════════════════════════════════
+     持久化层（本次新增）—— 改造前这一页**没有数据落盘**：
+     「保存睡眠安排」是 toast-only 的假保存（showToast + 700ms 跳回 sleep.html），
+     入睡/起床/午觉/目标时长一个都没存 ⟹ 跳回去等于白填。
+     现在：点保存先把整份安排写盘，再走原来的成功态。
+
+       lifeflow-sleep-plan = { v:1, inTime, outTime, nap, napDur, durTarget }
+
+     ⚠ 首屏静态值（22:45 / 06:30 / 午觉 on / 7.5h）改成由本 key 驱动渲染，
+       seed 精确复刻这四个值 ⟹ 首次打开与改造前逐像素一致。
+     ══════════════════════════════════════════════════════════════ */
+  var K_PLAN = 'lifeflow-sleep-plan';
+  var SCHEMA_V = 1;
+  var DUR_STEPS = [6.0, 6.5, 7.0, 7.5, 8.0, 8.5, 9.0];
+
+  function seedPlan() {
+    return { v: SCHEMA_V, inTime: '22:45', outTime: '06:30', nap: true, napDur: 20, durTarget: 7.5 };
+  }
+  function loadPlan() {
+    try {
+      var raw = localStorage.getItem(K_PLAN);
+      if (raw) {
+        var d = JSON.parse(raw);
+        if (d && d.v === SCHEMA_V) { return d; }
+      }
+    } catch (e) { /* 存储不可用 → 退化为种子，页面仍能显示 */ }
+    var seed = seedPlan();
+    savePlan(seed, true);
+    return seed;
+  }
+  function savePlan(obj, quiet) {
+    try {
+      localStorage.setItem(K_PLAN, JSON.stringify(obj));
+      if (!quiet) { window.dispatchEvent(new CustomEvent('sleep-updated', { detail: obj })); }
+    } catch (e) { /* 忽略 */ }
+  }
+
+  var plan = loadPlan();
+  var hours = plan.durTarget;
+
+  function hoursText(v) { return (Number.isInteger(v) ? String(v) : v.toFixed(1)) + ' h'; }
+  function renderHours() { $('sleep-hours').textContent = hoursText(hours); }
+
+  /* 把盘里的安排贴回表单（入睡/起床/午觉/时长四处） */
+  function hydrateForm() {
+    if (plan.inTime) { $('sleep-in').value = plan.inTime; }
+    if (plan.outTime) { $('sleep-out').value = plan.outTime; }
+    var nap = document.querySelector('.switch-row .switch');
+    if (nap && typeof plan.nap === 'boolean') {
+      nap.classList.toggle('is-on', plan.nap);
+      nap.setAttribute('aria-checked', plan.nap ? 'true' : 'false');
+    }
+    if (typeof plan.durTarget === 'number') { hours = plan.durTarget; }
+    renderHours();
+  }
+
   $('sleep-minus').addEventListener('click', function () {
-    hours = Math.max(5, +(hours - 0.5).toFixed(1));
+    var i = DUR_STEPS.indexOf(hours);
+    if (i < 0) { i = DUR_STEPS.indexOf(7.5); }
+    hours = DUR_STEPS[Math.max(0, i - 1)];
     renderHours();
   });
   $('sleep-plus').addEventListener('click', function () {
-    hours = Math.min(10, +(hours + 0.5).toFixed(1));
+    var i = DUR_STEPS.indexOf(hours);
+    if (i < 0) { i = DUR_STEPS.indexOf(7.5); }
+    hours = DUR_STEPS[Math.min(DUR_STEPS.length - 1, i + 1)];
     renderHours();
   });
 
-  /* 保存 → toast → 700ms 返回 */
+  /* 保存 → 落盘 → 广播 → 原来的 toast + 700ms 返回 */
   $('save-sleep').addEventListener('click', function () {
+    var napSw = document.querySelector('.switch-row .switch');
+    var next = {
+      v: SCHEMA_V,
+      inTime: $('sleep-in').value || '22:45',
+      outTime: $('sleep-out').value || '06:30',
+      nap: napSw ? napSw.classList.contains('is-on') : true,
+      napDur: 20,
+      durTarget: hours
+    };
+    plan = next;
+    savePlan(next);
     window.LF.toast('已保存睡眠安排');
     setTimeout(function () { location.href = 'sleep.html'; }, 700);
   });
+
+  /* 跨页 / 跨标签页：sleep.html 改了目标时长 → 本页重读 */
+  function reloadPlan() {
+    var p = loadPlan();
+    if (p && p.v === SCHEMA_V) { plan = p; hydrateForm(); }
+  }
+  window.addEventListener('sleep-updated', function (e) {
+    if (e && e.detail && typeof e.detail.durTarget === 'number') { plan = e.detail; hydrateForm(); }
+    else { reloadPlan(); }
+  });
+  window.addEventListener('storage', function (e) {
+    if (e.key === K_PLAN) { reloadPlan(); }
+  });
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) { reloadPlan(); }
+  });
+
+  hydrateForm();
 })();
 </script>
 <style>
@@ -1279,6 +1377,12 @@ body {
   .duration-label { font-size: 15px; font-weight: 650; color: var(--text-1); }
 
   .switch:active { transform: scale(0.94); }
+
+  /* 触控热区：带 .switch-row 的行，语义是「点这行就切换」。
+     所以热区撑在整行上，开关本身不再单独撑 —— 避免两个重叠热区。
+     整行可点后，行高 45.2px 已达标（≥44px）。 */
+  .switch-row { cursor: pointer; }
+  .switch-row:active { transform: scale(0.985); }
 
   /* 模块主色按钮：深夜蓝 */
   .btn--night { background: linear-gradient(135deg, #1B2A4A 0%, #33456E 100%); color: #FFFFFF; box-shadow: 0 8px 22px rgba(27, 42, 74, 0.32); }

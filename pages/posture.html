@@ -220,7 +220,7 @@ body {
   max-width: 430px;
   margin: 0 auto;
   min-height: 100vh;
-  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(148px + env(safe-area-inset-bottom, 0px));
 }
 
 /* 桌面呈现：居中 + 侧边框 + 柔和投影，像一台安静的设备 */
@@ -781,6 +781,19 @@ body {
 .switch.is-on { background: var(--gradient); }
 .switch.is-on::after { transform: translateX(20px); }
 
+/* 触控热区：按钮自己的渲染盒一点不动（视觉不可能变），
+   只用一个绝对定位的透明伪元素往外撑出可点区。
+   热区高 = 13 + 28 + 13 = 54px */
+
+.switch::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -13px;
+  bottom: -13px;
+}
+
 /* 复选框（圆润） */
 .check {
   width: 26px;
@@ -1296,25 +1309,137 @@ body {
   window.addEventListener('hashchange', showState);
 
   var RING_LEN = 289;
-  var count = 6, goal = 10;
+  var goal = 10;
+
+  /* ══════════════════════════════════════════════════════════════
+     持久化层（本次新增）—— 改造前这一页**没有业务存储**：
+     「起身活动了 +1」往 DOM 里 insertBefore 一行、改内存变量 count，
+     刷新即归零；「撤销上一次」靠 `if (count <= 6)` 挡着最早 6 条。
+     现在：每次起身落 localStorage，时间线由数据渲染。
+
+       lifeflow-posture-records  = { v:1, items:[ { id, date, time, name, tag,
+                                     icon, sub, seed } ] }
+       lifeflow-posture-settings = { v:1, remind, interval, goal }
+
+     ⚠ 时间线那 6 行不是"假数字"，是**今天的既有流水**（09:12/10:05/11:20/
+       14:30/15:40/16:25），所以按模板要求把它们 seed 成 date=今天的历史记录，
+       逐字复刻 time/tag/name/sub ⟹ 首次打开时间线与改造前逐像素一致。
+       seed 记录带 seed:true，撤销时跳过它们（等价于改前 count<=6 那条底线）。
+     ══════════════════════════════════════════════════════════════ */
+  var K_RECORDS = 'lifeflow-posture-records';
+  var K_SETTINGS = 'lifeflow-posture-settings';
+  var SCHEMA_V = 1;
+  var TAG_ICON = { '喝水': 'droplets', '拉伸': 'stretch-horizontal', '走动': 'footprints' };
+
+  function ymd(d) {
+    var p = function (x) { return (x < 10 ? '0' : '') + x; };
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+  }
+  /* 种子：复刻改造前写死的 6 行时间线（顺序也照抄） */
+  function seedRecords() {
+    var today = ymd(new Date());
+    return [
+      { id: 'seed-p1', date: today, time: '09:12', name: '肩颈放松', tag: '拉伸', icon: 'stretch-horizontal', sub: '坐了 48 分钟', seed: true },
+      { id: 'seed-p2', date: today, time: '10:05', name: '去接水', tag: '走动', icon: 'footprints', sub: '坐了 52 分钟', seed: true },
+      { id: 'seed-p3', date: today, time: '11:20', name: '补水 200ml', tag: '喝水', icon: 'droplets', sub: '坐了 41 分钟', seed: true },
+      { id: 'seed-p4', date: today, time: '14:30', name: '肩颈放松', tag: '拉伸', icon: 'stretch-horizontal', sub: '坐了 55 分钟', seed: true },
+      { id: 'seed-p5', date: today, time: '15:40', name: '起身走走', tag: '走动', icon: 'footprints', sub: '坐了 46 分钟', seed: true },
+      { id: 'seed-p6', date: today, time: '16:25', name: '肩颈放松', tag: '拉伸', icon: 'stretch-horizontal', sub: '坐了 39 分钟', seed: true }
+    ];
+  }
+  function loadRecords() {
+    try {
+      var raw = localStorage.getItem(K_RECORDS);
+      if (raw) {
+        var d = JSON.parse(raw);
+        if (d && d.v === SCHEMA_V && Array.isArray(d.items)) { return d.items; }
+      }
+    } catch (e) { /* 存储不可用 → 退化为种子，页面仍能显示 */ }
+    var seed = seedRecords();
+    saveRecords(seed, true);
+    return seed;
+  }
+  function saveRecords(list, quiet) {
+    try {
+      localStorage.setItem(K_RECORDS, JSON.stringify({ v: SCHEMA_V, items: list }));
+      records = list;
+      if (!quiet) { window.dispatchEvent(new CustomEvent('posture-updated', { detail: { items: list } })); }
+    } catch (e) { /* 忽略 */ }
+  }
+  function loadSettings() {
+    try {
+      var raw = localStorage.getItem(K_SETTINGS);
+      if (raw) {
+        var d = JSON.parse(raw);
+        if (d && d.v === SCHEMA_V) { return d; }
+      }
+    } catch (e) { /* 忽略 */ }
+    return null;
+  }
+  function saveSettings(patch) {
+    var cur = loadSettings() || { v: SCHEMA_V };
+    var next = {
+      v: SCHEMA_V,
+      remind: patch.remind != null ? patch.remind : cur.remind,
+      interval: patch.interval != null ? patch.interval : cur.interval,
+      goal: patch.goal != null ? patch.goal : cur.goal
+    };
+    try {
+      localStorage.setItem(K_SETTINGS, JSON.stringify(next));
+      window.dispatchEvent(new CustomEvent('posture-updated', { detail: next }));
+    } catch (e) { /* 忽略 */ }
+    return next;
+  }
+  var records = loadRecords();
+
+  function todayRecords() {
+    var today = ymd(new Date());
+    return records.filter(function (r) { return String(r.date) === today; });
+  }
+  function count() { return todayRecords().length; }
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  /* 时间线：用户新增的在前，种子（今天的既有流水）按原顺序在后
+     —— 与改造前「insertBefore 插到最前」的观感一致 */
+  function renderTl() {
+    var list = $('tl-list');
+    if (!list) { return; }
+    var frag = document.createDocumentFragment();
+    var rows = records.filter(function (r) { return !r.seed; }).concat(records.filter(function (r) { return r.seed; }));
+    rows.forEach(function (r) {
+      var row = document.createElement('div');
+      row.className = 'tl-row';
+      row.setAttribute('data-id', r.id || '');
+      row.innerHTML = '<span class="tl-row__time">' + esc(r.time) + '</span>' +
+        '<span class="tl-row__tag"><i data-lucide="' + esc(r.icon || TAG_ICON[r.tag] || 'footprints') + '"></i> ' + esc(r.tag) + '</span>' +
+        '<div class="tl-row__main"><div class="tl-row__name">' + esc(r.name) + '</div><div class="tl-row__sub">' + esc(r.sub) + '</div></div>';
+      frag.appendChild(row);
+    });
+    list.innerHTML = '';
+    list.appendChild(frag);
+    if (window.lucide) { window.lucide.createIcons(); }
+  }
 
   function render() {
-    var pct = Math.round(count / goal * 100);
+    var c = count();
+    var pct = Math.round(c / goal * 100);
     $('ring-fill').style.strokeDashoffset = String(RING_LEN * (1 - pct / 100));
     $('ring-pct').textContent = pct + '%';
-    $('today-count').textContent = String(count);
+    $('today-count').textContent = String(c);
     $('bar-fill').style.width = pct + '%';
-    $('tl-hint').textContent = count + ' 次';
-    var remain = goal - count;
+    $('tl-hint').textContent = c + ' 次';
+    var remain = goal - c;
     $('coach-next').textContent = remain > 0
       ? '还差 ' + remain + ' 次起身 · 每 ' + $('int-val').textContent + ' 分钟记得起来动一动'
       : '今日目标已达成 · 明天继续保持这个节奏';
   }
 
-  /* ② 起身 +1（波纹动效） */
+  /* ② 起身 +1（波纹动效 + 落盘） */
   var standBtn = $('stand-btn');
   standBtn.addEventListener('click', function (e) {
-    count++;
     var rect = standBtn.getBoundingClientRect();
     var x = e.clientX - rect.left, y = e.clientY - rect.top;
     var r = document.createElement('span');
@@ -1323,56 +1448,71 @@ body {
     setTimeout(function () { r.remove(); }, 700);
     var now = new Date();
     var hm = ('0' + now.getHours()).slice(-2) + ':' + ('0' + now.getMinutes()).slice(-2);
-    var tag = count % 3 === 0 ? '喝水' : (count % 3 === 1 ? '拉伸' : '走动');
-    var tagIcon = tag === '喝水' ? 'droplets' : (tag === '拉伸' ? 'stretch-horizontal' : 'footprints');
-    var row = document.createElement('div');
-    row.className = 'tl-row';
-    row.innerHTML = '<span class="tl-row__time">' + hm + '</span>' +
-      '<span class="tl-row__tag"><i data-lucide="' + tagIcon + '"></i> ' + tag + '</span>' +
-      '<div class="tl-row__main"><div class="tl-row__name">起身活动</div><div class="tl-row__sub">刚刚</div></div>';
-    var list = $('tl-list');
-    list.insertBefore(row, list.firstChild);
+    var c = count() + 1;
+    /* 标签轮换规则与改造前一致（按今日第几次取模） */
+    var tag = c % 3 === 0 ? '喝水' : (c % 3 === 1 ? '拉伸' : '走动');
+    var rec = {
+      id: 'p' + Date.now(),
+      date: ymd(now),
+      time: hm,
+      name: '起身活动',
+      tag: tag,
+      icon: TAG_ICON[tag],
+      sub: '刚刚'
+    };
+    records.push(rec);
+    saveRecords(records);
+    renderTl();
     render();
-    showToast('已记录起身 · 今日第 ' + count + ' 次');
-    if (window.lucide) { window.lucide.createIcons(); }
+    showToast('已记录起身 · 今日第 ' + c + ' 次');
   });
 
-  /* 撤销 */
+  /* 撤销：真删最近一条**本次新增**的记录（改前靠 count<=6 挡着种子，语义相同） */
   $('undo-btn').addEventListener('click', function () {
-    if (count <= 6) { showToast('这是演示数据，最早 6 条不可撤销'); return; }
-    count--;
-    var list = $('tl-list');
-    var first = list.querySelector('.tl-row');
-    if (first) { first.remove(); }
+    var idx = -1;
+    for (var i = records.length - 1; i >= 0; i--) {
+      if (!records[i].seed) { idx = i; break; }
+    }
+    if (idx < 0) { showToast('这是演示数据，最早 6 条不可撤销'); return; }
+    records.splice(idx, 1);
+    saveRecords(records);
+    renderTl();
     render();
     showToast('已撤销一次起身');
   });
 
-  /* ③ 间隔 chips */
+  /* ③ 间隔 chips（改前只切 class + 内存值，不落盘） */
   document.querySelectorAll('[data-interval]').forEach(function (c) {
     c.addEventListener('click', function () {
       document.querySelectorAll('[data-interval]').forEach(function (x) { x.classList.remove('is-active'); x.setAttribute('aria-pressed', 'false'); });
       c.classList.add('is-active');
       c.setAttribute('aria-pressed', 'true');
       $('int-val').textContent = c.getAttribute('data-interval');
+      saveSettings({ interval: parseInt(c.getAttribute('data-interval'), 10) });
       render();
     });
   });
 
-  /* 强提醒开关（③ 与 ⑥ 联动） */
-  function bindSwitch(id, msg) {
+  /* 强提醒开关（③ 与 ⑥ 联动，改前只切 class，不落盘） */
+  function bindSwitch(id, name) {
     var sw = $(id);
     if (!sw) { return; }
     sw.addEventListener('click', function () {
       var on = sw.classList.toggle('is-on');
       sw.setAttribute('aria-checked', on ? 'true' : 'false');
-      showToast(on ? msg + '已开启' : msg + '已关闭');
+      saveSettings({ remind: on });
+      /* ③ 和 ⑥ 是同一个开关的两处入口，保持同步 */
+      ['remind-switch', 'set-remind'].forEach(function (x) {
+        var el = $(x);
+        if (el && el !== sw) { el.classList.toggle('is-on', on); el.setAttribute('aria-checked', on ? 'true' : 'false'); }
+      });
+      showToast(on ? name + '已开启' : name + '已关闭');
     });
   }
   bindSwitch('remind-switch', '强提醒');
   bindSwitch('set-remind', '强提醒');
 
-  /* ⑥ 设置 stepper */
+  /* ⑥ 设置 stepper（改前只改文本 + 内存变量，不落盘） */
   var intVal = $('int-val'), goalVal = $('goal-val');
   function bindStep(decId, incId, valEl, min, max, step, apply) {
     $(decId).addEventListener('click', function () {
@@ -1386,12 +1526,57 @@ body {
       if (apply) { apply(v); }
     });
   }
-  bindStep('int-dec', 'int-inc', intVal, 30, 60, 5, function () {
+  bindStep('int-dec', 'int-inc', intVal, 30, 60, 5, function (v) {
     document.querySelectorAll('[data-interval]').forEach(function (c) { c.classList.remove('is-active'); });
+    saveSettings({ interval: v });
     render();
   });
-  bindStep('goal-dec', 'goal-inc', goalVal, 6, 15, 1, function (v) { goal = v; render(); });
+  bindStep('goal-dec', 'goal-inc', goalVal, 6, 15, 1, function (v) { goal = v; saveSettings({ goal: v }); render(); });
 
+  /* 开屏：把盘里的设置贴回界面（无存储 ⟹ 保持改造前的静态值） */
+  function hydrateSettings() {
+    var s = loadSettings();
+    if (s) {
+      if (typeof s.goal === 'number') { goal = s.goal; goalVal.textContent = String(s.goal); }
+      if (s.interval != null) {
+        intVal.textContent = String(s.interval);
+        document.querySelectorAll('[data-interval]').forEach(function (c) {
+          var on = parseInt(c.getAttribute('data-interval'), 10) === Number(s.interval);
+          c.classList.toggle('is-active', on);
+          c.setAttribute('aria-pressed', on ? 'true' : 'false');
+        });
+      }
+      if (typeof s.remind === 'boolean') {
+        ['remind-switch', 'set-remind'].forEach(function (id) {
+          var el = $(id);
+          if (el) { el.classList.toggle('is-on', s.remind); el.setAttribute('aria-checked', s.remind ? 'true' : 'false'); }
+        });
+      }
+    }
+  }
+
+  /* 跨页 / 跨标签页联动 */
+  function reloadAll() {
+    records = loadRecords();
+    hydrateSettings();
+    renderTl();
+    render();
+  }
+  window.addEventListener('posture-updated', function (e) {
+    if (e && e.detail && Array.isArray(e.detail.items)) { records = e.detail.items; } else { records = loadRecords(); }
+    hydrateSettings();
+    renderTl();
+    render();
+  });
+  window.addEventListener('storage', function (e) {
+    if (e.key === K_RECORDS || e.key === K_SETTINGS) { reloadAll(); }
+  });
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) { reloadAll(); }
+  });
+
+  hydrateSettings();
+  renderTl();
   render();
 })();
 </script>

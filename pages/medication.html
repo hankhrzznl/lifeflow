@@ -220,7 +220,7 @@ body {
   max-width: 430px;
   margin: 0 auto;
   min-height: 100vh;
-  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(148px + env(safe-area-inset-bottom, 0px));
 }
 
 /* 桌面呈现：居中 + 侧边框 + 柔和投影，像一台安静的设备 */
@@ -781,6 +781,19 @@ body {
 .switch.is-on { background: var(--gradient); }
 .switch.is-on::after { transform: translateX(20px); }
 
+/* 触控热区：按钮自己的渲染盒一点不动（视觉不可能变），
+   只用一个绝对定位的透明伪元素往外撑出可点区。
+   热区高 = 13 + 28 + 13 = 54px；diet 页有 .meal-switch .switch{transform:scale(0.82)}，
+   缩放会连热区一起缩，54 × 0.82 ≈ 44.3px，仍达标。 */
+.switch::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -13px;
+  bottom: -13px;
+}
+
 /* 复选框（圆润） */
 .check {
   width: 26px;
@@ -1064,7 +1077,7 @@ body {
       <section class="fade-up" aria-label="今日服药列表">
         <div class="section-head">
           <h2 class="section-head__title">今日服药</h2>
-          <span class="section-head__hint" id="list-hint">1 / 2</span>
+          <span class="section-head__hint" id="list-hint">1 / 2 次</span>
         </div>
         <div class="med-list" id="med-list">
           <div class="med-item item-row is-done" data-name="维生素 D">
@@ -1279,46 +1292,234 @@ body {
   showState();
   window.addEventListener('hashchange', showState);
 
-  /* ② 服药记录 */
-  var items = Array.prototype.slice.call(document.querySelectorAll('.med-item'));
+  /* ══════════════════════════════════════════════════════════════
+     持久化层（本次新增）—— 改造前这一页**没有数据落盘**：
+     · sheet 的「添加」只往 DOM 里 append 一行（刷新即丢）
+     · 服药打卡只 toggle 一个 class ⟹ 刷新回到写死的 1/2
+     · 「提前 15 分钟」「到点提醒」「吃药模块」三个开关都不存
+
+       lifeflow-medication-items    = { v:1, items:[ { id, name, type, dose,
+                                        periods, time, timesPerDay, courseDays,
+                                        remind, createdAt } ] }
+       lifeflow-medication-taken    = { v:1, items:[ { date, time, name } ] }
+       lifeflow-medication-settings = { v:1, early, due, remindAt }
+
+     ⚠ lifeflow-module-medication 是**另一个口径**：review.html 里
+         try { return localStorage.getItem(LS_MED) === 'true'; } catch (e) { return false; }
+       它要的是**裸字符串 'true'**，全站此前无人写这个 key ⟹ medicationEnabled()
+       恒 false、回顾页少一个「吃药」维度（死代码）。这里按消费方的期望原样写，
+       因此它**不带 { v:1 } 外壳** —— 与 lifeflow-expense-budget 那类"裸值设置"
+       同类，属于有意偏离模板 schema 的一处，已记入报告。
+     ══════════════════════════════════════════════════════════════ */
+  var K_ITEMS = 'lifeflow-medication-items';
+  var K_TAKEN = 'lifeflow-medication-taken';
+  var K_SETTINGS = 'lifeflow-medication-settings';
+  var LS_MODULE = 'lifeflow-module-medication';
+  var SCHEMA_V = 1;
+  var items = [];
+  /* 时段 → 钟点归并（与 med-add.html 同口径） */
+  var PERIOD_TIME = { '早': '08:00', '午': '12:00', '晚': '19:00', '睡前': '22:00' };
+  var PERIOD_ORDER = ['早', '午', '晚', '睡前'];
+
+  function ymd(d) {
+    var p = function (x) { return (x < 10 ? '0' : '') + x; };
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+  }
+  function seedMeds() {
+    /* 复刻改造前写死的两行（名称/剂量/钟点/频次逐字照抄） */
+    return [
+      { id: 'seed-m1', name: '维生素 D', type: 'daily', dose: '400 IU', periods: ['早'], time: '08:00', timesPerDay: 1, remind: true },
+      { id: 'seed-m2', name: '护肝片', type: 'daily', dose: '2 片', periods: ['晚'], time: '21:00', timesPerDay: 1, remind: true }
+    ];
+  }
+  function loadMeds() {
+    try {
+      var raw = localStorage.getItem(K_ITEMS);
+      if (raw) {
+        var d = JSON.parse(raw);
+        if (d && d.v === SCHEMA_V && Array.isArray(d.items)) { return d.items; }
+      }
+    } catch (e) { /* 存储不可用 → 退化为种子，页面仍能显示 */ }
+    var seed = seedMeds();
+    saveMeds(seed, true);
+    return seed;
+  }
+  function saveMeds(list, quiet) {
+    try {
+      localStorage.setItem(K_ITEMS, JSON.stringify({ v: SCHEMA_V, items: list }));
+      items = list;
+      if (!quiet) { window.dispatchEvent(new CustomEvent('medication-updated', { detail: { items: list } })); }
+    } catch (e) { /* 忽略 */ }
+  }
+  function loadTaken() {
+    try {
+      var raw = localStorage.getItem(K_TAKEN);
+      if (raw) {
+        var d = JSON.parse(raw);
+        if (d && d.v === SCHEMA_V && Array.isArray(d.items)) { return d.items; }
+      }
+    } catch (e) { /* 忽略 */ }
+    return [];
+  }
+  function saveTaken(list) {
+    try {
+      localStorage.setItem(K_TAKEN, JSON.stringify({ v: SCHEMA_V, items: list }));
+      window.dispatchEvent(new CustomEvent('medication-updated', { detail: { taken: list } }));
+    } catch (e) { /* 忽略 */ }
+  }
+  function loadSettings() {
+    try {
+      var raw = localStorage.getItem(K_SETTINGS);
+      if (raw) {
+        var d = JSON.parse(raw);
+        if (d && d.v === SCHEMA_V) { return d; }
+      }
+    } catch (e) { /* 忽略 */ }
+    return null;
+  }
+  function saveSettings(patch) {
+    var cur = loadSettings() || { v: SCHEMA_V };
+    var next = {
+      v: SCHEMA_V,
+      early: patch.early != null ? patch.early : cur.early,
+      due: patch.due != null ? patch.due : cur.due,
+      remindAt: patch.remindAt != null ? patch.remindAt : cur.remindAt
+    };
+    try {
+      localStorage.setItem(K_SETTINGS, JSON.stringify(next));
+      window.dispatchEvent(new CustomEvent('medication-updated', { detail: next }));
+    } catch (e) { /* 忽略 */ }
+    return next;
+  }
+  /* 吃药模块开关：按 review.html 的期望写**裸字符串**（不带 schema 外壳）
+     ⚠ loadModuleOn 必须是**三态**：未存过 → null（首屏保持改造前的静态 ON），
+       存过 → 布尔。写成 `getItem(...) === 'true'` 会恒返回 false，
+       于是"没存过"被当成"用户关过"，首屏会把开关从 ON 掰成 OFF
+       —— 我第一版就是这么写的，导致 medication.html 多出 4.2% 像素差异。 */
+  function loadModuleOn() {
+    try {
+      var raw = localStorage.getItem(LS_MODULE);
+      return raw === null ? null : raw === 'true';
+    } catch (e) { return null; }
+  }
+  function saveModuleOn(on) {
+    try {
+      localStorage.setItem(LS_MODULE, on ? 'true' : 'false');
+      window.dispatchEvent(new CustomEvent('medication-updated', { detail: { module: on } }));
+    } catch (e) { /* 忽略 */ }
+  }
+  /* 今天已服的药名集合（改了打卡状态就从这里重算，而不是从 DOM 的 class 反推） */
+  function takenToday() {
+    var today = ymd(new Date());
+    var set = {};
+    loadTaken().forEach(function (r) { if (String(r.date) === today) { set[r.name] = 1; } });
+    return set;
+  }
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  /* meta 文案口径必须与改造前的静态行一致：「400 IU · 08:00 · 每日 1 次」 */
+  function medMeta(m) {
+    return (m.dose || '—') + ' · ' + (m.time || '08:00') + ' · 每日 ' + (m.timesPerDay || 1) + ' 次';
+  }
+  function renderMeds() {
+    var box = $('med-list');
+    if (!box) { return; }
+    var taken = takenToday();
+    box.innerHTML = items.map(function (m) {
+      var on = !!taken[m.name];
+      return '<div class="med-item item-row' + (on ? ' is-done' : '') + '" data-name="' + esc(m.name) + '">' +
+        '<span class="icon-box icon-box--sleep"><i data-lucide="pill"></i></span>' +
+        '<div class="item-row__main">' +
+        '<div class="item-row__name">' + esc(m.name) + '</div>' +
+        '<div class="item-row__meta">' + esc(medMeta(m)) + '</div>' +
+        '</div>' +
+        '<button type="button" class="check' + (on ? ' is-done' : '') + '" data-check aria-label="标记' + esc(m.name) + '"><i data-lucide="check"></i></button>' +
+        '</div>';
+    }).join('');
+    if (window.lucide) { window.lucide.createIcons(); }
+  }
+
+  /* ② 服药记录：打卡状态由盘里的「今天已服」决定 */
   function refresh() {
-    var done = document.querySelectorAll('.med-item.is-done').length;
-    var total = items.length;
-    $('done-count').textContent = String(done);
-    $('list-hint').textContent = done + ' / ' + total;
-    $('head-fill').style.width = Math.round(done / total * 100) + '%';
-    var remain = total - done;
+    $('done-count').textContent = String(doneCount);
+    /* 改前：list-hint = done + ' / ' + total → 只显示「1 / 2」，没有单位。
+       同一张页面上，上方卡片的同型计数写作「1 / 2 次已服」（带单位），
+       下方的 coach-next 更是整句「还有 1 次药没吃」——
+       唯独区块头这个最贴近列表的计数是裸比值，读者无法判断单位是「次」还是「种」。
+       补单位，并与本页既有的 .tag--active / --life-green 完成态口径对齐。 */
+    var hint = $('list-hint');
+    if (hint) {
+      hint.textContent = doneCount + ' / ' + total + ' 次';
+      hint.classList.toggle('list-hint--done', total > 0 && doneCount >= total);
+    }
+    $('head-fill').style.width = (total > 0 ? Math.round(doneCount / total * 100) : 0) + '%';
+    var remain = total - doneCount;
     $('coach-next').textContent = remain > 0
       ? '还有 ' + remain + ' 次药没吃 · 21:00 前记得服'
       : '今日药已全部服完 · 明天见';
+  }
+  var doneCount = 0, total = 0;
+  /* 从数据重算计数 + 打卡态（改前是从 DOM 的 .is-done class 数出来的） */
+  function refreshFromData() {
+    if (!items.length) { items = loadMeds(); }
+    var taken = takenToday();
+    total = items.length;
+    doneCount = items.filter(function (m) { return !!taken[m.name]; }).length;
+    var rows = $('med-list') ? $('med-list').querySelectorAll('.med-item') : [];
+    Array.prototype.forEach.call(rows, function (row) {
+      var on = !!taken[row.getAttribute('data-name')];
+      row.classList.toggle('is-done', on);
+      var btn = row.querySelector('[data-check]');
+      if (btn) { btn.classList.toggle('is-done', on); }
+    });
+    refresh();
   }
   $('med-list').addEventListener('click', function (e) {
     var btn = e.target.closest('[data-check]');
     if (!btn) { return; }
     var item = btn.closest('.med-item');
+    var name = item.getAttribute('data-name');
     var on = !item.classList.contains('is-done');
+    var today = ymd(new Date());
+    var now = new Date();
+    var hm = ('0' + now.getHours()).slice(-2) + ':' + ('0' + now.getMinutes()).slice(-2);
+    var list = loadTaken().filter(function (r) { return !(String(r.date) === today && r.name === name); });
+    if (on) { list.push({ date: today, time: hm, name: name }); }
+    saveTaken(list);
     item.classList.toggle('is-done', on);
     btn.classList.toggle('is-done', on);
     showToast(on ? '已记录服药' : '已撤销');
-    refresh();
+    refreshFromData();
   });
-  refresh();
+  /* 清单变化（med-add 加了药 / 别的标签页删了药）→ 重渲染再算计数 */
+  renderMeds();
+  refreshFromData();
 
-  /* ③ 提醒开关 */
-  [['early-sw', '提前 15 分钟'], ['due-sw', '到点提醒']].forEach(function (pair) {
+  /* ③ 提醒开关（改前只切 class，不存） */
+  var remindInput = document.querySelector('.remind-card .time-input');
+  [['early-sw', '提前 15 分钟', 'early'], ['due-sw', '到点提醒', 'due']].forEach(function (pair) {
     var sw = $(pair[0]);
     sw.addEventListener('click', function () {
       var on = sw.classList.toggle('is-on');
       sw.setAttribute('aria-checked', on ? 'true' : 'false');
+      var p = {}; p[pair[2]] = on;
+      saveSettings(p);
       showToast((on ? '已开启' : '已关闭') + pair[1]);
     });
   });
+  if (remindInput) {
+    remindInput.addEventListener('change', function () { saveSettings({ remindAt: remindInput.value }); });
+  }
 
-  /* ④ 默认停用开关 */
+  /* ④ 默认停用开关 → 落盘为 lifeflow-module-medication（review.html 读它） */
   $('enable-sw').addEventListener('click', function () {
     var on = this.classList.toggle('is-on');
     this.setAttribute('aria-checked', on ? 'true' : 'false');
     $('enable-row').classList.toggle('is-off', !on);
+    saveModuleOn(on);
     showToast(on ? '吃药模块已启用' : '吃药已停用 · 我的页会隐藏此模块');
   });
 
@@ -1337,27 +1538,69 @@ body {
       freq = parseInt(c.getAttribute('data-freq'), 10);
     });
   });
+  /* sheet 保存（改前只 append 一个 DOM 节点，刷新即丢）→ 追加进清单并落盘 */
   $('sheet-save').addEventListener('click', function () {
     var name = $('new-name').value.trim();
     var dose = $('new-dose').value.trim();
     var time = $('new-time').value || '08:00';
     if (!name) { showToast('先输入药名'); return; }
-    var row = document.createElement('div');
-    row.className = 'med-item item-row';
-    row.setAttribute('data-name', name);
-    row.innerHTML =
-      '<span class="icon-box icon-box--sleep"><i data-lucide="pill"></i></span>' +
-      '<div class="item-row__main"><div class="item-row__name">' + name + '</div>' +
-      '<div class="item-row__meta">' + (dose || '—') + ' · ' + time + ' · 每日 ' + freq + ' 次</div></div>' +
-      '<button type="button" class="check" data-check aria-label="标记' + name + '"><i data-lucide="check"></i></button>';
-    $('med-list').appendChild(row);
-    items = Array.prototype.slice.call(document.querySelectorAll('.med-item'));
-    refresh();
-    if (window.lucide) { window.lucide.createIcons(); }
+    var list = loadMeds();
+    list.push({
+      id: 'm' + Date.now(),
+      name: name,
+      type: 'daily',
+      typeLabel: '每日长期',
+      dose: dose,
+      periods: [],
+      time: time,
+      timesPerDay: freq,
+      remind: true,
+      createdAt: ymd(new Date())
+    });
+    saveMeds(list);
+    renderMeds();
+    refreshFromData();
     sheet.classList.remove('is-open');
     $('new-name').value = ''; $('new-dose').value = '';
     showToast('已添加 ' + name);
   });
+
+  /* 开屏：把设置贴回界面（无存储 ⟹ 全部保持改造前的静态值） */
+  function hydrateSettings() {
+    var s = loadSettings();
+    if (s) {
+      [['early-sw', 'early'], ['due-sw', 'due']].forEach(function (pair) {
+        if (typeof s[pair[1]] !== 'boolean') { return; }
+        var sw = $(pair[0]);
+        if (!sw) { return; }
+        sw.classList.toggle('is-on', s[pair[1]]);
+        sw.setAttribute('aria-checked', s[pair[1]] ? 'true' : 'false');
+      });
+      if (s.remindAt && remindInput) { remindInput.value = s.remindAt; }
+    }
+    var on = loadModuleOn();
+    if (typeof on === 'boolean') {
+      $('enable-sw').classList.toggle('is-on', on);
+      $('enable-sw').setAttribute('aria-checked', on ? 'true' : 'false');
+      $('enable-row').classList.toggle('is-off', !on);
+    }
+  }
+
+  /* 跨页 / 跨标签页联动：med-add 加了药、别的标签页打了卡 → 重渲染 */
+  function renderAll() { items = loadMeds(); renderMeds(); refreshFromData(); }
+  window.addEventListener('medication-updated', function () { renderAll(); });
+  window.addEventListener('storage', function (e) {
+    if (e.key === K_ITEMS || e.key === K_TAKEN || e.key === K_SETTINGS || e.key === LS_MODULE) { renderAll(); }
+  });
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) { renderAll(); }
+  });
+
+  /* 开屏顺序：先按数据渲染清单并算计数（顺带清掉改造前写死的那 1/2 假数字），
+     再把设置贴回界面。无存储 ⟹ 设置区保持改造前的静态值，不动 DOM。 */
+  renderMeds();
+  refreshFromData();
+  hydrateSettings();
 
   /* 管理药列表 */
   $('mgmt-btn').addEventListener('click', function () { showToast('药列表管理 · 长按某一行可删除'); });
@@ -1374,6 +1617,12 @@ body {
   .head-row__num { font-size: 30px; font-weight: 700; letter-spacing: -0.02em; color: var(--text-1); font-variant-numeric: tabular-nums; }
   .head-row__num small { font-size: 14px; font-weight: 600; color: var(--text-3); margin-left: 3px; }
   .head-row__tag { margin-left: auto; }
+
+  /* 「今日服药」列表计数：补单位 + 完成态变绿
+     改前它是裸比值「1 / 2」，与上方卡片的「1 / 2 次已服」不一致、看不出单位。
+     完成态用本页既有的 --life-green（.tag--active 同色系），不引入新语义色。
+     只影响本页：这段在本文件的 <style> 里。 */
+  .section-head__hint.list-hint--done { color: var(--life-green); font-weight: 600; }
   .head-bar { margin-top: 14px; }
   .head-next { font-size: 12.5px; color: var(--text-2); margin-top: 10px; line-height: 1.6; }
 

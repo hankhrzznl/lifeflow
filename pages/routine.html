@@ -1197,10 +1197,21 @@ body {
      刷新就回到写死的 `switch is-on`（两个都开）。
      现在：只有开关状态落盘，冷启动按数据回填。
 
-       lifeflow-routine-reminders = { v:1, wake:true, sleep:true }   ← 设置类单独一个 key
+       lifeflow-reminder-settings = { v:1, on:{ wake, winddown, sleep-ritual,
+                                       med-morning, med-night, water-noon,
+                                       water-pm, sedentary } }
+     ⚠ **与 reminders.html 共用同一个 key**（本页原先的 `lifeflow-routine-reminders` 已废弃）。
+       原因：本页的「起床 / 07:00」与 reminders.html 里
+       「晨起 · 自然醒 / 07:00 · 起床仪式 · 节奏方案第一锚点」**是同一个真实提醒**，
+       两个 key 会造成"这边关掉、那边还开着"的状态不一致。
+       共享后 id 也统一成语义名：本页写 `wake` / `sleep`，reminders 那行对应用 `wake`。
+     ⚠ 本页**只写自己拥有的两个字段**（wake / sleep），其余字段原样保留 ——
+       否则会把 reminders 页的 6 个设置全部覆盖掉。
      ══════════════════════════════════════════════════════════════ */
-  var K_REMIND = 'lifeflow-routine-reminders';
+  var K_REMIND = 'lifeflow-reminder-settings';
+  var LEGACY_KEY = 'lifeflow-routine-reminders';   /* 旧 key，读到就迁移过来 */
   var SCHEMA_V = 1;
+  var OWN_KEYS = ['wake', 'sleep'];
 
   /* 种子 = 改造前写死的状态（两个开关都是 .is-on / aria-checked="true"） */
   function seedReminders() { return { wake: true, sleep: true }; }
@@ -1210,17 +1221,37 @@ body {
       var raw = localStorage.getItem(K_REMIND);
       if (raw) {
         var d = JSON.parse(raw);
-        if (d && d.v === SCHEMA_V) { return { wake: d.wake !== false, sleep: d.sleep !== false }; }
+        if (d && d.v === SCHEMA_V && d.on && typeof d.on === 'object') {
+          return { wake: d.on.wake !== false, sleep: d.on.sleep !== false };
+        }
+      }
+      /* 迁移旧 key：老用户在本页关过的开关不该因为换 key 而回默认 */
+      var old = localStorage.getItem(LEGACY_KEY);
+      if (old) {
+        var od = JSON.parse(old);
+        if (od && od.v === SCHEMA_V) {
+          var mig = { wake: od.wake !== false, sleep: od.sleep !== false };
+          saveReminders(mig, true);
+          return mig;
+        }
       }
     } catch (e) { /* 存储不可用 → 退化为种子，页面仍能显示 */ }
     var seed = seedReminders();
     saveReminders(seed, true);
     return seed;
   }
+  /* ⚠ 只合并自己拥有的字段，**不能整对象覆盖** —— 否则会把 reminders 页的
+     6 个设置（winddown / med-* / water-* / sedentary）全部抹掉。 */
   function saveReminders(obj, quiet) {
     try {
-      localStorage.setItem(K_REMIND, JSON.stringify({ v: SCHEMA_V, wake: obj.wake, sleep: obj.sleep }));
-      if (!quiet) { window.dispatchEvent(new CustomEvent('routine-updated', { detail: obj })); }
+      var cur = {};
+      try {
+        var raw = localStorage.getItem(K_REMIND);
+        if (raw) { var d = JSON.parse(raw); if (d && d.v === SCHEMA_V && d.on) { cur = d.on; } }
+      } catch (e) { /* 读不到就从空开始 */ }
+      OWN_KEYS.forEach(function (k) { cur[k] = obj[k] !== false; });
+      localStorage.setItem(K_REMIND, JSON.stringify({ v: SCHEMA_V, on: cur }));
+      if (!quiet) { window.dispatchEvent(new CustomEvent('reminders-updated', { detail: { on: cur } })); }
     } catch (e) { /* 忽略 */ }
   }
 
@@ -1256,9 +1287,23 @@ body {
     });
   });
 
-  /* 跨页联动：别的页改了提醒设置 → 本页重读并回填 */
-  window.addEventListener('routine-updated', function (e) {
-    reminders = (e && e.detail) ? e.detail : loadReminders();
+  /* 跨页联动：别的页改了提醒设置 → 本页重读并回填
+     ⚠ 事件载荷有两种形状，必须都认：
+       · reminders.html 广播 { on:{ wake, winddown, … } }   ← 共享 key 的完整形状
+       · 本页 saveReminders 也广播同样的 { on:{…} }
+     踩过（真 bug）：我最初写成 `reminders = e.detail`，而 e.detail 是 `{on:{…}}`，
+     于是 `reminders['wake']` 是 undefined ⟹ `!== false` 成立 ⟹ **回退成全开**，
+     把刚关掉的开关又掰回打开。现象很迷惑：**写盘是对的、UI 却被自己的广播改回去了**。
+     所以这里统一成"只取 on 那一层"。 */
+  window.addEventListener('reminders-updated', function (e) {
+    var d = e && e.detail;
+    if (d && d.on && typeof d.on === 'object') {
+      reminders = { wake: d.on.wake !== false, sleep: d.on.sleep !== false };
+    } else if (d && (typeof d.wake !== 'undefined' || typeof d.sleep !== 'undefined')) {
+      reminders = { wake: d.wake !== false, sleep: d.sleep !== false };
+    } else {
+      reminders = loadReminders();
+    }
     applyReminders();
   });
   window.addEventListener('storage', function (e) {

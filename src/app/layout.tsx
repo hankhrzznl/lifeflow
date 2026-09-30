@@ -3,6 +3,7 @@ import "@/styles/tokens.css";
 import "@/styles/app.css";
 import { Tabbar, RailNav } from "@/components/Tabbar";
 import { PwaRegister } from "@/components/PwaRegister";
+import { SyncBootstrap } from "@/components/SyncBootstrap";
 
 export const metadata: Metadata = {
   title: "LifeFlow · 一份记录，三种姿态",
@@ -38,6 +39,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </div>
         <Tabbar />
         <PwaRegister />
+        {/* 同步启动器：没配置凭据时什么都不做（纯本地模式）*/}
+        <SyncBootstrap />
       </body>
     </html>
   );

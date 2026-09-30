@@ -8,8 +8,8 @@
  */
 
 import { useState } from "react";
-import { db, type ProposalDoc, type RuleDoc, uid } from "@/lib/db";
-import { notifyChanged } from "@/lib/useData";
+import { type ProposalDoc, type RuleDoc, uid } from "@/lib/db";
+import { insert, patch } from "@/lib/write";
 
 export function ProposalCard({
   p,
@@ -26,9 +26,9 @@ export function ProposalCard({
 
   async function resolve(status: "accepted" | "dismissed") {
     setBusy(true);
-    await db.proposals.update(p.id, { resolved: status });
+    await patch("proposals", p.id, { resolved: status });
     setBusy(false);
-    notifyChanged();
+
     onDone?.();
   }
 
@@ -38,7 +38,7 @@ export function ProposalCard({
 
     if (p.kind === "adjust" && d.id && d.target != null) {
       // 改一条已有规则的标准
-      await db.rules.update(d.id, { target: d.target, updatedAt: Date.now() });
+      await patch("rules", d.id, { target: d.target });
     } else if (p.kind === "period") {
       // 声明一段时期（只存引用，不拥有）
       const rule: RuleDoc = {
@@ -49,10 +49,9 @@ export function ProposalCard({
         mentions: d.mentions ?? [],
         periodGoal: d.periodGoal,
         state: "growing",
-        updatedAt: Date.now(),
         order: 100,
       };
-      await db.rules.add(rule);
+      await insert("rules", rule);
     } else {
       // 新建一条规则
       const rule: RuleDoc = {
@@ -64,15 +63,14 @@ export function ProposalCard({
         unit: d.unit,
         cadence: "daily",
         state: "growing",
-        updatedAt: Date.now(),
         order: 50,
       };
-      await db.rules.add(rule);
+      await insert("rules", rule);
     }
 
-    await db.proposals.update(p.id, { resolved: "accepted" });
+    await patch("proposals", p.id, { resolved: "accepted" });
     setBusy(false);
-    notifyChanged();
+
     onDone?.();
   }
 
@@ -81,11 +79,11 @@ export function ProposalCard({
     if (!Number.isFinite(n)) return;
     setBusy(true);
     if (p.draft?.id) {
-      await db.rules.update(p.draft.id, { target: n, updatedAt: Date.now() });
+      await patch("rules", p.draft.id, { target: n });
     }
-    await db.proposals.update(p.id, { resolved: "accepted" });
+    await patch("proposals", p.id, { resolved: "accepted" });
     setBusy(false);
-    notifyChanged();
+
     onDone?.();
   }
 

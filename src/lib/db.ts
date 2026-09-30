@@ -21,6 +21,7 @@
  *   4. 任何规则任何时刻都能在自己家里找到  → 规则是平表，不是树
  */
 import Dexie, { type EntityTable } from "dexie";
+import type { Syncable, SyncMetaDoc } from "./sync-types";
 
 /* ─────────────────────────────────────────────────────────────
    规则（rules）—— 定稿 §7「规则（承诺）」
@@ -31,7 +32,7 @@ export type RuleState = "growing" | "solid" | "paused" | "archived";
 /** 目标形态：普通规则 / 线性目标（可数里程碑）/ 多因素目标（时期）/ 工具设定 */
 export type RuleKind = "rule" | "linear" | "period" | "setting";
 
-export interface RuleDoc {
+export interface RuleDoc extends Syncable {
   id: string;
   /** 一句话 —— 如「睡稳」 */
   title: string;
@@ -66,7 +67,8 @@ export interface RuleDoc {
   state: RuleState;
   /** 排序用 */
   order?: number;
-  updatedAt: number;
+  /* ⚠ updatedAt / deletedAt / userId 来自 Syncable，
+     全部由 lib/write.ts 的 stamp() 盖 —— 业务代码不要手写。 */
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -74,7 +76,7 @@ export interface RuleDoc {
    一条 = 时刻 + 指向哪条规则 + 值
    情绪一条、饮水一杯、专注 25 分钟、账目一笔、一次联系 —— 都是这一条结构
    ───────────────────────────────────────────────────────────── */
-export interface EntryDoc {
+export interface EntryDoc extends Syncable {
   id: string;
   /** 时刻（ISO，本地时区写字符串，避免时区误判） */
   at: string; // YYYY-MM-DDTHH:mm
@@ -107,7 +109,7 @@ export interface EntryDoc {
    ───────────────────────────────────────────────────────────── */
 export type ProposalKind = "new-rule" | "period" | "adjust" | "review-rhythm" | "stale-rule";
 
-export interface ProposalDoc {
+export interface ProposalDoc extends Syncable {
   id: string;
   kind: ProposalKind;
   /** 给用户看的一句话 */
@@ -126,7 +128,7 @@ export interface ProposalDoc {
    工具（tools）—— 界面 05
    走 B：工具 = 标签 + 一个筛选视图，所以这里只存"有哪些视图、叫什么"
    ───────────────────────────────────────────────────────────── */
-export interface ToolViewDoc {
+export interface ToolViewDoc extends Syncable {
   id: string;
   name: string;
   /** 筛哪个标签 */
@@ -154,6 +156,8 @@ class LifeFlowDB extends Dexie {
   proposals!: EntityTable<ProposalDoc, "id">;
   toolViews!: EntityTable<ToolViewDoc, "id">;
   meta!: EntityTable<MetaDoc, "key">;
+  /** 游标表：每张表推/拉到哪个时间戳（见 sync-types.ts 的差异二） */
+  syncMeta!: EntityTable<SyncMetaDoc, "key">;
 
   constructor() {
     super("lifeflow-v7");
@@ -163,6 +167,18 @@ class LifeFlowDB extends Dexie {
       proposals: "id, kind, at",
       toolViews: "id, order",
       meta: "key",
+    });
+    /* v2 = 同步元数据（依据 docs/17 第三节，但用游标代替队列 —— 见 sync-types.ts）
+       · 业务表加 updatedAt / deletedAt / userId（Syncable）
+       · 新增 syncMeta（推/拉游标）
+       · 索引同步字段，便于算"待推条数"与增量拉取 */
+    this.version(2).stores({
+      rules: "id, state, kind, home, order, updatedAt, deletedAt",
+      entries: "id, date, at, ruleId, *tags, updatedAt, deletedAt",
+      proposals: "id, kind, at, updatedAt, deletedAt",
+      toolViews: "id, order, updatedAt, deletedAt",
+      meta: "key",
+      syncMeta: "key",
     });
   }
 }
@@ -181,7 +197,10 @@ export function nowLocal(): { at: string; date: string } {
 }
 
 export function uid(prefix = "e"): string {
-  return `${prefix}${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+  /* ⚠ 同步之后 id 必须跨设备唯一。
+     原来只取 4 位随机后缀（36^4 ≈ 168 万），三台设备并发写时有撞键风险；
+     改成时间戳(36) + 10 位随机(36^10 ≈ 3.6e15)，撞键概率可忽略。 */
+  return `${prefix}${Date.now().toString(36)}${Math.random().toString(36).slice(2, 12)}`;
 }
 
 export function addDays(date: string, n: number): string {

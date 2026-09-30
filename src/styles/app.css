@@ -545,8 +545,13 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--life-green);
+  background: var(--text-3);
 }
+/* 三态：灰=仅本机 · 蓝=有改动待推 · 绿=已同步（不用 emoji，沿用 state-dot 语义） */
+.sync--pending { color: var(--brand); }
+.sync--pending .sync__dot { background: var(--brand); }
+.sync--ok { color: #4f7d53; }
+.sync--ok .sync__dot { background: var(--life-green); }
 
 /* ── 沉浸态（专注计时用）────────────────────────────────── */
 body.is-immersive .shell__head,

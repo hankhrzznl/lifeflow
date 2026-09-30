@@ -10,8 +10,9 @@
  */
 
 import { useMemo, useState } from "react";
-import { notifyChanged, useData } from "@/lib/useData";
-import { db, todayDate, addDays } from "@/lib/db";
+import { useData } from "@/lib/useData";
+import { todayDate, addDays } from "@/lib/db";
+import { softDelete } from "@/lib/write";
 import { entriesOfDay } from "@/lib/metrics";
 import { EntryRow, SyncDot } from "@/components/Parts";
 import { QuickSheet } from "@/components/QuickSheet";
@@ -25,8 +26,9 @@ export default function LogPage() {
   const ofDay = useMemo(() => entriesOfDay(entries, date), [entries, date]);
 
   async function remove(id: string) {
-    await db.entries.delete(id);
-    notifyChanged();
+    /* 软删（决策 S3）：不物理删 —— 行还得上传，物理删了远端永远收不到这次删除。
+       界面靠 useData 的 live() 过滤。 */
+    await softDelete("entries", id);
   }
 
   if (state.status === "loading") {

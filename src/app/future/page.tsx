@@ -12,8 +12,9 @@
  */
 
 import { useState } from "react";
-import { useData, notifyChanged } from "@/lib/useData";
-import { db, uid, type RuleDoc, type RuleState } from "@/lib/db";
+import { useData } from "@/lib/useData";
+import { uid, type RuleDoc, type RuleState } from "@/lib/db";
+import { insert, patch } from "@/lib/write";
 import { metricsOf } from "@/lib/metrics";
 import { StateTag, SyncDot } from "@/components/Parts";
 import { ProposalCard } from "@/components/ProposalCard";
@@ -48,13 +49,11 @@ export default function FuturePage() {
   const { rules, entries, openProposals, proposals, toolViews } = state.data;
 
   async function setState(id: string, s: RuleState) {
-    await db.rules.update(id, { state: s, updatedAt: Date.now() });
-    notifyChanged();
+    await patch("rules", id, { state: s });
   }
 
   async function setTarget(id: string, v: number) {
-    await db.rules.update(id, { target: v, updatedAt: Date.now() });
-    notifyChanged();
+    await patch("rules", id, { target: v });
     setMsg("已改 · 会影响「此刻」推给你的那一件");
     setTimeout(() => setMsg(null), 2200);
   }
@@ -77,11 +76,10 @@ export default function FuturePage() {
       updatedAt: Date.now(),
       order: 50,
     };
-    await db.rules.add(rule);
+    await insert("rules", rule);
     setNewTitle("");
     setNewTarget("");
     setNewUnit("");
-    notifyChanged();
     setMsg("已加");
     setTimeout(() => setMsg(null), 2000);
   }
@@ -93,11 +91,10 @@ export default function FuturePage() {
       if (!Number.isFinite(num) || num <= 0) continue;
       const r = rules.find((x) => x.id === id);
       if (!r || r.target === num) continue;
-      await db.rules.update(id, { target: num, updatedAt: Date.now() });
+      await patch("rules", id, { target: num });
       n++;
     }
     setBatch({});
-    notifyChanged();
     setMsg(`已应用 ${n} 处改动`);
     setTimeout(() => setMsg(null), 2400);
   }
@@ -119,11 +116,10 @@ export default function FuturePage() {
       updatedAt: Date.now(),
       order: 100,
     };
-    await db.rules.add(rule);
+    await insert("rules", rule);
     setPeriodName("");
     setPeriodFrom("");
     setPeriodTo("");
-    notifyChanged();
     setMsg("已声明一段时期（只存引用，不拥有规则）");
     setTimeout(() => setMsg(null), 2600);
   }
@@ -133,8 +129,7 @@ export default function FuturePage() {
     if (!p) return;
     const cur = p.mentions ?? [];
     const next = cur.includes(ruleId) ? cur.filter((x) => x !== ruleId) : [...cur, ruleId];
-    await db.rules.update(periodId, { mentions: next, updatedAt: Date.now() });
-    notifyChanged();
+    await patch("rules", periodId, { mentions: next });
   }
 
   async function exportAll() {

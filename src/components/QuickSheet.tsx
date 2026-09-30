@@ -11,8 +11,8 @@
  */
 
 import { useState } from "react";
-import { db, nowLocal, uid, type EntryDoc } from "@/lib/db";
-import { notifyChanged } from "@/lib/useData";
+import { nowLocal, uid, type EntryDoc } from "@/lib/db";
+import { insert } from "@/lib/write";
 
 interface Quick {
   label: string;
@@ -79,8 +79,9 @@ export function QuickSheet({
       account: partial.account,
       createdAt: Date.now(),
     };
-    await db.entries.add(doc);
-    notifyChanged();
+    /* 走写入层（lib/write.ts）：它负责盖 updatedAt / userId 并广播刷新。
+       不要直接 db.entries.add —— 那样同步会漏掉这一条。 */
+    await insert("entries", doc);
     setFlash(`已记下 · ${doc.text}`);
     setTimeout(() => setFlash(null), 1600);
   }

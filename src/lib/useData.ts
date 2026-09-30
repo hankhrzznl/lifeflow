@@ -10,6 +10,7 @@
 import { useEffect, useState } from "react";
 import { db, type EntryDoc, type ProposalDoc, type RuleDoc, type ToolViewDoc } from "./db";
 import { ensureSeed } from "./seed";
+import type { Syncable } from "./sync-types";
 
 export interface Ready {
   rules: RuleDoc[];
@@ -29,14 +30,26 @@ export function notifyChanged(): void {
   if (typeof window !== "undefined") window.dispatchEvent(new Event(EVT));
 }
 
+/** 过滤软删的行 —— 界面这一层必须自己挡，否则删掉的东西还会显示 */
+function live<T extends Syncable>(rows: T[]): T[] {
+  return rows.filter((r) => !r.deletedAt);
+}
+
 async function readAll(): Promise<Ready> {
   await ensureSeed();
-  const [rules, entries, proposals, toolViews] = await Promise.all([
+  const [rulesRaw, entriesRaw, proposalsRaw, toolViewsRaw] = await Promise.all([
     db.rules.toArray(),
     db.entries.toArray(),
     db.proposals.toArray(),
     db.toolViews.toArray(),
   ]);
+  /* ⚠ 同步之后"删除"是软删（行还得上传；物理删了远端永远收不到这次删除），
+     所以界面这一层必须过滤 deletedAt，否则删掉的东西会继续显示。 */
+  const rules = live(rulesRaw);
+  const entries = live(entriesRaw);
+  const proposals = live(proposalsRaw);
+  const toolViews = live(toolViewsRaw);
+
   rules.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
   proposals.sort((a, b) => a.at.localeCompare(b.at));
   toolViews.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));

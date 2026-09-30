@@ -16,6 +16,7 @@ import {
   addDays,
   todayDate,
 } from "./db";
+import { insertMany } from "./write";
 
 const T = todayDate();
 
@@ -229,7 +230,7 @@ function toolViews(): ToolViewDoc[] {
 
 /* ── 入口 ─────────────────────────────────────────────────── */
 /** 种子版本 —— **改了下面任何播种内容就把它加 1**，否则老库不会重播 */
-const SEED_VERSION = "2";
+const SEED_VERSION = "3";
 
 export async function ensureSeed(): Promise<void> {
   const rec = await db.meta.get("seed");
@@ -246,10 +247,10 @@ export async function ensureSeed(): Promise<void> {
       db.proposals.clear(),
       db.toolViews.clear(),
     ]);
-    await db.rules.bulkAdd(rules());
-    await db.entries.bulkAdd(entries());
-    await db.proposals.bulkAdd(proposals());
-    await db.toolViews.bulkAdd(toolViews());
+    await insertMany("rules", rules());
+    await insertMany("entries", entries());
+    await insertMany("proposals", proposals());
+    await insertMany("toolViews", toolViews());
   });
   await db.meta.put({ key: "seed", value: SEED_VERSION });
 }

@@ -1,0 +1,151 @@
+/* ============================================================
+   LifeFlow v7 · 设计令牌（单一来源）
+   定稿 §9#6：指标单点计算；这里同理 —— 颜色/间距/字号只在这一处定义
+
+   品牌色口径：Klein 蓝 #002FA7（lead 明确要求，不要换成 #2458D8）
+   完成态统一用 --life-green #7BAE7F，不新造语义色
+   ============================================================ */
+
+:root {
+  color-scheme: light;
+
+  /* —— 表面 —— */
+  --bg: #faf6f0;
+  --card: #ffffff;
+  --surface-2: #f3efe8;
+  --surface-3: #eae5db;
+  --scrim: rgba(38, 34, 30, 0.32);
+
+  /* —— 文字 —— */
+  --text-1: #26221e;
+  --text-2: #7a746c;
+  --text-3: #a69f94;
+  --text-inverse: #fdfbf7;
+
+  /* —— 线 —— */
+  --border: #eae6df;
+  --border-strong: #dcd6cb;
+
+  /* —— 品牌 —— */
+  --brand: #002fa7;
+  --brand-strong: #001f6e;
+  --brand-soft: rgba(0, 47, 167, 0.1);
+  --brand-softer: rgba(0, 47, 167, 0.06);
+
+  /* —— 语义（不新造）—— */
+  --life-green: #7bae7f;
+  --life-green-soft: rgba(123, 174, 127, 0.14);
+  --pause-amber: #d99a2b;
+  --pause-amber-soft: rgba(217, 154, 43, 0.14);
+
+  /* —— 字号 —— */
+  --fs-display: 34px;
+  --fs-h1: 28px;
+  --fs-h2: 20px;
+  --fs-h3: 17px;
+  --fs-body: 15px;
+  --fs-sm: 13px;
+  --fs-caption: 12px;
+
+  /* —— 间距 —— */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-8: 32px;
+
+  /* —— 圆角 —— */
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 20px;
+  --r-pill: 999px;
+
+  /* —— 内边距 —— */
+  --pad-card: 16px 18px;
+
+  /* —— 字体 —— */
+  --font-sans: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei",
+    "Noto Sans CJK SC", "Helvetica Neue", sans-serif;
+  --font-num: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, monospace;
+
+  /* —— 动效 —— */
+  --dur-fast: 0.14s;
+  --dur: 0.22s;
+  --ease: cubic-bezier(0.32, 0.72, 0, 1);
+
+  /* —— 三档断点（供 JS 读取，勿手改）—— */
+  --bp-tablet: 768px;
+  --bp-desk: 1100px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text-1);
+  font-family: var(--font-sans);
+  font-size: var(--fs-body);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  font-family: inherit;
+  font-size: inherit;
+  cursor: pointer;
+  border: 0;
+  background: none;
+  color: inherit;
+}
+
+input,
+textarea,
+select {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+ul,
+ol {
+  list-style: none;
+}
+
+img,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+/* 无障碍：减少动效 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

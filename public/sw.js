@@ -1,87 +1,42 @@
-const CACHE_VERSION = "lifeflow-v5";
-const STATIC_CACHE = `${CACHE_VERSION}-static`;
-const PAGES_CACHE = `${CACHE_VERSION}-pages`;
-const ASSET_EXTENSIONS = ["js", "css", "woff2", "woff", "ico", "png", "svg", "jpg"];
+/* LifeFlow service worker —— 离线可用（定稿 §7：Local-first 不变）
+   策略：网络优先、失败回落缓存。
+   为什么不用"缓存优先"：开发期会看到旧版本；离线时仍然可用。
 
-const PRECACHE_URLS = ["/", "/efficiency", "/efficiency/schedule", "/assistant", "/more"];
+   ⚠ iPad 注意：未"加到主屏"的网页，Safari 会在 7 天不活跃后清掉
+   localStorage / IndexedDB / SW 注册。加到主屏后域名豁免 ITP。
+   所以「加到主屏」不是可选优化，是防丢必需（见 PwaRegister.tsx 的提示）。 */
+
+const CACHE = "lifeflow-v7-v1";
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches.open(STATIC_CACHE).then((cache) => {
-      return cache.addAll(PRECACHE_URLS);
-    })
-  );
   self.skipWaiting();
+  event.waitUntil(
+    caches.open(CACHE).then((c) => c.addAll(["/", "/manifest.webmanifest", "/icon.svg"])).catch(() => {}),
+  );
 });
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((keys) => {
-      return Promise.all(
-        keys
-          .filter((key) => key.startsWith("lifeflow-") && key !== STATIC_CACHE && key !== PAGES_CACHE)
-          .map((key) => caches.delete(key))
-      );
-    })
+    caches
+      .keys()
+      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+      .then(() => self.clients.claim()),
   );
-  self.clients.claim();
 });
-
-function isAsset(url) {
-  const ext = url.pathname.split(".").pop();
-  return ASSET_EXTENSIONS.includes(ext);
-}
-
-function isPage(url) {
-  return url.pathname === "/" || PRECACHE_URLS.includes(url.pathname);
-}
 
 self.addEventListener("fetch", (event) => {
-  const { request } = event;
-  const url = new URL(request.url);
-
+  const req = event.request;
+  if (req.method !== "GET") return;
+  const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
 
-  if (request.method !== "GET") return;
-
-  if (isAsset(url)) {
-    event.respondWith(
-      caches.match(request).then((cached) => {
-        const fetchPromise = fetch(request).then((response) => {
-          if (response.ok) {
-            const clone = response.clone();
-            caches.open(STATIC_CACHE).then((cache) => cache.put(request, clone));
-          }
-          return response;
-        });
-        return cached || fetchPromise;
+  event.respondWith(
+    fetch(req)
+      .then((res) => {
+        const copy = res.clone();
+        caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
+        return res;
       })
-    );
-    return;
-  }
-
-  if (isPage(url) || request.mode === "navigate") {
-    event.respondWith(
-      fetch(request)
-        .then((response) => {
-          if (response.ok) {
-            const clone = response.clone();
-            caches.open(PAGES_CACHE).then((cache) => cache.put(request, clone));
-          }
-          return response;
-        })
-        .catch(() => {
-          return caches.match(request).then((cached) => {
-            return cached || caches.match("/");
-          });
-        })
-    );
-    return;
-  }
-});
-
-self.addEventListener("message", (event) => {
-  if (event.data?.type === "SKIP_WAITING") {
-    self.skipWaiting();
-  }
+      .catch(() => caches.match(req).then((hit) => hit || caches.match("/"))),
+  );
 });

@@ -44,3 +44,6 @@ next-env.d.ts
 .trae-html-share-packages/
 lifeflow-ai-assistant-plan/
 LIFEFLOW_PROJECT_INTRO.md
+
+# 本地产物
+/_server.log

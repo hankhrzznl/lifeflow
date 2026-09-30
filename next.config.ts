@@ -1,39 +1,10 @@
-import type { NextConfig } from "next";
+﻿import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // ── 旧路由重定向到新子站架构 ──
-  async redirects() {
-    return [
-      { source: "/today", destination: "/efficiency/schedule", permanent: true },
-      { source: "/planner", destination: "/efficiency-v2", permanent: true },
-      { source: "/goals", destination: "/efficiency-v2", permanent: true },
-      { source: "/goals/:path*", destination: "/efficiency-v2", permanent: true },
-      { source: "/review", destination: "/efficiency/review", permanent: true },
-      { source: "/stats", destination: "/efficiency-v2", permanent: true },
-      { source: "/efficiency", destination: "/efficiency-v2", permanent: true },
-    ];
-  },
-
-  images: {
-    formats: ["image/avif", "image/webp"],
-    deviceSizes: [640, 750, 828, 1080, 1200],
-    imageSizes: [16, 32, 48, 64, 96, 128, 256],
-    minimumCacheTTL: 86400,
-  },
-  compiler: {
-    removeConsole:
-      process.env.NODE_ENV === "production"
-        ? { exclude: ["error", "warn"] }
-        : false,
-  },
-  experimental: {
-    optimizePackageImports: [
-      "framer-motion",
-      "lucide-react",
-      "recharts",
-      "date-fns",
-    ],
-  },
+  reactStrictMode: true,
+  // v2-legacy/ 是留档的旧工程（不完整、不参与构建）。
+  // 它不在 src/ 下，不会被当成路由；类型检查的排除写在 tsconfig.json 的 exclude 里。
+  // （Next 16 已移除 next.config 的 eslint 键，别再写，否则配置校验直接报错。）
 };
 
 export default nextConfig;

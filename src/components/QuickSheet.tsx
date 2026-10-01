@@ -11,8 +11,10 @@
  */
 
 import { useState } from "react";
-import { nowLocal, uid, type EntryDoc } from "@/lib/db";
+import { nowLocal, uid, type EntryDoc, type RuleDoc } from "@/lib/db";
 import { insert } from "@/lib/write";
+import { metricsOf } from "@/lib/metrics";
+import { useData } from "@/lib/useData";
 
 interface Quick {
   label: string;
@@ -23,16 +25,13 @@ interface Quick {
   ruleId?: string;
 }
 
-/** 常用项 —— 系统按用途排的顺序（可后续改成"按频率自动排"）*/
+/** 常用项 —— 与任何规则无关的随手记（吃喝、备忘、账目这类） */
 const QUICKS: Quick[] = [
-  { label: "水 250ml", text: "一杯水 250ml", value: 250, unit: "ml", tags: ["饮水"], ruleId: "r-water" },
   { label: "咖啡", text: "一杯咖啡", tags: ["饮食"] },
   { label: "午餐", text: "午餐", tags: ["饮食"] },
-  { label: "专注 25 分", text: "专注 25 分钟", value: 1, unit: "格", tags: ["专注"], ruleId: "r-focus" },
-  { label: "起身", text: "起身活动", value: 1, unit: "次", tags: ["体态"], ruleId: "r-posture" },
-  { label: "快走 40 分", text: "快走 40 分钟", value: 40, unit: "分钟", tags: ["训练"], ruleId: "r-walk" },
   { label: "记一笔账", text: "", tags: ["记账"] },
-  { label: "心情", text: "", tags: ["情绪"], ruleId: "r-mood" },
+  { label: "备忘", text: "", tags: ["备忘"] },
+  { label: "心情", text: "", tags: ["情绪"] },
 ];
 
 const TOOL_QUICKS: Quick[] = [
@@ -55,8 +54,64 @@ export function QuickSheet({
   const [amount, setAmount] = useState("");
   const [flash, setFlash] = useState<string | null>(null);
   const [tool, setTool] = useState<string | null>(null);
+  const data = useData();
 
   if (!open) return null;
+
+  /* 在养的规则 —— 点一下就按它的标准记一笔。
+     ⚠ 这一段是"记录 → 指标"的闭环：不接的话，
+        「睡稳 30/30」这类数字永远不会动，回看也永远没料。 */
+  const liveRules: RuleDoc[] =
+    data.status === "ready"
+      ? data.data.rules.filter(
+          (r) => r.state === "growing" && (r.kind === "rule" || r.kind === "linear"),
+        )
+      : [];
+  const today = nowData();
+
+  function nowData(): string {
+    return nowLocal().date;
+  }
+
+  /**
+   * 按规则记一笔 —— **一次点击 = 今天这条达标**（补差额，不超记）。
+   *
+   * ⚠ 这里踩过两个坑，都是 e2e 抓到的：
+   *   坑① 把"规则目标"当成"每次增量" ⟹ 点「喝水 2000ml」记了 2000，
+   *        当天累计从 1500 跳到 3500，**一次点击超过全天目标**，数字失真。
+   *   坑② 只把文案改成"记满"，值仍是整个目标 ⟹ 结果一模一样。
+   *        文案改了、行为没改，这种"假修"只有断言看得见。
+   *
+   * 根因：**"一杯 250ml"与"全天 2000ml"是两个刻度**，规则里只存了后者。
+   *   前者推不出来 —— 睡眠 7 小时一次、喝水 250ml 一次、快走 40 分钟一次，
+   *   没有统一规律，不能猜。
+   *
+   * 正确做法：**补差额** —— 值 = max(目标 − 今天已累计, 0)。
+   *   点完当天累计**恰好等于**目标：已达标则不写记录（返回 null），
+   *   没达标则补齐到正好达标。零碎的多次记录走「随手记」。
+   */
+  function ruleQuick(r: RuleDoc): Quick | null {
+    const target = r.target ?? 1;
+    const remain = Math.max(target - todaySum(r.id), 0);
+    if (remain <= 0) return null; // 已达标：不写空记录
+    return {
+      label: `${r.title} 记满`,
+      text: `${r.title} ${remain}${r.unit ?? ""}`,
+      value: remain,
+      unit: r.unit,
+      tags: [r.home ?? r.title],
+      ruleId: r.id,
+    };
+  }
+
+  /** 今天这条已累计多少（记满要按差额补，所以必须先知道） */
+  function todaySum(ruleId: string): number {
+    if (data.status !== "ready") return 0;
+    const d = nowLocal().date;
+    return data.data.entries
+      .filter((e) => e.ruleId === ruleId && e.date === d)
+      .reduce((s, e) => s + (e.value ?? 1), 0);
+  }
 
   function reset() {
     setText("");
@@ -157,9 +212,65 @@ export function QuickSheet({
           </button>
         </div>
 
-        {/* ① 常用（主角）*/}
-        <div className="row--between" style={{ marginTop: 12 }}>
-          <span className="t-bold t-sm">常用的</span>
+        {/* ① 在养的规则 —— 点一下按标准记一笔（记录 → 指标的闭环）*/}
+        {liveRules.length ? (
+          <>
+            <div className="row--between" style={{ marginTop: 12 }}>
+              <span className="t-bold t-sm">在养的</span>
+              <span className="t-cap t-faint">点一下 = 这条记满</span>
+            </div>
+            <div className="row row--wrap" style={{ marginTop: 8, gap: 6 }}>
+              {liveRules.map((r) => {
+                const sum = todaySum(r.id);
+                const q = ruleQuick(r);
+                const done = q === null;
+                const m = metricsOf(r, data.status === "ready" ? data.data.entries : [], today);
+                return (
+                  <button
+                    key={r.id}
+                    type="button"
+                    className={`pill${done ? " pill--on" : ""}`}
+                    disabled={done}
+                    onClick={() => {
+                      if (q) void tapQuick(q);
+                    }}
+                    title={
+                      done
+                        ? `今天已经达标了（${sum}${r.unit ?? ""}）`
+                        : r.target != null
+                          ? `点一下补到刚好达标：还差 ${Math.max((r.target ?? 1) - sum, 0)}${r.unit ?? ""}`
+                          : "记一次即达标"
+                    }
+                  >
+                    {r.title}
+                    {done ? (
+                      <span className="t-cap" style={{ opacity: 0.75 }}>
+                        ✓
+                      </span>
+                    ) : (
+                      <span className="t-cap" style={{ opacity: 0.75 }}>
+                        还差 {r.target != null ? Math.max(r.target - sum, 0) : 1}
+                        {r.unit ?? ""}
+                      </span>
+                    )}
+                    {!done && m.streak > 0 ? (
+                      <span className="t-cap" style={{ opacity: 0.6 }}>
+                        {m.streak}天
+                      </span>
+                    ) : null}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="t-cap t-faint" style={{ marginTop: 6 }}>
+              点一下 <b>补到刚好达标</b>，不会超记。记录今天喝了三杯那种走下面的「随手记」。
+            </p>
+          </>
+        ) : null}
+
+        {/* ② 常用（与规则无关的随手记）*/}
+        <div className="row--between" style={{ marginTop: 14 }}>
+          <span className="t-bold t-sm">随手记</span>
           <span className="t-cap t-faint">点一下即记，不再确认</span>
         </div>
         <div className="row row--wrap" style={{ marginTop: 8, gap: 6 }}>
@@ -170,7 +281,7 @@ export function QuickSheet({
           ))}
         </div>
 
-        {/* ② 一行输入（降级为辅助）*/}
+        {/* ③ 一行输入（降级为辅助）*/}
         <div className="row--between" style={{ marginTop: 16 }}>
           <span className="t-bold t-sm">或者打一句话</span>
           {tool ? <span className="tag tag--grow">{tool}</span> : null}
@@ -202,7 +313,7 @@ export function QuickSheet({
           </button>
         </div>
 
-        {/* ③ 工具（走 B：就是带标签的流）*/}
+        {/* ④ 工具（走 B：就是带标签的流）*/}
         <div className="row--between" style={{ marginTop: 16 }}>
           <span className="t-bold t-sm">工具</span>
           <span className="t-cap t-faint">不进养成链，但数会进统计</span>

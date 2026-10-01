@@ -91,6 +91,25 @@ export class MemoryAdapter implements SyncAdapter {
 /* ─────────────────────────────────────────────────────────────
    3. Supabase —— 走 PostgREST，不引 SDK
    ───────────────────────────────────────────────────────────── */
+/* ─────────────────────────────────────────────────────────────
+   表名映射 —— 本地驼峰 ↔ 远端下划线
+   ------------------------------------------------------------
+   ⚠ 这是接 Supabase 前最容易漏的一处：
+     本地表名是 toolViews，而 supabase-schema.sql 建的是 tool_views。
+     不映射的话，只有这一张表会 404，而且报错信息看起来像"网络问题"，
+     排查成本高。放在这里集中处理。
+   ───────────────────────────────────────────────────────────── */
+const REMOTE_NAME: Record<SyncTable, string> = {
+  rules: "rules",
+  entries: "entries",
+  proposals: "proposals",
+  toolViews: "tool_views",
+};
+
+export function remoteName(table: SyncTable): string {
+  return REMOTE_NAME[table];
+}
+
 export interface SupabaseConfig {
   url: string;
   anonKey: string;
@@ -167,13 +186,17 @@ export class SupabaseAdapter implements SyncAdapter {
       updated_at: new Date(r.updated_at).toISOString(),
       deleted_at: r.deleted_at ? new Date(r.deleted_at).toISOString() : null,
       payload: r.payload,
-      user_id: undefined, // 由 RLS 的 default auth.uid() 填，或不传
+      /* user_id 不传 —— 建表时它是 `default auth.uid()`，
+         由 PostgREST 填。传了反而可能和 RLS 的 with check 打架。 */
     }));
-    const r = await fetch(`${this.cfg.url}/rest/v1/${table}?on_conflict=user_id,id`, {
-      method: "POST",
-      headers: { ...this.headers(), Prefer: "resolution=merge-duplicates,return=minimal" },
-      body: JSON.stringify(body),
-    });
+    const r = await fetch(
+      `${this.cfg.url}/rest/v1/${remoteName(table)}?on_conflict=user_id,id`,
+      {
+        method: "POST",
+        headers: { ...this.headers(), Prefer: "resolution=merge-duplicates,return=minimal" },
+        body: JSON.stringify(body),
+      },
+    );
     if (!r.ok) throw new Error(`push ${table} 失败 HTTP ${r.status}: ${await r.text()}`);
   }
 
@@ -181,7 +204,9 @@ export class SupabaseAdapter implements SyncAdapter {
   async pull(table: SyncTable, since: number): Promise<RemoteRow[]> {
     const iso = new Date(since).toISOString();
     const qs = `select=id,updated_at,deleted_at,payload&updated_at=gt.${encodeURIComponent(iso)}&order=updated_at.asc`;
-    const r = await fetch(`${this.cfg.url}/rest/v1/${table}?${qs}`, { headers: this.headers() });
+    const r = await fetch(`${this.cfg.url}/rest/v1/${remoteName(table)}?${qs}`, {
+      headers: this.headers(),
+    });
     if (!r.ok) throw new Error(`pull ${table} 失败 HTTP ${r.status}: ${await r.text()}`);
     const j = (await r.json()) as Array<{
       id: string;

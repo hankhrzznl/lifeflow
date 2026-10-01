@@ -18,6 +18,7 @@ import { insert, patch } from "@/lib/write";
 import { metricsOf } from "@/lib/metrics";
 import { StateTag, SyncDot } from "@/components/Parts";
 import { ProposalCard } from "@/components/ProposalCard";
+import { SyncPanel } from "@/components/SyncPanel";
 
 const STATE_LABEL: Record<RuleState, string> = {
   growing: "在养",
@@ -348,6 +349,9 @@ export default function FuturePage() {
             也可以让系统从你的记录里提一个（见上面的系统提议）
           </p>
         </section>
+
+        {/* ── 多设备同步 ── */}
+        <SyncPanel />
 
         {/* ── 提醒（设定）── */}
         {settings.length ? (

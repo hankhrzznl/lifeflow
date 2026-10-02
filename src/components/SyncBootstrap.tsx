@@ -14,13 +14,23 @@
 
 import { useEffect } from "react";
 import { startAutoSync } from "@/lib/sync-engine";
-import { readSupabaseConfig, setAdapter, SupabaseAdapter, readStoredToken } from "@/lib/sync-adapter";
+import {
+  consumeAuthRedirect,
+  readSupabaseConfig,
+  setAdapter,
+  SupabaseAdapter,
+  readStoredToken,
+} from "@/lib/sync-adapter";
 import { installTestBridge } from "@/lib/test-bridge";
 
 export function SyncBootstrap() {
   useEffect(() => {
 
     installTestBridge();
+
+    /* 先接魔法链接的回跳令牌（若本次加载带了 #access_token=…），
+       再读配置 —— 顺序不能反，否则 adapter 拿不到刚落地的登录态 */
+    consumeAuthRedirect();
 
     const cfg = readSupabaseConfig();
     if (cfg) {

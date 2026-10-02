@@ -118,6 +118,7 @@ export interface SupabaseConfig {
 }
 
 const TOKEN_KEY = "lf-sync-token";
+const REFRESH_KEY = "lf-sync-refresh";
 
 export function readStoredToken(): string | null {
   if (typeof window === "undefined") return null;
@@ -128,13 +129,62 @@ export function readStoredToken(): string | null {
   }
 }
 
+function readStoredRefresh(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return window.localStorage.getItem(REFRESH_KEY);
+  } catch {
+    return null;
+  }
+}
+
 export function storeToken(t: string | null): void {
   if (typeof window === "undefined") return;
   try {
     if (t) window.localStorage.setItem(TOKEN_KEY, t);
-    else window.localStorage.removeItem(TOKEN_KEY);
+    else {
+      window.localStorage.removeItem(TOKEN_KEY);
+      window.localStorage.removeItem(REFRESH_KEY);
+    }
   } catch {
     /* 隐私模式下写不了，忽略 */
+  }
+}
+
+/** 魔法链接回跳后接令牌：此时 URL hash 里有 #access_token=…&refresh_token=…。
+ *  写入 localStorage 并把 hash 从地址栏清掉（replaceState，不留脏历史）。
+ *  返回 true = 这次加载确实带了登录回跳。 */
+export function consumeAuthRedirect(): boolean {
+  if (typeof window === "undefined") return false;
+  const h = window.location.hash;
+  if (!h || !h.includes("access_token=")) return false;
+  const p = new URLSearchParams(h.startsWith("#") ? h.slice(1) : h);
+  const at = p.get("access_token");
+  if (!at) return false;
+  storeToken(at);
+  const rt = p.get("refresh_token");
+  try {
+    if (rt) window.localStorage.setItem(REFRESH_KEY, rt);
+    else window.localStorage.removeItem(REFRESH_KEY);
+  } catch {
+    /* 隐私模式下写不了，忽略 */
+  }
+  try {
+    window.history.replaceState(null, "", window.location.pathname + window.location.search);
+  } catch {
+    /* 忽略 */
+  }
+  return true;
+}
+
+/** 解 JWT 的 exp（秒）。解析不了返回 null。 */
+function jwtExp(t: string): number | null {
+  try {
+    const seg = t.split(".")[1];
+    const j = JSON.parse(atob(seg.replace(/-/g, "+").replace(/_/g, "/")));
+    return typeof j.exp === "number" ? j.exp : null;
+  } catch {
+    return null;
   }
 }
 
@@ -154,7 +204,8 @@ export class SupabaseAdapter implements SyncAdapter {
   }
 
   private headers(): Record<string, string> {
-    const token = this.cfg.accessToken ?? this.cfg.anonKey;
+    /* 每次现读：刷新过的令牌能立刻用上，不等适配器重建 */
+    const token = readStoredToken() ?? this.cfg.anonKey;
     return {
       apikey: this.cfg.anonKey,
       Authorization: `Bearer ${token}`,
@@ -162,9 +213,48 @@ export class SupabaseAdapter implements SyncAdapter {
     };
   }
 
+  /** access_token 过期（默认 1 小时）就用 refresh_token 换新的。
+   *  并发调用共享同一次刷新，避免同时打多枪。 */
+  private refreshing: Promise<boolean> | null = null;
+
+  private ensureFresh(): Promise<boolean> {
+    const t = readStoredToken();
+    if (!t) return Promise.resolve(false); // 未登录（走匿名 key，无需刷新）
+    const exp = jwtExp(t);
+    if (exp === null || exp * 1000 - Date.now() > 60_000) return Promise.resolve(true);
+    if (this.refreshing) return this.refreshing;
+    this.refreshing = (async () => {
+      try {
+        const rt = readStoredRefresh();
+        if (!rt) return false;
+        const r = await fetch(`${this.cfg.url}/auth/v1/token?grant_type=refresh_token`, {
+          method: "POST",
+          headers: { apikey: this.cfg.anonKey, "Content-Type": "application/json" },
+          body: JSON.stringify({ refresh_token: rt }),
+        });
+        if (!r.ok) return false;
+        const j = (await r.json()) as { access_token?: string; refresh_token?: string };
+        if (!j.access_token) return false;
+        storeToken(j.access_token);
+        try {
+          if (j.refresh_token) window.localStorage.setItem(REFRESH_KEY, j.refresh_token);
+        } catch {
+          /* 忽略 */
+        }
+        return true;
+      } catch {
+        return false;
+      } finally {
+        this.refreshing = null;
+      }
+    })();
+    return this.refreshing;
+  }
+
   /** 当前用户：调 /auth/v1/user */
   async currentUserId(): Promise<string | null> {
-    const token = this.cfg.accessToken;
+    await this.ensureFresh();
+    const token = readStoredToken();
     if (!token) return null;
     try {
       const r = await fetch(`${this.cfg.url}/auth/v1/user`, {
@@ -180,6 +270,7 @@ export class SupabaseAdapter implements SyncAdapter {
 
   /** 批量 upsert（PostgREST：POST + Prefer: resolution=merge-duplicates） */
   async push(table: SyncTable, rows: RemoteRow[]): Promise<void> {
+    await this.ensureFresh();
     if (!rows.length) return;
     const body = rows.map((r) => ({
       id: r.id,
@@ -202,6 +293,7 @@ export class SupabaseAdapter implements SyncAdapter {
 
   /** 增量拉取 */
   async pull(table: SyncTable, since: number): Promise<RemoteRow[]> {
+    await this.ensureFresh();
     const iso = new Date(since).toISOString();
     const qs = `select=id,updated_at,deleted_at,payload&updated_at=gt.${encodeURIComponent(iso)}&order=updated_at.asc`;
     const r = await fetch(`${this.cfg.url}/rest/v1/${remoteName(table)}?${qs}`, {

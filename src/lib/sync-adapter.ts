@@ -316,13 +316,19 @@ export class SupabaseAdapter implements SyncAdapter {
 
   /** 魔法链接：发信 */
   async signInWithEmail(email: string): Promise<void> {
-    const r = await fetch(`${this.cfg.url}/auth/v1/otp`, {
+    const origin = typeof window !== "undefined" ? window.location.origin : undefined;
+    /* GoTrue 从请求 query 的 redirect_to 取回跳地址（按白名单校验），
+       body 里的 email_redirect_to 一并带上做兼容；
+       此前只写了 body 里嵌套的 options.email_redirect_to —— GoTrue 不认识，
+       邮件链接一律退回 site_url（曾是 127.0.0.1:3210，导致"登录后黑屏"） */
+    const qs = origin ? `?redirect_to=${encodeURIComponent(origin)}` : "";
+    const r = await fetch(`${this.cfg.url}/auth/v1/otp${qs}`, {
       method: "POST",
       headers: { apikey: this.cfg.anonKey, "Content-Type": "application/json" },
       body: JSON.stringify({
         email,
         create_user: true,
-        options: { email_redirect_to: typeof window !== "undefined" ? window.location.origin : undefined },
+        ...(origin ? { email_redirect_to: origin } : {}),
       }),
     });
     if (!r.ok) throw new Error(`发送登录邮件失败 HTTP ${r.status}: ${await r.text()}`);

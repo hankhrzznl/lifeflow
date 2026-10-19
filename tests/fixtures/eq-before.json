@@ -1,0 +1,262 @@
+{
+  "scenarios": {
+    "s1-体+8-应涨": {
+      "scores": {
+        "body": 70,
+        "bond": 25,
+        "mind": 67,
+        "means": 20
+      },
+      "base": {
+        "body": 62,
+        "bond": 25,
+        "mind": 67,
+        "means": 20
+      },
+      "delta": {
+        "body": 8,
+        "bond": 0,
+        "mind": 0,
+        "means": 0
+      },
+      "cur": {
+        "body": 70,
+        "bond": 25,
+        "mind": 67,
+        "means": 20
+      },
+      "light0": 120,
+      "step": 1,
+      "light1": 121,
+      "level": 15,
+      "tier": "凝露",
+      "applied": 1,
+      "shift": 1,
+      "cum": [
+        0,
+        4,
+        9,
+        14,
+        20,
+        26
+      ]
+    },
+    "s2-志+10-卡门上": {
+      "scores": {
+        "body": 70,
+        "bond": 25,
+        "mind": 67,
+        "means": 20
+      },
+      "base": {
+        "body": 70,
+        "bond": 25,
+        "mind": 67,
+        "means": 10
+      },
+      "delta": {
+        "body": 0,
+        "bond": 0,
+        "mind": 0,
+        "means": 10
+      },
+      "cur": {
+        "body": 70,
+        "bond": 25,
+        "mind": 67,
+        "means": 20
+      },
+      "light0": 120,
+      "step": 0,
+      "light1": 120,
+      "level": 15,
+      "tier": "凝露",
+      "applied": 0,
+      "shift": 0,
+      "cum": [
+        0,
+        4,
+        9,
+        14,
+        20,
+        26
+      ]
+    },
+    "s3-志+11-应涨": {
+      "scores": {
+        "body": 70,
+        "bond": 25,
+        "mind": 67,
+        "means": 20
+      },
+      "base": {
+        "body": 70,
+        "bond": 25,
+        "mind": 67,
+        "means": 9
+      },
+      "delta": {
+        "body": 0,
+        "bond": 0,
+        "mind": 0,
+        "means": 11
+      },
+      "cur": {
+        "body": 70,
+        "bond": 25,
+        "mind": 67,
+        "means": 20
+      },
+      "light0": 120,
+      "step": 1,
+      "light1": 121,
+      "level": 15,
+      "tier": "凝露",
+      "applied": 1,
+      "shift": 1,
+      "cum": [
+        0,
+        4,
+        9,
+        14,
+        20,
+        26
+      ]
+    },
+    "s4-体-27-应缩": {
+      "scores": {
+        "body": 70,
+        "bond": 25,
+        "mind": 67,
+        "means": 20
+      },
+      "base": {
+        "body": 97,
+        "bond": 25,
+        "mind": 67,
+        "means": 20
+      },
+      "delta": {
+        "body": -27,
+        "bond": 0,
+        "mind": 0,
+        "means": 0
+      },
+      "cur": {
+        "body": 70,
+        "bond": 25,
+        "mind": 67,
+        "means": 20
+      },
+      "light0": 10,
+      "step": -1,
+      "light1": 9,
+      "level": 3,
+      "tier": "拾光",
+      "applied": -1,
+      "shift": -1,
+      "cum": [
+        0,
+        4,
+        9,
+        14,
+        20,
+        26
+      ]
+    },
+    "s5-体+5志+5-应涨": {
+      "scores": {
+        "body": 70,
+        "bond": 25,
+        "mind": 67,
+        "means": 20
+      },
+      "base": {
+        "body": 65,
+        "bond": 25,
+        "mind": 67,
+        "means": 15
+      },
+      "delta": {
+        "body": 5,
+        "bond": 0,
+        "mind": 0,
+        "means": 5
+      },
+      "cur": {
+        "body": 70,
+        "bond": 25,
+        "mind": 67,
+        "means": 20
+      },
+      "light0": 120,
+      "step": 1,
+      "light1": 121,
+      "level": 15,
+      "tier": "凝露",
+      "applied": 1,
+      "shift": 1,
+      "cum": [
+        0,
+        4,
+        9,
+        14,
+        20,
+        26
+      ]
+    },
+    "s6-全零-持平": {
+      "scores": {
+        "body": 70,
+        "bond": 25,
+        "mind": 67,
+        "means": 20
+      },
+      "base": {
+        "body": 70,
+        "bond": 25,
+        "mind": 67,
+        "means": 20
+      },
+      "delta": {
+        "body": 0,
+        "bond": 0,
+        "mind": 0,
+        "means": 0
+      },
+      "cur": {
+        "body": 70,
+        "bond": 25,
+        "mind": 67,
+        "means": 20
+      },
+      "light0": 120,
+      "step": 0,
+      "light1": 120,
+      "level": 15,
+      "tier": "凝露",
+      "applied": 0,
+      "shift": 0,
+      "cum": [
+        0,
+        4,
+        9,
+        14,
+        20,
+        26
+      ]
+    }
+  },
+  "pages": {
+    "index.html": {
+      "bytes": 236158,
+      "title": "EQ{\"scores\":{\"body\":70,\"bond\":25,\"mind\":67,\"means\":20},\"base\":{\"body\":70,\"bond\":25,\"mind\":67,\"means\":20},\"delta\":{\"body\":0,\"bond\":0,\"mind\":0,\"means\":0},\"cur\":{\"body\":70,\"bond\":25,\"mind\":67,\"means\":20},\"light0\":120,\"step\":0,\"light1\":120,\"level\":15,\"tier\":\"凝露\",\"applied\":0,\"shift\":0,\"cum\":[0,4,9,14,20,26]}",
+      "timedOut": false
+    },
+    "desktop.html": {
+      "bytes": 130371,
+      "title": "执灯人 · 电脑端",
+      "timedOut": false
+    }
+  }
+}

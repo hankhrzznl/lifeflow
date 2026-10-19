@@ -1,0 +1,13 @@
+import { chromium, EXE, BASE, OUT } from "./_env.mjs";
+const browser = await chromium.launch({ executablePath: EXE });
+const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
+await page.goto(BASE + "/index.html", { waitUntil: "load" });
+await page.waitForTimeout(900);
+await page.evaluate(() => document.querySelector('[data-tab="profile"]').click());
+await page.waitForTimeout(500);
+await page.screenshot({ path: OUT + "p2-hub.png" });
+await page.evaluate(() => document.querySelector('[data-tab="today"]').click());
+await page.waitForTimeout(400);
+await page.screenshot({ path: OUT + "p2-today-mod.png" });
+await browser.close();
+console.log("done");

@@ -1,0 +1,43 @@
+name: Deploy to GitHub Pages
+
+on:
+  # 只手动触发：避免推分支时自动发布，覆盖同仓库里原有站点的 Pages
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/configure-pages@v5
+
+      # 只发布对外需要的静态文件：落地页 + 手机端 + 电脑端 + 工作台。
+      # 不发布 .workbuddy / 资料库备份 / _sync / tests / docs / .design。
+      - name: Stage public site
+        run: |
+          mkdir -p _site
+          cp index.html _site/index.html
+          cp -r pages _site/pages
+          cp -r workbench _site/workbench
+          touch _site/.nojekyll
+          du -sh _site
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - id: deployment
+        uses: actions/deploy-pages@v4

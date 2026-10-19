@@ -1,0 +1,79 @@
+{
+  "data": [
+    {
+      "id": "page-mobile",
+      "type": "page",
+      "title": "手机端 · 修仙版",
+      "version": 1,
+      "createdAt": 1791435928000,
+      "canvasData": {
+        "x": 0,
+        "y": 0,
+        "width": 393,
+        "height": 852,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 900,
+          "viewportWidth": 1440,
+          "sourceHash": "fnv1a-fba48421",
+          "measuredAt": 1791521744848
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/index.html"
+      }
+    },
+    {
+      "id": "page-desktop",
+      "type": "page",
+      "title": "电脑端 · 修仙版",
+      "version": 1,
+      "createdAt": 1791435928000,
+      "canvasData": {
+        "x": 460,
+        "y": 0,
+        "width": 1200,
+        "height": 800,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 100,
+          "viewportWidth": 1440,
+          "sourceHash": "fnv1a-4339eab4",
+          "measuredAt": 1791530619028
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/desktop.html"
+      }
+    },
+    {
+      "id": "img-crane-avatar",
+      "type": "image",
+      "title": "白鹤头像",
+      "version": 1,
+      "createdAt": 1791435928000,
+      "canvasData": {
+        "x": 0,
+        "y": 920,
+        "width": 400,
+        "height": 400,
+        "group": 0,
+        "naturalSize": {
+          "width": 1920,
+          "height": 1920
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "pages/assets/crane-avatar.jpg"
+      }
+    }
+  ],
+  "config": {
+    "autoLayout": false,
+    "deviceType": "desktop",
+    "showEdge": false,
+    "visualEditorEnabled": false
+  }
+}

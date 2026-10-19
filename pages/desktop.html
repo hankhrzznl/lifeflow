@@ -1,0 +1,1535 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>执灯人 · 电脑端</title>
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<!-- 执灯人电脑端蓝本 · 一天一盏灯，一周一关（方向规格 v2.0）；与手机端 index.html 同源同语言、共享本地数据。版式早期参考 Tiimo，商标归 Tiimo ApS 所有 -->
+<link rel="stylesheet" href="tokens.css">
+<style>
+:root{
+  /* ===== 共享令牌在 tokens.css（--xuan/--mo/--line/--brand/四域/--zhu） ===== */
+  --bg:var(--xuan);
+  --card:var(--xuan-2);
+  --card2:#1A2332;        /* 深玄卡（浮层/输入） */
+  --sidebar:#0E1322;      /* 侧栏底（比主底更深一档） */
+  --ink:var(--mo);
+  --mut:var(--mo-2);
+  --dim:#5A6478;
+  --hair:rgba(232,234,242,.05);
+
+  /* 非焦点域的灰态：同色相 35% 饱和 + 55% 明度（暗底灰态） */
+  --d-energy-dim:#7A4540;
+  --d-bond-dim:#6A4E7A;
+  --d-mind-dim:#3A5E75;
+  --d-means-dim:#7A6838;
+
+  /* ===== 优先级：力量色相 ===== */
+  --hi:#FF5C4D;
+  --mid:#F5C545;
+  --lo:#6A7488;
+
+  /* ===== 时段：暗场光影（底更暗、标记更亮） ===== */
+  --any:#10141F;--any-ic:#8A93A8;      /* 中性 */
+  --am:#141826;--am-ic:#C9A86A;        /* 晨 · 淡金 */
+  --noon:#161B2A;--noon-ic:#E8EAF2;    /* 午 · 最亮 */
+  --day:#12161F;--day-ic:#D98A5A;      /* 昏 · 斜光 */
+  --eve:#0E1220;--eve-ic:#6B7FA8;      /* 夜 · 唯一冷色 */
+
+  --danger:var(--zhu);
+  --warn-bg:rgba(255,59,92,.08);--warn-ink:#FF6B7A;
+
+  --cjk:'Source Han Sans SC','Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif;
+  --en:'Source Han Serif SC','Noto Serif CJK SC','SimSun',serif;
+}
+
+/* ===== 日间：与手机端同一套暖奶油/暖墨 + 四域色，桌面端只换令牌不换版式 ===== */
+[data-theme="light"]{
+  --xuan:#F7F4EF;
+  --xuan-2:#FFFFFF;
+  --card2:#F2ECE3;
+  --sidebar:#FAF7F2;
+  --mo:#26221E;
+  --mo-2:#6E675E;
+  --mo-3:#A39C90;
+  --ink:var(--mo);
+  --mut:var(--mo-2);
+  --dim:#A39C90;
+  --line:rgba(38,34,30,.10);
+  --hair:rgba(38,34,30,.05);
+  --brand:#002FA7;
+  --brand-ink:#FFFFFF;
+  --d-energy:#D64545;
+  --d-bond:#8B5CF6;
+  --d-mind:#2E86DE;
+  --d-means:#B7791F;
+  --d-energy-dim:#E8B4B0;
+  --d-bond-dim:#C9B3E8;
+  --d-mind-dim:#A9C9E8;
+  --d-means-dim:#E0C9A0;
+  --hi:#D64545;
+  --mid:#B7791F;
+  --lo:#A39C90;
+  --any:#F2ECE3;--any-ic:#6E675E;
+  --am:#FBF4E6;--am-ic:#9A7B3A;
+  --noon:#FFFFFF;--noon-ic:#26221E;
+  --day:#F7EDE3;--day-ic:#A35B2A;
+  --eve:#EEF0F6;--eve-ic:#5A6478;
+  --zhu:#D64545;
+  --danger:var(--zhu);
+  --warn-bg:rgba(214,69,69,.08);--warn-ink:#B23A3A;
+}
+
+/* ===== 软焦点：同一时刻只有焦点域上满色，其余走灰态 ===== */
+.dd-e{--dd:var(--d-energy-dim)}
+.dd-b{--dd:var(--d-bond-dim)}
+.dd-m{--dd:var(--d-mind-dim)}
+.dd-x{--dd:var(--d-means-dim)}
+body[data-focus="energy"] .dd-e{--dd:var(--d-energy)}
+body[data-focus="bond"]   .dd-b{--dd:var(--d-bond)}
+body[data-focus="mind"]   .dd-m{--dd:var(--d-mind)}
+body[data-focus="means"]  .dd-x{--dd:var(--d-means)}
+
+/* ===== 时段：暗底（--sb）+ 亮色标记（--sc）成对 ===== */
+.sl-any{--sb:var(--any);--sc:var(--any-ic)}
+.sl-am{--sb:var(--am);--sc:var(--am-ic)}
+.sl-noon{--sb:var(--noon);--sc:var(--noon-ic)}
+.sl-day{--sb:var(--day);--sc:var(--day-ic)}
+.sl-eve{--sb:var(--eve);--sc:var(--eve-ic)}
+
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font:14px/1.6 var(--cjk);font-weight:400;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;box-shadow:none;outline:0}
+a{color:inherit;text-decoration:none}
+svg{display:block}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-thumb{background:var(--mo-3);border-radius:2px}
+::-webkit-scrollbar-track{background:transparent}
+
+/* ===== 布局骨架 ===== */
+.app{display:grid;grid-template-columns:216px 1fr 304px;grid-template-rows:minmax(0,1fr);height:100vh;min-height:720px;overflow:hidden;background:var(--bg)}
+.side{background:var(--sidebar);border-right:1px solid var(--mo-3);display:flex;flex-direction:column;padding:18px 12px 14px;min-height:0;overflow:hidden}
+.main{display:flex;flex-direction:column;min-width:0;min-height:0}
+.aside{background:var(--sidebar);border-left:1px solid var(--mo-3);padding:18px 14px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;min-height:0}
+
+/* ===== 侧栏 ===== */
+.logo{display:flex;align-items:center;gap:10px;padding:2px 8px 16px}
+.logo-mark{width:34px;height:34px;flex:none;border-radius:2px;background:transparent;border:1.5px solid var(--brand);display:flex;align-items:center;justify-content:center;color:var(--brand);box-shadow:0 0 8px rgba(77,195,255,.2)}
+.logo-mark svg{width:18px;height:18px}
+.logo-t b{display:block;font:600 15px/1.25 var(--en);white-space:nowrap;color:var(--mo);letter-spacing:1px}
+.logo-t span{font:400 11px/1.3 var(--cjk);color:var(--mo-2)}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nv{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:4px;font:500 13.5px var(--cjk);color:var(--mo-2);transition:background .15s,color .15s,text-shadow .15s;position:relative}
+.nv svg{width:17px;height:17px;flex:none;stroke-width:1.5}
+.nv:hover{background:rgba(232,234,242,.04);color:var(--mo)}
+.nv.on{background:transparent;color:var(--brand);font-weight:600;text-shadow:0 0 8px rgba(77,195,255,.3)}
+.nv.on::before{content:'';position:absolute;left:0;top:8px;bottom:8px;width:2px;background:var(--brand);box-shadow:0 0 6px var(--brand)}
+.side-foot{margin-top:auto;border-top:1px solid var(--line);padding-top:12px;display:flex;flex-direction:column;gap:2px}
+.side-foot .nv{font-size:12.5px;color:var(--mo-2)}
+.side-foot .nv:hover{color:var(--mo)}
+.focus-lab{font:500 10.5px var(--en);color:var(--dim);letter-spacing:1.4px;padding:0 12px 8px}
+.focus-pick{display:flex;align-items:center;gap:9px;padding:0 12px 12px}
+.focus-dot{width:10px;height:10px;border-radius:1px;padding:0;opacity:.4;transition:opacity .18s,box-shadow .18s}
+.focus-dot:hover{opacity:.7}
+.focus-dot.on{opacity:1;box-shadow:0 0 6px currentColor}
+.focus-name{margin-left:auto;font:500 11.5px var(--cjk);color:var(--mo-2)}
+
+/* ===== 顶栏 ===== */
+.top{display:flex;align-items:center;gap:14px;padding:20px 26px 14px}
+.top h1{font:600 21px var(--en);letter-spacing:1px;color:var(--mo)}
+.top .wk-sub{font:400 12.5px var(--cjk);color:var(--mo-2);margin-top:1px}
+.rnd{width:32px;height:32px;border-radius:4px;background:var(--card2);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;color:var(--mo-2);transition:background .15s}
+.rnd:hover{background:rgba(232,234,242,.06)}
+.rnd svg{width:15px;height:15px}
+.today-pill{padding:7px 16px;border-radius:4px;background:var(--card2);border:1px solid var(--line);font:500 12.5px var(--cjk);color:var(--mo);transition:background .15s}
+.today-pill:hover{background:rgba(232,234,242,.06)}
+.seg{margin-left:auto;display:flex;background:var(--card2);border:1px solid var(--line);border-radius:4px;padding:3px}
+.seg button{padding:6px 18px;border-radius:2px;font:500 12.5px var(--cjk);color:var(--mo-2)}
+.seg button.on{background:var(--brand);color:var(--brand-ink);font-weight:600;box-shadow:0 0 12px rgba(77,195,255,.25)}
+
+/* ===== 演示提示条 ===== */
+.demo-bar{display:none;align-items:center;gap:10px;margin:0 26px 4px;background:var(--warn-bg);border:1px solid rgba(255,59,92,.2);border-radius:6px;padding:9px 16px;font:400 12.5px var(--cjk);color:var(--warn-ink)}
+.demo-bar.show{display:flex}
+.demo-bar b{font-weight:600}
+.demo-bar button{margin-left:auto;padding:5px 14px;border-radius:4px;background:rgba(255,59,92,.12);font:600 12px var(--cjk);color:var(--warn-ink)}
+.demo-bar button:hover{background:rgba(31,29,26,.1)}
+
+/* ===== 视图容器 ===== */
+.view{display:none;flex:1;min-height:0;padding:10px 26px 20px;overflow:hidden}
+.view.on{display:block}
+.stage{height:100%;background:var(--card);border:1px solid var(--mo-3);border-radius:6px;overflow:hidden;display:flex;flex-direction:column}
+
+/* ===== 日视图 · 时段卷轴 ===== */
+.tl-scroll{flex:1;min-height:0;overflow-y:auto;position:relative}
+.dy-wrap{padding:6px 30px 20px}
+.dy-head{display:flex;align-items:baseline;gap:12px;padding:16px 0 12px;border-bottom:1px solid var(--mo-3)}
+.dy-head .dh{font:600 16px var(--en);color:var(--mo);letter-spacing:1px}
+.dy-head .dn{font:400 12px var(--en);color:var(--mo-2)}
+.dy-slot{padding:0 0 6px}
+.dy-slot.drag-over{background:rgba(31,29,26,.03)}
+.slot-head{display:flex;align-items:center;gap:10px;margin:20px 0 8px}
+.slot-head::before{content:'';width:3px;height:14px;background:var(--sc,var(--mo-2));flex:none}
+.slot-head .sh-t{font:600 13.5px var(--cjk);color:var(--mo);letter-spacing:1px}
+.slot-head .sh-m{font:400 11px var(--en);color:var(--dim)}
+.sh-now{margin-left:auto;font:500 10.5px var(--cjk);color:var(--zhu);border:1px solid rgba(160,52,44,.55);padding:1px 8px;border-radius:2px;letter-spacing:2px}
+.dy-empty{font:400 12px var(--cjk);color:var(--dim);padding:6px 0 6px 14px;letter-spacing:2px}
+.dy-any{border-top:1px solid var(--mo-3);margin-top:18px;padding:14px 0 0}
+.dy-any .da-lab{font:500 10.5px var(--en);color:var(--dim);letter-spacing:.8px;margin-bottom:8px}
+
+/* ===== 周视图 · 七日疏密 ===== */
+.wk-wrap{flex:1;display:grid;grid-template-columns:repeat(7,1fr);min-height:0}
+.wk-col{border-left:1px solid var(--mo-3);padding:18px 12px 14px;display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer}
+.wk-col:hover{background:rgba(232,234,242,.04)}
+.wk-col.sel{outline:1px solid var(--brand);outline-offset:-1px;border-radius:10px}
+.wk-col.drag-over{background:rgba(77,195,255,.10);outline:1px dashed var(--brand);outline-offset:-2px;border-radius:10px}
+.wk-dot{cursor:grab}
+.wk-dot:active{cursor:grabbing}
+/* 月视图 · 一月一册 */
+.mo-wrap{display:flex;flex-direction:column;gap:10px}
+.mo-cap{font-family:var(--en);font-size:18px;color:var(--mo);letter-spacing:.06em;padding:2px 2px 0;display:flex;align-items:baseline;gap:16px;flex-wrap:wrap}
+.mo-sum{display:flex;align-items:baseline;gap:14px;margin-left:auto;font-size:10.5px;color:var(--mo-3);letter-spacing:.04em}
+.mo-sum b{font-family:var(--en);font-size:14px;color:var(--mo);font-weight:600;margin-right:3px}
+.mo-head{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;color:var(--mo-3);font-size:10px;letter-spacing:.14em;text-align:center}
+.mo-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;flex:1;grid-auto-rows:1fr}
+.mo-cell{position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;min-height:74px;padding:10px 8px;border:1px solid var(--hair);border-radius:12px;background:var(--card);color:var(--mo);cursor:pointer;transition:border-color .16s,background .16s}
+.mo-cell:hover{border-color:var(--line);background:var(--sheet)}
+.mo-cell.out{opacity:.36}
+.mo-cell.today{border-color:var(--brand)}
+.mo-cell.sel{outline:1px solid var(--brand);outline-offset:-1px}
+.mo-d{font-family:var(--en);font-size:15px;line-height:1}
+.mo-dots{display:flex;gap:3px;min-height:6px}
+.mo-dots i{width:5px;height:5px;border-radius:50%;background:var(--brand);opacity:.85}
+.mo-dots i.on{background:var(--zhu)}
+.mo-n{position:absolute;right:8px;top:7px;font-size:9px;color:var(--mo-3);font-variant-numeric:tabular-nums}
+.wk-col:first-child{border-left:0}
+.wk-col .wk-dh{font:500 11.5px var(--cjk);color:var(--mo-2)}
+.wk-col.today .wk-dh{color:var(--mo);font-weight:600}
+.wk-col .wk-dn{width:30px;height:30px;display:flex;align-items:center;justify-content:center;font:600 14px var(--en);color:var(--mo)}
+.wk-col.today .wk-dn{background:var(--zhu);color:var(--xuan)}
+.wk-dots{margin-top:22px;display:flex;flex-wrap:wrap;gap:10px 12px;justify-content:center;align-content:flex-start;max-width:110px}
+.wk-dot{width:7px;height:7px;border-radius:50%;border:1px solid var(--mo-2);opacity:.5}
+.wk-dot.on{background:var(--mo);border-color:var(--mo);opacity:.85}
+.wk-more{font:400 11px var(--en);color:var(--dim);align-self:center}
+.wk-empty{margin-top:22px;font:400 11px var(--cjk);color:var(--dim);letter-spacing:2px}
+
+/* ===== 时间块（卷轴条目）：左竖条＝域色（软焦点），时段由组头表达 ===== */
+.blk{position:relative;border-radius:4px;padding:15px 14px 15px 0;min-height:56px;overflow:visible;cursor:grab;background:transparent;box-shadow:none;border-bottom:1px solid var(--line);transition:background .15s;display:flex;flex-direction:column;gap:4px}
+.blk::before{content:'';position:absolute;left:0;top:14px;bottom:14px;width:3px;background:var(--dd,#7A4540)}
+.blk:hover{background:rgba(232,234,242,.03)}
+.blk:active{cursor:grabbing}
+.blk .b-top{display:flex;align-items:center;gap:6px;min-width:0}
+.blk .b-ic{font-size:13px;line-height:1;flex:none}
+.blk .b-dot{width:6px;height:6px;border-radius:1px;flex:none;background:var(--dd)}
+.blk .b-t{font:500 13px var(--cjk);color:var(--mo);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.blk .b-m{font:400 11px var(--en);color:var(--mo-2);margin-top:0;opacity:1}
+.blk.slim{padding:12px 14px 12px 0;display:flex;align-items:center;gap:6px;flex-direction:row}
+.blk.slim .b-t{font-size:12.5px}
+.blk.slim .b-m{margin:0 0 0 auto;flex:none}
+.blk.done{opacity:.5}
+.blk.done .b-t{color:var(--mo-2);text-decoration:none}
+.blk.active{border:1px solid var(--dd);box-shadow:0 0 12px rgba(255,255,255,0);padding:14px 13px 14px 13px;margin-left:-1px;border-bottom-color:var(--dd);background:rgba(255,255,255,.01)}
+.blk.active::before{width:4px;top:13px;bottom:13px;box-shadow:0 0 8px var(--dd)}
+
+/* 随时条目并入日视图底部（.dy-any），复用 .ib-item */
+
+/* ===== 右栏 ===== */
+.aside h3{font:600 13.5px var(--en);margin-bottom:10px;display:flex;align-items:center;gap:7px;color:var(--mo);letter-spacing:.5px}
+.aside h3 svg{width:15px;height:15px;color:var(--mo-2);stroke-width:1.5}
+.aside h3 .cnt{margin-left:auto;font:500 11px var(--cjk);color:var(--mo-2);background:transparent;border:1px solid var(--line);border-radius:2px;padding:1px 8px}
+.now-card{background:var(--card2);border:1px solid var(--line);border-radius:6px;padding:16px;position:relative}
+.now-card.active{border-color:var(--dd);box-shadow:0 0 16px rgba(255,255,255,0),0 0 0 1px var(--dd)}
+.now-card.active::after{content:'';position:absolute;inset:-1px;border-radius:7px;box-shadow:0 0 20px var(--dd);opacity:.18;pointer-events:none}
+.now-emoji{font-size:28px;line-height:1}
+.now-card .n-name{font:600 16px var(--cjk);margin-top:8px;color:var(--mo)}
+.now-card .n-sub{font:400 12px var(--cjk);color:var(--mo-2);margin-top:2px}
+.now-bar{height:2px;border-radius:0;background:var(--line);margin-top:12px;overflow:hidden;position:relative}
+.now-bar i{display:block;height:100%;background:linear-gradient(90deg,var(--dd),var(--dd));filter:brightness(1.1)}
+.now-bar i::after{content:'';position:absolute;right:0;top:50%;width:4px;height:4px;border-radius:50%;background:var(--dd);transform:translateY(-50%);box-shadow:0 0 6px var(--dd)}
+.next-lab{font:500 11.5px var(--en);color:var(--dim);margin-top:12px;letter-spacing:.6px}
+.next-item{display:flex;align-items:center;gap:8px;margin-top:6px;font:500 12.5px var(--cjk);color:var(--mo)}
+.focus-card{background:var(--card2);border:1px solid var(--line);border-radius:6px;padding:16px;text-align:center}
+.focus-card h3{justify-content:center;color:var(--mo)}
+.f-time{font:600 34px var(--en);letter-spacing:1px;color:var(--mo);font-variant-numeric:tabular-nums}
+.f-btns{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:10px}
+.f-btns .f-adj{width:34px;height:34px;border-radius:4px;border:1px solid var(--line);font:600 12px var(--en);color:var(--mo-2);transition:background .15s,color .15s}
+.f-btns .f-adj:hover{background:rgba(232,234,242,.08);color:var(--mo)}
+.f-go{padding:8px 26px;border-radius:4px;background:var(--brand);color:var(--brand-ink);font:600 13px var(--cjk);box-shadow:0 0 12px rgba(77,195,255,.25)}
+.f-go.stop{background:var(--zhu);color:#fff;box-shadow:0 0 12px rgba(255,59,92,.3)}
+.ib-group{margin-bottom:11px}
+.ib-tag{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:2px;font:600 11px var(--cjk);color:#fff;margin-bottom:7px}
+.ib-tag svg{width:10px;height:10px}
+.ib-item{position:relative;display:flex;align-items:center;gap:7px;background:var(--card);border:1px solid var(--line);border-radius:4px;padding:8px 10px 8px 13px;margin-bottom:6px;font:500 12.5px var(--cjk);cursor:grab;transition:border-color .15s,background .15s;overflow:hidden}
+.ib-item::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--dd,#7A4540)}
+.ib-item:hover{border-color:rgba(232,234,242,.15);background:rgba(232,234,242,.02)}
+.ib-item:active{cursor:grabbing}
+.ib-item .b-ic{font-size:13px}
+.ib-item .b-dot{width:6px;height:6px;border-radius:1px;flex:none;background:var(--dd)}
+.ib-item .b-t{color:var(--mo);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ib-item .ib-m{margin-left:auto;font:400 10.5px var(--en);color:var(--dim);flex:none}
+.ib-empty{font:400 11.5px var(--cjk);color:var(--dim);padding:2px 0 6px}
+
+/* ===== 空态 ===== */
+.empty-stage{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--mo-2)}
+.empty-stage .e-emoji{font-size:40px}
+.empty-stage b{font:600 15px var(--cjk);color:var(--mo)}
+
+/* ===== 方向视图 ===== */
+.gl-grid{flex:1;min-height:0;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px;padding:16px 18px;align-content:start}
+.gl-card{background:var(--card2);border:1px solid var(--mo-3);border-radius:6px;padding:16px;border-top:1px solid transparent;position:relative}
+.gl-card::before{content:'';position:absolute;left:0;top:0;width:3px;height:100%;background:transparent;border-radius:0 2px 2px 0}
+.gl-card .g-dom{display:inline-flex;align-items:center;gap:5px;font:600 11px var(--cjk);padding:3px 10px;border-radius:2px}
+.gl-card h4{font:600 16.5px var(--cjk);margin-top:10px;color:var(--mo)}
+.gl-card .g-step{font:400 12.5px var(--cjk);color:var(--mo-2);margin-top:4px}
+.g-prog{display:flex;align-items:center;gap:8px;margin-top:12px}
+.g-prog .p-track{flex:1;height:2px;border-radius:0;background:var(--mo-3);overflow:hidden}
+.g-prog .p-track i{display:block;height:100%;border-radius:0}
+.g-prog .p-lab{font:500 11.5px var(--en);color:var(--mo-2)}
+.sub-row{display:flex;align-items:center;gap:8px;margin-top:9px;font:500 12.5px var(--cjk);color:var(--mo);cursor:pointer}
+.sub-row .s-chk{width:14px;height:14px;flex:none;border-radius:2px;border:1.5px solid var(--mo-3);position:relative}
+.sub-row.done .s-chk{border-color:var(--zhu);background:var(--zhu)}
+.sub-row.done .s-chk::after{content:'';position:absolute;inset:2px 3px 4px 2px;border:solid #fff;border-width:0 0 1.5px 1.5px;transform:rotate(-45deg) translateY(-1px)}
+.sub-row.done{color:var(--mo-2);text-decoration:none}
+.gl-add{display:flex;align-items:center;justify-content:center;gap:8px;border:1px dashed var(--mo-3);border-radius:6px;padding:16px;color:var(--mo-2);font:500 13px var(--cjk);cursor:pointer;grid-column:1/-1;transition:.15s}
+.gl-add:hover{border-color:var(--mo);color:var(--mo);background:rgba(31,29,26,.02)}
+.gl-form{grid-column:1/-1;background:var(--card2);border:1px solid var(--mo-3);border-radius:6px;padding:16px}
+.gl-form input{width:100%;border:1px solid var(--mo-3);border-radius:4px;padding:10px 14px;font:500 13.5px var(--cjk);outline:none;background:var(--xuan);color:var(--mo)}
+.gl-form input::placeholder{color:var(--dim)}
+.gl-form input:focus{border-color:var(--mo-2)}
+.dom-chips{display:flex;gap:8px;margin-top:12px}
+.dm-chip{padding:6px 16px;border-radius:2px;font:600 12px var(--cjk);transition:.15s}
+.dm-chip.on{color:#fff}
+.gl-form .f-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
+.gl-form .f-actions button{padding:8px 18px;border-radius:4px;font:600 12.5px var(--cjk)}
+.gl-form .f-cancel{color:var(--mo-2)}
+.gl-form .f-ok{background:var(--brand);color:var(--brand-ink)}
+
+/* ===== 四域视图 ===== */
+.dm-grid{flex:1;min-height:0;overflow-y:auto;padding:16px 18px;display:grid;grid-template-columns:1fr 1fr;gap:14px;align-content:start}
+.dm-card{background:var(--card2);border:1px solid var(--mo-3);border-radius:6px;padding:16px 18px}
+.dm-head{display:flex;align-items:center;gap:9px;margin-bottom:13px}
+.dm-head .d-dot{width:10px;height:10px;border-radius:1px}
+.dm-head b{font:600 15px var(--cjk);color:var(--mo)}
+.dm-head .d-avg{margin-left:auto;font:500 12px var(--en);color:var(--mo-2)}
+.dm-row{display:flex;align-items:center;gap:10px;padding:7px 0;border-top:1px solid var(--hair)}
+.dm-row .r-name{font:600 12.5px var(--cjk);color:var(--mo);width:64px;flex:none}
+.dm-row .r-info{font:400 11px var(--cjk);color:var(--mo-2);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dm-row .r-track{width:74px;height:2px;border-radius:0;background:var(--line);overflow:hidden;flex:none;position:relative}
+.dm-row .r-track i{display:block;height:100%;border-radius:0;position:relative}
+.dm-row .r-track i::after{content:'';position:absolute;right:0;top:50%;width:3px;height:3px;border-radius:50%;background:currentColor;transform:translateY(-50%);box-shadow:0 0 4px currentColor}
+.dm-row .r-pct{font:500 11px var(--en);color:var(--mo-2);width:34px;text-align:right;flex:none}
+
+/* ===== 成长视图 ===== */
+.gr-wrap{flex:1;min-height:0;overflow-y:auto;padding:20px 26px;display:grid;grid-template-columns:minmax(300px,420px) 1fr;gap:22px;align-content:start}
+.gr-now{background:var(--card2);border:1px solid var(--line);border-radius:6px;padding:20px}
+.gr-now .gn-lab{font:500 12px var(--en);color:var(--dim);letter-spacing:.8px}
+.gr-now .gn-realm{font:600 24px var(--en);margin-top:4px;color:var(--mo);letter-spacing:2px}
+.gr-now .gn-desc{font:400 12.5px var(--cjk);color:var(--mo-2);margin-top:6px}
+.gr-track{margin-top:16px;display:flex;flex-direction:column}
+.gr-node{display:flex;align-items:center;gap:12px;position:relative;padding:5px 0}
+.gr-node .g-dot{width:10px;height:10px;border-radius:1px;background:var(--dim);flex:none;z-index:1}
+.gr-node.past .g-dot{background:var(--brand)}
+.gr-node.cur .g-dot{background:transparent;border:1.5px solid var(--zhu);box-shadow:0 0 8px rgba(255,59,92,.4);width:12px;height:12px}
+.gr-node.cur .g-dot::after{content:'今';position:absolute;left:1.5px;top:7px;font:700 7px var(--en);color:var(--zhu)}
+.gr-node .g-line{position:absolute;left:4.5px;top:100%;height:16px;width:1px;background:var(--line)}
+.gr-node.past .g-line{background:var(--brand);opacity:.35}
+.gr-node .g-name{font:500 13px var(--cjk);color:var(--dim)}
+.gr-node.past .g-name,.gr-node.cur .g-name{color:var(--mo)}
+.gr-node.cur .g-name::after{content:'当前';font:500 10px var(--cjk);color:var(--brand-ink);background:var(--brand);border-radius:2px;padding:1px 8px;margin-left:8px;box-shadow:0 0 8px rgba(77,195,255,.3)}
+/* ===== 段位主画（人物立绘 · 内联 SVG） ===== */
+.gr-hero{grid-column:1/-1;position:relative;height:340px;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:#10141F;display:flex;align-items:stretch}
+.gh-left{flex:0 0 55%;display:flex;flex-direction:column;justify-content:center;padding:30px 20px 30px 36px;position:relative}
+.gh-seal{writing-mode:vertical-rl;font:600 18px/1 var(--en);color:var(--zhu);background:transparent;border:1px solid var(--zhu);letter-spacing:5px;padding:12px 7px 12px 9px;border-radius:2px;align-self:flex-start;box-shadow:0 0 12px rgba(255,59,92,.15)}
+.gh-desc{margin-top:18px;font:400 12.5px var(--cjk);color:var(--mo-2);line-height:1.8;max-width:220px}
+.gh-right{flex:1;display:flex;align-items:flex-end;justify-content:center;padding:0 28px 8px 0;position:relative}
+.gh-right svg{height:310px;width:auto;display:block;filter:drop-shadow(0 0 20px rgba(77,195,255,.08))}
+.gh-bottom-line{position:absolute;left:0;right:0;bottom:0;height:1px;background:var(--line)}
+.gr-realms{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-content:start}
+.gr-card{background:var(--card2);border:1px solid var(--line);border-radius:6px;padding:14px 16px;transition:border-color .15s}
+.gr-card .gc-idx{font:500 11px var(--en);color:var(--xuan);background:var(--brand);border-radius:2px;padding:1px 9px;letter-spacing:1px}
+.gr-card b{display:block;font:600 15.5px var(--en);margin-top:8px;color:var(--mo);letter-spacing:2px}
+.gr-card p{font:400 12px var(--cjk);color:var(--mo-2);margin-top:4px}
+.gr-card.cur{border-color:rgba(77,195,255,.4);box-shadow:0 0 16px rgba(77,195,255,.08)}
+.gr-card.cur .gc-idx{background:var(--zhu)}
+.gr-card.locked .gc-idx{background:transparent;color:var(--dim);border:1px solid var(--line)}
+.gr-card.locked b{color:var(--dim)}
+.gr-card.locked p{color:var(--mo-3)}
+.gr-rite{grid-column:1/-1;background:var(--card2);border:1px solid var(--line);border-radius:6px;padding:14px 18px;display:flex;gap:20px}
+.gr-rite div{font:400 12px var(--cjk);color:var(--mo-2)}
+.gr-rite b{display:block;font:600 12.5px var(--cjk);color:var(--mo);margin-bottom:3px}
+.gr-node .g-jie{margin-left:auto;font:600 10px/1 var(--cjk);color:var(--zhu);border:1px solid rgba(255,59,92,.5);border-radius:2px;padding:2px 5px;flex:none;box-shadow:0 0 6px rgba(255,59,92,.2)}
+.gr-node:not(.past):not(.cur) .g-jie{color:var(--dim);border-color:var(--line);box-shadow:none}
+.now-crane{width:46px;height:46px;border-radius:3px;object-fit:cover;object-position:center 18%;display:block;border:1px solid var(--line)}
+
+/* ===== 三件事：道场并置 / 光年（星图） / 灯焰曲线 ===== */
+.gr-year,.gr-line{grid-column:1/-1;border:1px solid var(--line);border-radius:6px;background:var(--card2);padding:18px 20px}
+.gr-year h3,.gr-line h3{font:600 13px var(--cjk);color:var(--mo);letter-spacing:2px;display:flex;align-items:center;gap:8px}
+.gr-year h3::before,.gr-line h3::before{content:'';width:3px;height:13px;background:var(--zhu);box-shadow:0 0 6px rgba(255,59,92,.4)}
+.gr-year h3 small,.gr-line h3 small{font:400 11px var(--cjk);color:var(--dim);letter-spacing:0}
+.yr-grid{margin-top:14px;display:flex;gap:3px;overflow-x:auto;padding-bottom:4px}
+.yr-col{display:flex;flex-direction:column;gap:3px}
+.yr-dot{width:4px;height:4px;border-radius:50%;background:var(--mo-2);opacity:.2}
+.yr-dot.l1{opacity:.35;background:#7A8698}
+.yr-dot.l2{opacity:.55;background:#9AA3B5}
+.yr-dot.l3{opacity:.8;background:#C5CBD8;box-shadow:0 0 4px rgba(232,234,242,.3)}
+.yr-dot.l4{background:var(--brand);box-shadow:0 0 6px var(--brand);opacity:1}
+.yr-dot.jie{background:var(--zhu);opacity:1;transform:rotate(45deg) scale(1.4);box-shadow:0 0 8px var(--zhu);width:6px;height:6px}
+.yr-legend{margin-top:10px;display:flex;gap:14px;font:400 10.5px var(--cjk);color:var(--dim);align-items:center;flex-wrap:wrap}
+.yr-legend .yr-dot{display:inline-block;vertical-align:middle;margin-right:4px}
+.dl-svg{margin-top:12px;width:100%;height:110px;display:block}
+
+/* ===== Toast ===== */
+.toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(16px);background:var(--card);color:var(--mo);border:1px solid var(--line);padding:10px 22px;border-radius:4px;font:500 13px var(--cjk);opacity:0;pointer-events:none;transition:all .25s;z-index:99;box-shadow:0 4px 20px rgba(0,0,0,.4)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ===== 响应式 ===== */
+@media (max-width:1180px){.app{grid-template-columns:216px 1fr}.aside{display:none}}
+@media (max-width:760px){.app{grid-template-columns:1fr}.side{display:none}.view{padding:8px 12px 14px}.demo-bar{margin:0 12px 4px}.top{padding:14px 14px 10px}}
+</style>
+</head>
+<body data-focus="energy">
+<div class="app">
+  <!-- 侧栏 -->
+  <aside class="side">
+    <div class="logo">
+      <span class="logo-mark"><svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M12 4v16M4 12h16" stroke-linecap="round"/></svg></span>
+      <span class="logo-t"><b>LifeFlow</b><span>清修日课 · 电脑端</span></span>
+    </div>
+    <nav class="nav">
+      <button class="nv" data-v="day"><svg fill="none" stroke="currentColor" stroke-linecap="round" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 9.6h17M8 3.4V6.2M16 3.4V6.2"/></svg>日视图</button>
+      <button class="nv" data-v="week"><svg fill="none" stroke="currentColor" stroke-linecap="round" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M9.2 5v15.5M14.8 5v15.5"/></svg>周视图</button>
+      <button class="nv" data-v="month"><svg fill="none" stroke="currentColor" stroke-linecap="round" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 9.6h17M3.5 14.3h17M8.5 9.6v10.9M15.5 9.6v10.9"/></svg>月视图</button>
+      <button class="nv" data-v="growth"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M12 20.5v-6.6"/><path d="M12 13.9c0-3 2.4-5.4 5.4-5.4h2.1c0 3-2.4 5.4-5.4 5.4z"/><path d="M12 16.2c-2.4 0-4.4-2-4.4-4.4V9.5h1.6c2.4 0 4.4 2 4.4 4.4z"/></svg>成长</button>
+    </nav>
+    <div class="side-foot">
+      <div class="focus-lab">焦点域</div>
+      <div class="focus-pick">
+        <button class="focus-dot on" data-f="energy" style="background:#5A6B4A" title="体能"></button>
+        <button class="focus-dot" data-f="bond" style="background:#3B4A6B" title="情感"></button>
+        <button class="focus-dot" data-f="mind" style="background:#3E5C6B" title="智识"></button>
+        <button class="focus-dot" data-f="means" style="background:#8A5A3B" title="资源"></button>
+        <span class="focus-name">体能</span>
+      </div>
+      <a class="nv" href="index.html"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>返回手机版</a>
+      <button class="nv" id="btnExport"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M12 4v11m0 0l-4-4m4 4l4-4"/><path d="M4.5 19.6h15"/></svg>导出数据</button>
+    </div>
+  </aside>
+
+  <!-- 主区 -->
+  <main class="main">
+    <header class="top">
+      <div>
+        <h1 id="vTitle">日视图</h1>
+        <div class="wk-sub" id="vSub"></div>
+      </div>
+      <button class="rnd" id="wPrev"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" viewBox="0 0 24 24"><path d="M14.5 6 9 12l5.5 6"/></svg></button>
+      <button class="rnd" id="wNext"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" viewBox="0 0 24 24"><path d="M9.5 6 15 12l-5.5 6"/></svg></button>
+      <button class="today-pill" id="wThis">今天</button>
+      <button class="rnd" id="themeToggle" type="button" aria-label="切换日夜"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"/></svg></button>
+      <div class="seg" id="segDW">
+        <button class="on" data-v="day">日</button>
+        <button data-v="week">周</button>
+        <button data-v="month">月</button>
+      </div>
+    </header>
+    <div class="demo-bar" id="demoBar">演示数据 · 这是预置的示例内容，方便先看看效果<button id="btnClearDemo">一键清空</button></div>
+
+    <section class="view" id="v-day"><div class="stage" id="stage-day"></div></section>
+    <section class="view" id="v-week"><div class="stage" id="stage-week"></div></section>
+    <section class="view" id="v-month"><div class="stage" id="stage-month"></div></section>
+    <section class="view" id="v-growth"><div class="stage" id="stage-growth"></div></section>
+  </main>
+
+  <!-- 右栏 -->
+  <aside class="aside">
+    <div class="now-card" id="nowCard"></div>
+    <div class="focus-card">
+      <h3>专注</h3>
+      <div class="f-time" id="fTime">15:00</div>
+      <div class="f-btns">
+        <button class="f-adj" id="fMinus">−5</button>
+        <button class="f-go" id="fGo">开始</button>
+        <button class="f-adj" id="fPlus">+5</button>
+      </div>
+    </div>
+    <div>
+      <h3><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M4 13h4l2 3h4l2-3h4"/><path d="M4 13V7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v6"/></svg>收件箱 <span class="cnt" id="ibCnt"></span></h3>
+      <div id="ibList"></div>
+    </div>
+  </aside>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="core/light.js"></script>
+<script>
+/* ================= 工具 ================= */
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ================= 设计令牌：与手机端 index.html 完全一致 ================= */
+const DOM_COLOR={体能:'#FF5C4D',情感:'#C77DFF',智识:'#4DC3FF',资源:'#F5C545'};
+const DOM_RGBA={体能:'255,92,77',情感:'199,125,255',智识:'77,195,255',资源:'245,197,69'};
+const DOM_KEY={体能:'energy',情感:'bond',智识:'mind',资源:'means'};
+const DOM_CLS={体能:'dd-e',情感:'dd-b',智识:'dd-m',资源:'dd-x'};
+const SLOT_CLS={anytime:'sl-any',morning:'sl-am',noon:'sl-noon',day:'sl-day',evening:'sl-eve'};
+
+/* ================= 数据：灯值与手机同源（zdLight）；电脑自己的任务板仍在 tiimoClone ================= */
+const KEY='tiimoClone';
+/* 手机端 zdLight 是灯的真相；桌面只读它，不写它。
+   没有手机数据时才用 173 光演示值（方向规格 v2.0 §2：年净光 ≈173）。 */
+const SHARED_LIGHT=(()=>{
+  try{
+    const s=JSON.parse(localStorage.getItem('zdLight')||'null');
+    const n=s&&Number(s.light);
+    return Number.isFinite(n)&&n>=0?n:null;
+  }catch(e){return null}
+})();
+const CUR_LIGHT=SHARED_LIGHT==null?173:SHARED_LIGHT;
+const SLOT_NAME={morning:'上午',noon:'中午',day:'下午',evening:'晚上',anytime:'随时'};
+const SLOT_ORDER=['morning','noon','day','evening','anytime'];
+const SLOT_RANGE={morning:[420,720],noon:[720,840],day:[840,1080],evening:[1080,1320],anytime:null};
+const DAY_START=6,DAY_END=23,PXH=44;
+const _now=new Date();
+const _ymd=d=>`${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`;
+const TODAY_STR=_ymd(_now);
+const WEEK_BASE_STR=(()=>{const d=new Date(_now);const w=(d.getDay()+6)%7;d.setDate(d.getDate()-w);return _ymd(d)})();
+const NOW_MIN=_now.getHours()*60+_now.getMinutes();
+const WK_CN=['一','二','三','四','五','六','日'];
+/* ================= 灯焰内核：统一来自 core/light.js（唯一实现，与手机端共用） =================
+   这里只保留本页的文案常量，数值与判定函数一律引用内核，避免两端各写一份再改漏一边 */
+const REALMS=LightCore.TIERS;
+const REALM_DESC=['第一段 · 九级台阶，光来得快','第二段 · 节奏成形，日子顺流','第三段 · 轻重分明，灯焰已稳','第四段 · 长明之境，一年只挪几步'];
+const TIER_SPAN=LightCore.TIER_SPAN;
+const TIER_LIGHT=LightCore.TIER_LIGHT;
+const LIGHT_REQ=LightCore.LIGHT_REQ;
+const CUM_L=LightCore.CUM;
+const lightLevel=LightCore.levelOf;
+const tierIdx=LightCore.tierIndex;
+/* 手机端在另一个标签页点亮灯时，桌面跟着刷新（只读同步） */
+window.addEventListener('storage',function(e){ if(e.key==='zdLight') location.reload(); });
+const FOCUS_NAME={energy:'体能',bond:'情感',mind:'智识',means:'资源'};
+const MOD_META={
+  '睡眠':{dom:'体能',info:'7h12m · 目标 8h',pct:.90},'饮食':{dom:'体能',info:'三餐已记录 2/3',pct:.67},
+  '运动':{dom:'体能',info:'本周 3 次 · 目标 4',pct:.75},'休息':{dom:'体能',info:'久坐 4h12m · 偏久',pct:.45},
+  '饮水':{dom:'体能',info:'5 杯 · 目标 8 杯',pct:.63},'吃药':{dom:'体能',info:'今日 2/3 次',pct:.67},
+  '功法养生':{dom:'体能',info:'今天练了 20 分钟',pct:.50},
+  '情绪记录':{dom:'情感',info:'本周记录 4 天',pct:.57},'关系':{dom:'情感',info:'3 位好友 · 本周联系 2',pct:.66},
+  '独处':{dom:'情感',info:'今天留了 20 分钟',pct:.50},'恢复':{dom:'情感',info:'情绪均值 中位',pct:.45},
+  '冥想':{dom:'情感',info:'本周 4 次 · 共 80 分钟',pct:.57},
+  '学习':{dom:'智识',info:'本周 6h · 目标 8h',pct:.75},'思考':{dom:'智识',info:'记录 9 条洞察',pct:.90},
+  '成长':{dom:'智识',info:'凝露 · 第 18 级',pct:.85},'输出':{dom:'智识',info:'待整理 3 条',pct:.40},
+  '记账':{dom:'资源',info:'本月 42 笔',pct:.70},'预算':{dom:'资源',info:'剩余 38%',pct:.38},
+  '时间':{dom:'资源',info:'本周自由 12h',pct:.60},'长期目标':{dom:'资源',info:'3 个在推进',pct:.75}
+};
+let saved={},state={},weekOffset=0,monthOffset=0,curView='day',demoMode=false,selectedDay=null;
+
+/* ===== 日夜：与手机共用 lifeflow-theme，桌面只换令牌不换版式 ===== */
+const savedTheme=(()=>{try{return localStorage.getItem('lifeflow-theme')}catch(e){return null}})();
+function applyTheme(t){
+  document.documentElement.setAttribute('data-theme',t);
+  const b=document.getElementById('themeToggle');
+  if(b){
+    b.innerHTML=t==='light'
+      ? '<svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4 8.5 8.5 0 1 0 20 14.5z"/></svg>'
+      : '<svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"/></svg>';
+  }
+}
+applyTheme(savedTheme==='light'?'light':'dark');
+document.getElementById('themeToggle')?.addEventListener('click',()=>{
+  const t=document.documentElement.getAttribute('data-theme')==='light'?'dark':'light';
+  applyTheme(t);
+  try{localStorage.setItem('lifeflow-theme',t)}catch(e){}
+});
+window.addEventListener('storage',e=>{if(e.key==='lifeflow-theme')applyTheme(e.newValue==='light'?'light':'dark')});
+
+/* 演示数据（仅首次打开且无手机端数据时播种） */
+function seedDemo(){
+  const T=(ic,t,m,dom,slot,date,done)=>({ic,t,m,dom,slot,dates:[date],done:!!done,drop:true});
+  const S=n=>{const d=new Date(TODAY_STR);d.setDate(d.getDate()+n);return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`};
+  const plan={
+    anytime:[T('💧','喝水',5,'体能','anytime',TODAY_STR)],
+    morning:[T('🌅','起床仪式',20,'体能','morning',TODAY_STR,true),T('✍️','深度写作',90,'智识','morning',TODAY_STR),T('🏃','晨跑 3 公里',40,'体能','morning',TODAY_STR),T('📖','读书 30 页',30,'智识','morning',TODAY_STR)],
+    noon:[T('🍜','午餐',40,'体能','noon',TODAY_STR),T('🧘','午间冥想',15,'情感','noon',TODAY_STR)],
+    day:[T('🧭','方向梳理',45,'智识','day',TODAY_STR),T('🏋️','力量训练',60,'体能','day',TODAY_STR),T('📊','周预算复核',25,'资源','day',TODAY_STR),T('📞','给朋友打电话',20,'情感','day',TODAY_STR)],
+    evening:[T('🧘','冥想',15,'情感','evening',TODAY_STR),T('💰','记账',15,'资源','evening',TODAY_STR),T('🏊','游泳',50,'体能','evening',TODAY_STR),T('📝','写周记',30,'智识','evening',TODAY_STR)]
+  };
+  /* 前几天的功课：让「月视图」不是只有今天一个点 */
+  [[-7,'🏃','夜跑 2 公里',30,'体能','evening',true],
+   [-5,'📚','读书 40 页',40,'智识','evening',true],
+   [-3,'🧹','周整理',30,'资源','day',true],
+   [-1,'📝','写周记',30,'智识','evening',true],
+   [2,'🎯','下周方向会',45,'智识','morning',false]].forEach(function(a){
+    plan[a[5]].push(T(a[1],a[2],a[3],a[4],a[5],S(a[0]),a[6]));
+  });
+  return{
+    demo:true,uid:100,streak:4,streakDate:TODAY_STR,done:2,doneDate:TODAY_STR,
+    todos:{
+      high:[{ic:'📤',t:'提交周报',m:25,dom:'资源'},{ic:'🏥',t:'预约体检',m:10,dom:'体能'}],
+      mid:[{ic:'💡',t:'整理灵感清单',m:20,dom:'智识'}],
+      low:[{ic:'🧺',t:'换季衣物收纳',m:30,dom:'资源'}],
+      inbox:[{ic:'☎️',t:'回复未读消息',m:15,dom:'情感'},{ic:'🛒',t:'买菜',m:40,dom:'资源'},{ic:'🧹',t:'整理桌面',m:15,dom:'体能'}]
+    },
+    plan,
+    goals:[
+      {id:'g1',name:'减脂 5 公斤',dom:'体能',step:'晚饭后出门走 15 分钟'},
+      {id:'g2',name:'输出 12 篇文章',dom:'智识',step:'先写大纲再动笔'},
+      {id:'g3',name:'建立应急储蓄',dom:'资源',step:'每月 10 号自动转入'}
+    ],
+    sub:{
+      g1:[{t:'每周 3 次力量训练',done:true},{t:'晚餐碳水减半',done:false},{t:'每周体重记录',done:false}],
+      g2:[{t:'列 12 个选题',done:true},{t:'固定早上写作时段',done:false}]
+    }
+  };
+}
+function loadState(){
+  let savedRaw=null;
+  try{savedRaw=localStorage.getItem(KEY)}catch(e){savedRaw=null}
+  saved=JSON.parse(savedRaw||'null')||{};
+  /* 手机端 zdLight 里已有真实 plan/todos 时，电脑端直接用它（同一份事实）；tiimoClone 只做旧数据/演示兜底 */
+  let mobile=null;
+  try{const z=JSON.parse(localStorage.getItem('zdLight')||'null');if(z&&(z.plan||z.todos))mobile=z}catch(e){}
+  const hasReal=!!(mobile||(saved&&(Object.values(saved.todos||{}).some(a=>a&&a.length)||Object.values(saved.plan||{}).some(a=>a&&a.length)||(saved.goals&&saved.goals.length))));
+  demoMode=!hasReal;
+  const src=mobile||(hasReal?saved:seedDemo());
+  if(!hasReal){saved=src}
+  /* 保证每个任务都有数字 id（seed 与手机端老数据兼容） */
+  let uid=src.uid||100;
+  const ensure=a=>(a||[]).forEach(x=>{if(typeof x.id!=='number')x.id=uid++;});
+  Object.values(src.todos||{}).forEach(ensure);
+  Object.values(src.plan||{}).forEach(ensure);
+  state={
+    todos:JSON.parse(JSON.stringify(src.todos||{high:[],mid:[],low:[],inbox:[]})),
+    plan:JSON.parse(JSON.stringify(src.plan||{anytime:[],morning:[],noon:[],day:[],evening:[]})),
+    goals:JSON.parse(JSON.stringify(src.goals||[])),
+    sub:JSON.parse(JSON.stringify(src.sub||{})),
+    streak:src.streak||0,streakDate:src.streakDate||'',
+    done:(src.doneDate===TODAY_STR?src.done:0),doneDate:TODAY_STR,
+    uid:uid,demo:src.demo||!hasReal
+  };
+  if(!hasReal)persist();
+}
+function persist(){
+  try{localStorage.setItem(KEY,JSON.stringify({...saved,...state,uid:state.uid,doneDate:TODAY_STR}))}catch(e){}
+  /* 电脑端的「规划」写回手机端同一份 zdLight.plan/todos；手机端 reload 后读到 */
+  try{
+    const z=JSON.parse(localStorage.getItem('zdLight')||'{}')||{};
+    z.plan=state.plan; z.todos=state.todos;
+    z.streak=state.streak; z.done=state.done; z.v=z.v||2;
+    localStorage.setItem('zdLight',JSON.stringify(z));
+  }catch(e){}
+}
+function nextId(){
+  let mx=state.uid||0;
+  const scan=x=>{if(x.id>mx)mx=x.id};
+  Object.values(state.todos).forEach(l=>l.forEach(scan));
+  Object.values(state.plan).forEach(l=>l.forEach(scan));
+  return mx+1;
+}
+function findTask(id){
+  for(const g in state.todos){const x=state.todos[g].find(x=>x.id===id);if(x)return{item:x,zone:'todo',g}}
+  for(const g in state.plan){const x=state.plan[g].find(x=>x.id===id);if(x)return{item:x,zone:'plan',g}}
+  return null;
+}
+function toggleDone(f){
+  const {item}=f;
+  item.done=!item.done;
+  if(item.done){
+    const prev=state.done;state.done++;
+    if(prev===0&&state.done>=1&&state.streakDate!==TODAY_STR){
+      state.streak++;state.streakDate=TODAY_STR;
+      toast('连续记录 +1 天 ✦');
+    }
+  }else if(state.done>0){state.done--}
+  persist();renderAll();
+}
+function moveTask(id,slot,date){
+  const f=findTask(id);if(!f)return;
+  f.item.done=false;
+  if(f.zone==='todo'){
+    state.todos[f.g]=state.todos[f.g].filter(x=>x.id!==id);
+    f.item.dates=[date];state.plan[slot].push(f.item);
+  }else{
+    if(f.g===slot&&f.item.dates&&f.item.dates[0]===date)return;
+    state.plan[f.g]=state.plan[f.g].filter(x=>x.id!==id);
+    f.item.dates=[date];state.plan[slot].push(f.item);
+  }
+  persist();renderAll();toast(`已排到 ${date===TODAY_STR?'今天':date} · ${SLOT_NAME[slot]}`);
+}
+/* 手机端改动 → 本页实时同步 */
+window.addEventListener('storage',e=>{
+  if(e.key!==KEY)return;
+  loadState();renderAll();toast('手机端数据已同步');
+});
+
+/* ================= 时间线渲染（日 / 周共用） ================= */
+function colDate(i){const d=new Date(WEEK_BASE_STR);d.setDate(d.getDate()+weekOffset*7+i);return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`}
+function weekBase(){const d=new Date(WEEK_BASE_STR);d.setDate(d.getDate()+weekOffset*7);return d}
+function isTodayCol(i){return weekOffset===0&&colDate(i)===TODAY_STR}
+function icoOf(t){
+  if(t.ic&&!String(t.ic).startsWith('#'))return `<span class="b-ic">${esc(t.ic)}</span>`;
+  return `<span class="b-dot"></span>`;
+}
+/* 收集某天任务：slot 取自 plan 分组键 */
+function collectDay(date,onlyTimed){
+  return Object.entries(state.plan).flatMap(([slot,arr])=>(arr||[]).filter(t=>t.dates&&t.dates[0]===date&&(!onlyTimed||SLOT_RANGE[slot])).map(t=>({t,slot})));
+}
+/* 时间块：卷轴条目（无绝对定位），左竖条＝域色（软焦点），时段由组头表达 */
+function blkHtml(x){
+  const t=x.t,slim=(t.m||0)<=25;
+  return `<div class="blk ${DOM_CLS[t.dom]||''}${slim?' slim':''}${t.done?' done':''}" draggable="true" data-id="${t.id}">
+    <div class="b-top">${icoOf(t)}<span class="b-t">${esc(t.t)}</span></div>
+    <div class="b-m">${t.m||30} 分钟${t.done?' · 已记':''}</div>
+  </div>`;
+}
+/* 拖拽：日视图卷轴按「时段组」接收；点击条目＝切换完成 */
+function dragBind(root,date){
+  date=date||TODAY_STR;
+  root.ondragstart=e=>{
+    const el=e.target.closest('[data-id]');if(!el)return;
+    e.dataTransfer.setData('text/plain',el.dataset.id);
+  };
+  root.onclick=e=>{
+    const el=e.target.closest('.blk');if(!el)return;
+    const f=findTask(+el.dataset.id);if(f)toggleDone(f);
+  };
+  root.querySelectorAll('.dy-slot[data-slot]').forEach(g=>{
+    g.ondragover=e=>{e.preventDefault();e.dataTransfer.dropEffect='move';g.classList.add('drag-over')};
+    g.ondragleave=()=>g.classList.remove('drag-over');
+    g.ondrop=e=>{
+      e.preventDefault();g.classList.remove('drag-over');
+      const id=+e.dataTransfer.getData('text/plain');if(!id)return;
+      moveTask(id,g.dataset.slot,date);
+    };
+  });
+}
+/* 周视图 · 七日疏密：墨点疏密表示当日记录量；点列进日视图，拖墨点可换天 */
+function dotsHtml(date){
+  const items=collectDay(date,false);
+  if(!items.length)return '<div class="wk-empty">留白</div>';
+  return `<div class="wk-dots">${items.slice(0,12).map(x=>`<span class="wk-dot${x.t.done?' on':''}" draggable="true" data-id="${x.t.id}" title="${esc(x.t.t)} · 可拖到别的日子"></span>`).join('')}${items.length>12?`<span class="wk-more">+${items.length-12}</span>`:''}</div>`;
+}
+function renderWeek(){
+  let cols='';
+  for(let i=0;i<7;i++){
+    const date=colDate(i);
+    cols+=`<div class="wk-col${isTodayCol(i)?' today':''}${date===selectedDay?' sel':''}" data-date="${date}" title="点开这一天的日视图"><div class="wk-dh">周${WK_CN[i]}</div><div class="wk-dn">${date.split('-')[2]}</div>${dotsHtml(date)}</div>`;
+  }
+  $('#stage-week').innerHTML=`<div class="wk-wrap">${cols}</div>`;
+  $$('#stage-week .wk-col').forEach(c=>{
+    c.onclick=()=>{ selectedDay=c.dataset.date; switchView('day'); renderAll(); };
+    c.ondragover=e=>{ e.preventDefault(); c.classList.add('drag-over'); };
+    c.ondragleave=()=>c.classList.remove('drag-over');
+    c.ondrop=e=>{
+      e.preventDefault(); c.classList.remove('drag-over');
+      const id=+e.dataTransfer.getData('text/plain'); if(!id)return;
+      const f=findTask(id); if(!f)return;
+      /* 拖到别的日子：保留原时段，只改日期 */
+      moveTask(id, f.zone==='todo' ? 'morning' : f.g, c.dataset.date);
+    };
+  });
+  $$('#stage-week .wk-dot[data-id]').forEach(d=>d.ondragstart=e=>{
+    e.dataTransfer.setData('text/plain', d.dataset.id);
+    e.dataTransfer.effectAllowed='move';
+  });
+}
+/* 日视图 · 时段卷轴：按时段分组，此刻朱砂小印，拖入组＝改时段 */
+function monthBase(){const t=new Date(TODAY_STR);return new Date(t.getFullYear(),t.getMonth()+monthOffset,1)}
+/* 月视图 · 一月一册：墨点＝当日功课，点开进那一天 */
+function renderMonth(){
+  const first=monthBase();
+  const start=new Date(first); start.setDate(1-((first.getDay()+6)%7));
+  const head='<div class="mo-head">'+['一','二','三','四','五','六','日'].map(d=>`<span>周${d}</span>`).join('')+'</div>';
+  let cells='';
+  let activeDays=0,total=0,doneN=0;
+  for(let i=0;i<42;i++){
+    const d=new Date(start); d.setDate(start.getDate()+i);
+    const key=`${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`;
+    const items=collectDay(key,false);
+    const out=d.getMonth()!==first.getMonth();
+    if(!out&&items.length){activeDays++;total+=items.length;doneN+=items.filter(x=>x.t.done).length}
+    const dots=items.slice(0,5).map(x=>`<i class="${x.t.done?'on':''}"></i>`).join('');
+    cells+=`<button type="button" class="mo-cell${out?' out':''}${key===TODAY_STR?' today':''}${key===selectedDay?' sel':''}" data-date="${key}">
+      <span class="mo-d">${d.getDate()}</span>
+      <span class="mo-dots">${dots}</span>
+      ${items.length?`<span class="mo-n">${items.length}</span>`:''}
+    </button>`;
+  }
+  const rate=total?Math.round(doneN/total*100):0;
+  const sum=`<div class="mo-sum"><span><b>${activeDays}</b> 天有功课</span><span><b>${total}</b> 项</span><span><b>${doneN}</b> 项已记</span><span><b>${rate}%</b> 完成率</span></div>`;
+  $('#stage-month').innerHTML=`<div class="mo-wrap"><div class="mo-cap">${first.getFullYear()} 年 ${first.getMonth()+1} 月${sum}</div>${head}<div class="mo-grid">${cells}</div></div>`;
+  $$('#stage-month .mo-cell').forEach(c=>c.onclick=()=>{selectedDay=c.dataset.date;switchView('day');renderAll();});
+}
+function renderDay(){
+  const date=selectedDay||TODAY_STR;
+  const base=new Date(date);
+  const all=collectDay(date,false);
+  const isNow=slot=>{const r=SLOT_RANGE[slot];return r&&NOW_MIN>=r[0]&&NOW_MIN<r[1]};
+  const groups=SLOT_ORDER.filter(s=>SLOT_RANGE[s]).map(slot=>({slot,items:all.filter(x=>x.slot===slot)}));
+  const any=all.filter(x=>!SLOT_RANGE[x.slot]);
+  $('#stage-day').innerHTML=`
+    <div class="dy-wrap">
+      <div class="dy-head"><span class="dh">周${WK_CN[(base.getDay()+6)%7]} · ${base.getMonth()+1} 月 ${base.getDate()} 日</span><span class="dn">${all.length?`功课 ${all.length} 项`:'今日留白'}</span></div>
+      ${groups.map(g=>`
+        <div class="dy-slot" data-slot="${g.slot}">
+          <div class="slot-head ${SLOT_CLS[g.slot]||'sl-any'}"><span class="sh-t">${SLOT_NAME[g.slot]}</span><span class="sh-m">${g.items.reduce((a,x)=>a+(x.t.m||30),0)} 分钟</span>${isNow(g.slot)?'<span class="sh-now">此刻</span>':''}</div>
+          ${g.items.length?g.items.map(blkHtml).join(''):'<div class="dy-empty">留白</div>'}
+        </div>`).join('')}
+      <div class="dy-any">
+        <div class="da-lab">随时 · 今天</div>
+        ${any.length?any.map(x=>`<div class="ib-item ${DOM_CLS[x.t.dom]||''}" style="cursor:default" draggable="false">${icoOf(x.t)}<span class="b-t" style="font-size:13px">${esc(x.t.t)}</span><span class="ib-m">${x.t.m||30} 分钟</span></div>`).join(''):'<div class="ib-empty">今天没有随时任务</div>'}
+      </div>
+    </div>`;
+  dragBind($('#stage-day'),date);
+}
+
+/* ================= 右栏 ================= */
+function renderNow(){
+  const all=collectDay(TODAY_STR,true);
+  all.sort((a,b)=>SLOT_RANGE[a.slot][0]-SLOT_RANGE[b.slot][0]);
+  const cur=all.find(x=>!x.t.done&&SLOT_RANGE[x.slot][0]<=NOW_MIN&&NOW_MIN<SLOT_RANGE[x.slot][0]+(x.t.m||30))||all.find(x=>!x.t.done);
+  const next=all.find(x=>!x.t.done&&x!==cur);
+  $('#nowCard').innerHTML=cur?`
+    <div class="now-emoji"><img class="now-crane" src="assets/crane-avatar.jpg" alt="白鹤"></div>
+    <div class="n-name">${esc(cur.t.t)}</div>
+    <div class="n-sub">${SLOT_NAME[cur.slot]} · ${cur.t.m||30} 分钟</div>
+    <div class="now-bar"><i style="width:38%;background:${DOM_COLOR[cur.t.dom]||'var(--brand)'}"></i></div>
+    ${next?`<div class="next-lab">接下来</div><div class="next-item ${DOM_CLS[next.t.dom]||''}">${icoOf(next.t)}<span>${esc(next.t.t)}</span></div>`:''}`
+  :`<div class="now-emoji"><img class="now-crane" src="assets/crane-avatar.jpg" alt="白鹤"></div><div class="n-name">自由时间</div><div class="n-sub">此刻没有安排，享受留白</div>`;
+}
+const ICO_HI='<svg viewBox="0 0 24 24"><path d="M12 5l7 12H5z" fill="currentColor"/></svg>';
+const ICO_MID='<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5" fill="currentColor"/></svg>';
+const ICO_LO='<svg viewBox="0 0 24 24"><path d="M12 19L5 7h14z" fill="currentColor"/></svg>';
+const ICO_IN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 13h4l2 3h4l2-3h4"/><path d="M4 13V7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v6"/></svg>';
+const IB_GROUPS=[['high','高','#8A4A44',ICO_HI],['mid','中','#7A6B3A',ICO_MID],['low','低','#4A5A66',ICO_LO],['inbox','待办事项','#9A958C',ICO_IN]];
+function renderInbox(){
+  let n=0,html='';
+  IB_GROUPS.forEach(([k,lab,c,ic])=>{
+    const list=state.todos[k]||[];
+    if(k==='inbox')n=list.length;
+    html+=`<div class="ib-group"><span class="ib-tag" style="background:${c}">${ic} ${lab}</span>
+    ${list.length?list.map(t=>`<div class="ib-item ${DOM_CLS[t.dom]||''}" draggable="true" data-id="${t.id||''}">${icoOf(t)}<span class="b-t">${esc(t.t)}</span><span class="ib-m">${t.m||30}m</span></div>`).join(''):'<div class="ib-empty">空</div>'}</div>`;
+  });
+  $('#ibList').innerHTML=html;
+  $('#ibCnt').textContent=n?`待处理 ${n}`:'已清空';
+  dragBind($('#ibList'));
+}
+
+/* 方向 / 四域 已从电脑端移除：它们属于手机端的产品模型（目标编辑在手机，四域在灯/我的）。
+   电脑端只保留 日/周/月 + 成长（境印）。 */
+
+/* ================= 成长 ================= */
+const DAO_PTS=[10,16,22,20,30,34,52,58,66,72,80,88];
+const KARMA_JIE='2026-6-21';
+const KARMA_JIE_NOTE='六月廿一 · 首次过关';
+function dayLevel(ds){let h=0;for(let i=0;i<ds.length;i++)h=(h*31+ds.charCodeAt(i))>>>0;const v=h%100;return v<12?0:v<40?1:v<68?2:v<88?3:4}
+function yearHtml(){
+  const start=new Date(2026,0,5),today=new Date(2026,9,3);
+  let cols='';
+  for(let w=0;w<53;w++){
+    let cells='';
+    for(let d=0;d<7;d++){
+      const dt=new Date(start.getTime()+(w*7+d)*864e5);
+      if(dt.getFullYear()>2026)break;
+      const ds=`2026-${dt.getMonth()+1}-${dt.getDate()}`;
+      const future=dt>today;
+      cells+=`<span class="yr-dot l${dayLevel(ds)}${ds===KARMA_JIE?' jie':''}"${future?' style="opacity:.12"':''} title="${ds}"></span>`;
+    }
+    cols+=`<div class="yr-col">${cells}</div>`;
+  }
+  const MONS=['一','二','三','四','五','六','七','八','九','十','十一','十二'];
+  return `<div class="yr-grid">${cols}</div>
+    <div class="yr-legend">${MONS.map(m=>`<span style="flex:1">${m}月</span>`).join('')}</div>
+    <div class="yr-legend"><span><span class="yr-dot l0"></span>疏</span><span><span class="yr-dot l2"></span>中</span><span><span class="yr-dot l4"></span>密</span><span><span class="yr-dot jie"></span>${KARMA_JIE_NOTE}</span><span style="margin-left:auto">2026 年 · 每周一行 · 未至之日留白</span></div>`;
+}
+function daoLineHtml(){
+  const W=600,H=110,pad=6,n=DAO_PTS.length;
+  const step=(W-pad*2)/(n-1),y=v=>(H-10-v*0.9).toFixed(1),x=i=>(pad+i*step).toFixed(1);
+  const jx=x(5);
+  return `<svg class="dl-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+    <defs>
+      <linearGradient id="dlGrad" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stop-color="#4DC3FF" stop-opacity=".6"/>
+        <stop offset="50%" stop-color="#8AE8FF" stop-opacity="1"/>
+        <stop offset="100%" stop-color="#4DC3FF" stop-opacity=".6"/>
+      </linearGradient>
+      <filter id="dlGlow" x="-20%" y="-20%" width="140%" height="140%">
+        <feGaussianBlur stdDeviation="2.5" result="blur"/>
+        <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+    </defs>
+    <line x1="0" y1="${H-10}" x2="${W}" y2="${H-10}" stroke="var(--line)" stroke-width="1"/>
+    <polyline points="${DAO_PTS.map((v,i)=>`${x(i)},${y(v)}`).join(' ')}" fill="none" stroke="url(#dlGrad)" stroke-width="1.5" stroke-linejoin="round" filter="url(#dlGlow)"/>
+    <line x1="${jx}" y1="8" x2="${jx}" y2="${H-10}" stroke="var(--zhu)" stroke-width="1" style="filter:drop-shadow(0 0 4px #FF3B5C)"/>
+    ${DAO_PTS.map((v,i)=>`<circle cx="${x(i)}" cy="${y(v)}" r="2" fill="#8AE8FF"/>`).join('')}
+    <circle cx="${jx}" cy="${y(DAO_PTS[5])}" r="4" fill="var(--zhu)" style="filter:drop-shadow(0 0 6px #FF3B5C)"/>
+  </svg>
+  <div class="yr-legend"><span style="color:var(--zhu)"><span class="yr-dot jie"></span>${KARMA_JIE_NOTE}</span><span style="margin-left:auto">每月一候 · 曲线只升，遇劫有印</span></div>`;
+}
+/* ===== 四境立绘 SVG 模板（墨线淡彩 · 同一人四态） ===== */
+const REALM_SVGS=[
+  /* 拾光 · 气感·微光：素衣微躬 / 丹田一点焰红微光 / 茶盏冷茶 / 白鹤静立身侧 / 焰红 10% */
+  `<svg viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg" stroke="#E8EAF2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <defs>
+      <filter id="cxGlow" x="-50%" y="-50%" width="200%" height="200%">
+        <feGaussianBlur stdDeviation="1.5" result="blur"/>
+        <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+    </defs>
+
+    <!-- l1 伴生：白鹤静立身侧（月白描线，最低存在感） -->
+    <g id="l1-伴生" opacity=".6">
+      <!-- 鹤身（敛翅静立） -->
+      <path d="M156 218c1-22-6-38-10-46" stroke-width="1.5"/>
+      <ellipse cx="160" cy="224" rx="14" ry="7" stroke-width="1.2" transform="rotate(-10 160 224)"/>
+      <line x1="162" y1="230" x2="162" y2="254" stroke-width="1.2"/>
+      <line x1="156" y1="230" x2="154" y2="254" stroke-width="1.2"/>
+      <path d="M146 172l-6 2" stroke-width="1.2"/>
+      <circle cx="148" cy="170" r="1.2" fill="#FF5C4D" stroke="none" opacity=".7"/>
+      <!-- 翅一笔收 -->
+      <path d="M156 222c6-3 12-2 16 3" stroke-width="1" opacity=".6"/>
+    </g>
+
+    <!-- l2 器物：冷茶盏（双手前，热茶气→冷茶无气） -->
+    <g id="l2-器物" opacity=".7">
+      <path d="M82 240h24" stroke-width="2"/>
+      <path d="M86 240v-5c0-2 3-3 6-3s6 1 6 3v5" stroke-width="1.5"/>
+      <!-- 盏中冷茶（月白一横线） -->
+      <path d="M88 237h12" stroke-width="1" opacity=".5"/>
+    </g>
+
+    <!-- l3 衣：素衣无彩（深玄底月白线），衣褶密，微躬 -->
+    <g id="l3-衣">
+      <!-- 外袍大形（微躬，肩略圆） -->
+      <path d="M72 110l-22 92c-2 10-1 22 4 32h92c6-10 7-22 5-32l-22-92-28 18z" stroke-width="2"/>
+      <!-- 左袖（拢袖前伸） -->
+      <path d="M54 170c-4 18-2 36 6 50l6 12" stroke-width="1.5"/>
+      <!-- 右袖（拢袖前伸） -->
+      <path d="M146 170c4 18 2 36-6 50l-6 12" stroke-width="1.5"/>
+      <!-- 双手拢于袖中（茶盏上方） -->
+      <path d="M88 218c3 5 7 8 12 8s9-3 12-8" stroke-width="1.5"/>
+      <!-- 衣褶（密 7-8 道，拾光尘劳未褪） -->
+      <path d="M62 150l-2 28" stroke-width="1" opacity=".6"/>
+      <path d="M68 170l-1 22" stroke-width="1" opacity=".5"/>
+      <path d="M138 170l1 22" stroke-width="1" opacity=".5"/>
+      <path d="M144 150l2 28" stroke-width="1" opacity=".6"/>
+      <path d="M84 200l-1 16" stroke-width="1" opacity=".4"/>
+      <path d="M116 200l1 16" stroke-width="1" opacity=".4"/>
+      <path d="M92 248l-1 10" stroke-width="1" opacity=".4"/>
+      <path d="M108 248l1 10" stroke-width="1" opacity=".4"/>
+      <!-- 腰际线 -->
+      <path d="M72 168c10-2 16-2 28-2s18 0 28 2" stroke-width="1" opacity=".5"/>
+      <!-- 衣襟 -->
+      <path d="M100 112l-4 58" stroke-width="1.2" opacity=".7"/>
+    </g>
+
+    <!-- l4 身：头颈 + 两点眼（微低，内视） -->
+    <g id="l4-身">
+      <path d="M94 92v14" stroke-width="2"/>
+      <path d="M106 92v14" stroke-width="2"/>
+      <!-- 脸（微低） -->
+      <path d="M88 58c0-16 12-28 12-28s12 12 12 28-6 20-12 20-12-4-12-20z" stroke-width="2"/>
+      <!-- 两点眼（低头内视，眼位偏下） -->
+      <line x1="92" y1="64" x2="97" y2="64" stroke-width="2"/>
+      <line x1="103" y1="64" x2="108" y2="64" stroke-width="2"/>
+      <!-- 肩（微躬） -->
+      <path d="M68 108c6-8 18-14 32-14s26 6 32 14" stroke-width="2"/>
+    </g>
+
+    <!-- l5 发：低髻 + 散丝（微乱，拾光尘劳） -->
+    <g id="l5-发" stroke-width="1.5">
+      <path d="M88 54c2-16 10-24 12-24s10 8 12 24" stroke-width="2"/>
+      <path d="M84 48c4-10 14-18 16-18s12 8 16 18" stroke-width="1.5"/>
+      <ellipse cx="100" cy="76" rx="10" ry="7" stroke-width="1.5"/>
+      <!-- 散落发丝（拾光微乱） -->
+      <path d="M86 56l-3 14" stroke-width="1" opacity=".6"/>
+      <path d="M114 56l3 14" stroke-width="1" opacity=".6"/>
+      <path d="M88 48l-1 8" stroke-width="1" opacity=".5"/>
+      <path d="M112 48l1 8" stroke-width="1" opacity=".5"/>
+    </g>
+
+    <!-- l7 能量层：丹田一点焰红微光（拾光 · 10% 能量） -->
+    <g id="l7-能量" filter="url(#cxGlow)">
+      <!-- 丹田核心光点（焰红） -->
+      <circle cx="100" cy="172" r="3" fill="#FF5C4D" stroke="none" opacity=".8"/>
+      <circle cx="100" cy="172" r="6" fill="#FF5C4D" stroke="none" opacity=".25"/>
+      <circle cx="100" cy="172" r="10" fill="#FF5C4D" stroke="none" opacity=".1"/>
+      <!-- 身周两三粒微火星 -->
+      <circle cx="80" cy="180" r="0.8" fill="#FF5C4D" stroke="none" opacity=".4"/>
+      <circle cx="120" cy="178" r="0.6" fill="#FF8A6C" stroke="none" opacity=".3"/>
+      <circle cx="100" cy="158" r="0.5" fill="#FF5C4D" stroke="none" opacity=".3"/>
+    </g>
+
+    <!-- 地线（淡） -->
+    <line x1="40" y1="286" x2="160" y2="286" stroke-width="1" opacity=".15"/>
+  </svg>`,
+
+  /* 凝露 · 行气·周流：道袍站姿 / 双手结印于腹前 / 周身气流如带 / 白鹤立肩头 / 霞紫 25% */
+  `<svg viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg" stroke="#E8EAF2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <defs>
+      <filter id="jdGlow" x="-50%" y="-50%" width="200%" height="200%">
+        <feGaussianBlur stdDeviation="1.5" result="blur"/>
+        <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+    </defs>
+
+    <!-- l1 伴生：白鹤立肩头（霞紫描线，存在感上升） -->
+    <g id="l1-伴生" stroke="#C77DFF" filter="url(#jdGlow)">
+      <!-- 鹤身（立于右肩，颈微曲） -->
+      <path d="M132 92c2-18-4-30-8-36" stroke-width="1.5"/>
+      <ellipse cx="136" cy="98" rx="12" ry="6" stroke-width="1.2" transform="rotate(-20 136 98)"/>
+      <path d="M124 56l-5 2" stroke-width="1.5"/>
+      <!-- 鹤翅收 -->
+      <path d="M132 96c6-3 12-2 16 3" stroke-width="1" opacity=".7"/>
+      <!-- 鹤腿抓肩 -->
+      <path d="M134 104l-2 4" stroke-width="1" opacity=".6"/>
+      <path d="M138 104l0 4" stroke-width="1" opacity=".6"/>
+      <!-- 头顶朱砂 -->
+      <circle cx="126" cy="54" r="1" fill="#FF5C4D" stroke="none"/>
+    </g>
+
+    <!-- l3 衣：道袍（霞紫纹镶边），衣褶 5-6 道，站姿端正 -->
+    <g id="l3-衣">
+      <!-- 道袍大形（宽袖，站姿） -->
+      <path d="M68 106l-24 100c-2 12-1 26 4 36h104c5-10 6-24 4-36l-24-100-30 18z" stroke-width="2"/>
+      <!-- 左袖（宽袖，手结印于腹前） -->
+      <path d="M46 150c-8 24-8 44-4 64l8 16" stroke-width="1.5"/>
+      <!-- 右袖（宽袖） -->
+      <path d="M154 150c8 24 8 44 4 64l-8 16" stroke-width="1.5"/>
+      <!-- 交领缘边（霞紫） -->
+      <path d="M100 110l-12 50" stroke-width="1.5" stroke="#C77DFF" opacity=".6" filter="url(#jdGlow)"/>
+      <path d="M100 110l12 50" stroke-width="1" stroke="#C77DFF" opacity=".4"/>
+      <!-- 袖缘（霞紫） -->
+      <path d="M44 214c8 6 18 8 28 6" stroke-width="1" stroke="#C77DFF" opacity=".5" filter="url(#jdGlow)"/>
+      <path d="M156 214c-8 6-18 8-28 6" stroke-width="1" stroke="#C77DFF" opacity=".5" filter="url(#jdGlow)"/>
+      <!-- 腰带（霞紫一线） -->
+      <path d="M50 168c12-2 20-3 32-3s20 1 32 3" stroke-width="1.2" stroke="#C77DFF" opacity=".6" filter="url(#jdGlow)"/>
+      <!-- 衣褶 5-6 道 -->
+      <path d="M72 150l-2 26" stroke-width="1" opacity=".5"/>
+      <path d="M128 150l2 26" stroke-width="1" opacity=".5"/>
+      <path d="M84 200l-1 18" stroke-width="1" opacity=".4"/>
+      <path d="M116 200l1 18" stroke-width="1" opacity=".4"/>
+      <path d="M92 250l0 12" stroke-width="1" opacity=".3"/>
+      <path d="M108 250l0 12" stroke-width="1" opacity=".3"/>
+      <!-- 衣襟中缝 -->
+      <path d="M100 112l0 130" stroke-width="1" opacity=".4"/>
+    </g>
+
+    <!-- 双手结印于腹前 -->
+    <g id="l2-手印">
+      <!-- 左手在下 -->
+      <path d="M80 200c6-6 14-8 20-6" stroke-width="1.5"/>
+      <!-- 右手在上 -->
+      <path d="M86 194c6-4 14-4 20 0" stroke-width="1.5"/>
+      <!-- 拇指相接（结印核心，霞紫微光） -->
+      <circle cx="100" cy="196" r="2" fill="#C77DFF" stroke="none" filter="url(#jdGlow)"/>
+      <path d="M96 196l8 0" stroke-width="1.5" stroke="#C77DFF" opacity=".7" filter="url(#jdGlow)"/>
+    </g>
+
+    <!-- l4 身：头颈 + 两点眼（平视，凝露） -->
+    <g id="l4-身">
+      <path d="M94 90v14" stroke-width="2"/>
+      <path d="M106 90v14" stroke-width="2"/>
+      <!-- 脸（平视，端正） -->
+      <path d="M88 54c0-18 12-30 12-30s12 12 12 30-6 22-12 22-12-4-12-22z" stroke-width="2"/>
+      <!-- 两点眼（平视，凝露） -->
+      <line x1="93" y1="58" x2="98" y2="58" stroke-width="2"/>
+      <line x1="102" y1="58" x2="107" y2="58" stroke-width="2"/>
+      <!-- 肩（背直，肩平） -->
+      <path d="M68 104c6-8 18-14 32-14s26 6 32 14" stroke-width="2"/>
+    </g>
+
+    <!-- l5 发：低髻，发丝整齐（凝露收心） -->
+    <g id="l5-发" stroke-width="1.5">
+      <path d="M88 50c2-16 10-24 12-24s10 8 12 24" stroke-width="2"/>
+      <path d="M84 44c4-10 14-18 16-18s12 8 16 18" stroke-width="1.5"/>
+      <ellipse cx="100" cy="72" rx="9" ry="6" stroke-width="1.5"/>
+      <!-- 鬓角一丝收齐 -->
+      <path d="M88 52l-1 8" stroke-width="1" opacity=".5"/>
+      <path d="M112 52l1 8" stroke-width="1" opacity=".5"/>
+    </g>
+
+    <!-- l7 能量层：周身气流如带（霞紫 · 25% 能量） -->
+    <g id="l7-能量" stroke="#C77DFF" filter="url(#jdGlow)" fill="none">
+      <!-- 气带一：绕腰一周（断续如带） -->
+      <path d="M46 172c10-4 20-6 30-6s20 2 30 6 20 6 30 4" stroke-width="1" opacity=".5" stroke-dasharray="4 6"/>
+      <!-- 气带二：胸间环绕 -->
+      <path d="M56 136c10-3 20-4 30-4s20 1 30 4 20 5 30 3" stroke-width="0.8" opacity=".35" stroke-dasharray="3 7"/>
+      <!-- 气带三：头顶上方微弧 -->
+      <path d="M80 20c6-4 14-6 20-6s14 2 20 6" stroke-width="0.8" opacity=".3" stroke-dasharray="2 6"/>
+      <!-- 身周散紫粒子 -->
+      <circle cx="50" cy="150" r="1" fill="#C77DFF" stroke="none" opacity=".4"/>
+      <circle cx="150" cy="140" r="0.8" fill="#E0A8FF" stroke="none" opacity=".3"/>
+      <circle cx="60" cy="210" r="1.2" fill="#C77DFF" stroke="none" opacity=".35"/>
+      <circle cx="142" cy="220" r="0.8" fill="#C77DFF" stroke="none" opacity=".3"/>
+      <circle cx="100" cy="28" r="1" fill="#E0A8FF" stroke="none" opacity=".3"/>
+      <!-- 结印处气漩 -->
+      <circle cx="100" cy="196" r="8" stroke="#C77DFF" stroke-width="0.8" opacity=".3"/>
+      <circle cx="100" cy="196" r="12" stroke="#C77DFF" stroke-width="0.6" opacity=".2"/>
+    </g>
+
+    <!-- 地线（微亮霞紫） -->
+    <line x1="36" y1="286" x2="164" y2="286" stroke="#C77DFF" stroke-width="1" opacity=".2" filter="url(#jdGlow)"/>
+  </svg>`,
+
+  /* 悬河 · 意显·元神：身后元神虚影 / 本命刀出鞘刀身流墨 / 刀尖垂地墨粒滴落 / 白鹤绕身 / 雷青 50% */
+  `<svg viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg" stroke="#E8EAF2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <defs>
+      <filter id="cmGlow" x="-50%" y="-50%" width="200%" height="200%">
+        <feGaussianBlur stdDeviation="2" result="blur"/>
+        <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+      <filter id="cmGlowLg" x="-80%" y="-80%" width="260%" height="260%">
+        <feGaussianBlur stdDeviation="4" result="blur"/>
+        <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+      <linearGradient id="bladeGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#8AE8FF" stop-opacity="0"/>
+        <stop offset="40%" stop-color="#4DC3FF" stop-opacity=".8"/>
+        <stop offset="100%" stop-color="#8AE8FF" stop-opacity="1"/>
+      </linearGradient>
+    </defs>
+
+    <!-- l0 地面裂纹（悬河境力量外泄） -->
+    <g opacity=".35" stroke="#4DC3FF" stroke-width="1" filter="url(#cmGlow)">
+      <path d="M70 284l10-8 8 4 6-6"/>
+      <path d="M100 286l6-10 8 6 10-8"/>
+      <path d="M130 284l8-6 6 8"/>
+    </g>
+
+    <!-- l7-虚影：元神虚影（放大1.4倍，墨色透明度.12，置于身后） -->
+    <g transform="translate(44, -10) scale(1.4)" opacity=".12" stroke="#E8EAF2" stroke-width="1.5">
+      <path d="M72 104l-26 100c-3 12-2 26 4 36h100c6-10 7-24 4-36l-26-100-28 16z"/>
+      <path d="M88 50c0-18 12-30 12-30s12 12 12 30-6 22-12 22-12-4-12-22z"/>
+      <path d="M88 46c2-16 10-24 12-24s10 8 12 24"/>
+      <ellipse cx="100" cy="68" rx="9" ry="6"/>
+      <path d="M70 102c6-8 18-14 30-14s24 6 30 14"/>
+    </g>
+
+    <!-- l1 伴生：白鹤绕身一周（雷青线描鹤） -->
+    <g id="l1-伴生" stroke="#4DC3FF" stroke-width="1.2" filter="url(#cmGlow)" fill="none">
+      <!-- 鹤绕弧线（上半圈） -->
+      <path d="M40 140c10-50 60-70 100-50" stroke-width="1" opacity=".4" stroke-dasharray="3 5"/>
+      <!-- 鹤身（左侧高飞位） -->
+      <path d="M38 138c2-12 8-20 14-20" stroke-width="1.5"/>
+      <ellipse cx="50" cy="142" rx="12" ry="5" stroke-width="1.2" transform="rotate(-25 50 142)"/>
+      <path d="M34 120l-6 0" stroke-width="1.5"/>
+      <!-- 鹤翅展开 -->
+      <path d="M48 138c8-6 16-4 22 4" stroke-width="1"/>
+      <path d="M44 144c6-3 12-2 16 2" stroke-width="1" opacity=".7"/>
+      <!-- 头顶一点朱砂 -->
+      <circle cx="36" cy="119" r="1.5" fill="#FF3B5C" stroke="none"/>
+      <!-- 散落雷粒子 -->
+      <circle cx="62" cy="160" r="1.5" fill="#4DC3FF" stroke="none" opacity=".6"/>
+      <circle cx="30" cy="170" r="1" fill="#8AE8FF" stroke="none" opacity=".5"/>
+      <circle cx="170" cy="80" r="1.2" fill="#4DC3FF" stroke="none" opacity=".4"/>
+    </g>
+
+    <!-- l2 器物：本命刀（出鞘，刀身流墨，刀尖垂地，墨粒滴落） -->
+    <g id="l2-器物">
+      <!-- 刀身（斜向下，从右上到左下，刀尖近地） -->
+      <path d="M148 120L60 268" stroke="url(#bladeGrad)" stroke-width="2.5" filter="url(#cmGlow)"/>
+      <!-- 刀背线 -->
+      <path d="M150 118L62 266" stroke="#E8EAF2" stroke-width="1" opacity=".6"/>
+      <!-- 刀身墨流纹（沿刀身纵向墨纹） -->
+      <path d="M130 156l-6 20" stroke="#1A2332" stroke-width="1" opacity=".5"/>
+      <path d="M110 196l-4 16" stroke="#1A2332" stroke-width="1" opacity=".4"/>
+      <path d="M90 236l-3 12" stroke="#1A2332" stroke-width="1" opacity=".3"/>
+      <!-- 刀镡（护手） -->
+      <ellipse cx="144" cy="128" rx="7" ry="3" stroke="#E8EAF2" stroke-width="1.2" transform="rotate(-58 144 128)"/>
+      <ellipse cx="144" cy="128" rx="4" ry="1.5" fill="#4DC3FF" stroke="none" opacity=".6" filter="url(#cmGlow)"/>
+      <!-- 刀柄 -->
+      <path d="M148 120l12-10" stroke="#E8EAF2" stroke-width="2"/>
+      <!-- 刀柄缠纹 -->
+      <line x1="153" y1="114" x2="157" y2="111" stroke="#4DC3FF" stroke-width="1" opacity=".7"/>
+      <line x1="157" y1="117" x2="161" y2="114" stroke="#4DC3FF" stroke-width="1" opacity=".7"/>
+      <!-- 刀尖墨粒滴落 -->
+      <circle cx="58" cy="272" r="2" fill="#E8EAF2" opacity=".7" filter="url(#cmGlow)"/>
+      <circle cx="54" cy="280" r="1.2" fill="#4DC3FF" opacity=".5"/>
+      <circle cx="62" cy="284" r="0.8" fill="#8AE8FF" opacity=".4"/>
+      <path d="M58 270v4" stroke="#4DC3FF" stroke-width="1" opacity=".6"/>
+    </g>
+
+    <!-- l3 衣：劲装（深玄底，雷青纹，护腕），衣褶疏朗 -->
+    <g id="l3-衣" stroke="#E8EAF2">
+      <!-- 劲装大形（收腰，下摆微张） -->
+      <path d="M74 106l-22 88c-2 10-1 22 3 32h90c4-10 5-22 3-32l-22-88-26 14z" stroke-width="2"/>
+      <!-- 右袖（拔刀，袖略短露护腕） -->
+      <path d="M142 130c6 18 6 34 2 48" stroke-width="1.5"/>
+      <!-- 左袖（负后或收袖） -->
+      <path d="M62 140c-4 16-4 30 0 44" stroke-width="1.5"/>
+      <!-- 护腕（右手握刀） -->
+      <rect x="138" y="172" width="14" height="8" rx="1" stroke-width="1.2" stroke="#4DC3FF" filter="url(#cmGlow)"/>
+      <line x1="142" y1="173" x2="142" y2="179" stroke="#4DC3FF" stroke-width="1" opacity=".7"/>
+      <line x1="148" y1="173" x2="148" y2="179" stroke="#4DC3FF" stroke-width="1" opacity=".7"/>
+      <!-- 腰封（雷青一线） -->
+      <path d="M56 166c8-2 16-3 22-3s14 1 22 3" stroke-width="1.5" stroke="#4DC3FF" filter="url(#cmGlow)"/>
+      <path d="M100 166c10-1 20 0 30 3" stroke-width="1.5" stroke="#4DC3FF" filter="url(#cmGlow)"/>
+      <!-- 衣褶（3-4道，疏朗） -->
+      <path d="M84 170l-1 18" stroke-width="1" opacity=".4"/>
+      <path d="M116 170l1 18" stroke-width="1" opacity=".4"/>
+      <path d="M92 230l0 14" stroke-width="1" opacity=".3"/>
+      <path d="M108 230l0 14" stroke-width="1" opacity=".3"/>
+      <!-- 衣襟（交领） -->
+      <path d="M100 114l-6 52" stroke-width="1.2" opacity=".7"/>
+      <!-- 胸前雷纹（小符） -->
+      <path d="M96 140l4-4 4 4-4 4z" stroke-width="1" stroke="#4DC3FF" opacity=".6" filter="url(#cmGlow)"/>
+      <!-- 下摆开叉 -->
+      <path d="M100 226v28" stroke-width="1" opacity=".5"/>
+    </g>
+
+    <!-- l4 身：头颈 + 两点眼（微仰侧视，眼神锐利） -->
+    <g id="l4-身" stroke="#E8EAF2">
+      <!-- 颈 -->
+      <path d="M94 90v14" stroke-width="2"/>
+      <path d="M106 90v14" stroke-width="2"/>
+      <!-- 脸（侧微仰，轮廓偏右） -->
+      <path d="M86 48c0-16 11-28 14-28s13 10 14 26c1 8-2 18-8 22s-14 2-20-4-2-12-2-16z" stroke-width="2"/>
+      <!-- 两点眼（侧视，左眼略大，青金色） -->
+      <line x1="95" y1="56" x2="100" y2="55" stroke-width="2" stroke="#4DC3FF" filter="url(#cmGlow)"/>
+      <line x1="104" y1="54" x2="110" y2="53" stroke-width="2" stroke="#8AE8FF" filter="url(#cmGlow)"/>
+      <!-- 眉心一点（神尊血脉之种，青金微光） -->
+      <circle cx="100" cy="48" r="1.5" fill="#8AE8FF" stroke="none" filter="url(#cmGlow)"/>
+      <!-- 肩（挺拔，侧身右肩略高） -->
+      <path d="M70 104c6-8 18-14 30-14s24 6 30 14" stroke-width="2"/>
+    </g>
+
+    <!-- l5 发：低髻，一丝不乱，发梢微染霜青 -->
+    <g id="l5-发" stroke="#E8EAF2">
+      <path d="M86 44c2-14 10-22 14-22s12 8 14 22" stroke-width="2"/>
+      <path d="M82 38c4-10 14-18 18-18s14 8 18 18" stroke-width="1.5"/>
+      <!-- 低髻（整齐） -->
+      <ellipse cx="100" cy="66" rx="9" ry="6" stroke-width="1.5"/>
+      <!-- 发梢霜青渐变（末梢染青） -->
+      <path d="M82 40l-1 6" stroke-width="1" stroke="#4DC3FF" opacity=".6" filter="url(#cmGlow)"/>
+      <path d="M118 40l1 6" stroke-width="1" stroke="#4DC3FF" opacity=".6" filter="url(#cmGlow)"/>
+      <!-- 鬓角收齐 -->
+      <path d="M88 46l-1 8" stroke-width="1" opacity=".5"/>
+      <path d="M112 46l1 8" stroke-width="1" opacity=".5"/>
+    </g>
+
+    <!-- l7 能量层：雷弧 + 墨粒子（悬河境 50% 能量） -->
+    <g id="l7-能量" filter="url(#cmGlow)" stroke="#4DC3FF" fill="none">
+      <!-- 右臂雷弧（沿拔刀方向） -->
+      <path d="M144 160c8-2 14 2 18 8" stroke-width="1.2" opacity=".7"/>
+      <path d="M146 170c10 0 16 6 18 14" stroke-width="1" opacity=".5"/>
+      <!-- 身周散雷粒子 -->
+      <circle cx="60" cy="200" r="1.5" fill="#8AE8FF" stroke="none" opacity=".6"/>
+      <circle cx="170" cy="210" r="1.2" fill="#4DC3FF" stroke="none" opacity=".5"/>
+      <circle cx="70" cy="130" r="1" fill="#8AE8FF" stroke="none" opacity=".4"/>
+      <circle cx="160" cy="150" r="0.8" fill="#4DC3FF" stroke="none" opacity=".4"/>
+      <circle cx="50" cy="250" r="1.5" fill="#8AE8FF" stroke="none" opacity=".5"/>
+      <!-- 刀身周围墨粒子（沿刀身轨迹） -->
+      <circle cx="80" cy="230" r="1.2" fill="#E8EAF2" stroke="none" opacity=".4"/>
+      <circle cx="100" cy="198" r="1" fill="#E8EAF2" stroke="none" opacity=".3"/>
+      <circle cx="120" cy="166" r="0.8" fill="#E8EAF2" stroke="none" opacity=".3"/>
+    </g>
+
+    <!-- 地线（微亮雷青） -->
+    <line x1="30" y1="286" x2="170" y2="286" stroke="#4DC3FF" stroke-width="1" opacity=".25" filter="url(#cmGlow)"/>
+  </svg>`,
+
+  /* 鉴台 · 破境·雷相：鎏金铠甲 / 举刀向天 / 身后雷纹大网 / 白鹤振翅高飞 / 鎏金 100% */
+  `<svg viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg" stroke="#E8EAF2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <defs>
+      <filter id="zzGlow" x="-80%" y="-80%" width="260%" height="260%">
+        <feGaussianBlur stdDeviation="2.5" result="blur"/>
+        <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+      <filter id="zzGlowLg" x="-120%" y="-120%" width="340%" height="340%">
+        <feGaussianBlur stdDeviation="5" result="blur"/>
+        <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+      <linearGradient id="zzBladeGrad" x1="0" y1="1" x2="0" y2="0">
+        <stop offset="0%" stop-color="#F5C545" stop-opacity=".3"/>
+        <stop offset="50%" stop-color="#FFE08A" stop-opacity=".9"/>
+        <stop offset="100%" stop-color="#FFFFFF" stop-opacity="1"/>
+      </linearGradient>
+    </defs>
+
+    <!-- l0 地面裂纹网（鉴台境·力量完全外泄） -->
+    <g stroke="#F5C545" stroke-width="1" opacity=".4" filter="url(#zzGlow)">
+      <path d="M50 284l10-8 12 6 8-10 10 4"/>
+      <path d="M100 286l8-12 10 6 12-10"/>
+      <path d="M150 284l8-6 10 8 6-4"/>
+      <path d="M30 288l14-4"/>
+      <path d="M170 288l-14-4"/>
+    </g>
+
+    <!-- l7-背后雷纹大网（鉴台境·域场展开） -->
+    <g id="l7-雷网" stroke="#F5C545" filter="url(#zzGlow)" fill="none" opacity=".5">
+      <!-- 主雷弧（从身后向上升腾，三道主脉） -->
+      <path d="M60 250c10-40 30-70 40-120" stroke-width="1.2" opacity=".6"/>
+      <path d="M100 260c0-60 10-100 20-160" stroke-width="1.5" opacity=".7"/>
+      <path d="M140 250c-10-40-30-70-40-120" stroke-width="1.2" opacity=".6"/>
+      <!-- 雷枝分叉 -->
+      <path d="M80 140c8-10 20-14 30-10" stroke-width="0.8" opacity=".4"/>
+      <path d="M120 120c-6-8 -16-12 -26-10" stroke-width="0.8" opacity=".4"/>
+      <path d="M90 80c10-4 20-2 30 4" stroke-width="0.8" opacity=".35"/>
+      <path d="M70 180c10-6 20-8 30-6" stroke-width="0.8" opacity=".35"/>
+      <path d="M130 180c-10-6 -20-8 -30-6" stroke-width="0.8" opacity=".35"/>
+      <!-- 网纹节点（雷结） -->
+      <circle cx="100" cy="100" r="2" fill="#FFE08A" stroke="none" opacity=".5"/>
+      <circle cx="70" cy="160" r="1.5" fill="#F5C545" stroke="none" opacity=".4"/>
+      <circle cx="130" cy="160" r="1.5" fill="#F5C545" stroke="none" opacity=".4"/>
+      <circle cx="80" cy="50" r="1.2" fill="#FFE08A" stroke="none" opacity=".35"/>
+      <circle cx="120" cy="50" r="1.2" fill="#FFE08A" stroke="none" opacity=".35"/>
+      <circle cx="50" cy="200" r="1" fill="#F5C545" stroke="none" opacity=".3"/>
+      <circle cx="150" cy="200" r="1" fill="#F5C545" stroke="none" opacity=".3"/>
+    </g>
+
+    <!-- l1 伴生：白鹤振翅高飞（鎏金线描，最高位） -->
+    <g id="l1-伴生" stroke="#F5C545" stroke-width="1.2" filter="url(#zzGlow)">
+      <!-- 鹤身（高飞，颈前伸） -->
+      <path d="M148 40c0-12 6-18 12-18" stroke-width="1.5"/>
+      <ellipse cx="154" cy="46" rx="14" ry="6" stroke-width="1.2" transform="rotate(-30 154 46)"/>
+      <path d="M160 22l8 -2" stroke-width="1.5"/>
+      <!-- 翅大张（振翅） -->
+      <path d="M150 42c12-12 28-14 40-6" stroke-width="1.2" opacity=".9"/>
+      <path d="M148 50c10-8 24-10 36-4" stroke-width="1" opacity=".7"/>
+      <!-- 翅下羽 -->
+      <path d="M156 48c8 2 18 4 28 2" stroke-width="0.8" opacity=".5"/>
+      <!-- 尾羽 -->
+      <path d="M142 52l-8 6" stroke-width="1" opacity=".6"/>
+      <path d="M144 56l-6 4" stroke-width="0.8" opacity=".5"/>
+      <!-- 头顶朱砂（鎏金身仍留一点红） -->
+      <circle cx="168" cy="20" r="1.2" fill="#FF5C4D" stroke="none"/>
+      <!-- 高飞散金粒子 -->
+      <circle cx="180" cy="30" r="1" fill="#FFE08A" stroke="none" opacity=".5"/>
+      <circle cx="170" cy="60" r="0.8" fill="#F5C545" stroke="none" opacity=".4"/>
+      <circle cx="190" cy="50" r="0.6" fill="#FFE08A" stroke="none" opacity=".3"/>
+    </g>
+
+    <!-- l2 器物：本命刀（举刀向天，刀身鎏金，雷纹缠刀） -->
+    <g id="l2-器物" filter="url(#zzGlow)">
+      <!-- 刀身（竖直向天，从肩上方高举） -->
+      <path d="M108 10L88 150" stroke="url(#zzBladeGrad)" stroke-width="3"/>
+      <!-- 刀背线 -->
+      <path d="M112 8L92 148" stroke="#E8EAF2" stroke-width="1" opacity=".5"/>
+      <!-- 刀身鎏金雷纹 -->
+      <path d="M104 30l-2 20 3 18 -4 22 2 20 -3 18" stroke="#F5C545" stroke-width="1" opacity=".6"/>
+      <path d="M98 60l-2 16 3 14" stroke="#FFE08A" stroke-width="0.8" opacity=".5"/>
+      <!-- 刀镡（鎏金护手，雷纹） -->
+      <ellipse cx="90" cy="154" rx="9" ry="3.5" stroke="#F5C545" stroke-width="1.5" transform="rotate(-82 90 154)"/>
+      <ellipse cx="90" cy="154" rx="5" ry="2" fill="#FFE08A" stroke="none" opacity=".7"/>
+      <!-- 刀柄（鎏金缠） -->
+      <path d="M88 156l-10 16" stroke="#F5C545" stroke-width="2.5"/>
+      <!-- 刀柄缠纹 -->
+      <line x1="82" y1="162" x2="86" y2="168" stroke="#FFE08A" stroke-width="1" opacity=".7"/>
+      <line x1="78" y1="168" x2="82" y2="174" stroke="#FFE08A" stroke-width="1" opacity=".7"/>
+      <!-- 刀柄尾环（鎏金） -->
+      <circle cx="76" cy="172" r="3" stroke="#F5C545" stroke-width="1.2" fill="none"/>
+      <circle cx="76" cy="172" r="1.5" fill="#FFE08A" stroke="none" opacity=".6"/>
+      <!-- 刀尖雷弧（向天劈出雷气） -->
+      <path d="M108 10c4-8 12-12 20-10" stroke="#F5C545" stroke-width="1" opacity=".6"/>
+      <path d="M106 14c-4-6 -12-10 -20-8" stroke="#F5C545" stroke-width="0.8" opacity=".4"/>
+      <circle cx="108" cy="5" r="2" fill="#FFFFFF" stroke="none" opacity=".8" filter="url(#zzGlowLg)"/>
+    </g>
+
+    <!-- l3 衣：鎏金铠甲式华服（衣褶最少，力量外化成形） -->
+    <g id="l3-衣">
+      <!-- 华服大形（收腰窄袖，铠甲式线条） -->
+      <path d="M70 104l-20 98c-2 12-1 26 4 36h92c5-10 6-24 4-36l-20-98-30 16z" stroke-width="2"/>
+      <!-- 肩甲（鎏金） -->
+      <path d="M60 108c4-10 16-18 28-20" stroke="#F5C545" stroke-width="1.5" opacity=".7" filter="url(#zzGlow)"/>
+      <path d="M140 108c-4-10 -16-18 -28-20" stroke="#F5C545" stroke-width="1.5" opacity=".7" filter="url(#zzGlow)"/>
+      <!-- 胸甲纹（鎏金雷纹符） -->
+      <path d="M88 130l12-12 12 12 -12 12z" stroke="#F5C545" stroke-width="1.2" opacity=".6" filter="url(#zzGlow)"/>
+      <circle cx="100" cy="130" r="3" fill="#FFE08A" stroke="none" opacity=".5" filter="url(#zzGlow)"/>
+      <!-- 右袖（举刀，袖短露臂甲） -->
+      <path d="M124 120c10 14 12 28 8 40" stroke-width="1.5"/>
+      <!-- 左袖（侧垂） -->
+      <path d="M76 124c-8 18 -8 34 -4 48" stroke-width="1.5"/>
+      <!-- 臂甲（右臂举刀处，鎏金） -->
+      <path d="M126 142l6 -2" stroke="#F5C545" stroke-width="2" opacity=".8" filter="url(#zzGlow)"/>
+      <path d="M130 148l8 -2" stroke="#F5C545" stroke-width="1.5" opacity=".6" filter="url(#zzGlow)"/>
+      <!-- 腰封（鎏金宽带） -->
+      <path d="M52 166c14-3 24-4 36-4s22 1 36 4" stroke="#F5C545" stroke-width="2" opacity=".8" filter="url(#zzGlow)"/>
+      <path d="M100 166c16-2 28 0 42 4" stroke="#F5C545" stroke-width="2" opacity=".8" filter="url(#zzGlow)"/>
+      <!-- 腰封雷纹扣 -->
+      <circle cx="100" cy="166" r="4" stroke="#FFE08A" stroke-width="1" fill="none" filter="url(#zzGlow)"/>
+      <circle cx="100" cy="166" r="2" fill="#F5C545" stroke="none" opacity=".7" filter="url(#zzGlow)"/>
+      <!-- 衣褶（仅 2-3 道，极简，铠甲化后无多余褶皱） -->
+      <path d="M86 180l0 14" stroke-width="1" opacity=".3"/>
+      <path d="M114 180l0 14" stroke-width="1" opacity=".3"/>
+      <path d="M98 248l0 10" stroke-width="1" opacity=".25"/>
+      <!-- 下摆开叉 -->
+      <path d="M100 220v40" stroke-width="1" opacity=".4"/>
+    </g>
+
+    <!-- l4 身：头颈 + 两点眼（头微仰，目光如电） -->
+    <g id="l4-身">
+      <path d="M94 88v14" stroke-width="2"/>
+      <path d="M106 88v14" stroke-width="2"/>
+      <!-- 脸（微仰，轮廓更鲜明） -->
+      <path d="M86 46c0-18 12-30 14-30s14 12 14 28c1 10-2 20-8 24s-14 2-20-4-2-12-2-18z" stroke-width="2"/>
+      <!-- 两点眼（鎏金色，目光如电） -->
+      <line x1="94" y1="52" x2="100" y2="50" stroke-width="2.5" stroke="#F5C545" filter="url(#zzGlow)"/>
+      <line x1="104" y1="50" x2="112" y2="48" stroke-width="2.5" stroke="#FFE08A" filter="url(#zzGlow)"/>
+      <!-- 眉心竖纹（第三眼·雷相） -->
+      <path d="M100 38v8" stroke="#F5C545" stroke-width="1.5" opacity=".8" filter="url(#zzGlow)"/>
+      <circle cx="100" cy="36" r="1.5" fill="#FFE08A" stroke="none" filter="url(#zzGlow)"/>
+      <!-- 肩（舒展有力） -->
+      <path d="M68 102c6-8 18-14 32-14s26 6 32 14" stroke-width="2"/>
+    </g>
+
+    <!-- l5 发：高髻+发冠（鉴台境·威仪），发梢鎏金霜染 -->
+    <g id="l5-发" stroke-width="1.5">
+      <path d="M86 42c2-16 10-26 14-26s12 10 14 26" stroke-width="2"/>
+      <path d="M82 36c4-10 14-18 18-18s14 8 18 18" stroke-width="1.5"/>
+      <!-- 高髻 -->
+      <ellipse cx="100" cy="24" rx="10" ry="7" stroke-width="1.5"/>
+      <!-- 发冠（鎏金） -->
+      <path d="M90 18c4-4 16-4 20 0" stroke="#F5C545" stroke-width="1.2" filter="url(#zzGlow)"/>
+      <circle cx="100" cy="14" r="2" fill="#FFE08A" stroke="none" filter="url(#zzGlow)"/>
+      <!-- 发梢鎏金霜染 -->
+      <path d="M80 38l-2 8" stroke="#F5C545" stroke-width="1" opacity=".6" filter="url(#zzGlow)"/>
+      <path d="M120 38l2 8" stroke="#F5C545" stroke-width="1" opacity=".6" filter="url(#zzGlow)"/>
+      <!-- 鬓角收齐 -->
+      <path d="M88 46l-1 8" stroke-width="1" opacity=".5"/>
+      <path d="M112 46l1 8" stroke-width="1" opacity=".5"/>
+    </g>
+
+    <!-- l7 能量层：雷光披身 + 散金粒子（鉴台 · 100% 能量） -->
+    <g id="l7-能量" filter="url(#zzGlow)" stroke="#F5C545" fill="none">
+      <!-- 身周雷弧铠甲（从肩到腰的弧光） -->
+      <path d="M56 120c-6 20 -4 40 4 60" stroke-width="1" opacity=".5"/>
+      <path d="M144 120c6 20 4 40 -4 60" stroke-width="1" opacity=".5"/>
+      <!-- 臂间雷弧 -->
+      <path d="M132 140c12 4 20 12 24 24" stroke-width="1" opacity=".4"/>
+      <path d="M68 160c-10 2 -18 8 -22 18" stroke-width="0.8" opacity=".35"/>
+      <!-- 脚下雷光 -->
+      <ellipse cx="100" cy="282" rx="40" ry="4" stroke="#FFE08A" stroke-width="1" opacity=".3"/>
+      <ellipse cx="100" cy="282" rx="24" ry="3" stroke="#F5C545" stroke-width="0.8" opacity=".25"/>
+      <!-- 大量鎏金粒子（100% 能量） -->
+      <circle cx="40" cy="100" r="1.5" fill="#FFE08A" stroke="none" opacity=".5"/>
+      <circle cx="160" cy="80" r="1.2" fill="#F5C545" stroke="none" opacity=".45"/>
+      <circle cx="30" cy="180" r="1.8" fill="#FFE08A" stroke="none" opacity=".4"/>
+      <circle cx="170" cy="180" r="1.5" fill="#F5C545" stroke="none" opacity=".4"/>
+      <circle cx="45" cy="250" r="1.2" fill="#FFE08A" stroke="none" opacity=".35"/>
+      <circle cx="155" cy="250" r="1" fill="#F5C545" stroke="none" opacity=".3"/>
+      <circle cx="35" cy="60" r="1" fill="#FFE08A" stroke="none" opacity=".3"/>
+      <circle cx="165" cy="40" r="0.8" fill="#F5C545" stroke="none" opacity=".3"/>
+      <circle cx="25" cy="220" r="1.2" fill="#FFE08A" stroke="none" opacity=".35"/>
+      <circle cx="175" cy="220" r="1" fill="#F5C545" stroke="none" opacity=".3"/>
+      <circle cx="50" cy="140" r="0.8" fill="#FFE08A" stroke="none" opacity=".3"/>
+      <circle cx="150" cy="120" r="0.8" fill="#F5C545" stroke="none" opacity=".3"/>
+    </g>
+
+    <!-- 地线（鎏金亮） -->
+    <line x1="24" y1="286" x2="176" y2="286" stroke="#F5C545" stroke-width="1.2" opacity=".35" filter="url(#zzGlow)"/>
+  </svg>`
+];
+
+function renderGrowth(){
+  const lv=lightLevel(CUR_LIGHT), ri=tierIdx(lv);
+  const inner=lv-TIER_SPAN[ri][0]+1, innerCn='一二三四五六七八九'[inner-1];
+  const into=CUR_LIGHT-CUM_L[lv-1], need=LIGHT_REQ[lv-1];
+  const pct=Math.round(CUR_LIGHT/CUM_L[36]*100);
+  const nodes=REALMS.map((r,i)=>`<div class="gr-node${i<ri?' past':''}${i===ri?' cur':''}"><span class="g-dot"></span>${i<REALMS.length-1?'<span class="g-line"></span>':''}<span class="g-name">${r} · 第 ${TIER_SPAN[i][0]}-${TIER_SPAN[i][1]} 级</span><span class="g-jie">关</span></div>`).join('');
+  $('#stage-growth').innerHTML=`<div class="gr-wrap">
+    <div class="gr-hero">
+      <div class="gh-left">
+        <span class="gh-seal">${REALMS[ri]} · ${innerCn}</span>
+        <span class="gh-desc">${REALM_DESC[ri]}</span>
+      </div>
+      <div class="gh-right">${REALM_SVGS[ri]}</div>
+      <div class="gh-bottom-line"></div>
+    </div>
+    <div class="gr-now">
+      <div class="gn-lab">当前灯焰</div>
+      <div class="gn-realm">${CUR_LIGHT} 光 · ${REALMS[ri]}</div>
+      <div class="gn-desc">距下一级还差 ${need-into} 光 · 满级 1,062 光（已行 ${pct}%）</div>
+      <div class="gr-track">${nodes}</div>
+    </div>
+    <div class="gr-realms">
+      ${REALMS.map((r,i)=>`<div class="gr-card${i===ri?' cur':''}${i>ri?' locked':''}"><span class="gc-idx">${i>ri?'未至':'段 '+(i+1)}</span><b>${r}</b><p>${REALM_DESC[i]}</p></div>`).join('')}
+      <div class="gr-rite">
+        <div><b>周关卡</b>本周记录满 5 天即过关：灯形变一次，另得 2 光；未过不加也不扣</div>
+        <div><b>敛光</b>连续 3 天没有任何记录才敛光，一晚即归；等级永不下降</div>
+      </div>
+    </div>
+    <div class="gr-year"><h3>光年视图 <small>一日一盏 · 疏密自知</small></h3>${yearHtml()}</div>
+    <div class="gr-line"><h3>灯焰曲线 <small>36 级 · 1,062 光 · 涨快缩慢</small></h3>${daoLineHtml()}</div>
+  </div>`;
+}
+
+/* ================= 视图切换 / 顶栏 ================= */
+const VIEW_TITLE={day:'日视图',week:'周视图',month:'月视图',growth:'成长'};
+function switchView(v){
+  curView=v;
+  $$('.view').forEach(x=>x.classList.remove('on'));
+  $('#v-'+v).classList.add('on');
+  $$('.nav .nv[data-v]').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
+  $$('#segDW button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
+  const showNav=(v==='day'||v==='week'||v==='month');
+  $('#wPrev').style.display=showNav?'':'none';
+  $('#wNext').style.display=showNav?'':'none';
+  $('#wThis').style.display=showNav?'':'none';
+  $('#segDW').style.display=(v==='day'||v==='week'||v==='month')?'':'none';
+  $('#vTitle').textContent=VIEW_TITLE[v];
+  const base=weekBase();
+  if(v==='week')$('#vSub').textContent=`${base.getMonth()+1} 月 ${base.getDate()} 日 – ${new Date(base.getTime()+6*864e5).getMonth()+1} 月 ${new Date(base.getTime()+6*864e5).getDate()} 日`;
+  else if(v==='day'){const d=new Date(selectedDay||TODAY_STR);$('#vSub').textContent=`${d.getMonth()+1} 月 ${d.getDate()} 日 · 周${WK_CN[(d.getDay()+6)%7]}${(selectedDay||TODAY_STR)===TODAY_STR?' · 今天':''}`}
+  else if(v==='month'){const m=monthBase();$('#vSub').textContent=`${m.getFullYear()} 年 ${m.getMonth()+1} 月 · 一月一册`}
+  else $('#vSub').textContent='';
+  renderAll();
+}
+function renderAll(){
+  renderWeek();renderDay();renderMonth();renderGrowth();renderNow();renderInbox();
+  $('#demoBar').classList.toggle('show',!!state.demo);
+}
+
+/* ================= 焦点域（软焦点） ================= */
+$$('.focus-dot').forEach(b=>b.onclick=()=>{
+  document.body.dataset.focus=b.dataset.f;
+  $$('.focus-dot').forEach(x=>x.classList.toggle('on',x===b));
+  $('.focus-name').textContent=FOCUS_NAME[b.dataset.f];
+  toast(`焦点域 · ${FOCUS_NAME[b.dataset.f]}`);
+});
+
+/* ================= 专注 / 导出 / 清空 ================= */
+let fMin=15,fLeft=900,fTimer=null;
+function fShow(){$('#fTime').textContent=`${String(Math.floor(fLeft/60)).padStart(2,'0')}:${String(fLeft%60).padStart(2,'0')}`}
+$('#fMinus').onclick=()=>{fMin=Math.max(5,fMin-5);if(!fTimer){fLeft=fMin*60;fShow()}};
+$('#fPlus').onclick=()=>{fMin=Math.min(60,fMin+5);if(!fTimer){fLeft=fMin*60;fShow()}};
+$('#fGo').onclick=()=>{
+  if(fTimer){clearInterval(fTimer);fTimer=null;$('#fGo').textContent='开始';$('#fGo').classList.remove('stop');return}
+  fLeft=fMin*60;fShow();
+  $('#fGo').textContent='暂停';$('#fGo').classList.add('stop');
+  fTimer=setInterval(()=>{
+    fLeft--;fShow();
+    if(fLeft<=0){clearInterval(fTimer);fTimer=null;$('#fGo').textContent='开始';$('#fGo').classList.remove('stop');toast('专注完成，起来走走 ☕')}
+  },1000);
+};
+$('#btnExport').onclick=()=>{
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(state,null,2)],{type:'application/json'}));
+  a.download='tiimo-clone-data.json';a.click();
+  toast('数据已导出');
+};
+$('#btnClearDemo').onclick=()=>{
+  state={todos:{high:[],mid:[],low:[],inbox:[]},plan:{anytime:[],morning:[],noon:[],day:[],evening:[]},goals:[],sub:{},streak:0,streakDate:'',done:0,doneDate:TODAY_STR,uid:100,demo:false};
+  saved=state;persist();renderAll();toast('演示数据已清空，从收件箱开始添加');
+};
+
+/* ================= Toast ================= */
+let toastT=null;
+function toast(msg){
+  const el=$('#toast');el.textContent=msg;el.classList.add('show');
+  clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove('show'),2200);
+}
+
+/* ================= 启动 ================= */
+$$('.nav .nv[data-v]').forEach(b=>b.onclick=()=>switchView(b.dataset.v));
+$$('#segDW button').forEach(b=>b.onclick=()=>switchView(b.dataset.v));
+$('#wPrev').onclick=()=>{if(curView==='month')monthOffset--;else weekOffset--;renderAll();switchView(curView)};
+$('#wNext').onclick=()=>{if(curView==='month')monthOffset++;else weekOffset++;renderAll();switchView(curView)};
+$('#wThis').onclick=()=>{weekOffset=0;monthOffset=0;selectedDay=TODAY_STR;renderAll();switchView(curView)};
+loadState();
+fShow();
+const H=location.hash.slice(1);
+switchView(VIEW_TITLE[H]?H:'day');
+</script>
+</body>
+</html>

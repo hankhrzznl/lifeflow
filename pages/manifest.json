@@ -1,0 +1,26 @@
+{
+  "name": "执灯人 · 一天一盏灯",
+  "short_name": "执灯人",
+  "description": "LifeFlow 高保真蓝本：手机端 index.html / 电脑端 desktop.html。版式早期参考 Tiimo，Tiimo 商标归 Tiimo ApS 所有。",
+  "lang": "zh-CN",
+  "id": "./",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0B0F1A",
+  "theme_color": "#0B0F1A",
+  "icons": [
+    {
+      "src": "assets/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/apple-touch-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

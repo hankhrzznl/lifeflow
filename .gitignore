@@ -1,0 +1,13 @@
+# 调试产物（一次性截图/临时脚本）
+.workbuddy/tmp/
+.workbuddy/import/shots/
+tests/.artifacts/
+shot-*.png
+*.log
+
+# 依赖（这份蓝本不需要，防止将来误入）
+node_modules/
+# 公开仓库：内部记忆/资料库备份/内部同步清单不入库
+.workbuddy/
+资料库备份/
+_sync/
